@@ -1,0 +1,10 @@
+# @voyantjs/bookings
+
+## 0.1.1
+
+### Patch Changes
+
+- @voyantjs/core@0.1.1
+- @voyantjs/db@0.1.1
+- @voyantjs/hono@0.1.1
+- @voyantjs/utils@0.1.1

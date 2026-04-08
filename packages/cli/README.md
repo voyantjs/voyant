@@ -21,6 +21,8 @@ voyant new my-app --template dmc
 voyant new my-app --template operator
 ```
 
+Built-in starters are downloaded from the matching GitHub Release for the installed CLI version.
+
 You can also point at a custom local template directory:
 
 ```bash

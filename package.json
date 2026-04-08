@@ -12,6 +12,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish",
+    "package:starters": "node scripts/package-starters.mjs",
     "__prepare": "husky",
     "typecheck": "turbo run typecheck --continue",
     "test": "turbo run test --continue",

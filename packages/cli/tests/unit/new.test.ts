@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { c } from "tar"
 
 import { newCommand } from "../../src/commands/new.js"
 
@@ -72,13 +73,20 @@ function seedTemplate(root: string) {
 
 describe("newCommand", () => {
   let tmp: string
+  let previousFetch: typeof globalThis.fetch | undefined
 
   beforeEach(() => {
     tmp = mkdtempSync(join(tmpdir(), "voyant-cli-new-"))
+    previousFetch = globalThis.fetch
   })
 
   afterEach(() => {
     rmSync(tmp, { recursive: true, force: true })
+    if (previousFetch === undefined) {
+      delete globalThis.fetch
+    } else {
+      globalThis.fetch = previousFetch
+    }
   })
 
   it("fails without a project name", async () => {
@@ -206,6 +214,38 @@ describe("newCommand", () => {
     expect(schema).toContain('export * from "@voyantjs/db/schema"')
     expect(schema).toContain('export * from "@voyantjs/bookings/schema/travel-details"')
     expect(schema).toContain('export * from "@voyantjs/legal/contracts/schema"')
+  })
+
+  it("downloads a built-in starter from a versioned release tarball", async () => {
+    const starterRoot = join(tmp, "remote-starter")
+    seedTemplate(starterRoot)
+
+    const archivePath = join(tmp, "voyant-starter-dmc-0.1.0.tar.gz")
+    await c(
+      {
+        cwd: starterRoot,
+        file: archivePath,
+        gzip: true,
+      },
+      ["."],
+    )
+
+    const archive = readFileSync(archivePath)
+    globalThis.fetch = async (input) => {
+      expect(String(input)).toContain("/v0.1.0/voyant-starter-dmc-0.1.0.tar.gz")
+      return new Response(archive, {
+        status: 200,
+        headers: { "content-type": "application/gzip" },
+      })
+    }
+
+    const workspace = join(tmp, "workspace")
+    mkdirSync(workspace, { recursive: true })
+    const { ctx } = makeCtx(["my-app", "--template", "dmc"], workspace)
+    const code = await newCommand(ctx)
+    expect(code).toBe(0)
+    expect(existsSync(join(workspace, "my-app", "src", "entry.ts"))).toBe(true)
+    expect(existsSync(join(workspace, "my-app", ".env"))).toBe(false)
   })
 
   it("fails when --template points at a missing directory", async () => {

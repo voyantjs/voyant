@@ -18,8 +18,9 @@ Runs the main repository checks for pull requests and pushes to `main` and `deve
 Handles package releases:
 
 - normal Changesets release flow on pushes to `main`
-- one-time manual bootstrap publish for the initial `0.1.0` release
+- one-time manual bootstrap GitHub release for the initial `0.1.0` release
 - npm Trusted Publishing via GitHub Actions OIDC
+- versioned starter tarballs attached to each GitHub Release for CLI scaffolding
 
 ## Required GitHub Secrets
 

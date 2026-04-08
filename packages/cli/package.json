@@ -20,11 +20,10 @@
   },
   "files": [
     "bin",
-    "dist",
-    "templates"
+    "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/sync-templates.mjs",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/",
     "test": "vitest run",
@@ -32,7 +31,8 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@voyantjs/core": "workspace:*"
+    "@voyantjs/core": "workspace:*",
+    "tar": "^7.4.3"
   },
   "devDependencies": {
     "@voyantjs/voyant-typescript-config": "workspace:*",

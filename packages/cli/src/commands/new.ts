@@ -1,6 +1,16 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import { dirname, isAbsolute, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { x } from "tar"
 
 import { parseArgs } from "../lib/args.js"
 import type { CommandContext, CommandResult } from "../types.js"
@@ -11,7 +21,10 @@ import type { CommandContext, CommandResult } from "../types.js"
  */
 const SKIP_PATHS = new Set([
   "node_modules",
+  ".git",
+  ".github",
   ".turbo",
+  ".tanstack",
   "dist",
   ".wrangler",
   ".next",
@@ -27,6 +40,9 @@ const SKIP_PATHS = new Set([
 
 const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
 const REPO_ROOT = resolve(CLI_ROOT, "..", "..")
+const BUILT_IN_TEMPLATES = new Set(["dmc", "operator"])
+const STARTER_RELEASE_BASE_URL =
+  process.env.VOYANT_STARTER_BASE_URL ?? "https://github.com/voyantjs/voyant/releases/download"
 
 const TEMPLATE_ALIAS_FALLBACK = "dmc"
 
@@ -41,8 +57,8 @@ const TEMPLATE_ALIAS_FALLBACK = "dmc"
  * The template source is resolved (in priority order):
  *   1. `--template <path>` — absolute or cwd-relative path
  *   2. `--template <name>` — built-in / discoverable template alias
- *   3. bundled templates shipped with the CLI
- *   4. repo-local `templates/<name>` when invoked from a Voyant checkout
+ *   3. repo-local `templates/<name>` when invoked from a Voyant checkout
+ *   4. version-matched starter tarball from GitHub Releases
  *   5. `dmc` as the default fallback starter
  */
 export async function newCommand(ctx: CommandContext): Promise<CommandResult> {
@@ -66,8 +82,16 @@ export async function newCommand(ctx: CommandContext): Promise<CommandResult> {
     return 1
   }
 
-  const templatePath = resolveTemplate(ctx.cwd, flags.template)
-  if (!templatePath) {
+  let templateSource: TemplateSource | null
+  try {
+    templateSource = await resolveTemplate(ctx.cwd, flags.template)
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err)
+    ctx.stderr(`Failed to resolve template: ${reason}\n`)
+    return 1
+  }
+
+  if (!templateSource) {
     ctx.stderr(
       "Could not find a template. Pass --template <name|path>.\n",
     )
@@ -75,15 +99,17 @@ export async function newCommand(ctx: CommandContext): Promise<CommandResult> {
   }
 
   try {
-    cpSync(templatePath, target, {
+    cpSync(templateSource.path, target, {
       recursive: true,
       force: true,
-      filter: (src) => !shouldSkip(src, templatePath),
+      filter: (src) => !shouldSkip(src, templateSource.path),
     })
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
     ctx.stderr(`Failed to copy template: ${reason}\n`)
     return 1
+  } finally {
+    templateSource.cleanup?.()
   }
 
   const voyantVersion = resolveVoyantVersion()
@@ -135,23 +161,35 @@ export async function newCommand(ctx: CommandContext): Promise<CommandResult> {
   return 0
 }
 
-function resolveTemplate(cwd: string, override: string | boolean | undefined): string | null {
+type TemplateSource = {
+  path: string
+  cleanup?: () => void
+}
+
+async function resolveTemplate(
+  cwd: string,
+  override: string | boolean | undefined,
+): Promise<TemplateSource | null> {
   if (typeof override === "string") {
     const abs = isAbsolute(override) ? override : resolve(cwd, override)
-    if (existsSync(abs)) return abs
+    if (existsSync(abs)) return { path: abs }
   }
 
   const requested = typeof override === "string" ? override : TEMPLATE_ALIAS_FALLBACK
-  const fallbacks = [
+  const localCandidates = [
     join(cwd, "templates", requested),
-    join(CLI_ROOT, "templates", requested),
     join(REPO_ROOT, "templates", requested),
   ]
 
-  for (const candidate of fallbacks) {
-    if (existsSync(candidate)) return candidate
+  for (const candidate of localCandidates) {
+    if (existsSync(candidate)) return { path: candidate }
   }
-  return null
+
+  if (!BUILT_IN_TEMPLATES.has(requested)) {
+    return null
+  }
+
+  return downloadStarterTemplate(requested, resolveVoyantVersion())
 }
 
 function shouldSkip(srcPath: string, templateRoot: string): boolean {
@@ -160,6 +198,38 @@ function shouldSkip(srcPath: string, templateRoot: string): boolean {
   const first = rel.split(/[\\/]/)[0]
   if (!first) return false
   return SKIP_PATHS.has(first)
+}
+
+async function downloadStarterTemplate(starter: string, voyantVersion: string): Promise<TemplateSource> {
+  const root = mkdtempSync(join(tmpdir(), `voyant-starter-${starter}-`))
+  const archivePath = join(root, `${starter}.tar.gz`)
+  const extractDir = join(root, "template")
+  mkdirSync(extractDir, { recursive: true })
+
+  try {
+    const url = starterAssetUrl(starter, voyantVersion)
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`received ${response.status} ${response.statusText} from ${url}`)
+    }
+
+    const archive = Buffer.from(await response.arrayBuffer())
+    writeFileSync(archivePath, archive)
+    await x({ file: archivePath, cwd: extractDir, strict: true })
+
+    return {
+      path: extractDir,
+      cleanup: () => rmSync(root, { recursive: true, force: true }),
+    }
+  } catch (err) {
+    rmSync(root, { recursive: true, force: true })
+    throw err
+  }
+}
+
+function starterAssetUrl(starter: string, voyantVersion: string): string {
+  const base = STARTER_RELEASE_BASE_URL.replace(/\/+$/, "")
+  return `${base}/v${voyantVersion}/voyant-starter-${starter}-${voyantVersion}.tar.gz`
 }
 
 function defaultConfigSource(): string {

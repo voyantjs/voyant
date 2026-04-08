@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       bootstrap:
-        description: "Publish the current checked-in versions without creating a Changesets release PR"
+        description: "Create the initial GitHub release and starter assets for the current checked-in version"
         required: false
         default: false
         type: boolean
@@ -41,17 +41,20 @@ jobs:
       - name: Build packages
         run: pnpm turbo build --filter='./packages/**' --continue
 
-      - name: Publish current package versions
-        run: pnpm changeset publish
+      - name: Determine release version
+        id: version
+        run: echo "value=$(node -p \"JSON.parse(require('fs').readFileSync('./packages/cli/package.json', 'utf8')).version\")" >> "$GITHUB_OUTPUT"
 
-      - name: Create repo tag for bootstrap release
-        run: |
-          if git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null; then
-            echo "Tag v0.1.0 already exists"
-          else
-            git tag v0.1.0
-            git push origin v0.1.0
-          fi
+      - name: Package starter archives
+        run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: .release/starters/*.tar.gz
 
   release:
     if: github.event_name == 'push'
@@ -76,6 +79,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Create Release PR or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: pnpm version-packages
@@ -84,3 +88,21 @@ jobs:
           title: "chore: release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine release version
+        if: steps.changesets.outputs.published == 'true'
+        id: version
+        run: echo "value=$(node -p \"JSON.parse(require('fs').readFileSync('./packages/cli/package.json', 'utf8')).version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Package starter archives
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
+
+      - name: Create GitHub release
+        if: steps.changesets.outputs.published == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: .release/starters/*.tar.gz

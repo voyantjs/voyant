@@ -17,6 +17,7 @@ COMMANDS
 
 EXAMPLES
   voyant new my-app --template dmc
+  voyant new my-app --template operator
   voyant new my-app --template ./my-custom-template
   voyant generate module invoices
   voyant generate link crm.person products.product --right-list

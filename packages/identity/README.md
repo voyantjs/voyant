@@ -1,0 +1,37 @@
+# @voyantjs/identity
+
+Identity primitives for Voyant. Provides shared contact-point, address, and named-contact records used across CRM, suppliers, facilities, and distribution.
+
+## Install
+
+```bash
+pnpm add @voyantjs/identity
+```
+
+## Usage
+
+CRM's person create/update syncs inline contact fields (email, phone, website, address, city, country) to this module, keeping identity primitives canonical across consumers.
+
+```typescript
+import { identityModule } from "@voyantjs/identity"
+import { createApp } from "@voyantjs/hono"
+
+const app = createApp({
+  modules: [identityModule],
+  // ...
+})
+```
+
+## Exports
+
+| Entry | Description |
+| --- | --- |
+| `.` | Module export |
+| `./service` | Identity sync/hydration service |
+| `./schema` | Drizzle tables (contact points, addresses, named contacts) |
+| `./validation` | Zod schemas |
+| `./routes` | Hono routes |
+
+## License
+
+FSL-1.1-Apache-2.0

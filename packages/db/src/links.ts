@@ -1,0 +1,224 @@
+/**
+ * Runtime link service backed by Drizzle — executes raw SQL against the
+ * dynamically-named pivot tables materialised from {@link LinkDefinition}s.
+ */
+
+import type {
+  LinkDefinition,
+  LinkRow,
+  LinkService,
+  LinkSpec,
+  ResolvedLinkSpec,
+} from "@voyantjs/core"
+import { generateLinkTableSql, resolveLinkFromSpec } from "@voyantjs/core"
+import { sql } from "drizzle-orm"
+
+import { newIdFromPrefix } from "./lib/typeid.js"
+import type { DrizzleClient } from "./types.js"
+
+/**
+ * TypeID prefix used for link row IDs.
+ * Short, fixed, and outside the module-owned prefix list in lib/typeid.ts.
+ */
+const LINK_ID_PREFIX = "lnk"
+
+type RawLinkRow = {
+  id: string
+  created_at: Date | string
+  updated_at: Date | string
+  deleted_at: Date | string | null
+  [column: string]: unknown
+}
+
+function toDate(v: Date | string): Date {
+  return v instanceof Date ? v : new Date(v)
+}
+
+function toNullableDate(v: Date | string | null): Date | null {
+  if (v === null) return null
+  return v instanceof Date ? v : new Date(v)
+}
+
+/**
+ * Create a runtime {@link LinkService} for the given set of link definitions.
+ *
+ * The service supports both a positional API (`create(linkKey, leftId, rightId)`)
+ * and a Medusa-style spec API (`create({ moduleA: { a_id }, moduleB: { b_id } })`)
+ * resolved against the provided definitions.
+ */
+export function createLinkService(
+  getDb: () => DrizzleClient,
+  definitions: LinkDefinition[],
+): LinkService {
+  const byKey = new Map<string, LinkDefinition>()
+  for (const def of definitions) {
+    if (byKey.has(def.tableName)) {
+      throw new Error(`createLinkService: duplicate link definition for table "${def.tableName}"`)
+    }
+    byKey.set(def.tableName, def)
+  }
+
+  function lookupByKey(linkKey: string): LinkDefinition {
+    const def = byKey.get(linkKey)
+    if (!def) {
+      throw new Error(`createLinkService: unknown link key "${linkKey}"`)
+    }
+    return def
+  }
+
+  function resolveArgs(
+    keyOrSpec: string | LinkSpec,
+    leftId?: string,
+    rightId?: string,
+  ): ResolvedLinkSpec {
+    if (typeof keyOrSpec === "string") {
+      if (leftId === undefined || rightId === undefined) {
+        throw new Error("createLinkService: positional API requires linkKey, leftId, and rightId")
+      }
+      return { definition: lookupByKey(keyOrSpec), leftId, rightId }
+    }
+    return resolveLinkFromSpec(keyOrSpec, definitions)
+  }
+
+  function rowFromRaw(def: LinkDefinition, raw: RawLinkRow): LinkRow {
+    const leftId = raw[def.leftColumn]
+    const rightId = raw[def.rightColumn]
+    if (typeof leftId !== "string" || typeof rightId !== "string") {
+      throw new Error(`createLinkService: malformed row returned from "${def.tableName}"`)
+    }
+    return {
+      id: raw.id,
+      leftId,
+      rightId,
+      createdAt: toDate(raw.created_at),
+      updatedAt: toDate(raw.updated_at),
+      deletedAt: toNullableDate(raw.deleted_at),
+    }
+  }
+
+  async function executeRows(query: ReturnType<typeof sql>): Promise<RawLinkRow[]> {
+    // biome-ignore lint/suspicious/noExplicitAny: drizzle's execute() return type varies by adapter
+    const result: any = await (getDb() as any).execute(query)
+    if (Array.isArray(result)) return result as RawLinkRow[]
+    if (result && Array.isArray(result.rows)) return result.rows as RawLinkRow[]
+    return []
+  }
+
+  async function createImpl(spec: ResolvedLinkSpec): Promise<LinkRow> {
+    const { definition: def, leftId, rightId } = spec
+    const table = sql.identifier(def.tableName)
+    const leftCol = sql.identifier(def.leftColumn)
+    const rightCol = sql.identifier(def.rightColumn)
+    const id = newIdFromPrefix(LINK_ID_PREFIX)
+
+    // Resurrect any soft-deleted pair first — otherwise the partial unique
+    // index would prevent the INSERT, and we'd fail the "idempotent" contract.
+    const restoreQuery = sql`UPDATE ${table}
+      SET "deleted_at" = NULL, "updated_at" = now()
+      WHERE ${leftCol} = ${leftId} AND ${rightCol} = ${rightId} AND "deleted_at" IS NOT NULL
+      RETURNING *`
+    const restored = await executeRows(restoreQuery)
+    if (restored.length > 0 && restored[0]) {
+      return rowFromRaw(def, restored[0])
+    }
+
+    const insertQuery = sql`INSERT INTO ${table}
+      ("id", ${leftCol}, ${rightCol}, "created_at", "updated_at", "deleted_at")
+      VALUES (${id}, ${leftId}, ${rightId}, now(), now(), NULL)
+      ON CONFLICT DO NOTHING
+      RETURNING *`
+    const inserted = await executeRows(insertQuery)
+    if (inserted.length > 0 && inserted[0]) {
+      return rowFromRaw(def, inserted[0])
+    }
+
+    // Conflict — a row (or matching pair) already exists. Fetch the active one.
+    const fetchQuery = sql`SELECT * FROM ${table}
+      WHERE ${leftCol} = ${leftId} AND ${rightCol} = ${rightId} AND "deleted_at" IS NULL
+      LIMIT 1`
+    const existing = await executeRows(fetchQuery)
+    if (existing.length > 0 && existing[0]) {
+      return rowFromRaw(def, existing[0])
+    }
+
+    throw new Error(`createLinkService: could not create or find link row in "${def.tableName}"`)
+  }
+
+  async function dismissImpl(spec: ResolvedLinkSpec): Promise<void> {
+    const { definition: def, leftId, rightId } = spec
+    const table = sql.identifier(def.tableName)
+    const leftCol = sql.identifier(def.leftColumn)
+    const rightCol = sql.identifier(def.rightColumn)
+    const query = sql`UPDATE ${table}
+      SET "deleted_at" = now(), "updated_at" = now()
+      WHERE ${leftCol} = ${leftId} AND ${rightCol} = ${rightId} AND "deleted_at" IS NULL`
+    await executeRows(query)
+  }
+
+  async function deleteImpl(spec: ResolvedLinkSpec): Promise<void> {
+    const { definition: def, leftId, rightId } = spec
+    const table = sql.identifier(def.tableName)
+    const leftCol = sql.identifier(def.leftColumn)
+    const rightCol = sql.identifier(def.rightColumn)
+    const query = sql`DELETE FROM ${table}
+      WHERE ${leftCol} = ${leftId} AND ${rightCol} = ${rightId}`
+    await executeRows(query)
+  }
+
+  async function list(
+    linkKey: string,
+    filter: { leftId?: string; rightId?: string } = {},
+  ): Promise<LinkRow[]> {
+    const def = lookupByKey(linkKey)
+    const table = sql.identifier(def.tableName)
+    const leftCol = sql.identifier(def.leftColumn)
+    const rightCol = sql.identifier(def.rightColumn)
+
+    const whereClauses = [sql`"deleted_at" IS NULL`]
+    if (filter.leftId) whereClauses.push(sql`${leftCol} = ${filter.leftId}`)
+    if (filter.rightId) whereClauses.push(sql`${rightCol} = ${filter.rightId}`)
+
+    // Manually join clauses with AND.
+    let whereSql = whereClauses[0] as ReturnType<typeof sql>
+    for (let i = 1; i < whereClauses.length; i++) {
+      whereSql = sql`${whereSql} AND ${whereClauses[i]}`
+    }
+
+    const query = sql`SELECT * FROM ${table}
+      WHERE ${whereSql}
+      ORDER BY "created_at" ASC`
+    const rows = await executeRows(query)
+    return rows.map((r) => rowFromRaw(def, r))
+  }
+
+  return {
+    async create(keyOrSpec: string | LinkSpec, leftId?: string, rightId?: string) {
+      return createImpl(resolveArgs(keyOrSpec, leftId, rightId))
+    },
+    async dismiss(keyOrSpec: string | LinkSpec, leftId?: string, rightId?: string) {
+      return dismissImpl(resolveArgs(keyOrSpec, leftId, rightId))
+    },
+    async delete(keyOrSpec: string | LinkSpec, leftId?: string, rightId?: string) {
+      return deleteImpl(resolveArgs(keyOrSpec, leftId, rightId))
+    },
+    list,
+  } as LinkService
+}
+
+/**
+ * Materialise every link definition's pivot table (CREATE TABLE + indexes).
+ * Intended for use by a `db:sync-links` CLI command in templates.
+ *
+ * Runs each DDL statement individually against the provided Drizzle client.
+ */
+export async function syncLinks(db: DrizzleClient, definitions: LinkDefinition[]): Promise<void> {
+  for (const def of definitions) {
+    const { createTable, indexes } = generateLinkTableSql(def)
+    // biome-ignore lint/suspicious/noExplicitAny: drizzle adapter execute typing varies
+    await (db as any).execute(sql.raw(createTable))
+    for (const idx of indexes) {
+      // biome-ignore lint/suspicious/noExplicitAny: drizzle adapter execute typing varies
+      await (db as any).execute(sql.raw(idx))
+    }
+  }
+}

@@ -1,0 +1,186 @@
+import type { VoyantAuthContext } from "@voyantjs/core"
+import { apikeyTable } from "@voyantjs/db/schema/iam"
+import { and, eq } from "drizzle-orm"
+import type { MiddlewareHandler } from "hono"
+
+import { sha256Base64Url } from "../auth/crypto.js"
+import { extractBearerToken, verifySession } from "../auth/session-jwt.js"
+import type { DbFactory, VoyantAuthIntegration, VoyantBindings, VoyantVariables } from "../types.js"
+
+function permissionsToScopes(permissions: string | null): string[] {
+  if (!permissions) return []
+  try {
+    const parsed = JSON.parse(permissions) as Record<string, string[]>
+    const scopes: string[] = []
+    for (const [resource, actions] of Object.entries(parsed)) {
+      if (Array.isArray(actions)) {
+        for (const action of actions) {
+          scopes.push(`${resource}:${action}`)
+        }
+      }
+    }
+    return scopes
+  } catch {
+    return []
+  }
+}
+
+const API_KEY_PREFIX = "voy_"
+
+function applyAuthContext(
+  c: {
+    set: <K extends keyof VoyantVariables>(key: K, value: VoyantVariables[K]) => void
+  },
+  auth: VoyantAuthContext,
+) {
+  if (auth.userId) c.set("userId", auth.userId)
+  if (auth.sessionId) c.set("sessionId", auth.sessionId)
+  if (auth.organizationId !== undefined) c.set("organizationId", auth.organizationId ?? undefined)
+  if (auth.callerType) c.set("callerType", auth.callerType)
+  if (auth.actor) c.set("actor", auth.actor)
+  if (auth.scopes !== undefined) c.set("scopes", auth.scopes)
+  if (auth.isInternalRequest !== undefined) c.set("isInternalRequest", auth.isInternalRequest)
+  if (auth.apiKeyId) c.set("apiKeyId", auth.apiKeyId)
+}
+
+export function requireAuth<TBindings extends VoyantBindings>(
+  dbFactory: DbFactory<TBindings>,
+  opts?: {
+    publicPaths?: string[]
+    auth?: VoyantAuthIntegration<TBindings>
+  },
+): MiddlewareHandler<{
+  Bindings: TBindings
+  Variables: VoyantVariables
+}> {
+  const publicPaths = opts?.publicPaths ?? []
+
+  return async (c, next) => {
+    if (c.req.method === "OPTIONS") return next()
+
+    const url = new URL(c.req.url)
+    const p = url.pathname.replace(/\/$/, "")
+    const isPublicAuth = p === "/auth/callback" || p.startsWith("/auth/")
+    const isHealthCheck = p === "/health"
+
+    if (isPublicAuth || isHealthCheck) return next()
+
+    for (const pp of publicPaths) {
+      if (p === pp || p.startsWith(`${pp}/`)) return next()
+    }
+
+    const authHeader = c.req.header("authorization") || c.req.header("Authorization")
+    const token = extractBearerToken(authHeader)
+
+    // Strategy 1: Internal API Key
+    const internalKey = c.env.INTERNAL_API_KEY
+    if (token && internalKey && token === internalKey) {
+      applyAuthContext(c, {
+        callerType: "internal",
+        isInternalRequest: true,
+      })
+      return next()
+    }
+
+    // Strategy 2: Core-owned API key support (voy_ prefixed)
+    if (token?.startsWith(API_KEY_PREFIX)) {
+      try {
+        const db = dbFactory(c.env)
+        const keyHash = await sha256Base64Url(token)
+
+        const [row] = await db
+          .select()
+          .from(apikeyTable)
+          .where(and(eq(apikeyTable.key, keyHash), eq(apikeyTable.enabled, true)))
+          .limit(1)
+
+        if (!row) {
+          return c.json({ error: "Invalid API key" }, 401)
+        }
+
+        if (row.expiresAt && row.expiresAt < new Date()) {
+          return c.json({ error: "API key expired" }, 401)
+        }
+
+        if (row.remaining !== null && row.remaining <= 0) {
+          return c.json({ error: "API key usage limit exceeded" }, 429)
+        }
+
+        if (row.remaining !== null) {
+          c.executionCtx.waitUntil?.(
+            db
+              .update(apikeyTable)
+              .set({
+                remaining: row.remaining - 1,
+                requestCount: row.requestCount + 1,
+                lastRequest: new Date(),
+              })
+              .where(eq(apikeyTable.id, row.id))
+              .then(() => {})
+              .catch(() => {}),
+          )
+        } else {
+          c.executionCtx.waitUntil?.(
+            db
+              .update(apikeyTable)
+              .set({
+                requestCount: row.requestCount + 1,
+                lastRequest: new Date(),
+              })
+              .where(eq(apikeyTable.id, row.id))
+              .then(() => {})
+              .catch(() => {}),
+          )
+        }
+
+        const scopes = permissionsToScopes(row.permissions)
+
+        applyAuthContext(c, {
+          organizationId: row.referenceId,
+          scopes,
+          callerType: "api_key",
+          apiKeyId: row.id,
+        })
+
+        return next()
+      } catch {
+        // fall through to next strategy
+      }
+    }
+
+    // Strategy 3: App-provided auth resolution (cookies, provider tokens, etc.)
+    if (opts?.auth?.resolve) {
+      const resolved = await opts.auth.resolve({
+        request: c.req.raw,
+        env: c.env,
+        db: dbFactory(c.env),
+        ctx: c.executionCtx,
+      })
+
+      if (resolved?.userId) {
+        applyAuthContext(c, resolved)
+        return next()
+      }
+    }
+
+    // Strategy 4: Generic session-claims bearer token support
+    const sessionSecret = c.env.SESSION_CLAIMS_SECRET
+
+    if (token && sessionSecret && token.includes(".")) {
+      try {
+        const sessionAuth = await verifySession(token, sessionSecret)
+
+        applyAuthContext(c, {
+          ...sessionAuth,
+          callerType: "session",
+        })
+
+        return next()
+      } catch {
+        // fall through
+      }
+    }
+
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+}

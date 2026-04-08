@@ -1,0 +1,1095 @@
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import { Hono, type Context } from "hono"
+
+import { createKmsProviderFromEnv } from "@voyantjs/utils"
+
+import { createBookingPiiService } from "./pii.js"
+import { bookingsService } from "./service.js"
+import { bookingPiiAccessLog } from "./schema.js"
+import {
+  bookingListQuerySchema,
+  cancelBookingSchema,
+  confirmBookingSchema,
+  createBookingSchema,
+  convertProductSchema,
+  expireBookingSchema,
+  expireStaleBookingsSchema,
+  extendBookingHoldSchema,
+  reserveBookingFromTransactionSchema,
+  insertBookingFulfillmentSchema,
+  insertBookingDocumentSchema,
+  insertBookingItemParticipantSchema,
+  insertBookingItemSchema,
+  insertBookingNoteSchema,
+  insertParticipantSchema,
+  insertPassengerSchema,
+  insertSupplierStatusSchema,
+  recordBookingRedemptionSchema,
+  reserveBookingSchema,
+  upsertParticipantTravelDetailsSchema,
+  updateBookingFulfillmentSchema,
+  updateSupplierStatusSchema,
+  updateBookingItemSchema,
+  updateBookingSchema,
+  updateBookingStatusSchema,
+  updateParticipantSchema,
+  updatePassengerSchema,
+} from "./validation.js"
+
+type KmsBindings = Partial<{
+  KMS_PROVIDER: string
+  KMS_ENV_KEY: string
+  KMS_LOCAL_KEY: string
+  GCP_PROJECT_ID: string
+  GCP_SERVICE_ACCOUNT_EMAIL: string
+  GCP_PRIVATE_KEY: string
+  GCP_KMS_KEYRING: string
+  GCP_KMS_LOCATION: string
+  GCP_KMS_PEOPLE_KEY_NAME: string
+  GCP_KMS_INTEGRATIONS_KEY_NAME: string
+  AWS_REGION: string
+  AWS_ACCESS_KEY_ID: string
+  AWS_SECRET_ACCESS_KEY: string
+  AWS_SESSION_TOKEN: string
+  AWS_KMS_ENDPOINT: string
+  AWS_KMS_PEOPLE_KEY_ID: string
+  AWS_KMS_INTEGRATIONS_KEY_ID: string
+}>
+
+type Env = {
+  Bindings: KmsBindings
+  Variables: {
+    db: PostgresJsDatabase
+    userId?: string
+    actor?: "staff" | "customer" | "partner" | "supplier"
+    callerType?: "session" | "api_key" | "internal"
+    scopes?: string[] | null
+    isInternalRequest?: boolean
+    authorizeBookingPii?: (args: {
+      db: PostgresJsDatabase
+      userId?: string
+      actor?: "staff" | "customer" | "partner" | "supplier"
+      callerType?: "session" | "api_key" | "internal"
+      scopes?: string[] | null
+      isInternalRequest?: boolean
+      bookingId: string
+      participantId: string
+      action: "read" | "update" | "delete"
+    }) => boolean | Promise<boolean>
+  }
+}
+
+function getRuntimeEnv(c: Context<Env>) {
+  const processEnv = (
+    globalThis as typeof globalThis & {
+      process?: { env?: Record<string, string | undefined> }
+    }
+  ).process?.env ?? {}
+
+  return {
+    ...processEnv,
+    ...(c.env ?? {}),
+  }
+}
+
+function hasPiiScope(scopes: string[] | null | undefined, action: "read" | "update" | "delete") {
+  if (!scopes || scopes.length === 0) {
+    return false
+  }
+
+  return (
+    scopes.includes("*") ||
+    scopes.includes("bookings-pii:*") ||
+    scopes.includes(`bookings-pii:${action}`)
+  )
+}
+
+async function logBookingPiiAccess(
+  c: Context<Env>,
+  input: {
+    bookingId?: string
+    participantId?: string
+    action: "read" | "update" | "delete"
+    outcome: "allowed" | "denied"
+    reason?: string
+    metadata?: Record<string, unknown>
+  },
+) {
+  await c.get("db").insert(bookingPiiAccessLog).values({
+    bookingId: input.bookingId ?? null,
+    participantId: input.participantId ?? null,
+    actorId: c.get("userId") ?? null,
+    actorType: c.get("actor") ?? null,
+    callerType: c.get("callerType") ?? null,
+    action: input.action,
+    outcome: input.outcome,
+    reason: input.reason ?? null,
+    metadata: input.metadata ?? null,
+  })
+}
+
+async function authorizeBookingPiiAccess(
+  c: Context<Env>,
+  input: {
+    bookingId: string
+    participantId: string
+    action: "read" | "update" | "delete"
+  },
+) {
+  if (c.get("isInternalRequest")) {
+    return { allowed: true as const }
+  }
+
+  const userId = c.get("userId")
+  if (!userId) {
+    await logBookingPiiAccess(c, {
+      ...input,
+      outcome: "denied",
+      reason: "missing_user",
+    })
+    return { allowed: false as const, response: c.json({ error: "Unauthorized" }, 401) }
+  }
+
+  const customAuthorizer = c.get("authorizeBookingPii")
+  if (customAuthorizer) {
+    const allowed = await customAuthorizer({
+      db: c.get("db"),
+      userId,
+      actor: c.get("actor"),
+      callerType: c.get("callerType"),
+      scopes: c.get("scopes"),
+      isInternalRequest: c.get("isInternalRequest"),
+      ...input,
+    })
+
+    if (!allowed) {
+      await logBookingPiiAccess(c, {
+        ...input,
+        outcome: "denied",
+        reason: "custom_policy_denied",
+      })
+      return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+    }
+
+    return { allowed: true as const }
+  }
+
+  const actor = c.get("actor")
+  const scopes = c.get("scopes")
+  const allowed = hasPiiScope(scopes, input.action) || actor === "staff"
+
+  if (!allowed) {
+    await logBookingPiiAccess(c, {
+      ...input,
+      outcome: "denied",
+      reason: "insufficient_scope",
+      metadata: { actor: actor ?? null },
+    })
+    return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+  }
+
+  return { allowed: true as const }
+}
+
+function handleKmsConfigError(c: Context<Env>, error: unknown) {
+  if (error instanceof Error) {
+    return c.json(
+      {
+        error: "Booking PII encryption is not configured",
+        details: error.message,
+      },
+      500,
+    )
+  }
+
+  return c.json({ error: "Booking PII encryption is not configured" }, 500)
+}
+
+// ==========================================================================
+// Bookings — method-chained for Hono RPC type inference
+// ==========================================================================
+
+export const bookingRoutes = new Hono<Env>()
+
+  // ==========================================================================
+  // Bookings CRUD
+  // ==========================================================================
+
+  // 1. GET / — List bookings
+  .get("/", async (c) => {
+    const query = bookingListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    return c.json(await bookingsService.listBookings(c.get("db"), query))
+  })
+
+  // 2. GET /:id — Get single booking
+  .get("/:id", async (c) => {
+    const row = await bookingsService.getBookingById(c.get("db"), c.req.param("id"))
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // 3. POST /reserve — Reserve inventory and create on-hold booking
+  .post("/reserve", async (c) => {
+    const result = await bookingsService.reserveBooking(
+      c.get("db"),
+      reserveBookingSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking }, 201)
+    }
+
+    if (result.status === "slot_not_found") {
+      return c.json({ error: "Availability slot not found" }, 404)
+    }
+
+    if (result.status === "insufficient_capacity") {
+      return c.json({ error: "Insufficient slot capacity" }, 409)
+    }
+
+    if (result.status === "slot_unavailable") {
+      return c.json({ error: "Availability slot is not bookable" }, 409)
+    }
+
+    if (result.status === "slot_product_mismatch" || result.status === "slot_option_mismatch") {
+      return c.json({ error: "Reservation item does not match availability slot" }, 409)
+    }
+
+    return c.json({ error: "Unable to reserve booking" }, 400)
+  })
+
+  // 3a. POST /from-product — Create booking draft from product definition
+  .post("/from-product", async (c) => {
+    const row = await bookingsService.createBookingFromProduct(
+      c.get("db"),
+      convertProductSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Product or option not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 3b. POST /from-offer/:offerId/reserve — Reserve booking from transaction offer
+  .post("/from-offer/:offerId/reserve", async (c) => {
+    const result = await bookingsService.reserveBookingFromOffer(
+      c.get("db"),
+      c.req.param("offerId"),
+      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Offer not found" }, 404)
+    }
+
+    if (result.status === "slot_not_found") {
+      return c.json({ error: "Availability slot not found" }, 404)
+    }
+
+    if (result.status === "insufficient_capacity") {
+      return c.json({ error: "Insufficient slot capacity" }, 409)
+    }
+
+    if (result.status === "slot_unavailable") {
+      return c.json({ error: "Availability slot is not bookable" }, 409)
+    }
+
+    if (result.status === "slot_product_mismatch" || result.status === "slot_option_mismatch") {
+      return c.json({ error: "Reservation item does not match availability slot" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking }, 201)
+    }
+
+    return c.json({ error: "Unable to reserve booking from offer" }, 400)
+  })
+
+  // 3c. POST /from-order/:orderId/reserve — Reserve booking from transaction order
+  .post("/from-order/:orderId/reserve", async (c) => {
+    const result = await bookingsService.reserveBookingFromOrder(
+      c.get("db"),
+      c.req.param("orderId"),
+      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Order not found" }, 404)
+    }
+
+    if (result.status === "slot_not_found") {
+      return c.json({ error: "Availability slot not found" }, 404)
+    }
+
+    if (result.status === "insufficient_capacity") {
+      return c.json({ error: "Insufficient slot capacity" }, 409)
+    }
+
+    if (result.status === "slot_unavailable") {
+      return c.json({ error: "Availability slot is not bookable" }, 409)
+    }
+
+    if (result.status === "slot_product_mismatch" || result.status === "slot_option_mismatch") {
+      return c.json({ error: "Reservation item does not match availability slot" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking }, 201)
+    }
+
+    return c.json({ error: "Unable to reserve booking from order" }, 400)
+  })
+
+  // 4. POST / — Create booking (manual/backoffice only)
+  .post("/", async (c) => {
+    const payload = await c.req.json()
+    const parsed = createBookingSchema.safeParse(payload)
+
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: parsed.error.issues[0]?.message ?? "Invalid booking create payload",
+          details: parsed.error.flatten(),
+        },
+        400,
+      )
+    }
+
+    return c.json(
+      {
+        data: await bookingsService.createBooking(
+          c.get("db"),
+          parsed.data,
+          c.get("userId"),
+        ),
+      },
+      201,
+    )
+  })
+
+  // 5. PATCH /:id — Update booking
+  .patch("/:id", async (c) => {
+    const row = await bookingsService.updateBooking(
+      c.get("db"),
+      c.req.param("id"),
+      updateBookingSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // 6. DELETE /:id — Delete booking
+  .delete("/:id", async (c) => {
+    const row = await bookingsService.deleteBooking(c.get("db"), c.req.param("id"))
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ==========================================================================
+  // Status
+  // ==========================================================================
+
+  // 7. PATCH /:id/status — Change booking status
+  .patch("/:id/status", async (c) => {
+    const result = await bookingsService.updateBookingStatus(
+      c.get("db"),
+      c.req.param("id"),
+      updateBookingStatusSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Invalid booking status transition" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to update booking status" }, 400)
+  })
+
+  // 8. POST /:id/confirm — Confirm an on-hold booking
+  .post("/:id/confirm", async (c) => {
+    const result = await bookingsService.confirmBooking(
+      c.get("db"),
+      c.req.param("id"),
+      confirmBookingSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "hold_expired") {
+      return c.json({ error: "Booking hold has expired" }, 409)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking is not in an on-hold state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to confirm booking" }, 400)
+  })
+
+  // 9. POST /:id/extend-hold — Extend booking hold expiry
+  .post("/:id/extend-hold", async (c) => {
+    const result = await bookingsService.extendBookingHold(
+      c.get("db"),
+      c.req.param("id"),
+      extendBookingHoldSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "hold_expired") {
+      return c.json({ error: "Booking hold has expired" }, 409)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking is not in an on-hold state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to extend booking hold" }, 400)
+  })
+
+  // 10. POST /:id/expire — Expire an on-hold booking
+  .post("/:id/expire", async (c) => {
+    const result = await bookingsService.expireBooking(
+      c.get("db"),
+      c.req.param("id"),
+      expireBookingSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking is not in an on-hold state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to expire booking" }, 400)
+  })
+
+  // 10b. POST /expire-stale — Expire all stale on-hold bookings up to a cutoff
+  .post("/expire-stale", async (c) => {
+    return c.json(
+      await bookingsService.expireStaleBookings(
+        c.get("db"),
+        expireStaleBookingsSchema.parse(await c.req.json()),
+        c.get("userId"),
+      ),
+    )
+  })
+
+  // 11. POST /:id/cancel — Cancel a booking and release allocations
+  .post("/:id/cancel", async (c) => {
+    const result = await bookingsService.cancelBooking(
+      c.get("db"),
+      c.req.param("id"),
+      cancelBookingSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking cannot be cancelled from its current state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to cancel booking" }, 400)
+  })
+
+  // ==========================================================================
+  // Participants
+  // ==========================================================================
+
+  // 12. GET /:id/allocations — List booking allocations
+  .get("/:id/allocations", async (c) => {
+    return c.json({ data: await bookingsService.listAllocations(c.get("db"), c.req.param("id")) })
+  })
+
+  // 13. GET /:id/participants — List participants
+  .get("/:id/participants", async (c) => {
+    return c.json({ data: await bookingsService.listParticipants(c.get("db"), c.req.param("id")) })
+  })
+
+  // 13a. GET /:id/participants/:participantId/travel-details — Read encrypted travel details
+  .get("/:id/participants/:participantId/travel-details", async (c) => {
+    const auth = await authorizeBookingPiiAccess(c, {
+      bookingId: c.req.param("id"),
+      participantId: c.req.param("participantId"),
+      action: "read",
+    })
+    if (!auth.allowed) {
+      return auth.response
+    }
+
+    const participant = await bookingsService.getParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("participantId"),
+    )
+
+    if (!participant) {
+      await logBookingPiiAccess(c, {
+        bookingId: c.req.param("id"),
+        participantId: c.req.param("participantId"),
+        action: "read",
+        outcome: "denied",
+        reason: "participant_not_found",
+      })
+      return c.json({ error: "Participant not found" }, 404)
+    }
+
+    try {
+      const pii = createBookingPiiService({
+        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
+        onAudit: async (event) => {
+          await logBookingPiiAccess(c, {
+            bookingId: participant.bookingId,
+            participantId: event.participantId,
+            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            outcome: "allowed",
+          })
+        },
+      })
+      const details = await pii.getParticipantTravelDetails(
+        c.get("db"),
+        participant.id,
+        c.get("userId"),
+      )
+
+      if (!details) {
+        await logBookingPiiAccess(c, {
+          bookingId: participant.bookingId,
+          participantId: participant.id,
+          action: "read",
+          outcome: "denied",
+          reason: "travel_details_not_found",
+        })
+        return c.json({ error: "Participant travel details not found" }, 404)
+      }
+
+      return c.json({ data: details })
+    } catch (error) {
+      return handleKmsConfigError(c, error)
+    }
+  })
+
+  // 9. POST /:id/participants — Add participant
+  .post("/:id/participants", async (c) => {
+    const row = await bookingsService.createParticipant(
+      c.get("db"),
+      c.req.param("id"),
+      insertParticipantSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 9a. PATCH /:id/participants/:participantId/travel-details — Upsert encrypted travel details
+  .patch("/:id/participants/:participantId/travel-details", async (c) => {
+    const auth = await authorizeBookingPiiAccess(c, {
+      bookingId: c.req.param("id"),
+      participantId: c.req.param("participantId"),
+      action: "update",
+    })
+    if (!auth.allowed) {
+      return auth.response
+    }
+
+    const participant = await bookingsService.getParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("participantId"),
+    )
+
+    if (!participant) {
+      await logBookingPiiAccess(c, {
+        bookingId: c.req.param("id"),
+        participantId: c.req.param("participantId"),
+        action: "update",
+        outcome: "denied",
+        reason: "participant_not_found",
+      })
+      return c.json({ error: "Participant not found" }, 404)
+    }
+
+    try {
+      const pii = createBookingPiiService({
+        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
+        onAudit: async (event) => {
+          await logBookingPiiAccess(c, {
+            bookingId: participant.bookingId,
+            participantId: event.participantId,
+            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            outcome: "allowed",
+          })
+        },
+      })
+      const row = await pii.upsertParticipantTravelDetails(
+        c.get("db"),
+        participant.id,
+        upsertParticipantTravelDetailsSchema.parse(await c.req.json()),
+        c.get("userId"),
+      )
+
+      if (!row) {
+        return c.json({ error: "Participant not found" }, 404)
+      }
+
+      return c.json({ data: row })
+    } catch (error) {
+      return handleKmsConfigError(c, error)
+    }
+  })
+
+  // 10. PATCH /:id/participants/:participantId — Update participant
+  .patch("/:id/participants/:participantId", async (c) => {
+    const row = await bookingsService.updateParticipant(
+      c.get("db"),
+      c.req.param("participantId"),
+      updateParticipantSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Participant not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // 10a. DELETE /:id/participants/:participantId/travel-details — Delete encrypted travel details
+  .delete("/:id/participants/:participantId/travel-details", async (c) => {
+    const auth = await authorizeBookingPiiAccess(c, {
+      bookingId: c.req.param("id"),
+      participantId: c.req.param("participantId"),
+      action: "delete",
+    })
+    if (!auth.allowed) {
+      return auth.response
+    }
+
+    const participant = await bookingsService.getParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("participantId"),
+    )
+
+    if (!participant) {
+      await logBookingPiiAccess(c, {
+        bookingId: c.req.param("id"),
+        participantId: c.req.param("participantId"),
+        action: "delete",
+        outcome: "denied",
+        reason: "participant_not_found",
+      })
+      return c.json({ error: "Participant not found" }, 404)
+    }
+
+    try {
+      const pii = createBookingPiiService({
+        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
+        onAudit: async (event) => {
+          await logBookingPiiAccess(c, {
+            bookingId: participant.bookingId,
+            participantId: event.participantId,
+            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            outcome: "allowed",
+          })
+        },
+      })
+      const row = await pii.deleteParticipantTravelDetails(
+        c.get("db"),
+        participant.id,
+        c.get("userId"),
+      )
+
+      if (!row) {
+        return c.json({ error: "Participant travel details not found" }, 404)
+      }
+
+      return c.json({ success: true }, 200)
+    } catch (error) {
+      return handleKmsConfigError(c, error)
+    }
+  })
+
+  // 11. DELETE /:id/participants/:participantId — Delete participant
+  .delete("/:id/participants/:participantId", async (c) => {
+    const row = await bookingsService.deleteParticipant(c.get("db"), c.req.param("participantId"))
+
+    if (!row) {
+      return c.json({ error: "Participant not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ==========================================================================
+  // Passengers (legacy compatibility)
+  // ==========================================================================
+
+  // 12. GET /:id/passengers — List passengers
+  .get("/:id/passengers", async (c) => {
+    return c.json({ data: await bookingsService.listPassengers(c.get("db"), c.req.param("id")) })
+  })
+
+  // 13. POST /:id/passengers — Add passenger
+  .post("/:id/passengers", async (c) => {
+    const row = await bookingsService.createPassenger(
+      c.get("db"),
+      c.req.param("id"),
+      insertPassengerSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 14. PATCH /:id/passengers/:passengerId — Update passenger
+  .patch("/:id/passengers/:passengerId", async (c) => {
+    const row = await bookingsService.updatePassenger(
+      c.get("db"),
+      c.req.param("passengerId"),
+      updatePassengerSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Passenger not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // 15. DELETE /:id/passengers/:passengerId — Delete passenger
+  .delete("/:id/passengers/:passengerId", async (c) => {
+    const row = await bookingsService.deletePassenger(c.get("db"), c.req.param("passengerId"))
+
+    if (!row) {
+      return c.json({ error: "Passenger not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ==========================================================================
+  // Items
+  // ==========================================================================
+
+  // 16. GET /:id/items — List booking items
+  .get("/:id/items", async (c) => {
+    return c.json({ data: await bookingsService.listItems(c.get("db"), c.req.param("id")) })
+  })
+
+  // 17. POST /:id/items — Add booking item
+  .post("/:id/items", async (c) => {
+    const row = await bookingsService.createItem(
+      c.get("db"),
+      c.req.param("id"),
+      insertBookingItemSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 18. PATCH /:id/items/:itemId — Update booking item
+  .patch("/:id/items/:itemId", async (c) => {
+    const row = await bookingsService.updateItem(
+      c.get("db"),
+      c.req.param("itemId"),
+      updateBookingItemSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // 19. DELETE /:id/items/:itemId — Delete booking item
+  .delete("/:id/items/:itemId", async (c) => {
+    const row = await bookingsService.deleteItem(c.get("db"), c.req.param("itemId"))
+
+    if (!row) {
+      return c.json({ error: "Booking item not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // 20. GET /:id/items/:itemId/participants — List item participants
+  .get("/:id/items/:itemId/participants", async (c) => {
+    return c.json({
+      data: await bookingsService.listItemParticipants(c.get("db"), c.req.param("itemId")),
+    })
+  })
+
+  // 21. POST /:id/items/:itemId/participants — Link participant to item
+  .post("/:id/items/:itemId/participants", async (c) => {
+    const row = await bookingsService.addItemParticipant(
+      c.get("db"),
+      c.req.param("itemId"),
+      insertBookingItemParticipantSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item or participant not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 22. DELETE /:id/items/:itemId/participants/:linkId — Unlink participant from item
+  .delete("/:id/items/:itemId/participants/:linkId", async (c) => {
+    const row = await bookingsService.removeItemParticipant(c.get("db"), c.req.param("linkId"))
+
+    if (!row) {
+      return c.json({ error: "Booking item participant link not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ==========================================================================
+  // Supplier Statuses
+  // ==========================================================================
+
+  .get("/:id/supplier-statuses", async (c) => {
+    return c.json({
+      data: await bookingsService.listSupplierStatuses(c.get("db"), c.req.param("id")),
+    })
+  })
+
+  .post("/:id/supplier-statuses", async (c) => {
+    const row = await bookingsService.createSupplierStatus(
+      c.get("db"),
+      c.req.param("id"),
+      insertSupplierStatusSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/:id/supplier-statuses/:statusId", async (c) => {
+    const row = await bookingsService.updateSupplierStatus(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("statusId"),
+      updateSupplierStatusSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Supplier status not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // ==========================================================================
+  // Fulfillment
+  // ==========================================================================
+
+  .get("/:id/fulfillments", async (c) => {
+    return c.json({ data: await bookingsService.listFulfillments(c.get("db"), c.req.param("id")) })
+  })
+
+  .post("/:id/fulfillments", async (c) => {
+    const row = await bookingsService.issueFulfillment(
+      c.get("db"),
+      c.req.param("id"),
+      insertBookingFulfillmentSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking, item, or participant not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/:id/fulfillments/:fulfillmentId", async (c) => {
+    const row = await bookingsService.updateFulfillment(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("fulfillmentId"),
+      updateBookingFulfillmentSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Fulfillment, item, or participant not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // ==========================================================================
+  // Redemption
+  // ==========================================================================
+
+  .get("/:id/redemptions", async (c) => {
+    return c.json({
+      data: await bookingsService.listRedemptionEvents(c.get("db"), c.req.param("id")),
+    })
+  })
+
+  .post("/:id/redemptions", async (c) => {
+    const row = await bookingsService.recordRedemption(
+      c.get("db"),
+      c.req.param("id"),
+      recordBookingRedemptionSchema.parse(await c.req.json()),
+      c.get("userId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking, item, or participant not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ==========================================================================
+  // Activity Log
+  // ==========================================================================
+
+  // 26. GET /:id/activity — List activity log
+  .get("/:id/activity", async (c) => {
+    return c.json({ data: await bookingsService.listActivity(c.get("db"), c.req.param("id")) })
+  })
+
+  // ==========================================================================
+  // Notes
+  // ==========================================================================
+
+  // 27. GET /:id/notes — List notes
+  .get("/:id/notes", async (c) => {
+    return c.json({ data: await bookingsService.listNotes(c.get("db"), c.req.param("id")) })
+  })
+
+  // 28. POST /:id/notes — Add note
+  .post("/:id/notes", async (c) => {
+    const userId = c.get("userId")
+
+    if (!userId) {
+      return c.json({ error: "User ID required to create notes" }, 400)
+    }
+    const row = await bookingsService.createNote(
+      c.get("db"),
+      c.req.param("id"),
+      userId,
+      insertBookingNoteSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ==========================================================================
+  // Documents
+  // ==========================================================================
+
+  // 29. GET /:id/documents — List documents for booking
+  .get("/:id/documents", async (c) => {
+    return c.json({ data: await bookingsService.listDocuments(c.get("db"), c.req.param("id")) })
+  })
+
+  // 30. POST /:id/documents — Add document to booking
+  .post("/:id/documents", async (c) => {
+    const row = await bookingsService.createDocument(
+      c.get("db"),
+      c.req.param("id"),
+      insertBookingDocumentSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // 31. DELETE /:id/documents/:documentId — Delete document
+  .delete("/:id/documents/:documentId", async (c) => {
+    const row = await bookingsService.deleteDocument(c.get("db"), c.req.param("documentId"))
+
+    if (!row) {
+      return c.json({ error: "Document not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+export type BookingRoutes = typeof bookingRoutes

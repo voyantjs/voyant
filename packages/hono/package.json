@@ -1,0 +1,125 @@
+{
+  "name": "@voyantjs/hono",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts",
+    "./module": "./src/module.ts",
+    "./plugin": "./src/plugin.ts",
+    "./types": "./src/types.ts",
+    "./middleware": "./src/middleware/index.ts",
+    "./middleware/auth": "./src/middleware/auth.ts",
+    "./middleware/cors": "./src/middleware/cors.ts",
+    "./middleware/error-boundary": "./src/middleware/error-boundary.ts",
+    "./middleware/db": "./src/middleware/db.ts",
+    "./middleware/rate-limit": "./src/middleware/rate-limit.ts",
+    "./middleware/require-actor": "./src/middleware/require-actor.ts",
+    "./middleware/require-permission": "./src/middleware/require-permission.ts",
+    "./middleware/logger": "./src/middleware/logger.ts",
+    "./auth": "./src/auth/index.ts",
+    "./auth/session-jwt": "./src/auth/session-jwt.ts",
+    "./auth/crypto": "./src/auth/crypto.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@voyantjs/core": "workspace:*",
+    "@voyantjs/db": "workspace:*",
+    "@voyantjs/types": "workspace:*",
+    "@voyantjs/utils": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.10"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260403.1",
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./app": {
+        "types": "./dist/app.d.ts",
+        "import": "./dist/app.js"
+      },
+      "./module": {
+        "types": "./dist/module.d.ts",
+        "import": "./dist/module.js"
+      },
+      "./plugin": {
+        "types": "./dist/plugin.d.ts",
+        "import": "./dist/plugin.js"
+      },
+      "./types": {
+        "types": "./dist/types.d.ts",
+        "import": "./dist/types.js"
+      },
+      "./middleware": {
+        "types": "./dist/middleware/index.d.ts",
+        "import": "./dist/middleware/index.js"
+      },
+      "./middleware/auth": {
+        "types": "./dist/middleware/auth.d.ts",
+        "import": "./dist/middleware/auth.js"
+      },
+      "./middleware/cors": {
+        "types": "./dist/middleware/cors.d.ts",
+        "import": "./dist/middleware/cors.js"
+      },
+      "./middleware/error-boundary": {
+        "types": "./dist/middleware/error-boundary.d.ts",
+        "import": "./dist/middleware/error-boundary.js"
+      },
+      "./middleware/db": {
+        "types": "./dist/middleware/db.d.ts",
+        "import": "./dist/middleware/db.js"
+      },
+      "./middleware/rate-limit": {
+        "types": "./dist/middleware/rate-limit.d.ts",
+        "import": "./dist/middleware/rate-limit.js"
+      },
+      "./middleware/require-actor": {
+        "types": "./dist/middleware/require-actor.d.ts",
+        "import": "./dist/middleware/require-actor.js"
+      },
+      "./middleware/require-permission": {
+        "types": "./dist/middleware/require-permission.d.ts",
+        "import": "./dist/middleware/require-permission.js"
+      },
+      "./middleware/logger": {
+        "types": "./dist/middleware/logger.d.ts",
+        "import": "./dist/middleware/logger.js"
+      },
+      "./auth": {
+        "types": "./dist/auth/index.d.ts",
+        "import": "./dist/auth/index.js"
+      },
+      "./auth/session-jwt": {
+        "types": "./dist/auth/session-jwt.d.ts",
+        "import": "./dist/auth/session-jwt.js"
+      },
+      "./auth/crypto": {
+        "types": "./dist/auth/crypto.d.ts",
+        "import": "./dist/auth/crypto.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  }
+}

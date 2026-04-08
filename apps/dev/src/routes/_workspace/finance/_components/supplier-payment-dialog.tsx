@@ -1,0 +1,234 @@
+import { Loader2 } from "lucide-react"
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod/v4"
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/components/ui"
+import { api } from "@/lib/api-client"
+import { zodResolver } from "@/lib/zod-resolver"
+
+const supplierPaymentFormSchema = z.object({
+  bookingId: z.string().min(1, "Booking ID is required"),
+  supplierId: z.string().optional().nullable(),
+  amountCents: z.coerce.number().int().min(1, "Amount must be at least 1"),
+  currency: z.string().min(3).max(3),
+  paymentMethod: z.enum(["bank_transfer", "credit_card", "cash", "cheque", "other"]),
+  status: z.enum(["pending", "completed", "failed", "refunded"]),
+  referenceNumber: z.string().optional().nullable(),
+  paymentDate: z.string().min(1, "Payment date is required"),
+  notes: z.string().optional().nullable(),
+})
+
+type SupplierPaymentFormValues = z.input<typeof supplierPaymentFormSchema>
+type SupplierPaymentFormOutput = z.output<typeof supplierPaymentFormSchema>
+
+type SupplierPaymentDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+}
+
+const PAYMENT_METHODS = [
+  { value: "bank_transfer", label: "Bank Transfer" },
+  { value: "credit_card", label: "Credit Card" },
+  { value: "cash", label: "Cash" },
+  { value: "cheque", label: "Cheque" },
+  { value: "other", label: "Other" },
+] as const
+
+const PAYMENT_STATUSES = [
+  { value: "pending", label: "Pending" },
+  { value: "completed", label: "Completed" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" },
+] as const
+
+export function SupplierPaymentDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: SupplierPaymentDialogProps) {
+  const form = useForm<SupplierPaymentFormValues, unknown, SupplierPaymentFormOutput>({
+    resolver: zodResolver(supplierPaymentFormSchema),
+    defaultValues: {
+      bookingId: "",
+      supplierId: "",
+      amountCents: 0,
+      currency: "EUR",
+      paymentMethod: "bank_transfer",
+      status: "completed",
+      referenceNumber: "",
+      paymentDate: "",
+      notes: "",
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      const today = new Date().toISOString().split("T")[0]!
+      form.reset({
+        bookingId: "",
+        supplierId: "",
+        amountCents: 0,
+        currency: "EUR",
+        paymentMethod: "bank_transfer",
+        status: "completed",
+        referenceNumber: "",
+        paymentDate: today,
+        notes: "",
+      })
+    }
+  }, [open, form])
+
+  const onSubmit = async (values: SupplierPaymentFormOutput) => {
+    const payload = {
+      bookingId: values.bookingId,
+      supplierId: values.supplierId || null,
+      amountCents: values.amountCents,
+      currency: values.currency,
+      paymentMethod: values.paymentMethod,
+      status: values.status,
+      referenceNumber: values.referenceNumber || null,
+      paymentDate: values.paymentDate,
+      notes: values.notes || null,
+    }
+
+    await api.post("/v1/finance/supplier-payments", payload)
+    onSuccess()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Record Supplier Payment</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogBody className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Booking ID</Label>
+                <Input {...form.register("bookingId")} placeholder="book_..." />
+                {form.formState.errors.bookingId && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.bookingId.message}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Supplier ID (optional)</Label>
+                <Input {...form.register("supplierId")} placeholder="supp_..." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Amount (cents)</Label>
+                <Input {...form.register("amountCents")} type="number" min="1" />
+                {form.formState.errors.amountCents && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.amountCents.message}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Currency</Label>
+                <Input
+                  {...form.register("currency")}
+                  placeholder="EUR"
+                  maxLength={3}
+                  className="uppercase"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Payment Date</Label>
+                <Input {...form.register("paymentDate")} type="date" />
+                {form.formState.errors.paymentDate && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.paymentDate.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Payment Method</Label>
+                <Select
+                  value={form.watch("paymentMethod")}
+                  onValueChange={(v) =>
+                    form.setValue("paymentMethod", v as SupplierPaymentFormValues["paymentMethod"])
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Status</Label>
+                <Select
+                  value={form.watch("status")}
+                  onValueChange={(v) =>
+                    form.setValue("status", v as SupplierPaymentFormValues["status"])
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_STATUSES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Reference Number</Label>
+                <Input {...form.register("referenceNumber")} placeholder="TXN-12345" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label>Notes</Label>
+              <Textarea {...form.register("notes")} placeholder="Payment notes..." />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Record Payment
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

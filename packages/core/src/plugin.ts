@@ -1,0 +1,126 @@
+/**
+ * Plugins — distributable bundles that group modules, extensions, event
+ * subscribers, and link definitions into a single unit.
+ *
+ * A plugin is the unit of "distribution" in Voyant: a customer, vendor, or
+ * integrator ships a plugin package and it can be registered alongside core
+ * modules without touching the framework itself.
+ *
+ * Core plugins are transport-agnostic — they contain {@link Module} and
+ * {@link Extension} values (no HTTP routes). Transport adapters (such as
+ * `@voyantjs/hono`) layer their own plugin shape on top of this
+ * contract to carry route bundles.
+ */
+
+import type { EventBus, EventHandler } from "./events.js"
+import type { LinkDefinition } from "./links.js"
+import type { Extension, Module } from "./module.js"
+
+/**
+ * A single event subscription contributed by a plugin.
+ *
+ * When the plugin is registered, `handler` is attached to the provided
+ * {@link EventBus} for the given `event` name.
+ */
+export interface Subscriber<TData = unknown> {
+  /** Event name, following `<resource>.<pastTenseAction>` convention. */
+  event: string
+  /** Callback invoked when the event is emitted. */
+  handler: EventHandler<TData>
+}
+
+/**
+ * A transport-agnostic plugin bundle.
+ *
+ * Plugins contribute any combination of:
+ * - {@link Module} values (core domain primitives)
+ * - {@link Extension} values (hook attachments to existing modules)
+ * - {@link Subscriber} values (event listeners)
+ * - {@link LinkDefinition} values (cross-module associations)
+ *
+ * Transport adapters can intersect this shape with their own fields (see
+ * `HonoPlugin` in `@voyantjs/hono` for the Hono variant).
+ */
+export interface Plugin {
+  /** Unique plugin identifier (e.g. "payload-cms", "bokun"). */
+  name: string
+  /** Optional version tag for diagnostics. */
+  version?: string
+  /** Modules contributed by the plugin. */
+  modules?: Module[]
+  /** Extensions contributed by the plugin. */
+  extensions?: Extension[]
+  /** Event subscribers wired to the caller's {@link EventBus} at registration. */
+  subscribers?: Subscriber[]
+  /** Link definitions contributed by the plugin. */
+  links?: LinkDefinition[]
+}
+
+/**
+ * Identity helper that returns the plugin as-is. Exists purely so authors
+ * can write `definePlugin({ ... })` and get inference + IDE help without
+ * casting.
+ */
+export function definePlugin<P extends Plugin>(plugin: P): P {
+  return plugin
+}
+
+/**
+ * Result of flattening a set of plugins.
+ */
+export interface RegisteredPlugins {
+  /** All modules contributed by the supplied plugins, in registration order. */
+  modules: Module[]
+  /** All extensions contributed by the supplied plugins. */
+  extensions: Extension[]
+  /** All link definitions contributed by the supplied plugins. */
+  links: LinkDefinition[]
+  /** All subscribers contributed, in registration order. */
+  subscribers: Subscriber[]
+  /** Subscription handles for subscribers attached to the event bus. */
+  subscriptions: Array<{ unsubscribe(): void }>
+}
+
+export interface RegisterPluginsOptions {
+  /** Event bus to attach subscribers to. If omitted, subscribers are collected but not wired. */
+  eventBus?: EventBus
+}
+
+/**
+ * Flatten a list of plugins into their constituent pieces and optionally
+ * attach event subscribers to an {@link EventBus}.
+ *
+ * Throws if two plugins declare the same `name`.
+ */
+export function registerPlugins(
+  plugins: ReadonlyArray<Plugin>,
+  options: RegisterPluginsOptions = {},
+): RegisteredPlugins {
+  const seen = new Set<string>()
+  const modules: Module[] = []
+  const extensions: Extension[] = []
+  const links: LinkDefinition[] = []
+  const subscribers: Subscriber[] = []
+  const subscriptions: Array<{ unsubscribe(): void }> = []
+
+  for (const plugin of plugins) {
+    if (seen.has(plugin.name)) {
+      throw new Error(`Duplicate plugin name: "${plugin.name}"`)
+    }
+    seen.add(plugin.name)
+
+    if (plugin.modules) modules.push(...plugin.modules)
+    if (plugin.extensions) extensions.push(...plugin.extensions)
+    if (plugin.links) links.push(...plugin.links)
+    if (plugin.subscribers) {
+      for (const sub of plugin.subscribers) {
+        subscribers.push(sub)
+        if (options.eventBus) {
+          subscriptions.push(options.eventBus.subscribe(sub.event, sub.handler))
+        }
+      }
+    }
+  }
+
+  return { modules, extensions, links, subscribers, subscriptions }
+}

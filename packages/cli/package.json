@@ -1,0 +1,90 @@
+{
+  "name": "@voyantjs/cli",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "type": "module",
+  "bin": {
+    "voyant": "./bin/voyant.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./commands/generate-module": "./src/commands/generate-module.ts",
+    "./commands/generate-link": "./src/commands/generate-link.ts",
+    "./commands/config": "./src/commands/config.ts",
+    "./commands/db-sync-links": "./src/commands/db-sync-links.ts",
+    "./commands/exec": "./src/commands/exec.ts",
+    "./commands/new": "./src/commands/new.ts",
+    "./lib/strings": "./src/lib/strings.ts",
+    "./lib/args": "./src/lib/args.ts",
+    "./lib/config-loader": "./src/lib/config-loader.ts"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/sync-templates.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@voyantjs/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "@types/node": "^22.10.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./commands/generate-module": {
+        "types": "./dist/commands/generate-module.d.ts",
+        "import": "./dist/commands/generate-module.js"
+      },
+      "./commands/generate-link": {
+        "types": "./dist/commands/generate-link.d.ts",
+        "import": "./dist/commands/generate-link.js"
+      },
+      "./commands/config": {
+        "types": "./dist/commands/config.d.ts",
+        "import": "./dist/commands/config.js"
+      },
+      "./commands/db-sync-links": {
+        "types": "./dist/commands/db-sync-links.d.ts",
+        "import": "./dist/commands/db-sync-links.js"
+      },
+      "./commands/exec": {
+        "types": "./dist/commands/exec.d.ts",
+        "import": "./dist/commands/exec.js"
+      },
+      "./commands/new": {
+        "types": "./dist/commands/new.d.ts",
+        "import": "./dist/commands/new.js"
+      },
+      "./lib/strings": {
+        "types": "./dist/lib/strings.d.ts",
+        "import": "./dist/lib/strings.js"
+      },
+      "./lib/args": {
+        "types": "./dist/lib/args.d.ts",
+        "import": "./dist/lib/args.js"
+      },
+      "./lib/config-loader": {
+        "types": "./dist/lib/config-loader.d.ts",
+        "import": "./dist/lib/config-loader.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  }
+}

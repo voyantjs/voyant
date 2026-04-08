@@ -1,0 +1,73 @@
+import type { VoyantPermission } from "@voyantjs/core"
+import type { MiddlewareHandler } from "hono"
+
+import type { DbFactory, VoyantAuthIntegration, VoyantBindings, VoyantVariables } from "../types.js"
+
+function hasScope(scopes: string[] | null | undefined, permission: VoyantPermission): boolean {
+  if (!scopes || scopes.length === 0) return false
+
+  const { resource, action } = permission
+  return (
+    scopes.includes("*") ||
+    scopes.includes(`${resource}:${action}`) ||
+    scopes.includes(`${resource}:*`) ||
+    scopes.includes(`*:${action}`)
+  )
+}
+
+export function requirePermission<TBindings extends VoyantBindings>(
+  dbFactory: DbFactory<TBindings>,
+  resource: string,
+  action: string,
+  opts?: {
+    auth?: VoyantAuthIntegration<TBindings>
+  },
+): MiddlewareHandler<{
+  Bindings: TBindings
+  Variables: VoyantVariables
+}> {
+  return async (c, next) => {
+    const permission: VoyantPermission = { resource, action }
+
+    if (c.get("isInternalRequest")) {
+      return next()
+    }
+
+    const scopes = c.get("scopes")
+    if (hasScope(scopes, permission)) {
+      return next()
+    }
+
+    const userId = c.get("userId")
+    if (!userId) {
+      return c.json({ error: "Unauthorized" }, 401)
+    }
+
+    if (!opts?.auth?.hasPermission) {
+      return c.json({ error: "No auth permission checker configured" }, 500)
+    }
+
+    const allowed = await opts.auth.hasPermission({
+      request: c.req.raw,
+      env: c.env,
+      db: dbFactory(c.env),
+      ctx: c.executionCtx,
+      auth: {
+        userId,
+        sessionId: c.get("sessionId"),
+        organizationId: c.get("organizationId"),
+        callerType: c.get("callerType"),
+        scopes,
+        isInternalRequest: c.get("isInternalRequest"),
+        apiKeyId: c.get("apiKeyId"),
+      },
+      permission,
+    })
+
+    if (!allowed) {
+      return c.json({ error: "Forbidden" }, 403)
+    }
+
+    return next()
+  }
+}

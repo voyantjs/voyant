@@ -1,0 +1,57 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage
+
+# Turbo
+.turbo
+
+# Vercel
+.vercel
+
+# Build Outputs
+.next/
+.open-next/
+out/
+build
+dist
+
+# Cloudflare Wrangler
+.wrangler/
+
+# Hatchet
+.hatchet/
+
+# Debug
+npm-debug.log*
+
+# TypeScript build artifacts
+*.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Misc
+.DS_Store
+*.pem
+
+# Local agent / editor state (per-machine)
+.claude/
+.agents/
+.cursor/
+
+# Scratch test artifacts
+voyant-exec-test.ts
+
+# Generated CLI starter bundle
+packages/cli/templates/

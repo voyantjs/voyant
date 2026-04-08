@@ -1,0 +1,2824 @@
+import { and, asc, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import type { z } from "zod"
+
+import { availabilitySlotsRef } from "./availability-ref.js"
+import {
+  bookingItemProductDetailsRef,
+  bookingProductDetailsRef,
+  optionUnitsRef,
+  productDayServicesRef,
+  productDaysRef,
+  productOptionsRef,
+  productTicketSettingsRef,
+  productsRef,
+} from "./products-ref.js"
+import {
+  bookingActivityLog,
+  bookingAllocations,
+  bookingDocuments,
+  bookingFulfillments,
+  bookingItemParticipants,
+  bookingItems,
+  bookingNotes,
+  bookingParticipants,
+  bookingRedemptionEvents,
+  bookingSupplierStatuses,
+  bookings,
+} from "./schema.js"
+import {
+  bookingTransactionDetailsRef,
+  offerItemParticipantsRef,
+  offerItemsRef,
+  offerParticipantsRef,
+  offersRef,
+  orderItemParticipantsRef,
+  orderItemsRef,
+  orderParticipantsRef,
+  ordersRef,
+} from "./transactions-ref.js"
+import type {
+  bookingListQuerySchema,
+  cancelBookingSchema,
+  confirmBookingSchema,
+  convertProductSchema,
+  extendBookingHoldSchema,
+  expireBookingSchema,
+  expireStaleBookingsSchema,
+  insertBookingFulfillmentSchema,
+  insertBookingDocumentSchema,
+  insertBookingItemParticipantSchema,
+  insertBookingItemSchema,
+  insertBookingNoteSchema,
+  insertBookingSchema,
+  insertParticipantSchema,
+  insertPassengerSchema,
+  reserveBookingFromTransactionSchema,
+  recordBookingRedemptionSchema,
+  reserveBookingSchema,
+  updateBookingFulfillmentSchema,
+  updateBookingItemSchema,
+  updateBookingSchema,
+  updateBookingStatusSchema,
+  updateParticipantSchema,
+  updatePassengerSchema,
+} from "./validation.js"
+
+type BookingListQuery = z.infer<typeof bookingListQuerySchema>
+type ConvertProductInput = z.infer<typeof convertProductSchema>
+type CreateBookingInput = z.infer<typeof insertBookingSchema>
+type UpdateBookingInput = z.infer<typeof updateBookingSchema>
+type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>
+type ReserveBookingInput = z.infer<typeof reserveBookingSchema>
+type ExtendBookingHoldInput = z.infer<typeof extendBookingHoldSchema>
+type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>
+type CancelBookingInput = z.infer<typeof cancelBookingSchema>
+type ExpireBookingInput = z.infer<typeof expireBookingSchema>
+type ExpireStaleBookingsInput = z.infer<typeof expireStaleBookingsSchema>
+type CreatePassengerInput = z.infer<typeof insertPassengerSchema>
+type UpdatePassengerInput = z.infer<typeof updatePassengerSchema>
+type CreateParticipantInput = z.infer<typeof insertParticipantSchema>
+type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>
+type CreateBookingItemInput = z.infer<typeof insertBookingItemSchema>
+type UpdateBookingItemInput = z.infer<typeof updateBookingItemSchema>
+type CreateBookingItemParticipantInput = z.infer<typeof insertBookingItemParticipantSchema>
+type CreateBookingNoteInput = z.infer<typeof insertBookingNoteSchema>
+type CreateBookingDocumentInput = z.infer<typeof insertBookingDocumentSchema>
+type CreateBookingFulfillmentInput = z.infer<typeof insertBookingFulfillmentSchema>
+type UpdateBookingFulfillmentInput = z.infer<typeof updateBookingFulfillmentSchema>
+type RecordBookingRedemptionInput = z.infer<typeof recordBookingRedemptionSchema>
+type ReserveBookingFromTransactionInput = z.infer<typeof reserveBookingFromTransactionSchema>
+
+/** Product data needed for convertProductToBooking — supplied by the caller (template). */
+export interface ConvertProductData {
+  product: {
+    id: string
+    name: string
+    description: string | null
+    sellCurrency: string
+    sellAmountCents: number | null
+    costAmountCents: number | null
+    marginPercent: number | null
+    startDate: string | null
+    endDate: string | null
+    pax: number | null
+  }
+  option: { id: string; name: string } | null
+  dayServices: Array<{
+    supplierServiceId: string | null
+    name: string
+    costCurrency: string
+    costAmountCents: number
+  }>
+  units: Array<{
+    id: string
+    name: string
+    description: string | null
+    unitType: string | null
+    isRequired: boolean
+    minQuantity: number | null
+    sortOrder: number
+  }>
+}
+
+type ProductOptionReference = typeof productOptionsRef.$inferSelect
+type OptionUnitReference = typeof optionUnitsRef.$inferSelect
+
+const travelerParticipantTypes = ["traveler", "occupant"] as const
+
+class BookingServiceError extends Error {
+  constructor(readonly code: string, message?: string) {
+    super(message ?? code)
+    this.name = "BookingServiceError"
+  }
+}
+
+function toTimestamp(value?: string | null) {
+  return value ? new Date(value) : null
+}
+
+function toDateValue(value: Date | string) {
+  return value instanceof Date ? value : new Date(value)
+}
+
+function toDateValueOrNull(value: Date | string | null) {
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
+}
+
+function toPassengerResponse(participant: typeof bookingParticipants.$inferSelect) {
+  return {
+    id: participant.id,
+    bookingId: participant.bookingId,
+    firstName: participant.firstName,
+    lastName: participant.lastName,
+    email: participant.email,
+    phone: participant.phone,
+    specialRequests: participant.specialRequests,
+    isLeadPassenger: participant.isPrimary,
+    createdAt: participant.createdAt,
+    updatedAt: participant.updatedAt,
+  }
+}
+
+function toCreateParticipantFromPassenger(data: CreatePassengerInput): CreateParticipantInput {
+  return {
+    participantType: "traveler" as const,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    specialRequests: data.specialRequests ?? null,
+    isPrimary: data.isLeadPassenger ?? false,
+  }
+}
+
+function toUpdateParticipantFromPassenger(data: UpdatePassengerInput): UpdateParticipantInput {
+  return {
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    specialRequests: data.specialRequests ?? null,
+    isPrimary: data.isLeadPassenger ?? undefined,
+  }
+}
+
+async function ensureParticipantFlags(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  participantId: string,
+  data: { isPrimary?: boolean | null },
+) {
+  if (data.isPrimary) {
+    await db
+      .update(bookingParticipants)
+      .set({ isPrimary: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(bookingParticipants.bookingId, bookingId),
+          ne(bookingParticipants.id, participantId),
+        ),
+      )
+  }
+}
+
+async function ensureBookingScopedLinks(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  data: { bookingItemId?: string | null; participantId?: string | null },
+) {
+  if (data.bookingItemId) {
+    const [item] = await db
+      .select({ id: bookingItems.id })
+      .from(bookingItems)
+      .where(and(eq(bookingItems.id, data.bookingItemId), eq(bookingItems.bookingId, bookingId)))
+      .limit(1)
+
+    if (!item) {
+      return { ok: false as const, reason: "booking_item_not_found" as const }
+    }
+  }
+
+  if (data.participantId) {
+    const [participant] = await db
+      .select({ id: bookingParticipants.id })
+      .from(bookingParticipants)
+      .where(
+        and(
+          eq(bookingParticipants.id, data.participantId),
+          eq(bookingParticipants.bookingId, bookingId),
+        ),
+      )
+      .limit(1)
+
+    if (!participant) {
+      return { ok: false as const, reason: "participant_not_found" as const }
+    }
+  }
+
+  return { ok: true as const }
+}
+
+type TransactionParticipantRecord = {
+  id: string
+  personId: string | null
+  participantType: string
+  travelerCategory: string | null
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+  preferredLanguage: string | null
+  isPrimary: boolean
+  notes: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+type TransactionItemRecord = {
+  id: string
+  productId: string | null
+  optionId: string | null
+  unitId: string | null
+  slotId: string | null
+  title: string
+  description: string | null
+  itemType: string
+  status: string
+  serviceDate: string | null
+  startsAt: Date | null
+  endsAt: Date | null
+  quantity: number
+  sellCurrency: string
+  unitSellAmountCents: number | null
+  totalSellAmountCents: number | null
+  costCurrency: string | null
+  unitCostAmountCents: number | null
+  totalCostAmountCents: number | null
+  notes: string | null
+  metadata: unknown
+  createdAt: Date
+  updatedAt: Date
+}
+
+type TransactionItemParticipantRecord = {
+  participantId: string
+  role: string
+  isPrimary: boolean
+  offerItemId?: string
+  orderItemId?: string
+}
+
+type ReservationSourceBundle = {
+  kind: "offer" | "order"
+  sourceId: string
+  offerId: string | null
+  orderId: string | null
+  personId: string | null
+  organizationId: string | null
+  currency: string
+  baseCurrency: string | null
+  totalAmountCents: number | null
+  costAmountCents: number | null
+  notes: string | null
+  participants: TransactionParticipantRecord[]
+  items: TransactionItemRecord[]
+  itemParticipants: TransactionItemParticipantRecord[]
+}
+
+function deriveBookingDateRange(items: TransactionItemRecord[]) {
+  const dates = items
+    .flatMap((item) => [item.serviceDate, item.startsAt?.toISOString().slice(0, 10) ?? null])
+    .filter((value): value is string => Boolean(value))
+    .sort()
+
+  return {
+    startDate: dates[0] ?? null,
+    endDate: dates[dates.length - 1] ?? null,
+  }
+}
+
+function deriveBookingPax(
+  participants: TransactionParticipantRecord[],
+  items: TransactionItemRecord[],
+) {
+  const pax = participants.filter((participant) =>
+    ["traveler", "occupant"].includes(participant.participantType),
+  ).length
+
+  if (pax > 0) {
+    return pax
+  }
+
+  return items
+    .filter((item) => item.itemType === "unit")
+    .reduce((sum, item) => sum + item.quantity, 0)
+}
+
+function getTransactionItemParticipantItemId(link: TransactionItemParticipantRecord) {
+  return "offerItemId" in link ? link.offerItemId : link.orderItemId
+}
+
+function mapDeliveryFormatToFulfillment(format: string) {
+  switch (format) {
+    case "pdf":
+      return { fulfillmentType: "pdf" as const, deliveryChannel: "download" as const }
+    case "qr_code":
+      return { fulfillmentType: "qr_code" as const, deliveryChannel: "download" as const }
+    case "barcode":
+      return { fulfillmentType: "barcode" as const, deliveryChannel: "download" as const }
+    case "mobile":
+      return { fulfillmentType: "mobile" as const, deliveryChannel: "wallet" as const }
+    case "email":
+      return { fulfillmentType: "voucher" as const, deliveryChannel: "email" as const }
+    case "ticket":
+      return { fulfillmentType: "ticket" as const, deliveryChannel: "download" as const }
+    case "voucher":
+    default:
+      return { fulfillmentType: "voucher" as const, deliveryChannel: "download" as const }
+  }
+}
+
+async function getConvertProductData(
+  db: PostgresJsDatabase,
+  data: ConvertProductInput,
+): Promise<ConvertProductData | null> {
+  const [product] = await db
+    .select()
+    .from(productsRef)
+    .where(eq(productsRef.id, data.productId))
+    .limit(1)
+
+  if (!product) {
+    return null
+  }
+
+  let option: ProductOptionReference | null = null
+  if (data.optionId) {
+    const [selectedOption] = await db
+      .select()
+      .from(productOptionsRef)
+      .where(
+        and(eq(productOptionsRef.id, data.optionId), eq(productOptionsRef.productId, product.id)),
+      )
+      .limit(1)
+
+    if (!selectedOption) {
+      return null
+    }
+
+    option = selectedOption
+  } else {
+    const [defaultOption] = await db
+      .select()
+      .from(productOptionsRef)
+      .where(eq(productOptionsRef.productId, product.id))
+      .orderBy(desc(productOptionsRef.isDefault), asc(productOptionsRef.sortOrder), asc(productOptionsRef.createdAt))
+      .limit(1)
+
+    option = defaultOption ?? null
+  }
+
+  const days = await db
+    .select()
+    .from(productDaysRef)
+    .where(eq(productDaysRef.productId, product.id))
+    .orderBy(asc(productDaysRef.dayNumber))
+
+  const dayServices = days.length
+    ? await db
+        .select({
+          supplierServiceId: productDayServicesRef.supplierServiceId,
+          name: productDayServicesRef.name,
+          costCurrency: productDayServicesRef.costCurrency,
+          costAmountCents: productDayServicesRef.costAmountCents,
+        })
+        .from(productDayServicesRef)
+        .where(
+          sql`${productDayServicesRef.dayId} IN (
+            SELECT ${productDaysRef.id}
+            FROM ${productDaysRef}
+            WHERE ${productDaysRef.productId} = ${product.id}
+          )`,
+        )
+        .orderBy(asc(productDayServicesRef.sortOrder), asc(productDayServicesRef.id))
+    : []
+
+  const units: OptionUnitReference[] =
+    option === null
+      ? []
+      : await db
+          .select()
+          .from(optionUnitsRef)
+          .where(eq(optionUnitsRef.optionId, option.id))
+          .orderBy(asc(optionUnitsRef.sortOrder), asc(optionUnitsRef.createdAt))
+
+  return {
+    product: {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      sellCurrency: product.sellCurrency,
+      sellAmountCents: product.sellAmountCents,
+      costAmountCents: product.costAmountCents,
+      marginPercent: product.marginPercent,
+      startDate: product.startDate,
+      endDate: product.endDate,
+      pax: product.pax,
+    },
+    option: option ? { id: option.id, name: option.name } : null,
+    dayServices,
+    units: units.map((unit) => ({
+      id: unit.id,
+      name: unit.name,
+      description: unit.description,
+      unitType: unit.unitType,
+      isRequired: unit.isRequired,
+      minQuantity: unit.minQuantity,
+      sortOrder: unit.sortOrder,
+    })),
+  }
+}
+
+type BookingStatus = typeof bookings.$inferSelect["status"]
+
+const VALID_BOOKING_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  draft: ["on_hold", "confirmed", "cancelled"],
+  on_hold: ["confirmed", "expired", "cancelled"],
+  confirmed: ["in_progress", "cancelled"],
+  in_progress: ["completed", "cancelled"],
+  completed: [],
+  expired: [],
+  cancelled: [],
+}
+
+function isValidBookingTransition(from: BookingStatus, to: BookingStatus) {
+  return VALID_BOOKING_TRANSITIONS[from].includes(to)
+}
+
+function computeHoldExpiresAt(input: { holdMinutes?: number; holdExpiresAt?: string | null }) {
+  if (input.holdExpiresAt) {
+    return new Date(input.holdExpiresAt)
+  }
+  const now = Date.now()
+  const minutes = input.holdMinutes ?? 30
+  return new Date(now + minutes * 60 * 1000)
+}
+
+function toBookingStatusTimestamps(status: BookingStatus) {
+  const now = new Date()
+  return {
+    confirmedAt: status === "confirmed" ? now : undefined,
+    expiredAt: status === "expired" ? now : undefined,
+    cancelledAt: status === "cancelled" ? now : undefined,
+    completedAt: status === "completed" ? now : undefined,
+  }
+}
+
+async function lockAvailabilitySlot(db: PostgresJsDatabase, slotId: string) {
+  const rows = await db.execute(
+    sql`SELECT id, product_id, option_id, date_local, starts_at, ends_at, timezone, status, unlimited, remaining_pax
+        FROM ${availabilitySlotsRef}
+        WHERE ${availabilitySlotsRef.id} = ${slotId}
+        FOR UPDATE`,
+  )
+
+  const row = (rows as unknown as Array<{
+    id: string
+    product_id: string
+    option_id: string | null
+    date_local: string
+    starts_at: Date
+    ends_at: Date | null
+    timezone: string
+    status: string
+    unlimited: boolean
+    remaining_pax: number | null
+  }>)[0]
+
+  if (!row) {
+    return null
+  }
+
+  return {
+    ...row,
+    starts_at: toDateValue(row.starts_at),
+    ends_at: toDateValueOrNull(row.ends_at),
+  }
+}
+
+async function adjustSlotCapacity(
+  db: PostgresJsDatabase,
+  slotId: string,
+  delta: number,
+) {
+  const locked = await lockAvailabilitySlot(db, slotId)
+  if (!locked) {
+    return { status: "slot_not_found" as const }
+  }
+
+  if (locked.status !== "open" && locked.status !== "sold_out") {
+    return { status: "slot_unavailable" as const, slot: locked }
+  }
+
+  if (locked.unlimited) {
+    return { status: "ok" as const, slot: locked, remainingPax: locked.remaining_pax }
+  }
+
+  const currentRemaining = locked.remaining_pax ?? 0
+  const nextRemaining = currentRemaining + delta
+
+  if (nextRemaining < 0) {
+    return { status: "insufficient_capacity" as const, slot: locked, remainingPax: currentRemaining }
+  }
+
+  let nextStatus = locked.status as "open" | "closed" | "sold_out" | "cancelled"
+  if (nextRemaining === 0 && locked.status === "open") {
+    nextStatus = "sold_out"
+  } else if (nextRemaining > 0 && locked.status === "sold_out") {
+    nextStatus = "open"
+  }
+
+  await db
+    .update(availabilitySlotsRef)
+    .set({
+      remainingPax: nextRemaining,
+      status: nextStatus,
+      updatedAt: new Date(),
+    })
+    .where(eq(availabilitySlotsRef.id, slotId))
+
+  return { status: "ok" as const, slot: locked, remainingPax: nextRemaining }
+}
+
+async function releaseAllocationCapacity(
+  db: PostgresJsDatabase,
+  allocation: Pick<
+    typeof bookingAllocations.$inferSelect,
+    "availabilitySlotId" | "quantity" | "status" | "id"
+  >,
+) {
+  if (!allocation.availabilitySlotId) {
+    return
+  }
+
+  if (allocation.status !== "held" && allocation.status !== "confirmed") {
+    return
+  }
+
+  await adjustSlotCapacity(db, allocation.availabilitySlotId, allocation.quantity)
+}
+
+async function reserveBookingFromTransactionSource(
+  db: PostgresJsDatabase,
+  source: ReservationSourceBundle,
+  data: ReserveBookingFromTransactionInput,
+  userId?: string,
+) {
+  try {
+    return await db.transaction(async (tx) => {
+      const holdExpiresAt = computeHoldExpiresAt(data)
+      const dateRange = deriveBookingDateRange(source.items)
+      const pax = deriveBookingPax(source.participants, source.items)
+
+      const [booking] = await tx
+        .insert(bookings)
+        .values({
+          bookingNumber: data.bookingNumber,
+          status: "on_hold",
+          personId: source.personId,
+          organizationId: source.organizationId,
+          sourceType: data.sourceType,
+          sellCurrency: source.currency,
+          baseCurrency: source.baseCurrency,
+          sellAmountCents: source.totalAmountCents,
+          costAmountCents: source.costAmountCents,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          pax: pax > 0 ? pax : null,
+          internalNotes: data.internalNotes ?? source.notes,
+          holdExpiresAt,
+        })
+        .returning()
+
+      if (!booking) {
+        throw new BookingServiceError("booking_create_failed")
+      }
+
+      const participantMap = new Map<string, string>()
+      if (data.includeParticipants) {
+        for (const participant of source.participants) {
+          const [createdParticipant] = await tx
+            .insert(bookingParticipants)
+            .values({
+              bookingId: booking.id,
+              personId: participant.personId ?? null,
+              participantType: participant.participantType as CreateParticipantInput["participantType"],
+              travelerCategory:
+                (participant.travelerCategory as CreateParticipantInput["travelerCategory"]) ?? null,
+              firstName: participant.firstName,
+              lastName: participant.lastName,
+              email: participant.email ?? null,
+              phone: participant.phone ?? null,
+              preferredLanguage: participant.preferredLanguage ?? null,
+              isPrimary: participant.isPrimary,
+              notes: participant.notes ?? null,
+            })
+            .returning()
+
+          if (!createdParticipant) {
+            throw new BookingServiceError("participant_create_failed")
+          }
+
+          participantMap.set(participant.id, createdParticipant.id)
+        }
+      }
+
+      const bookingItemMap = new Map<string, string>()
+      for (const item of source.items) {
+        if (item.slotId) {
+          const capacity = await adjustSlotCapacity(tx as PostgresJsDatabase, item.slotId, -item.quantity)
+
+          if (capacity.status === "slot_not_found") {
+            throw new BookingServiceError("slot_not_found")
+          }
+          if (capacity.status === "slot_unavailable") {
+            throw new BookingServiceError("slot_unavailable")
+          }
+          if (capacity.status === "insufficient_capacity") {
+            throw new BookingServiceError("insufficient_capacity")
+          }
+
+          const slot = capacity.slot
+          if (item.productId && item.productId !== slot.product_id) {
+            throw new BookingServiceError("slot_product_mismatch")
+          }
+          if (item.optionId && item.optionId !== slot.option_id) {
+            throw new BookingServiceError("slot_option_mismatch")
+          }
+        }
+
+        const [bookingItem] = await tx
+          .insert(bookingItems)
+          .values({
+            bookingId: booking.id,
+            title: item.title,
+            description: item.description ?? null,
+            itemType: item.itemType as CreateBookingItemInput["itemType"],
+            status: "on_hold",
+            serviceDate: item.serviceDate ?? (item.slotId ? undefined : null),
+            startsAt: item.startsAt ?? null,
+            endsAt: item.endsAt ?? null,
+            quantity: item.quantity,
+            sellCurrency: item.sellCurrency,
+            unitSellAmountCents: item.unitSellAmountCents ?? null,
+            totalSellAmountCents: item.totalSellAmountCents ?? null,
+            costCurrency: item.costCurrency ?? null,
+            unitCostAmountCents: item.unitCostAmountCents ?? null,
+            totalCostAmountCents: item.totalCostAmountCents ?? null,
+            notes: item.notes ?? null,
+            productId: item.productId ?? null,
+            optionId: item.optionId ?? null,
+            optionUnitId: item.unitId ?? null,
+            sourceOfferId: source.offerId,
+            metadata: (item.metadata as Record<string, unknown> | null | undefined) ?? null,
+          })
+          .returning()
+
+        if (!bookingItem) {
+          throw new BookingServiceError("booking_item_create_failed")
+        }
+
+        bookingItemMap.set(item.id, bookingItem.id)
+
+        if (item.slotId) {
+          const [allocation] = await tx
+            .insert(bookingAllocations)
+            .values({
+              bookingId: booking.id,
+              bookingItemId: bookingItem.id,
+              productId: item.productId ?? null,
+              optionId: item.optionId ?? null,
+              optionUnitId: item.unitId ?? null,
+              availabilitySlotId: item.slotId,
+              quantity: item.quantity,
+              allocationType: "unit",
+              status: "held",
+              holdExpiresAt,
+              metadata: (item.metadata as Record<string, unknown> | null | undefined) ?? null,
+            })
+            .returning()
+
+          if (!allocation) {
+            throw new BookingServiceError("allocation_create_failed")
+          }
+        }
+      }
+
+      for (const link of source.itemParticipants) {
+        const sourceItemId = getTransactionItemParticipantItemId(link)
+        if (!sourceItemId) {
+          continue
+        }
+
+        const bookingItemId = bookingItemMap.get(sourceItemId)
+        const participantId = participantMap.get(link.participantId)
+
+        if (!bookingItemId || !participantId) {
+          continue
+        }
+
+        await tx.insert(bookingItemParticipants).values({
+          bookingItemId,
+          participantId,
+          role: link.role as CreateBookingItemParticipantInput["role"],
+          isPrimary: link.isPrimary,
+        })
+      }
+
+      await tx
+        .insert(bookingTransactionDetailsRef)
+        .values({
+          bookingId: booking.id,
+          offerId: source.offerId,
+          orderId: source.orderId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: bookingTransactionDetailsRef.bookingId,
+          set: {
+            offerId: source.offerId,
+            orderId: source.orderId,
+            updatedAt: new Date(),
+          },
+        })
+
+      await tx.insert(bookingActivityLog).values({
+        bookingId: booking.id,
+        actorId: userId ?? "system",
+        activityType: "booking_reserved",
+        description: `Booking ${booking.bookingNumber} reserved from ${source.kind} ${source.sourceId}`,
+        metadata: {
+          sourceKind: source.kind,
+          sourceId: source.sourceId,
+          offerId: source.offerId,
+          orderId: source.orderId,
+          holdExpiresAt: holdExpiresAt.toISOString(),
+          itemCount: source.items.length,
+        },
+      })
+
+      if (data.note) {
+        await tx.insert(bookingNotes).values({
+          bookingId: booking.id,
+          authorId: userId ?? "system",
+          content: data.note,
+        })
+      }
+
+      return { status: "ok" as const, booking }
+    })
+  } catch (error) {
+    if (error instanceof BookingServiceError) {
+      return { status: error.code as Exclude<string, "ok"> }
+    }
+    throw error
+  }
+}
+
+async function getBookingTransactionLink(db: PostgresJsDatabase, bookingId: string) {
+  const [link] = await db
+    .select()
+    .from(bookingTransactionDetailsRef)
+    .where(eq(bookingTransactionDetailsRef.bookingId, bookingId))
+    .limit(1)
+
+  return link ?? null
+}
+
+async function syncTransactionOnBookingConfirmed(db: PostgresJsDatabase, bookingId: string) {
+  const link = await getBookingTransactionLink(db, bookingId)
+  if (!link) {
+    return
+  }
+
+  const now = new Date()
+
+  if (link.orderId) {
+    await db
+      .update(ordersRef)
+      .set({
+        status: "confirmed",
+        confirmedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(ordersRef.id, link.orderId))
+  }
+
+  if (link.offerId) {
+    await db
+      .update(offersRef)
+      .set({
+        status: "converted",
+        acceptedAt: now,
+        convertedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(offersRef.id, link.offerId))
+  }
+}
+
+async function syncTransactionOnBookingExpired(db: PostgresJsDatabase, bookingId: string) {
+  const link = await getBookingTransactionLink(db, bookingId)
+  if (!link?.orderId) {
+    return
+  }
+
+  const now = new Date()
+  await db
+    .update(ordersRef)
+    .set({
+      status: "expired",
+      expiresAt: now,
+      updatedAt: now,
+    })
+    .where(eq(ordersRef.id, link.orderId))
+}
+
+async function syncTransactionOnBookingCancelled(db: PostgresJsDatabase, bookingId: string) {
+  const link = await getBookingTransactionLink(db, bookingId)
+  if (!link?.orderId) {
+    return
+  }
+
+  const now = new Date()
+  await db
+    .update(ordersRef)
+    .set({
+      status: "cancelled",
+      cancelledAt: now,
+      updatedAt: now,
+    })
+    .where(eq(ordersRef.id, link.orderId))
+}
+
+async function syncTransactionOnBookingRedeemed(db: PostgresJsDatabase, bookingId: string) {
+  const link = await getBookingTransactionLink(db, bookingId)
+  if (!link?.orderId) {
+    return
+  }
+
+  await db
+    .update(ordersRef)
+    .set({
+      status: "fulfilled",
+      updatedAt: new Date(),
+    })
+    .where(eq(ordersRef.id, link.orderId))
+}
+
+async function autoIssueFulfillmentsForBooking(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  userId?: string,
+) {
+  const [booking] = await db
+    .select({
+      id: bookings.id,
+      bookingNumber: bookings.bookingNumber,
+    })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1)
+
+  if (!booking) {
+    return
+  }
+
+  const existingFulfillment = await db
+    .select({ id: bookingFulfillments.id })
+    .from(bookingFulfillments)
+    .where(eq(bookingFulfillments.bookingId, bookingId))
+    .limit(1)
+
+  if (existingFulfillment.length > 0) {
+    return
+  }
+
+  const items = await db
+    .select()
+    .from(bookingItems)
+    .where(and(eq(bookingItems.bookingId, bookingId), sql`${bookingItems.productId} IS NOT NULL`))
+    .orderBy(asc(bookingItems.createdAt))
+
+  if (items.length === 0) {
+    return
+  }
+
+  const productIds = [...new Set(items.map((item) => item.productId).filter((value): value is string => Boolean(value)))]
+  if (productIds.length === 0) {
+    return
+  }
+
+  const settings = await db
+    .select()
+    .from(productTicketSettingsRef)
+    .where(inArray(productTicketSettingsRef.productId, productIds))
+
+  const settingsByProductId = new Map(settings.map((setting) => [setting.productId, setting]))
+  const travelerParticipants = await db
+    .select()
+    .from(bookingParticipants)
+    .where(
+      and(
+        eq(bookingParticipants.bookingId, bookingId),
+        or(
+          eq(bookingParticipants.participantType, "traveler"),
+          eq(bookingParticipants.participantType, "occupant"),
+        ),
+      ),
+    )
+    .orderBy(desc(bookingParticipants.isPrimary), asc(bookingParticipants.createdAt))
+
+  const participantLinks = await db
+    .select()
+    .from(bookingItemParticipants)
+    .where(
+      sql`${bookingItemParticipants.bookingItemId} IN (
+        SELECT ${bookingItems.id}
+        FROM ${bookingItems}
+        WHERE ${bookingItems.bookingId} = ${bookingId}
+      )`,
+    )
+
+  const participantLinksByItemId = new Map<string, typeof participantLinks>()
+  for (const link of participantLinks) {
+    const links = participantLinksByItemId.get(link.bookingItemId) ?? []
+    links.push(link)
+    participantLinksByItemId.set(link.bookingItemId, links)
+  }
+
+  const fulfillmentsToInsert: Array<typeof bookingFulfillments.$inferInsert> = []
+  const now = new Date()
+
+  for (const item of items) {
+    const productId = item.productId
+    if (!productId) {
+      continue
+    }
+
+    const setting = settingsByProductId.get(productId)
+    if (!setting || setting.fulfillmentMode === "none" || setting.defaultDeliveryFormat === "none") {
+      continue
+    }
+
+    const delivery = mapDeliveryFormatToFulfillment(setting.defaultDeliveryFormat)
+    const payloadBase = {
+      bookingId,
+      bookingNumber: booking.bookingNumber,
+      productId,
+      bookingItemId: item.id,
+    }
+
+    if (setting.fulfillmentMode === "per_booking") {
+      if (fulfillmentsToInsert.some((row) => row.bookingItemId === item.id || row.bookingItemId === null)) {
+        continue
+      }
+
+      fulfillmentsToInsert.push({
+        bookingId,
+        bookingItemId: item.id,
+        participantId: null,
+        fulfillmentType: delivery.fulfillmentType,
+        deliveryChannel: delivery.deliveryChannel,
+        status: "issued",
+        payload: { ...payloadBase, scope: "booking" },
+        issuedAt: now,
+      })
+      continue
+    }
+
+    if (setting.fulfillmentMode === "per_item") {
+      fulfillmentsToInsert.push({
+        bookingId,
+        bookingItemId: item.id,
+        participantId: null,
+        fulfillmentType: delivery.fulfillmentType,
+        deliveryChannel: delivery.deliveryChannel,
+        status: "issued",
+        payload: { ...payloadBase, scope: "item" },
+        issuedAt: now,
+      })
+      continue
+    }
+
+    const linkedParticipants =
+      participantLinksByItemId
+        .get(item.id)
+        ?.map((link) => travelerParticipants.find((participant) => participant.id === link.participantId))
+        .filter((participant): participant is typeof bookingParticipants.$inferSelect => Boolean(participant)) ??
+      []
+
+    const participantsForItem =
+      linkedParticipants.length > 0 ? linkedParticipants : travelerParticipants
+
+    for (const participant of participantsForItem) {
+      fulfillmentsToInsert.push({
+        bookingId,
+        bookingItemId: item.id,
+        participantId: participant.id,
+        fulfillmentType: delivery.fulfillmentType,
+        deliveryChannel: delivery.deliveryChannel,
+        status: "issued",
+        payload: {
+          ...payloadBase,
+          participantId: participant.id,
+          scope: "participant",
+        },
+        issuedAt: now,
+      })
+    }
+  }
+
+  if (fulfillmentsToInsert.length === 0) {
+    return
+  }
+
+  await db.insert(bookingFulfillments).values(fulfillmentsToInsert)
+
+  await db.insert(bookingActivityLog).values({
+    bookingId,
+    actorId: userId ?? "system",
+    activityType: "fulfillment_issued",
+    description: `${fulfillmentsToInsert.length} fulfillment artifact(s) issued automatically`,
+    metadata: { count: fulfillmentsToInsert.length },
+  })
+}
+
+export const bookingsService = {
+  async listBookings(db: PostgresJsDatabase, query: BookingListQuery) {
+    const conditions = []
+
+    if (query.status) {
+      conditions.push(eq(bookings.status, query.status))
+    }
+
+    if (query.search) {
+      const term = `%${query.search}%`
+      conditions.push(or(ilike(bookings.bookingNumber, term), ilike(bookings.internalNotes, term)))
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(bookings)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(desc(bookings.createdAt)),
+      db.select({ count: sql<number>`count(*)::int` }).from(bookings).where(where),
+    ])
+
+    return {
+      data: rows,
+      total: countResult[0]?.count ?? 0,
+      limit: query.limit,
+      offset: query.offset,
+    }
+  },
+
+  async convertProductToBooking(
+    db: PostgresJsDatabase,
+    data: ConvertProductInput,
+    productData: ConvertProductData,
+    userId?: string,
+  ) {
+    const { product, option, dayServices, units } = productData
+
+    const [booking] = await db
+      .insert(bookings)
+      .values({
+        bookingNumber: data.bookingNumber,
+        status: "draft",
+        personId: data.personId ?? null,
+        organizationId: data.organizationId ?? null,
+        sellCurrency: product.sellCurrency,
+        sellAmountCents: product.sellAmountCents,
+        costAmountCents: product.costAmountCents,
+        marginPercent: product.marginPercent,
+        startDate: product.startDate,
+        endDate: product.endDate,
+        pax: product.pax,
+        internalNotes: data.internalNotes ?? null,
+      })
+      .returning()
+
+    if (!booking) {
+      return null
+    }
+
+    if (dayServices.length > 0) {
+      await db.insert(bookingSupplierStatuses).values(
+        dayServices.map((service) => ({
+          bookingId: booking.id,
+          supplierServiceId: service.supplierServiceId,
+          serviceName: service.name,
+          status: "pending" as const,
+          costCurrency: service.costCurrency,
+          costAmountCents: service.costAmountCents,
+        })),
+      )
+    }
+
+    const selectedUnits = option === null ? [] : units
+
+    const unitsToSeed =
+      selectedUnits.filter((unit) => unit.isRequired).length > 0
+        ? selectedUnits.filter((unit) => unit.isRequired)
+        : selectedUnits.length === 1
+          ? selectedUnits
+          : []
+
+    const itemRows =
+      unitsToSeed.length > 0
+        ? unitsToSeed.map((unit, index) => {
+            const quantity =
+              unit.unitType === "person" && product.pax
+                ? product.pax
+                : unit.minQuantity && unit.minQuantity > 0
+                  ? unit.minQuantity
+                  : 1
+            const singleSeedItem = unitsToSeed.length === 1 && index === 0
+            return {
+              bookingId: booking.id,
+              title: unit.name,
+              description: unit.description,
+              itemType: "unit" as const,
+              status: "draft" as const,
+              quantity,
+              sellCurrency: product.sellCurrency,
+              unitSellAmountCents:
+                singleSeedItem &&
+                product.sellAmountCents !== null &&
+                product.sellAmountCents !== undefined
+                  ? Math.floor(product.sellAmountCents / quantity)
+                  : null,
+              totalSellAmountCents: singleSeedItem ? (product.sellAmountCents ?? null) : null,
+              costCurrency: singleSeedItem ? product.sellCurrency : null,
+              unitCostAmountCents:
+                singleSeedItem &&
+                product.costAmountCents !== null &&
+                product.costAmountCents !== undefined
+                  ? Math.floor(product.costAmountCents / quantity)
+                  : null,
+              totalCostAmountCents: singleSeedItem ? (product.costAmountCents ?? null) : null,
+              productId: product.id,
+              optionId: option?.id ?? null,
+              optionUnitId: unit.id,
+            }
+          })
+        : [
+            {
+              bookingId: booking.id,
+              title: option?.name ?? product.name,
+              description: product.description,
+              itemType: "unit" as const,
+              status: "draft" as const,
+              quantity: 1,
+              sellCurrency: product.sellCurrency,
+              unitSellAmountCents: product.sellAmountCents ?? null,
+              totalSellAmountCents: product.sellAmountCents ?? null,
+              costCurrency: product.sellCurrency,
+              unitCostAmountCents: product.costAmountCents ?? null,
+              totalCostAmountCents: product.costAmountCents ?? null,
+              productId: product.id,
+              optionId: option?.id ?? null,
+              optionUnitId: null,
+            },
+          ]
+
+    const insertedItems = await db.insert(bookingItems).values(itemRows).returning()
+
+    await db
+      .insert(bookingProductDetailsRef)
+      .values({
+        bookingId: booking.id,
+        productId: product.id,
+        optionId: option?.id ?? null,
+      })
+      .onConflictDoUpdate({
+        target: bookingProductDetailsRef.bookingId,
+        set: {
+          productId: product.id,
+          optionId: option?.id ?? null,
+          updatedAt: new Date(),
+        },
+      })
+
+    if (insertedItems.length > 0) {
+      await db.insert(bookingItemProductDetailsRef).values(
+        insertedItems.map((item) => ({
+          bookingItemId: item.id,
+          productId: item.productId ?? null,
+          optionId: item.optionId ?? null,
+          unitId: item.optionUnitId ?? null,
+          supplierServiceId: null,
+        })),
+      )
+    }
+
+    await db.insert(bookingActivityLog).values({
+      bookingId: booking.id,
+      actorId: userId ?? "system",
+      activityType: "booking_converted",
+      description: `Booking converted from product "${product.name}"`,
+      metadata: { productId: product.id, productName: product.name, optionId: option?.id ?? null },
+    })
+
+    return booking
+  },
+
+  async getBookingById(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1)
+    return row ?? null
+  },
+
+  async createBookingFromProduct(
+    db: PostgresJsDatabase,
+    data: ConvertProductInput,
+    userId?: string,
+  ) {
+    const productData = await getConvertProductData(db, data)
+    if (!productData) {
+      return null
+    }
+
+    return this.convertProductToBooking(db, data, productData, userId)
+  },
+
+  listAllocations(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingAllocations)
+      .where(eq(bookingAllocations.bookingId, bookingId))
+      .orderBy(asc(bookingAllocations.createdAt))
+  },
+
+  async reserveBookingFromOffer(
+    db: PostgresJsDatabase,
+    offerId: string,
+    data: ReserveBookingFromTransactionInput,
+    userId?: string,
+  ) {
+    const [offer] = await db.select().from(offersRef).where(eq(offersRef.id, offerId)).limit(1)
+
+    if (!offer) {
+      return { status: "not_found" as const }
+    }
+
+    const [participants, items, itemParticipants] = await Promise.all([
+      db
+        .select()
+        .from(offerParticipantsRef)
+        .where(eq(offerParticipantsRef.offerId, offerId))
+        .orderBy(asc(offerParticipantsRef.createdAt)),
+      db
+        .select()
+        .from(offerItemsRef)
+        .where(eq(offerItemsRef.offerId, offerId))
+        .orderBy(asc(offerItemsRef.createdAt)),
+      db
+        .select()
+        .from(offerItemParticipantsRef)
+        .where(
+          sql`${offerItemParticipantsRef.offerItemId} IN (
+            SELECT ${offerItemsRef.id}
+            FROM ${offerItemsRef}
+            WHERE ${offerItemsRef.offerId} = ${offerId}
+          )`,
+        )
+        .orderBy(asc(offerItemParticipantsRef.createdAt)),
+    ])
+
+    return reserveBookingFromTransactionSource(
+      db,
+      {
+        kind: "offer",
+        sourceId: offerId,
+        offerId: offer.id,
+        orderId: null,
+        personId: offer.personId ?? null,
+        organizationId: offer.organizationId ?? null,
+        currency: offer.currency,
+        baseCurrency: offer.baseCurrency ?? null,
+        totalAmountCents: offer.totalAmountCents ?? null,
+        costAmountCents: offer.costAmountCents ?? null,
+        notes: offer.notes ?? null,
+        participants,
+        items,
+        itemParticipants,
+      },
+      data,
+      userId,
+    )
+  },
+
+  async reserveBookingFromOrder(
+    db: PostgresJsDatabase,
+    orderId: string,
+    data: ReserveBookingFromTransactionInput,
+    userId?: string,
+  ) {
+    const [order] = await db.select().from(ordersRef).where(eq(ordersRef.id, orderId)).limit(1)
+
+    if (!order) {
+      return { status: "not_found" as const }
+    }
+
+    const [participants, items, itemParticipants] = await Promise.all([
+      db
+        .select()
+        .from(orderParticipantsRef)
+        .where(eq(orderParticipantsRef.orderId, orderId))
+        .orderBy(asc(orderParticipantsRef.createdAt)),
+      db
+        .select()
+        .from(orderItemsRef)
+        .where(eq(orderItemsRef.orderId, orderId))
+        .orderBy(asc(orderItemsRef.createdAt)),
+      db
+        .select()
+        .from(orderItemParticipantsRef)
+        .where(
+          sql`${orderItemParticipantsRef.orderItemId} IN (
+            SELECT ${orderItemsRef.id}
+            FROM ${orderItemsRef}
+            WHERE ${orderItemsRef.orderId} = ${orderId}
+          )`,
+        )
+        .orderBy(asc(orderItemParticipantsRef.createdAt)),
+    ])
+
+    return reserveBookingFromTransactionSource(
+      db,
+      {
+        kind: "order",
+        sourceId: orderId,
+        offerId: order.offerId ?? null,
+        orderId: order.id,
+        personId: order.personId ?? null,
+        organizationId: order.organizationId ?? null,
+        currency: order.currency,
+        baseCurrency: order.baseCurrency ?? null,
+        totalAmountCents: order.totalAmountCents ?? null,
+        costAmountCents: order.costAmountCents ?? null,
+        notes: order.notes ?? null,
+        participants,
+        items,
+        itemParticipants,
+      },
+      data,
+      userId,
+    )
+  },
+
+  async reserveBooking(db: PostgresJsDatabase, data: ReserveBookingInput, userId?: string) {
+    try {
+      return await db.transaction(async (tx) => {
+        const holdExpiresAt = computeHoldExpiresAt(data)
+        const [booking] = await tx
+          .insert(bookings)
+          .values({
+            bookingNumber: data.bookingNumber,
+            status: "on_hold",
+            personId: data.personId ?? null,
+            organizationId: data.organizationId ?? null,
+            sourceType: data.sourceType,
+            externalBookingRef: data.externalBookingRef ?? null,
+            communicationLanguage: data.communicationLanguage ?? null,
+            sellCurrency: data.sellCurrency,
+            baseCurrency: data.baseCurrency ?? null,
+            sellAmountCents: data.sellAmountCents ?? null,
+            baseSellAmountCents: data.baseSellAmountCents ?? null,
+            costAmountCents: data.costAmountCents ?? null,
+            baseCostAmountCents: data.baseCostAmountCents ?? null,
+            marginPercent: data.marginPercent ?? null,
+            startDate: data.startDate ?? null,
+            endDate: data.endDate ?? null,
+            pax: data.pax ?? null,
+            internalNotes: data.internalNotes ?? null,
+            holdExpiresAt,
+          })
+          .returning()
+
+        if (!booking) {
+          throw new BookingServiceError("booking_create_failed")
+        }
+
+        for (const item of data.items) {
+          const capacity = await adjustSlotCapacity(
+            tx as PostgresJsDatabase,
+            item.availabilitySlotId,
+            -item.quantity,
+          )
+
+          if (capacity.status === "slot_not_found") {
+            throw new BookingServiceError("slot_not_found")
+          }
+          if (capacity.status === "slot_unavailable") {
+            throw new BookingServiceError("slot_unavailable")
+          }
+          if (capacity.status === "insufficient_capacity") {
+            throw new BookingServiceError("insufficient_capacity")
+          }
+
+          const slot = capacity.slot
+          if (item.productId && item.productId !== slot.product_id) {
+            throw new BookingServiceError("slot_product_mismatch")
+          }
+          if (item.optionId && item.optionId !== slot.option_id) {
+            throw new BookingServiceError("slot_option_mismatch")
+          }
+
+          const [bookingItem] = await tx
+            .insert(bookingItems)
+            .values({
+              bookingId: booking.id,
+              title: item.title,
+              description: item.description ?? null,
+              itemType: item.itemType,
+              status: "on_hold",
+              serviceDate: slot.date_local,
+              startsAt: slot.starts_at,
+              endsAt: slot.ends_at,
+              quantity: item.quantity,
+              sellCurrency: item.sellCurrency ?? booking.sellCurrency,
+              unitSellAmountCents: item.unitSellAmountCents ?? null,
+              totalSellAmountCents: item.totalSellAmountCents ?? null,
+              costCurrency: item.costCurrency ?? null,
+              unitCostAmountCents: item.unitCostAmountCents ?? null,
+              totalCostAmountCents: item.totalCostAmountCents ?? null,
+              notes: item.notes ?? null,
+              productId: item.productId ?? slot.product_id,
+              optionId: item.optionId ?? slot.option_id,
+              optionUnitId: item.optionUnitId ?? null,
+              pricingCategoryId: item.pricingCategoryId ?? null,
+              sourceSnapshotId: item.sourceSnapshotId ?? null,
+              sourceOfferId: item.sourceOfferId ?? null,
+              metadata: item.metadata ?? null,
+            })
+            .returning()
+
+          if (!bookingItem) {
+            throw new BookingServiceError("booking_item_create_failed")
+          }
+
+          const [allocation] = await tx
+            .insert(bookingAllocations)
+            .values({
+              bookingId: booking.id,
+              bookingItemId: bookingItem.id,
+              productId: item.productId ?? slot.product_id,
+              optionId: item.optionId ?? slot.option_id,
+              optionUnitId: item.optionUnitId ?? null,
+              pricingCategoryId: item.pricingCategoryId ?? null,
+              availabilitySlotId: item.availabilitySlotId,
+              quantity: item.quantity,
+              allocationType: item.allocationType,
+              status: "held",
+              holdExpiresAt,
+              metadata: item.metadata ?? null,
+            })
+            .returning()
+
+          if (!allocation) {
+            throw new BookingServiceError("allocation_create_failed")
+          }
+        }
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: booking.id,
+          actorId: userId ?? "system",
+          activityType: "booking_reserved",
+          description: `Booking ${booking.bookingNumber} reserved and placed on hold`,
+          metadata: { holdExpiresAt: holdExpiresAt.toISOString(), itemCount: data.items.length },
+        })
+
+        return { status: "ok" as const, booking }
+      })
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async createBooking(db: PostgresJsDatabase, data: CreateBookingInput, userId?: string) {
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(bookings)
+        .values({
+          ...data,
+          holdExpiresAt: toTimestamp(data.holdExpiresAt),
+          confirmedAt: toTimestamp(data.confirmedAt),
+          expiredAt: toTimestamp(data.expiredAt),
+          cancelledAt: toTimestamp(data.cancelledAt),
+          completedAt: toTimestamp(data.completedAt),
+          redeemedAt: toTimestamp(data.redeemedAt),
+        })
+        .returning()
+
+      if (!row) {
+        return null
+      }
+
+      await tx.insert(bookingActivityLog).values({
+        bookingId: row.id,
+        actorId: userId ?? "system",
+        activityType: "booking_created",
+        description: `Booking ${data.bookingNumber} created`,
+      })
+
+      return row
+    })
+  },
+
+  async updateBooking(db: PostgresJsDatabase, id: string, data: UpdateBookingInput) {
+    const [row] = await db
+      .update(bookings)
+      .set({
+        ...data,
+        holdExpiresAt: data.holdExpiresAt === undefined ? undefined : toTimestamp(data.holdExpiresAt),
+        confirmedAt: data.confirmedAt === undefined ? undefined : toTimestamp(data.confirmedAt),
+        expiredAt: data.expiredAt === undefined ? undefined : toTimestamp(data.expiredAt),
+        cancelledAt: data.cancelledAt === undefined ? undefined : toTimestamp(data.cancelledAt),
+        completedAt: data.completedAt === undefined ? undefined : toTimestamp(data.completedAt),
+        redeemedAt: data.redeemedAt === undefined ? undefined : toTimestamp(data.redeemedAt),
+        updatedAt: new Date(),
+      })
+      .where(eq(bookings.id, id))
+      .returning()
+
+    return row ?? null
+  },
+
+  async deleteBooking(db: PostgresJsDatabase, id: string) {
+    const [row] = await db
+      .delete(bookings)
+      .where(eq(bookings.id, id))
+      .returning({ id: bookings.id })
+
+    return row ?? null
+  },
+
+  async updateBookingStatus(
+    db: PostgresJsDatabase,
+    id: string,
+    data: UpdateBookingStatusInput,
+    userId?: string,
+  ) {
+    const [current] = await db
+      .select({ id: bookings.id, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1)
+
+    if (!current) {
+      return { status: "not_found" as const }
+    }
+
+    if (current.status === "on_hold" && data.status === "confirmed") {
+      return bookingsService.confirmBooking(db, id, { note: data.note }, userId)
+    }
+
+    if (current.status === "on_hold" && data.status === "expired") {
+      return bookingsService.expireBooking(db, id, { note: data.note }, userId)
+    }
+
+    if (data.status === "cancelled") {
+      return bookingsService.cancelBooking(db, id, { note: data.note }, userId)
+    }
+
+    if (data.status === "on_hold") {
+      return { status: "invalid_transition" as const }
+    }
+
+    if (!isValidBookingTransition(current.status, data.status)) {
+      return { status: "invalid_transition" as const }
+    }
+
+    const [row] = await db
+      .update(bookings)
+      .set({
+        status: data.status,
+        ...toBookingStatusTimestamps(data.status),
+        updatedAt: new Date(),
+      })
+      .where(eq(bookings.id, id))
+      .returning()
+
+    await db.insert(bookingActivityLog).values({
+      bookingId: id,
+      actorId: userId ?? "system",
+      activityType: "status_change",
+      description: `Status changed from ${current.status} to ${data.status}`,
+      metadata: { oldStatus: current.status, newStatus: data.status },
+    })
+
+    if (data.note) {
+      await db.insert(bookingNotes).values({
+        bookingId: id,
+        authorId: userId ?? "system",
+        content: data.note,
+      })
+    }
+
+    if (data.status === "confirmed") {
+      await autoIssueFulfillmentsForBooking(db, id, userId)
+    }
+
+    return { status: "ok" as const, booking: row ?? null }
+  },
+
+  async confirmBooking(
+    db: PostgresJsDatabase,
+    id: string,
+    data: ConfirmBookingInput,
+    userId?: string,
+  ) {
+    try {
+      return await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, booking_number, status, hold_expires_at
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (rows as unknown as Array<{
+          id: string
+          booking_number: string
+          status: BookingStatus
+          hold_expires_at: Date | null
+        }>)[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (booking.status !== "on_hold") {
+          throw new BookingServiceError("invalid_transition")
+        }
+        if (booking.hold_expires_at && booking.hold_expires_at < new Date()) {
+          throw new BookingServiceError("hold_expired")
+        }
+
+        await tx
+          .update(bookingAllocations)
+          .set({
+            status: "confirmed",
+            confirmedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(bookingAllocations.bookingId, id), eq(bookingAllocations.status, "held")))
+
+        await tx
+          .update(bookingItems)
+          .set({ status: "confirmed", updatedAt: new Date() })
+          .where(and(eq(bookingItems.bookingId, id), eq(bookingItems.status, "on_hold")))
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            status: "confirmed",
+            holdExpiresAt: null,
+            confirmedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await syncTransactionOnBookingConfirmed(tx as PostgresJsDatabase, id)
+        await autoIssueFulfillmentsForBooking(tx as PostgresJsDatabase, id, userId)
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "booking_confirmed",
+          description: `Booking ${booking.booking_number} confirmed`,
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async extendBookingHold(
+    db: PostgresJsDatabase,
+    id: string,
+    data: ExtendBookingHoldInput,
+    userId?: string,
+  ) {
+    try {
+      return await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, status, hold_expires_at
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (rows as unknown as Array<{
+          id: string
+          status: BookingStatus
+          hold_expires_at: Date | null
+        }>)[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (booking.status !== "on_hold") {
+          throw new BookingServiceError("invalid_transition")
+        }
+        if (booking.hold_expires_at && booking.hold_expires_at < new Date()) {
+          throw new BookingServiceError("hold_expired")
+        }
+
+        const holdExpiresAt = computeHoldExpiresAt(data)
+
+        await tx
+          .update(bookingAllocations)
+          .set({
+            holdExpiresAt,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(bookingAllocations.bookingId, id), eq(bookingAllocations.status, "held")))
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            holdExpiresAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "hold_extended",
+          description: "Booking hold extended",
+          metadata: { holdExpiresAt: holdExpiresAt.toISOString() },
+        })
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async expireBooking(
+    db: PostgresJsDatabase,
+    id: string,
+    data: ExpireBookingInput,
+    userId?: string,
+  ) {
+    try {
+      return await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, status, hold_expires_at
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (rows as unknown as Array<{
+          id: string
+          status: BookingStatus
+          hold_expires_at: Date | null
+        }>)[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (booking.status !== "on_hold") {
+          throw new BookingServiceError("invalid_transition")
+        }
+
+        const allocations = await tx
+          .select()
+          .from(bookingAllocations)
+          .where(eq(bookingAllocations.bookingId, id))
+
+        for (const allocation of allocations) {
+          await releaseAllocationCapacity(tx as PostgresJsDatabase, allocation)
+        }
+
+        await tx
+          .update(bookingAllocations)
+          .set({
+            status: "expired",
+            releasedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(bookingAllocations.bookingId, id), eq(bookingAllocations.status, "held")))
+
+        await tx
+          .update(bookingItems)
+          .set({ status: "expired", updatedAt: new Date() })
+          .where(and(eq(bookingItems.bookingId, id), eq(bookingItems.status, "on_hold")))
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            status: "expired",
+            holdExpiresAt: null,
+            expiredAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await syncTransactionOnBookingExpired(tx as PostgresJsDatabase, id)
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "hold_expired",
+          description: "Booking hold expired",
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async expireStaleBookings(
+    db: PostgresJsDatabase,
+    data: ExpireStaleBookingsInput,
+    userId?: string,
+  ) {
+    const cutoff = data.before ? new Date(data.before) : new Date()
+    const staleBookings = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.status, "on_hold"),
+          sql`${bookings.holdExpiresAt} IS NOT NULL`,
+          lte(bookings.holdExpiresAt, cutoff),
+        ),
+      )
+      .orderBy(asc(bookings.holdExpiresAt), asc(bookings.createdAt))
+
+    const expiredIds: string[] = []
+
+    for (const booking of staleBookings) {
+      const result = await this.expireBooking(
+        db,
+        booking.id,
+        { note: data.note ?? "Hold expired by sweep" },
+        userId,
+      )
+
+      if ("booking" in result && result.booking) {
+        expiredIds.push(result.booking.id)
+      }
+    }
+
+    return {
+      expiredIds,
+      count: expiredIds.length,
+      cutoff,
+    }
+  },
+
+  async cancelBooking(
+    db: PostgresJsDatabase,
+    id: string,
+    data: CancelBookingInput,
+    userId?: string,
+  ) {
+    try {
+      return await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, status
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (rows as unknown as Array<{ id: string; status: BookingStatus }>)[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (!["draft", "on_hold", "confirmed", "in_progress"].includes(booking.status)) {
+          throw new BookingServiceError("invalid_transition")
+        }
+
+        const allocations = await tx
+          .select()
+          .from(bookingAllocations)
+          .where(eq(bookingAllocations.bookingId, id))
+
+        for (const allocation of allocations) {
+          await releaseAllocationCapacity(tx as PostgresJsDatabase, allocation)
+        }
+
+        await tx
+          .update(bookingAllocations)
+          .set({
+            status: "cancelled",
+            releasedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bookingAllocations.bookingId, id),
+              or(
+                eq(bookingAllocations.status, "held"),
+                eq(bookingAllocations.status, "confirmed"),
+              ),
+            ),
+          )
+
+        await tx
+          .update(bookingItems)
+          .set({
+            status: "cancelled",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bookingItems.bookingId, id),
+              or(
+                eq(bookingItems.status, "draft"),
+                eq(bookingItems.status, "on_hold"),
+                eq(bookingItems.status, "confirmed"),
+              ),
+            ),
+          )
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            status: "cancelled",
+            holdExpiresAt: null,
+            cancelledAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await syncTransactionOnBookingCancelled(tx as PostgresJsDatabase, id)
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "status_change",
+          description: `Booking cancelled from ${booking.status}`,
+          metadata: { oldStatus: booking.status, newStatus: "cancelled" },
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  listParticipants(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingParticipants)
+      .where(eq(bookingParticipants.bookingId, bookingId))
+      .orderBy(desc(bookingParticipants.isPrimary), asc(bookingParticipants.createdAt))
+  },
+
+  async getParticipantById(db: PostgresJsDatabase, bookingId: string, participantId: string) {
+    const [row] = await db
+      .select()
+      .from(bookingParticipants)
+      .where(
+        and(
+          eq(bookingParticipants.id, participantId),
+          eq(bookingParticipants.bookingId, bookingId),
+        ),
+      )
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async createParticipant(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreateParticipantInput,
+    userId?: string,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const [row] = await db
+      .insert(bookingParticipants)
+      .values({
+        bookingId,
+        personId: data.personId ?? null,
+        participantType: data.participantType,
+        travelerCategory: data.travelerCategory ?? null,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        preferredLanguage: data.preferredLanguage ?? null,
+        accessibilityNeeds: data.accessibilityNeeds ?? null,
+        specialRequests: data.specialRequests ?? null,
+        isPrimary: data.isPrimary ?? false,
+        notes: data.notes ?? null,
+      })
+      .returning()
+
+    if (!row) {
+      return null
+    }
+
+    await ensureParticipantFlags(db, bookingId, row.id, data)
+
+    await db.insert(bookingActivityLog).values({
+      bookingId,
+      actorId: userId ?? "system",
+      activityType: "passenger_update",
+      description: `Participant ${data.firstName} ${data.lastName} added`,
+      metadata: { participantId: row.id, participantType: data.participantType },
+    })
+
+    return row
+  },
+
+  async updateParticipant(
+    db: PostgresJsDatabase,
+    participantId: string,
+    data: UpdateParticipantInput,
+  ) {
+    const [row] = await db
+      .update(bookingParticipants)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(bookingParticipants.id, participantId))
+      .returning()
+
+    if (!row) {
+      return null
+    }
+
+    await ensureParticipantFlags(db, row.bookingId, row.id, data)
+
+    return row
+  },
+
+  async deleteParticipant(db: PostgresJsDatabase, participantId: string) {
+    const [row] = await db
+      .delete(bookingParticipants)
+      .where(eq(bookingParticipants.id, participantId))
+      .returning({ id: bookingParticipants.id })
+
+    return row ?? null
+  },
+
+  listPassengers(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingParticipants)
+      .where(
+        and(
+          eq(bookingParticipants.bookingId, bookingId),
+          or(
+            ...travelerParticipantTypes.map((type) =>
+              eq(bookingParticipants.participantType, type),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(bookingParticipants.createdAt))
+      .then((rows) => rows.map(toPassengerResponse))
+  },
+
+  async createPassenger(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreatePassengerInput,
+    userId?: string,
+  ) {
+    const row = await this.createParticipant(
+      db,
+      bookingId,
+      toCreateParticipantFromPassenger(data),
+      userId,
+    )
+    return row ? toPassengerResponse(row) : null
+  },
+
+  async updatePassenger(db: PostgresJsDatabase, passengerId: string, data: UpdatePassengerInput) {
+    const row = await this.updateParticipant(
+      db,
+      passengerId,
+      toUpdateParticipantFromPassenger(data),
+    )
+    return row ? toPassengerResponse(row) : null
+  },
+
+  async deletePassenger(db: PostgresJsDatabase, passengerId: string) {
+    return this.deleteParticipant(db, passengerId)
+  },
+
+  listItems(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingItems)
+      .where(eq(bookingItems.bookingId, bookingId))
+      .orderBy(asc(bookingItems.createdAt))
+  },
+
+  async createItem(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreateBookingItemInput,
+    userId?: string,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id, sellCurrency: bookings.sellCurrency })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const [row] = await db
+      .insert(bookingItems)
+      .values({
+        bookingId,
+        title: data.title,
+        description: data.description ?? null,
+        itemType: data.itemType,
+        status: data.status,
+        serviceDate: data.serviceDate ?? null,
+        startsAt: toTimestamp(data.startsAt),
+        endsAt: toTimestamp(data.endsAt),
+        quantity: data.quantity,
+        sellCurrency: data.sellCurrency ?? booking.sellCurrency,
+        unitSellAmountCents: data.unitSellAmountCents ?? null,
+        totalSellAmountCents: data.totalSellAmountCents ?? null,
+        costCurrency: data.costCurrency ?? null,
+        unitCostAmountCents: data.unitCostAmountCents ?? null,
+        totalCostAmountCents: data.totalCostAmountCents ?? null,
+        notes: data.notes ?? null,
+        productId: data.productId ?? null,
+        optionId: data.optionId ?? null,
+        optionUnitId: data.optionUnitId ?? null,
+        pricingCategoryId: data.pricingCategoryId ?? null,
+        sourceSnapshotId: data.sourceSnapshotId ?? null,
+        sourceOfferId: data.sourceOfferId ?? null,
+        metadata: data.metadata ?? null,
+      })
+      .returning()
+
+    if (!row) {
+      return null
+    }
+
+    await db.insert(bookingActivityLog).values({
+      bookingId,
+      actorId: userId ?? "system",
+      activityType: "item_update",
+      description: `Booking item "${data.title}" added`,
+      metadata: { bookingItemId: row.id, itemType: data.itemType },
+    })
+
+    return row
+  },
+
+  async updateItem(db: PostgresJsDatabase, itemId: string, data: UpdateBookingItemInput) {
+    const [row] = await db
+      .update(bookingItems)
+      .set({
+        ...data,
+        startsAt: data.startsAt === undefined ? undefined : toTimestamp(data.startsAt),
+        endsAt: data.endsAt === undefined ? undefined : toTimestamp(data.endsAt),
+        updatedAt: new Date(),
+      })
+      .where(eq(bookingItems.id, itemId))
+      .returning()
+
+    return row ?? null
+  },
+
+  async deleteItem(db: PostgresJsDatabase, itemId: string) {
+    const [row] = await db
+      .delete(bookingItems)
+      .where(eq(bookingItems.id, itemId))
+      .returning({ id: bookingItems.id })
+
+    return row ?? null
+  },
+
+  listItemParticipants(db: PostgresJsDatabase, itemId: string) {
+    return db
+      .select()
+      .from(bookingItemParticipants)
+      .where(eq(bookingItemParticipants.bookingItemId, itemId))
+      .orderBy(desc(bookingItemParticipants.isPrimary), asc(bookingItemParticipants.createdAt))
+  },
+
+  async addItemParticipant(
+    db: PostgresJsDatabase,
+    itemId: string,
+    data: CreateBookingItemParticipantInput,
+  ) {
+    const [item] = await db
+      .select({ id: bookingItems.id })
+      .from(bookingItems)
+      .where(eq(bookingItems.id, itemId))
+      .limit(1)
+
+    if (!item) {
+      return null
+    }
+
+    const [participant] = await db
+      .select({ id: bookingParticipants.id })
+      .from(bookingParticipants)
+      .where(eq(bookingParticipants.id, data.participantId))
+      .limit(1)
+
+    if (!participant) {
+      return null
+    }
+
+    if (data.isPrimary) {
+      await db
+        .update(bookingItemParticipants)
+        .set({ isPrimary: false })
+        .where(eq(bookingItemParticipants.bookingItemId, itemId))
+    }
+
+    const [row] = await db
+      .insert(bookingItemParticipants)
+      .values({
+        bookingItemId: itemId,
+        participantId: data.participantId,
+        role: data.role,
+        isPrimary: data.isPrimary ?? false,
+      })
+      .returning()
+
+    return row
+  },
+
+  async removeItemParticipant(db: PostgresJsDatabase, linkId: string) {
+    const [row] = await db
+      .delete(bookingItemParticipants)
+      .where(eq(bookingItemParticipants.id, linkId))
+      .returning({ id: bookingItemParticipants.id })
+
+    return row ?? null
+  },
+
+  listSupplierStatuses(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingSupplierStatuses)
+      .where(eq(bookingSupplierStatuses.bookingId, bookingId))
+      .orderBy(asc(bookingSupplierStatuses.createdAt))
+  },
+
+  async createSupplierStatus(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: {
+      supplierServiceId?: string | null
+      serviceName: string
+      status?: "pending" | "confirmed" | "rejected" | "cancelled"
+      supplierReference?: string | null
+      costCurrency: string
+      costAmountCents: number
+      notes?: string | null
+    },
+    userId?: string,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const [row] = await db
+      .insert(bookingSupplierStatuses)
+      .values({
+        bookingId,
+        supplierServiceId: data.supplierServiceId ?? null,
+        serviceName: data.serviceName,
+        status: data.status ?? "pending",
+        supplierReference: data.supplierReference ?? null,
+        costCurrency: data.costCurrency,
+        costAmountCents: data.costAmountCents,
+        notes: data.notes ?? null,
+        confirmedAt: data.status === "confirmed" ? new Date() : null,
+      })
+      .returning()
+
+    await db.insert(bookingActivityLog).values({
+      bookingId,
+      actorId: userId ?? "system",
+      activityType: "supplier_update",
+      description: `Supplier status for "${data.serviceName}" added`,
+    })
+
+    return row ?? null
+  },
+
+  async updateSupplierStatus(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    statusId: string,
+    data: {
+      supplierServiceId?: string | null
+      serviceName?: string
+      status?: "pending" | "confirmed" | "rejected" | "cancelled"
+      supplierReference?: string | null
+      costCurrency?: string
+      costAmountCents?: number
+      notes?: string | null
+      confirmedAt?: string | null
+    },
+    userId?: string,
+  ) {
+    const updateData: Record<string, unknown> = {
+      ...data,
+      supplierServiceId: data.supplierServiceId ?? undefined,
+      supplierReference: data.supplierReference ?? undefined,
+      confirmedAt:
+        data.confirmedAt !== undefined
+          ? toTimestamp(data.confirmedAt)
+          : data.status === "confirmed"
+            ? new Date()
+            : undefined,
+      updatedAt: new Date(),
+    }
+
+    const [row] = await db
+      .update(bookingSupplierStatuses)
+      .set(updateData)
+      .where(eq(bookingSupplierStatuses.id, statusId))
+      .returning()
+
+    if (!row) {
+      return null
+    }
+
+    if (data.status) {
+      await db.insert(bookingActivityLog).values({
+        bookingId,
+        actorId: userId ?? "system",
+        activityType: "supplier_update",
+        description: `Supplier "${row.serviceName}" status updated to ${data.status}`,
+        metadata: { supplierStatusId: statusId, newStatus: data.status },
+      })
+    }
+
+    return row
+  },
+
+  listFulfillments(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingFulfillments)
+      .where(eq(bookingFulfillments.bookingId, bookingId))
+      .orderBy(desc(bookingFulfillments.createdAt))
+  },
+
+  async issueFulfillment(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreateBookingFulfillmentInput,
+    userId?: string,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const scoped = await ensureBookingScopedLinks(db, bookingId, data)
+    if (!scoped.ok) {
+      return null
+    }
+
+    const status = data.status ?? "issued"
+    const issuedAt =
+      data.issuedAt !== undefined
+        ? toTimestamp(data.issuedAt)
+        : status === "issued" || status === "reissued"
+          ? new Date()
+          : null
+    const revokedAt =
+      data.revokedAt !== undefined
+        ? toTimestamp(data.revokedAt)
+        : status === "revoked"
+          ? new Date()
+          : null
+
+    const [row] = await db
+      .insert(bookingFulfillments)
+      .values({
+        bookingId,
+        bookingItemId: data.bookingItemId ?? null,
+        participantId: data.participantId ?? null,
+        fulfillmentType: data.fulfillmentType,
+        deliveryChannel: data.deliveryChannel,
+        status,
+        artifactUrl: data.artifactUrl ?? null,
+        payload: data.payload ?? null,
+        issuedAt,
+        revokedAt,
+      })
+      .returning()
+
+    await db.insert(bookingActivityLog).values({
+      bookingId,
+      actorId: userId ?? "system",
+      activityType: "fulfillment_issued",
+      description: `Booking fulfillment issued as ${data.fulfillmentType}`,
+      metadata: {
+        fulfillmentId: row?.id ?? null,
+        bookingItemId: data.bookingItemId ?? null,
+        participantId: data.participantId ?? null,
+        status,
+      },
+    })
+
+    return row ?? null
+  },
+
+  async updateFulfillment(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    fulfillmentId: string,
+    data: UpdateBookingFulfillmentInput,
+    userId?: string,
+  ) {
+    const [existing] = await db
+      .select({ id: bookingFulfillments.id })
+      .from(bookingFulfillments)
+      .where(
+        and(eq(bookingFulfillments.id, fulfillmentId), eq(bookingFulfillments.bookingId, bookingId)),
+      )
+      .limit(1)
+
+    if (!existing) {
+      return null
+    }
+
+    const scoped = await ensureBookingScopedLinks(db, bookingId, data)
+    if (!scoped.ok) {
+      return null
+    }
+
+    const nextStatus = data.status
+    const [row] = await db
+      .update(bookingFulfillments)
+      .set({
+        bookingItemId: data.bookingItemId === undefined ? undefined : (data.bookingItemId ?? null),
+        participantId: data.participantId === undefined ? undefined : (data.participantId ?? null),
+        fulfillmentType: data.fulfillmentType,
+        deliveryChannel: data.deliveryChannel,
+        status: nextStatus,
+        artifactUrl: data.artifactUrl === undefined ? undefined : (data.artifactUrl ?? null),
+        payload: data.payload === undefined ? undefined : (data.payload ?? null),
+        issuedAt:
+          data.issuedAt !== undefined
+            ? toTimestamp(data.issuedAt)
+            : nextStatus === "issued" || nextStatus === "reissued"
+              ? new Date()
+              : undefined,
+        revokedAt:
+          data.revokedAt !== undefined
+            ? toTimestamp(data.revokedAt)
+            : nextStatus === "revoked"
+              ? new Date()
+              : undefined,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookingFulfillments.id, fulfillmentId))
+      .returning()
+
+    if (row) {
+      await db.insert(bookingActivityLog).values({
+        bookingId,
+        actorId: userId ?? "system",
+        activityType: "fulfillment_updated",
+        description: `Booking fulfillment ${fulfillmentId} updated`,
+        metadata: {
+          fulfillmentId,
+          bookingItemId: row.bookingItemId,
+          participantId: row.participantId,
+          status: row.status,
+        },
+      })
+    }
+
+    return row ?? null
+  },
+
+  listRedemptionEvents(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingRedemptionEvents)
+      .where(eq(bookingRedemptionEvents.bookingId, bookingId))
+      .orderBy(desc(bookingRedemptionEvents.redeemedAt), desc(bookingRedemptionEvents.createdAt))
+  },
+
+  async recordRedemption(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: RecordBookingRedemptionInput,
+    userId?: string,
+  ) {
+    return db.transaction(async (tx) => {
+      const [booking] = await tx
+        .select({
+          id: bookings.id,
+          redeemedAt: bookings.redeemedAt,
+        })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .limit(1)
+
+      if (!booking) {
+        return null
+      }
+
+      const scoped = await ensureBookingScopedLinks(tx as PostgresJsDatabase, bookingId, data)
+      if (!scoped.ok) {
+        return null
+      }
+
+      const redeemedAt = toTimestamp(data.redeemedAt) ?? new Date()
+
+      const [event] = await tx
+        .insert(bookingRedemptionEvents)
+        .values({
+          bookingId,
+          bookingItemId: data.bookingItemId ?? null,
+          participantId: data.participantId ?? null,
+          redeemedAt,
+          redeemedBy: data.redeemedBy ?? userId ?? null,
+          location: data.location ?? null,
+          method: data.method,
+          metadata: data.metadata ?? null,
+        })
+        .returning()
+
+      if (!booking.redeemedAt || booking.redeemedAt < redeemedAt) {
+        await tx
+          .update(bookings)
+          .set({
+            redeemedAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, bookingId))
+      }
+
+      if (data.bookingItemId) {
+        await tx
+          .update(bookingItems)
+          .set({
+            status: "fulfilled",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bookingItems.id, data.bookingItemId),
+              eq(bookingItems.bookingId, bookingId),
+              or(
+                eq(bookingItems.status, "confirmed"),
+                eq(bookingItems.status, "on_hold"),
+                eq(bookingItems.status, "draft"),
+              ),
+            ),
+          )
+
+        await tx
+          .update(bookingAllocations)
+          .set({
+            status: "fulfilled",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bookingAllocations.bookingId, bookingId),
+              eq(bookingAllocations.bookingItemId, data.bookingItemId),
+              or(
+                eq(bookingAllocations.status, "held"),
+                eq(bookingAllocations.status, "confirmed"),
+              ),
+            ),
+          )
+      }
+
+      await tx.insert(bookingActivityLog).values({
+        bookingId,
+        actorId: userId ?? "system",
+        activityType: "redemption_recorded",
+        description: "Booking redemption recorded",
+        metadata: {
+          redemptionEventId: event?.id ?? null,
+          bookingItemId: data.bookingItemId ?? null,
+          participantId: data.participantId ?? null,
+          redeemedAt: redeemedAt.toISOString(),
+          method: data.method,
+        },
+      })
+
+      await syncTransactionOnBookingRedeemed(tx as PostgresJsDatabase, bookingId)
+
+      return event ?? null
+    })
+  },
+
+  listActivity(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingActivityLog)
+      .where(eq(bookingActivityLog.bookingId, bookingId))
+      .orderBy(desc(bookingActivityLog.createdAt))
+  },
+
+  listNotes(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingNotes)
+      .where(eq(bookingNotes.bookingId, bookingId))
+      .orderBy(bookingNotes.createdAt)
+  },
+
+  async createNote(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    userId: string,
+    data: CreateBookingNoteInput,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const [row] = await db
+      .insert(bookingNotes)
+      .values({
+        bookingId,
+        authorId: userId,
+        content: data.content,
+      })
+      .returning()
+
+    await db.insert(bookingActivityLog).values({
+      bookingId,
+      actorId: userId,
+      activityType: "note_added",
+      description: "Note added",
+    })
+
+    return row
+  },
+
+  listDocuments(db: PostgresJsDatabase, bookingId: string) {
+    return db
+      .select()
+      .from(bookingDocuments)
+      .where(eq(bookingDocuments.bookingId, bookingId))
+      .orderBy(bookingDocuments.createdAt)
+  },
+
+  async createDocument(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreateBookingDocumentInput,
+  ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const [row] = await db
+      .insert(bookingDocuments)
+      .values({
+        bookingId,
+        participantId: data.participantId ?? data.passengerId ?? null,
+        type: data.type,
+        fileName: data.fileName,
+        fileUrl: data.fileUrl,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        notes: data.notes ?? null,
+      })
+      .returning()
+
+    return row
+  },
+
+  async deleteDocument(db: PostgresJsDatabase, documentId: string) {
+    const [row] = await db
+      .delete(bookingDocuments)
+      .where(eq(bookingDocuments.id, documentId))
+      .returning({ id: bookingDocuments.id })
+
+    return row ?? null
+  },
+}

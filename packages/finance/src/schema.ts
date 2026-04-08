@@ -1,0 +1,1105 @@
+import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
+import { relations } from "drizzle-orm"
+import {
+  boolean,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
+
+// ---------- enums ----------
+
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "partially_paid",
+  "paid",
+  "overdue",
+  "void",
+])
+
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "bank_transfer",
+  "credit_card",
+  "debit_card",
+  "cash",
+  "cheque",
+  "wallet",
+  "direct_bill",
+  "voucher",
+  "other",
+])
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "completed",
+  "failed",
+  "refunded",
+])
+
+export const paymentSessionStatusEnum = pgEnum("payment_session_status", [
+  "pending",
+  "requires_redirect",
+  "processing",
+  "authorized",
+  "paid",
+  "failed",
+  "cancelled",
+  "expired",
+])
+
+export const paymentSessionTargetTypeEnum = pgEnum("payment_session_target_type", [
+  "booking",
+  "order",
+  "invoice",
+  "booking_payment_schedule",
+  "booking_guarantee",
+  "other",
+])
+
+export const paymentInstrumentTypeEnum = pgEnum("payment_instrument_type", [
+  "credit_card",
+  "debit_card",
+  "bank_account",
+  "wallet",
+  "voucher",
+  "direct_bill",
+  "cash",
+  "other",
+])
+
+export const paymentInstrumentOwnerTypeEnum = pgEnum("payment_instrument_owner_type", [
+  "client",
+  "supplier",
+  "channel",
+  "agency",
+  "internal",
+  "other",
+])
+
+export const paymentInstrumentStatusEnum = pgEnum("payment_instrument_status", [
+  "active",
+  "inactive",
+  "expired",
+  "revoked",
+  "failed_verification",
+])
+
+export const paymentAuthorizationStatusEnum = pgEnum("payment_authorization_status", [
+  "pending",
+  "authorized",
+  "partially_captured",
+  "captured",
+  "voided",
+  "failed",
+  "expired",
+])
+
+export const paymentCaptureStatusEnum = pgEnum("payment_capture_status", [
+  "pending",
+  "completed",
+  "failed",
+  "refunded",
+  "voided",
+])
+
+export const captureModeEnum = pgEnum("capture_mode", ["automatic", "manual"])
+
+export const creditNoteStatusEnum = pgEnum("credit_note_status", ["draft", "issued", "applied"])
+
+export const paymentScheduleTypeEnum = pgEnum("payment_schedule_type", [
+  "deposit",
+  "installment",
+  "balance",
+  "hold",
+  "other",
+])
+
+export const paymentScheduleStatusEnum = pgEnum("payment_schedule_status", [
+  "pending",
+  "due",
+  "paid",
+  "waived",
+  "cancelled",
+  "expired",
+])
+
+export const guaranteeTypeEnum = pgEnum("guarantee_type", [
+  "deposit",
+  "credit_card",
+  "preauth",
+  "card_on_file",
+  "bank_transfer",
+  "voucher",
+  "agency_letter",
+  "other",
+])
+
+export const guaranteeStatusEnum = pgEnum("guarantee_status", [
+  "pending",
+  "active",
+  "released",
+  "failed",
+  "cancelled",
+  "expired",
+])
+
+export const taxScopeEnum = pgEnum("tax_scope", ["included", "excluded", "withheld"])
+
+export const commissionRecipientTypeEnum = pgEnum("commission_recipient_type", [
+  "channel",
+  "affiliate",
+  "agency",
+  "agent",
+  "internal",
+  "supplier",
+  "other",
+])
+
+export const commissionModelEnum = pgEnum("commission_model", [
+  "percentage",
+  "fixed",
+  "markup",
+  "net",
+])
+
+export const commissionStatusEnum = pgEnum("commission_status", [
+  "pending",
+  "accrued",
+  "payable",
+  "paid",
+  "void",
+])
+
+export const invoiceTypeEnum = pgEnum("invoice_type", ["invoice", "proforma", "credit_note"])
+
+export const invoiceNumberResetStrategyEnum = pgEnum("invoice_number_reset_strategy", [
+  "never",
+  "annual",
+  "monthly",
+])
+
+export const invoiceNumberSeriesScopeEnum = pgEnum("invoice_number_series_scope", [
+  "invoice",
+  "proforma",
+  "credit_note",
+])
+
+export const invoiceRenditionFormatEnum = pgEnum("invoice_rendition_format", [
+  "html",
+  "pdf",
+  "xml",
+  "json",
+])
+
+export const invoiceRenditionStatusEnum = pgEnum("invoice_rendition_status", [
+  "pending",
+  "ready",
+  "failed",
+  "stale",
+])
+
+export const invoiceTemplateBodyFormatEnum = pgEnum("invoice_template_body_format", [
+  "html",
+  "markdown",
+  "lexical_json",
+])
+
+export const taxRegimeCodeEnum = pgEnum("tax_regime_code", [
+  "standard",
+  "reduced",
+  "exempt",
+  "reverse_charge",
+  "margin_scheme_art311",
+  "zero_rated",
+  "out_of_scope",
+  "other",
+])
+
+// ---------- payment_instruments ----------
+
+export const paymentInstruments = pgTable(
+  "payment_instruments",
+  {
+    id: typeId("payment_instruments"),
+    ownerType: paymentInstrumentOwnerTypeEnum("owner_type").notNull().default("client"),
+    personId: text("person_id"),
+    organizationId: text("organization_id"),
+    supplierId: text("supplier_id"),
+    channelId: text("channel_id"),
+    instrumentType: paymentInstrumentTypeEnum("instrument_type").notNull(),
+    status: paymentInstrumentStatusEnum("status").notNull().default("active"),
+    label: text("label").notNull(),
+    provider: text("provider"),
+    brand: text("brand"),
+    last4: text("last4"),
+    holderName: text("holder_name"),
+    expiryMonth: integer("expiry_month"),
+    expiryYear: integer("expiry_year"),
+    externalToken: text("external_token"),
+    externalCustomerId: text("external_customer_id"),
+    billingEmail: text("billing_email"),
+    billingAddress: text("billing_address"),
+    directBillReference: text("direct_bill_reference"),
+    notes: text("notes"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_payment_instruments_owner_type").on(table.ownerType),
+    index("idx_payment_instruments_person").on(table.personId),
+    index("idx_payment_instruments_organization").on(table.organizationId),
+    index("idx_payment_instruments_supplier").on(table.supplierId),
+    index("idx_payment_instruments_channel").on(table.channelId),
+    index("idx_payment_instruments_status").on(table.status),
+    index("idx_payment_instruments_type").on(table.instrumentType),
+  ],
+)
+
+export type PaymentInstrument = typeof paymentInstruments.$inferSelect
+export type NewPaymentInstrument = typeof paymentInstruments.$inferInsert
+
+// ---------- payment_sessions ----------
+
+export const paymentSessions = pgTable(
+  "payment_sessions",
+  {
+    id: typeId("payment_sessions"),
+    targetType: paymentSessionTargetTypeEnum("target_type").notNull().default("other"),
+    targetId: text("target_id"),
+    bookingId: text("booking_id"),
+    orderId: text("order_id"),
+    invoiceId: typeIdRef("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    bookingPaymentScheduleId: typeIdRef("booking_payment_schedule_id").references(
+      () => bookingPaymentSchedules.id,
+      { onDelete: "set null" },
+    ),
+    bookingGuaranteeId: typeIdRef("booking_guarantee_id").references(() => bookingGuarantees.id, {
+      onDelete: "set null",
+    }),
+    paymentInstrumentId: typeIdRef("payment_instrument_id").references(
+      () => paymentInstruments.id,
+      { onDelete: "set null" },
+    ),
+    paymentAuthorizationId: typeIdRef("payment_authorization_id").references(
+      () => paymentAuthorizations.id,
+      { onDelete: "set null" },
+    ),
+    paymentCaptureId: typeIdRef("payment_capture_id").references(() => paymentCaptures.id, {
+      onDelete: "set null",
+    }),
+    paymentId: typeIdRef("payment_id").references(() => payments.id, {
+      onDelete: "set null",
+    }),
+    status: paymentSessionStatusEnum("status").notNull().default("pending"),
+    provider: text("provider"),
+    providerSessionId: text("provider_session_id"),
+    providerPaymentId: text("provider_payment_id"),
+    externalReference: text("external_reference"),
+    idempotencyKey: text("idempotency_key"),
+    clientReference: text("client_reference"),
+    currency: text("currency").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method"),
+    payerPersonId: text("payer_person_id"),
+    payerOrganizationId: text("payer_organization_id"),
+    payerEmail: text("payer_email"),
+    payerName: text("payer_name"),
+    redirectUrl: text("redirect_url"),
+    returnUrl: text("return_url"),
+    cancelUrl: text("cancel_url"),
+    callbackUrl: text("callback_url"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    expiredAt: timestamp("expired_at", { withTimezone: true }),
+    failureCode: text("failure_code"),
+    failureMessage: text("failure_message"),
+    notes: text("notes"),
+    providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_payment_sessions_target").on(table.targetType, table.targetId),
+    index("idx_payment_sessions_booking").on(table.bookingId),
+    index("idx_payment_sessions_order").on(table.orderId),
+    index("idx_payment_sessions_invoice").on(table.invoiceId),
+    index("idx_payment_sessions_schedule").on(table.bookingPaymentScheduleId),
+    index("idx_payment_sessions_guarantee").on(table.bookingGuaranteeId),
+    index("idx_payment_sessions_status").on(table.status),
+    index("idx_payment_sessions_provider").on(table.provider),
+    index("idx_payment_sessions_provider_session").on(table.providerSessionId),
+    index("idx_payment_sessions_expires_at").on(table.expiresAt),
+    uniqueIndex("uidx_payment_sessions_idempotency").on(table.idempotencyKey),
+    uniqueIndex("uidx_payment_sessions_provider_session").on(table.provider, table.providerSessionId),
+  ],
+)
+
+export type PaymentSession = typeof paymentSessions.$inferSelect
+export type NewPaymentSession = typeof paymentSessions.$inferInsert
+
+// ---------- payment_authorizations ----------
+
+export const paymentAuthorizations = pgTable(
+  "payment_authorizations",
+  {
+    id: typeId("payment_authorizations"),
+    bookingId: text("booking_id"),
+    orderId: text("order_id"),
+    invoiceId: typeIdRef("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    bookingGuaranteeId: typeIdRef("booking_guarantee_id"),
+    paymentInstrumentId: typeIdRef("payment_instrument_id").references(
+      () => paymentInstruments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    status: paymentAuthorizationStatusEnum("status").notNull().default("pending"),
+    captureMode: captureModeEnum("capture_mode").notNull().default("manual"),
+    currency: text("currency").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    provider: text("provider"),
+    externalAuthorizationId: text("external_authorization_id"),
+    approvalCode: text("approval_code"),
+    authorizedAt: timestamp("authorized_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_payment_authorizations_booking").on(table.bookingId),
+    index("idx_payment_authorizations_order").on(table.orderId),
+    index("idx_payment_authorizations_invoice").on(table.invoiceId),
+    index("idx_payment_authorizations_guarantee").on(table.bookingGuaranteeId),
+    index("idx_payment_authorizations_instrument").on(table.paymentInstrumentId),
+    index("idx_payment_authorizations_status").on(table.status),
+  ],
+)
+
+export type PaymentAuthorization = typeof paymentAuthorizations.$inferSelect
+export type NewPaymentAuthorization = typeof paymentAuthorizations.$inferInsert
+
+// ---------- payment_captures ----------
+
+export const paymentCaptures = pgTable(
+  "payment_captures",
+  {
+    id: typeId("payment_captures"),
+    paymentAuthorizationId: typeIdRef("payment_authorization_id").references(
+      () => paymentAuthorizations.id,
+      { onDelete: "set null" },
+    ),
+    invoiceId: typeIdRef("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    status: paymentCaptureStatusEnum("status").notNull().default("pending"),
+    currency: text("currency").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    provider: text("provider"),
+    externalCaptureId: text("external_capture_id"),
+    capturedAt: timestamp("captured_at", { withTimezone: true }),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_payment_captures_authorization").on(table.paymentAuthorizationId),
+    index("idx_payment_captures_invoice").on(table.invoiceId),
+    index("idx_payment_captures_status").on(table.status),
+  ],
+)
+
+export type PaymentCapture = typeof paymentCaptures.$inferSelect
+export type NewPaymentCapture = typeof paymentCaptures.$inferInsert
+
+// ---------- booking_payment_schedules ----------
+
+export const bookingPaymentSchedules = pgTable(
+  "booking_payment_schedules",
+  {
+    id: typeId("booking_payment_schedules"),
+    bookingId: text("booking_id").notNull(),
+    bookingItemId: text("booking_item_id"),
+    scheduleType: paymentScheduleTypeEnum("schedule_type").notNull().default("balance"),
+    status: paymentScheduleStatusEnum("status").notNull().default("pending"),
+    dueDate: date("due_date").notNull(),
+    currency: text("currency").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_payment_schedules_booking").on(table.bookingId),
+    index("idx_booking_payment_schedules_item").on(table.bookingItemId),
+    index("idx_booking_payment_schedules_status").on(table.status),
+    index("idx_booking_payment_schedules_due_date").on(table.dueDate),
+  ],
+)
+
+export type BookingPaymentSchedule = typeof bookingPaymentSchedules.$inferSelect
+export type NewBookingPaymentSchedule = typeof bookingPaymentSchedules.$inferInsert
+
+// ---------- booking_guarantees ----------
+
+export const bookingGuarantees = pgTable(
+  "booking_guarantees",
+  {
+    id: typeId("booking_guarantees"),
+    bookingId: text("booking_id").notNull(),
+    bookingPaymentScheduleId: typeIdRef("booking_payment_schedule_id").references(
+      () => bookingPaymentSchedules.id,
+      { onDelete: "set null" },
+    ),
+    bookingItemId: text("booking_item_id"),
+    guaranteeType: guaranteeTypeEnum("guarantee_type").notNull(),
+    status: guaranteeStatusEnum("status").notNull().default("pending"),
+    paymentInstrumentId: typeIdRef("payment_instrument_id").references(
+      () => paymentInstruments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    paymentAuthorizationId: typeIdRef("payment_authorization_id").references(
+      () => paymentAuthorizations.id,
+      { onDelete: "set null" },
+    ),
+    currency: text("currency"),
+    amountCents: integer("amount_cents"),
+    provider: text("provider"),
+    referenceNumber: text("reference_number"),
+    guaranteedAt: timestamp("guaranteed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_guarantees_booking").on(table.bookingId),
+    index("idx_booking_guarantees_schedule").on(table.bookingPaymentScheduleId),
+    index("idx_booking_guarantees_item").on(table.bookingItemId),
+    index("idx_booking_guarantees_instrument").on(table.paymentInstrumentId),
+    index("idx_booking_guarantees_authorization").on(table.paymentAuthorizationId),
+    index("idx_booking_guarantees_status").on(table.status),
+  ],
+)
+
+export type BookingGuarantee = typeof bookingGuarantees.$inferSelect
+export type NewBookingGuarantee = typeof bookingGuarantees.$inferInsert
+
+// ---------- booking_item_tax_lines ----------
+
+export const bookingItemTaxLines = pgTable(
+  "booking_item_tax_lines",
+  {
+    id: typeId("booking_item_tax_lines"),
+    bookingItemId: text("booking_item_id").notNull(),
+    code: text("code"),
+    name: text("name").notNull(),
+    jurisdiction: text("jurisdiction"),
+    scope: taxScopeEnum("scope").notNull().default("excluded"),
+    currency: text("currency").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    rateBasisPoints: integer("rate_basis_points"),
+    includedInPrice: boolean("included_in_price").notNull().default(false),
+    remittanceParty: text("remittance_party"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_item_tax_lines_item").on(table.bookingItemId),
+    index("idx_booking_item_tax_lines_scope").on(table.scope),
+  ],
+)
+
+export type BookingItemTaxLine = typeof bookingItemTaxLines.$inferSelect
+export type NewBookingItemTaxLine = typeof bookingItemTaxLines.$inferInsert
+
+// ---------- booking_item_commissions ----------
+
+export const bookingItemCommissions = pgTable(
+  "booking_item_commissions",
+  {
+    id: typeId("booking_item_commissions"),
+    bookingItemId: text("booking_item_id").notNull(),
+    channelId: text("channel_id"),
+    recipientType: commissionRecipientTypeEnum("recipient_type").notNull(),
+    commissionModel: commissionModelEnum("commission_model").notNull().default("percentage"),
+    currency: text("currency"),
+    amountCents: integer("amount_cents"),
+    rateBasisPoints: integer("rate_basis_points"),
+    status: commissionStatusEnum("status").notNull().default("pending"),
+    payableAt: date("payable_at"),
+    paidAt: date("paid_at"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_item_commissions_item").on(table.bookingItemId),
+    index("idx_booking_item_commissions_channel").on(table.channelId),
+    index("idx_booking_item_commissions_status").on(table.status),
+  ],
+)
+
+export type BookingItemCommission = typeof bookingItemCommissions.$inferSelect
+export type NewBookingItemCommission = typeof bookingItemCommissions.$inferInsert
+
+// ---------- invoices ----------
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: typeId("invoices"),
+
+    invoiceNumber: text("invoice_number").notNull().unique(),
+    invoiceType: invoiceTypeEnum("invoice_type").notNull().default("invoice"),
+    seriesId: typeIdRef("series_id"),
+    sequence: integer("sequence"),
+    templateId: typeIdRef("template_id"),
+    taxRegimeId: typeIdRef("tax_regime_id"),
+    language: text("language"),
+    bookingId: text("booking_id").notNull(),
+    personId: text("person_id"),
+    organizationId: text("organization_id"),
+    status: invoiceStatusEnum("status").notNull().default("draft"),
+
+    currency: text("currency").notNull(),
+    baseCurrency: text("base_currency"),
+    fxRateSetId: text("fx_rate_set_id"),
+    subtotalCents: integer("subtotal_cents").notNull().default(0),
+    baseSubtotalCents: integer("base_subtotal_cents"),
+    taxCents: integer("tax_cents").notNull().default(0),
+    baseTaxCents: integer("base_tax_cents"),
+    totalCents: integer("total_cents").notNull().default(0),
+    baseTotalCents: integer("base_total_cents"),
+    paidCents: integer("paid_cents").notNull().default(0),
+    basePaidCents: integer("base_paid_cents"),
+    balanceDueCents: integer("balance_due_cents").notNull().default(0),
+    baseBalanceDueCents: integer("base_balance_due_cents"),
+    commissionPercent: integer("commission_percent"),
+    commissionAmountCents: integer("commission_amount_cents"),
+
+    issueDate: date("issue_date").notNull(),
+    dueDate: date("due_date").notNull(),
+    notes: text("notes"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoices_booking").on(table.bookingId),
+    index("idx_invoices_person").on(table.personId),
+    index("idx_invoices_organization").on(table.organizationId),
+    index("idx_invoices_status").on(table.status),
+    index("idx_invoices_fx_rate_set").on(table.fxRateSetId),
+    index("idx_invoices_number").on(table.invoiceNumber),
+    index("idx_invoices_due_date").on(table.dueDate),
+  ],
+)
+
+export type Invoice = typeof invoices.$inferSelect
+export type NewInvoice = typeof invoices.$inferInsert
+
+// ---------- invoice_line_items ----------
+
+export const invoiceLineItems = pgTable(
+  "invoice_line_items",
+  {
+    id: typeId("invoice_line_items"),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    bookingItemId: text("booking_item_id"),
+
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    totalCents: integer("total_cents").notNull(),
+    taxRate: integer("tax_rate"),
+    sortOrder: integer("sort_order").notNull().default(0),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoice_line_items_invoice").on(table.invoiceId),
+    index("idx_invoice_line_items_booking_item").on(table.bookingItemId),
+  ],
+)
+
+export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect
+export type NewInvoiceLineItem = typeof invoiceLineItems.$inferInsert
+
+// ---------- payments ----------
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: typeId("payments"),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    baseCurrency: text("base_currency"),
+    baseAmountCents: integer("base_amount_cents"),
+    fxRateSetId: text("fx_rate_set_id"),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    paymentInstrumentId: typeIdRef("payment_instrument_id").references(
+      () => paymentInstruments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    paymentAuthorizationId: typeIdRef("payment_authorization_id").references(
+      () => paymentAuthorizations.id,
+      { onDelete: "set null" },
+    ),
+    paymentCaptureId: typeIdRef("payment_capture_id").references(() => paymentCaptures.id, {
+      onDelete: "set null",
+    }),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    referenceNumber: text("reference_number"),
+    paymentDate: date("payment_date").notNull(),
+    notes: text("notes"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_payments_invoice").on(table.invoiceId),
+    index("idx_payments_fx_rate_set").on(table.fxRateSetId),
+    index("idx_payments_instrument").on(table.paymentInstrumentId),
+    index("idx_payments_authorization").on(table.paymentAuthorizationId),
+    index("idx_payments_capture").on(table.paymentCaptureId),
+    index("idx_payments_status").on(table.status),
+    index("idx_payments_date").on(table.paymentDate),
+  ],
+)
+
+export type Payment = typeof payments.$inferSelect
+export type NewPayment = typeof payments.$inferInsert
+
+// ---------- credit_notes ----------
+
+export const creditNotes = pgTable(
+  "credit_notes",
+  {
+    id: typeId("credit_notes"),
+
+    creditNoteNumber: text("credit_note_number").notNull().unique(),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    status: creditNoteStatusEnum("status").notNull().default("draft"),
+
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    baseCurrency: text("base_currency"),
+    baseAmountCents: integer("base_amount_cents"),
+    fxRateSetId: text("fx_rate_set_id"),
+    reason: text("reason").notNull(),
+    notes: text("notes"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_credit_notes_invoice").on(table.invoiceId),
+    index("idx_credit_notes_fx_rate_set").on(table.fxRateSetId),
+    index("idx_credit_notes_number").on(table.creditNoteNumber),
+  ],
+)
+
+export type CreditNote = typeof creditNotes.$inferSelect
+export type NewCreditNote = typeof creditNotes.$inferInsert
+
+// ---------- credit_note_line_items ----------
+
+export const creditNoteLineItems = pgTable(
+  "credit_note_line_items",
+  {
+    id: typeId("credit_note_line_items"),
+    creditNoteId: typeIdRef("credit_note_id")
+      .notNull()
+      .references(() => creditNotes.id, { onDelete: "cascade" }),
+
+    description: text("description").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    totalCents: integer("total_cents").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_credit_note_line_items_credit_note").on(table.creditNoteId)],
+)
+
+export type CreditNoteLineItem = typeof creditNoteLineItems.$inferSelect
+export type NewCreditNoteLineItem = typeof creditNoteLineItems.$inferInsert
+
+// ---------- supplier_payments ----------
+
+export const supplierPayments = pgTable(
+  "supplier_payments",
+  {
+    id: typeId("supplier_payments"),
+
+    bookingId: text("booking_id").notNull(),
+    supplierId: text("supplier_id"),
+    bookingSupplierStatusId: text("booking_supplier_status_id"),
+
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    baseCurrency: text("base_currency"),
+    baseAmountCents: integer("base_amount_cents"),
+    fxRateSetId: text("fx_rate_set_id"),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    paymentInstrumentId: typeIdRef("payment_instrument_id").references(
+      () => paymentInstruments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    referenceNumber: text("reference_number"),
+    paymentDate: date("payment_date").notNull(),
+    notes: text("notes"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_supplier_payments_booking").on(table.bookingId),
+    index("idx_supplier_payments_supplier").on(table.supplierId),
+    index("idx_supplier_payments_fx_rate_set").on(table.fxRateSetId),
+    index("idx_supplier_payments_instrument").on(table.paymentInstrumentId),
+    index("idx_supplier_payments_status").on(table.status),
+    index("idx_supplier_payments_date").on(table.paymentDate),
+  ],
+)
+
+export type SupplierPayment = typeof supplierPayments.$inferSelect
+export type NewSupplierPayment = typeof supplierPayments.$inferInsert
+
+// ---------- finance_notes ----------
+
+export const financeNotes = pgTable(
+  "finance_notes",
+  {
+    id: typeId("finance_notes"),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    authorId: text("author_id").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_finance_notes_invoice").on(table.invoiceId)],
+)
+
+export type FinanceNote = typeof financeNotes.$inferSelect
+export type NewFinanceNote = typeof financeNotes.$inferInsert
+
+// ---------- invoice_number_series ----------
+
+export const invoiceNumberSeries = pgTable(
+  "invoice_number_series",
+  {
+    id: typeId("invoice_number_series"),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    prefix: text("prefix").notNull().default(""),
+    separator: text("separator").notNull().default(""),
+    padLength: integer("pad_length").notNull().default(4),
+    currentSequence: integer("current_sequence").notNull().default(0),
+    resetStrategy: invoiceNumberResetStrategyEnum("reset_strategy").notNull().default("never"),
+    resetAt: timestamp("reset_at", { withTimezone: true }),
+    scope: invoiceNumberSeriesScopeEnum("scope").notNull().default("invoice"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoice_number_series_scope").on(table.scope),
+    index("idx_invoice_number_series_active").on(table.active),
+  ],
+)
+
+export type InvoiceNumberSeries = typeof invoiceNumberSeries.$inferSelect
+export type NewInvoiceNumberSeries = typeof invoiceNumberSeries.$inferInsert
+
+// ---------- invoice_templates ----------
+
+export const invoiceTemplates = pgTable(
+  "invoice_templates",
+  {
+    id: typeId("invoice_templates"),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    language: text("language").notNull().default("en"),
+    jurisdiction: text("jurisdiction"),
+    bodyFormat: invoiceTemplateBodyFormatEnum("body_format").notNull().default("html"),
+    body: text("body").notNull(),
+    cssStyles: text("css_styles"),
+    isDefault: boolean("is_default").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoice_templates_language").on(table.language),
+    index("idx_invoice_templates_jurisdiction").on(table.jurisdiction),
+    index("idx_invoice_templates_default").on(table.isDefault),
+    index("idx_invoice_templates_active").on(table.active),
+  ],
+)
+
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect
+export type NewInvoiceTemplate = typeof invoiceTemplates.$inferInsert
+
+// ---------- invoice_renditions ----------
+
+export const invoiceRenditions = pgTable(
+  "invoice_renditions",
+  {
+    id: typeId("invoice_renditions"),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    templateId: typeIdRef("template_id").references(() => invoiceTemplates.id, {
+      onDelete: "set null",
+    }),
+    format: invoiceRenditionFormatEnum("format").notNull().default("pdf"),
+    status: invoiceRenditionStatusEnum("status").notNull().default("pending"),
+    storageKey: text("storage_key"),
+    fileSize: integer("file_size"),
+    checksum: text("checksum"),
+    language: text("language"),
+    errorMessage: text("error_message"),
+    generatedAt: timestamp("generated_at", { withTimezone: true }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoice_renditions_invoice").on(table.invoiceId),
+    index("idx_invoice_renditions_template").on(table.templateId),
+    index("idx_invoice_renditions_status").on(table.status),
+    index("idx_invoice_renditions_format").on(table.format),
+  ],
+)
+
+export type InvoiceRendition = typeof invoiceRenditions.$inferSelect
+export type NewInvoiceRendition = typeof invoiceRenditions.$inferInsert
+
+// ---------- tax_regimes ----------
+
+export const taxRegimes = pgTable(
+  "tax_regimes",
+  {
+    id: typeId("tax_regimes"),
+    code: taxRegimeCodeEnum("code").notNull(),
+    name: text("name").notNull(),
+    jurisdiction: text("jurisdiction"),
+    ratePercent: integer("rate_percent"),
+    description: text("description"),
+    legalReference: text("legal_reference"),
+    active: boolean("active").notNull().default(true),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_tax_regimes_code").on(table.code),
+    index("idx_tax_regimes_jurisdiction").on(table.jurisdiction),
+    index("idx_tax_regimes_active").on(table.active),
+  ],
+)
+
+export type TaxRegime = typeof taxRegimes.$inferSelect
+export type NewTaxRegime = typeof taxRegimes.$inferInsert
+
+// ---------- invoice_external_refs ----------
+
+export const invoiceExternalRefs = pgTable(
+  "invoice_external_refs",
+  {
+    id: typeId("invoice_external_refs"),
+    invoiceId: typeIdRef("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    externalId: text("external_id"),
+    externalNumber: text("external_number"),
+    externalUrl: text("external_url"),
+    status: text("status"),
+    metadata: jsonb("metadata"),
+    syncedAt: timestamp("synced_at", { withTimezone: true }),
+    syncError: text("sync_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_invoice_external_refs_invoice").on(table.invoiceId),
+    index("idx_invoice_external_refs_provider").on(table.provider),
+    uniqueIndex("uq_invoice_external_refs_invoice_provider").on(table.invoiceId, table.provider),
+  ],
+)
+
+export type InvoiceExternalRef = typeof invoiceExternalRefs.$inferSelect
+export type NewInvoiceExternalRef = typeof invoiceExternalRefs.$inferInsert
+
+// ---------- relations ----------
+
+export const invoicesRelations = relations(invoices, ({ many }) => ({
+  lineItems: many(invoiceLineItems),
+  payments: many(payments),
+  creditNotes: many(creditNotes),
+  notes: many(financeNotes),
+  authorizations: many(paymentAuthorizations),
+  captures: many(paymentCaptures),
+}))
+
+export const paymentInstrumentsRelations = relations(paymentInstruments, ({ many }) => ({
+  guarantees: many(bookingGuarantees),
+  payments: many(payments),
+  supplierPayments: many(supplierPayments),
+  authorizations: many(paymentAuthorizations),
+}))
+
+export const paymentAuthorizationsRelations = relations(paymentAuthorizations, ({ one, many }) => ({
+  invoice: one(invoices, {
+    fields: [paymentAuthorizations.invoiceId],
+    references: [invoices.id],
+  }),
+  paymentInstrument: one(paymentInstruments, {
+    fields: [paymentAuthorizations.paymentInstrumentId],
+    references: [paymentInstruments.id],
+  }),
+  bookingGuarantee: one(bookingGuarantees, {
+    fields: [paymentAuthorizations.bookingGuaranteeId],
+    references: [bookingGuarantees.id],
+    relationName: "guarantee_authorization",
+  }),
+  captures: many(paymentCaptures),
+  payments: many(payments),
+}))
+
+export const paymentCapturesRelations = relations(paymentCaptures, ({ one, many }) => ({
+  paymentAuthorization: one(paymentAuthorizations, {
+    fields: [paymentCaptures.paymentAuthorizationId],
+    references: [paymentAuthorizations.id],
+  }),
+  invoice: one(invoices, {
+    fields: [paymentCaptures.invoiceId],
+    references: [invoices.id],
+  }),
+  payments: many(payments),
+}))
+
+export const bookingPaymentSchedulesRelations = relations(
+  bookingPaymentSchedules,
+  ({ many }) => ({
+    guarantees: many(bookingGuarantees),
+  }),
+)
+
+export const bookingGuaranteesRelations = relations(bookingGuarantees, ({ one }) => ({
+  bookingPaymentSchedule: one(bookingPaymentSchedules, {
+    fields: [bookingGuarantees.bookingPaymentScheduleId],
+    references: [bookingPaymentSchedules.id],
+  }),
+  paymentInstrument: one(paymentInstruments, {
+    fields: [bookingGuarantees.paymentInstrumentId],
+    references: [paymentInstruments.id],
+  }),
+  paymentAuthorization: one(paymentAuthorizations, {
+    fields: [bookingGuarantees.paymentAuthorizationId],
+    references: [paymentAuthorizations.id],
+    relationName: "guarantee_authorization",
+  }),
+}))
+
+export const bookingItemTaxLinesRelations = relations(bookingItemTaxLines, () => ({}))
+
+export const bookingItemCommissionsRelations = relations(bookingItemCommissions, () => ({}))
+
+export const invoiceLineItemsRelations = relations(invoiceLineItems, ({ one }) => ({
+  invoice: one(invoices, { fields: [invoiceLineItems.invoiceId], references: [invoices.id] }),
+}))
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  invoice: one(invoices, { fields: [payments.invoiceId], references: [invoices.id] }),
+  paymentInstrument: one(paymentInstruments, {
+    fields: [payments.paymentInstrumentId],
+    references: [paymentInstruments.id],
+  }),
+  paymentAuthorization: one(paymentAuthorizations, {
+    fields: [payments.paymentAuthorizationId],
+    references: [paymentAuthorizations.id],
+  }),
+  paymentCapture: one(paymentCaptures, {
+    fields: [payments.paymentCaptureId],
+    references: [paymentCaptures.id],
+  }),
+}))
+
+export const creditNotesRelations = relations(creditNotes, ({ one, many }) => ({
+  invoice: one(invoices, { fields: [creditNotes.invoiceId], references: [invoices.id] }),
+  lineItems: many(creditNoteLineItems),
+}))
+
+export const creditNoteLineItemsRelations = relations(creditNoteLineItems, ({ one }) => ({
+  creditNote: one(creditNotes, {
+    fields: [creditNoteLineItems.creditNoteId],
+    references: [creditNotes.id],
+  }),
+}))
+
+export const supplierPaymentsRelations = relations(supplierPayments, ({ one }) => ({
+  paymentInstrument: one(paymentInstruments, {
+    fields: [supplierPayments.paymentInstrumentId],
+    references: [paymentInstruments.id],
+  }),
+}))
+
+export const financeNotesRelations = relations(financeNotes, ({ one }) => ({
+  invoice: one(invoices, { fields: [financeNotes.invoiceId], references: [invoices.id] }),
+}))
+
+export const invoiceRenditionsRelations = relations(invoiceRenditions, ({ one }) => ({
+  invoice: one(invoices, { fields: [invoiceRenditions.invoiceId], references: [invoices.id] }),
+  template: one(invoiceTemplates, {
+    fields: [invoiceRenditions.templateId],
+    references: [invoiceTemplates.id],
+  }),
+}))
+
+export const invoiceExternalRefsRelations = relations(invoiceExternalRefs, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceExternalRefs.invoiceId],
+    references: [invoices.id],
+  }),
+}))
+
+export const invoiceNumberSeriesRelations = relations(invoiceNumberSeries, () => ({}))
+export const invoiceTemplatesRelations = relations(invoiceTemplates, ({ many }) => ({
+  renditions: many(invoiceRenditions),
+}))
+export const taxRegimesRelations = relations(taxRegimes, () => ({}))

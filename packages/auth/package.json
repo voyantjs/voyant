@@ -1,0 +1,86 @@
+{
+  "name": "@voyantjs/auth",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/auth"
+  },
+  "description": "Auth package for the workspace",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    },
+    "./edge": {
+      "types": "./src/edge.ts",
+      "default": "./src/edge.ts"
+    },
+    "./backend": {
+      "types": "./src/backend.ts",
+      "default": "./src/backend.ts"
+    },
+    "./permissions": {
+      "types": "./src/permissions.ts",
+      "default": "./src/permissions.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "import": "./dist/server.js"
+      },
+      "./edge": {
+        "types": "./dist/edge.d.ts",
+        "import": "./dist/edge.js"
+      },
+      "./backend": {
+        "types": "./dist/backend.d.ts",
+        "import": "./dist/backend.js"
+      },
+      "./permissions": {
+        "types": "./dist/permissions.d.ts",
+        "import": "./dist/permissions.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "biome check src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "^1.5.6",
+    "@voyantjs/db": "workspace:*",
+    "@voyantjs/utils": "workspace:*",
+    "better-auth": "^1.5.6",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "@types/node": "25.5.2",
+    "typescript": "^6.0.2"
+  }
+}

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+.next
+out
+build
+.turbo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# Fly.io
+.fly
+
+# Testing
+coverage
+
+# Apps (exclude all except static-proxy)
+apps/*
+!apps/static-proxy
+
+# Packages (only include needed ones)
+packages/*
+!packages/eslint-config
+!packages/typescript-config

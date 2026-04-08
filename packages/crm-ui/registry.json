@@ -1,0 +1,97 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "voyant-crm",
+  "homepage": "https://voyant.dev",
+  "items": [
+    {
+      "name": "voyant-crm-person-card",
+      "type": "registry:component",
+      "title": "Person Card",
+      "description": "Display card for a CRM person — shows name, job title, contact details, and relation badge.",
+      "dependencies": ["lucide-react", "@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["avatar", "badge", "card"],
+      "files": [
+        {
+          "path": "registry/default/crm/person-card.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/person-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-person-card-connected",
+      "type": "registry:component",
+      "title": "Person Card (connected)",
+      "description": "Loads a CRM person by id and renders the Person Card.",
+      "dependencies": ["lucide-react", "@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["card", "voyant-crm-person-card"],
+      "files": [
+        {
+          "path": "registry/default/crm/person-card-connected.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/person-card-connected.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-person-form",
+      "type": "registry:component",
+      "title": "Person Form",
+      "description": "Create/edit form for a CRM person, wired to usePersonMutation.",
+      "dependencies": ["lucide-react", "@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["button", "input", "label"],
+      "files": [
+        {
+          "path": "registry/default/crm/person-form.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/person-form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-person-dialog",
+      "type": "registry:component",
+      "title": "Person Dialog",
+      "description": "Modal wrapper around Person Form with create/edit modes.",
+      "dependencies": ["@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["dialog", "voyant-crm-person-form"],
+      "files": [
+        {
+          "path": "registry/default/crm/person-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/person-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-person-list",
+      "type": "registry:component",
+      "title": "Person List",
+      "description": "Paginated table of CRM people with search, row actions, and create/edit dialog.",
+      "dependencies": ["lucide-react", "@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["badge", "button", "input", "table", "voyant-crm-person-dialog"],
+      "files": [
+        {
+          "path": "registry/default/crm/person-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/person-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-organization-card",
+      "type": "registry:component",
+      "title": "Organization Card",
+      "description": "Display card for a CRM organization — shows name, industry, website, and relation badge.",
+      "dependencies": ["lucide-react", "@voyantjs/voyant-crm-ui"],
+      "registryDependencies": ["badge", "card"],
+      "files": [
+        {
+          "path": "registry/default/crm/organization-card.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-card.tsx"
+        }
+      ]
+    }
+  ]
+}

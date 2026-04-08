@@ -1,0 +1,123 @@
+# Voyant
+
+Voyant is a source-available framework for travel companies. It provides starter apps and domain modules for CRM, products, availability, bookings, finance, distribution, resources, legal, and related travel workflows.
+
+#### [CLI](./packages/cli/README.md) | [DMC Template](./templates/dmc/README.md) | [Operator Template](./templates/operator/README.md) | [Packages](./packages) | [Examples](./examples)
+
+## Get started
+
+### 1. Install the CLI
+
+```bash
+npm install -g @voyantjs/cli
+```
+
+You can also use `pnpm add -g @voyantjs/cli`.
+
+### 2. Scaffold a project from a starter
+
+```bash
+voyant new my-travel-app --template dmc
+cd my-travel-app
+pnpm install
+```
+
+You can also point `--template` at a custom local starter directory.
+
+### 3. Configure the app
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+Then set your secrets in `.dev.vars` and provide `DATABASE_URL` in `.env` for Drizzle and local worker processes.
+
+### 4. Run the app
+
+```bash
+pnpm db:migrate
+pnpm dev
+```
+
+If your starter uses background jobs, run the worker in a second terminal:
+
+```bash
+pnpm dev:worker
+```
+
+## Starter templates
+
+Voyant currently ships two first-party starters:
+
+| Starter | Purpose | Stack |
+| --- | --- | --- |
+| [`templates/dmc`](./templates/dmc/README.md) | Destination management company workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle, Hatchet |
+| [`templates/operator`](./templates/operator/README.md) | Tour operator workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle, Hatchet |
+
+## What you get
+
+- A deployable application shell, not just isolated packages
+- A normalized travel operations data model on PostgreSQL + Drizzle
+- Headless domain modules for CRM, catalog, availability, bookings, finance, legal, resources, and more
+- Hono-based API transport with optional Next.js route helpers
+- Better Auth wiring in first-party starters, while keeping core packages auth-provider agnostic
+- Optional integrations for payments, invoicing, storage, CMS sync, and notifications
+
+## The framework surface
+
+### Core platform
+
+- [`@voyantjs/core`](./packages/core/README.md), [`@voyantjs/db`](./packages/db/README.md), [`@voyantjs/hono`](./packages/hono/README.md), [`@voyantjs/next`](./packages/next/README.md)
+- [`@voyantjs/auth`](./packages/auth/README.md), [`@voyantjs/types`](./packages/types/README.md), [`@voyantjs/utils`](./packages/utils/README.md), [`@voyantjs/voyant-test-utils`](./packages/test-utils/README.md)
+- [`@voyantjs/cli`](./packages/cli/README.md), [`@voyantjs/voyant-storage`](./packages/storage/README.md)
+
+### Travel domain modules
+
+- [`@voyantjs/crm`](./packages/crm/README.md), [`@voyantjs/suppliers`](./packages/suppliers/README.md), [`@voyantjs/products`](./packages/products/README.md), [`@voyantjs/availability`](./packages/availability/README.md)
+- [`@voyantjs/booking-requirements`](./packages/booking-requirements/README.md), [`@voyantjs/resources`](./packages/resources/README.md), [`@voyantjs/transactions`](./packages/transactions/README.md), [`@voyantjs/bookings`](./packages/bookings/README.md)
+- [`@voyantjs/finance`](./packages/finance/README.md), [`@voyantjs/notifications`](./packages/notifications/README.md), [`@voyantjs/checkout`](./packages/checkout/README.md), [`@voyantjs/legal`](./packages/legal/README.md)
+- [`@voyantjs/distribution`](./packages/distribution/README.md), [`@voyantjs/markets`](./packages/markets/README.md), [`@voyantjs/pricing`](./packages/pricing/README.md), [`@voyantjs/extras`](./packages/extras/README.md), [`@voyantjs/sellability`](./packages/sellability/README.md)
+- [`@voyantjs/facilities`](./packages/facilities/README.md), [`@voyantjs/hospitality`](./packages/hospitality/README.md), [`@voyantjs/ground`](./packages/ground/README.md), [`@voyantjs/identity`](./packages/identity/README.md), [`@voyantjs/external-refs`](./packages/external-refs/README.md), [`@voyantjs/octo`](./packages/octo)
+
+### UI and integrations
+
+- [`@voyantjs/voyant-admin`](./packages/admin/README.md) and [`@voyantjs/voyant-crm-ui`](./packages/crm-ui/README.md)
+- [`@voyantjs/plugin-netopia`](./packages/plugins/netopia/README.md), [`@voyantjs/plugin-smartbill`](./packages/plugins/smartbill/README.md), [`@voyantjs/plugin-payload-cms`](./packages/plugins/payload-cms/README.md), [`@voyantjs/plugin-sanity-cms`](./packages/plugins/sanity-cms/README.md)
+
+## For contributors
+
+This repository is the workspace that powers the framework, starters, and examples.
+
+| Area | What it contains |
+| --- | --- |
+| [`packages/*`](./packages) | Reusable business logic, schemas, services, transport adapters, and integrations |
+| [`templates/*`](./templates) | First-party starter apps |
+| [`apps/dev`](./apps/dev/README.md) | Internal playground for broader module coverage |
+| [`apps/registry`](./apps/registry) | Hosted shadcn registry for installable Voyant UI components |
+| [`examples/*`](./examples) | Reference apps that consume Voyant surfaces |
+
+### Monorepo commands
+
+| Command | Description |
+| --- | --- |
+| `pnpm install` | Install workspace dependencies |
+| `pnpm build` | Build the workspace with Turborepo |
+| `pnpm typecheck` | Run workspace typechecks |
+| `pnpm test` | Run workspace tests |
+| `pnpm lint` | Run Biome checks across the repo |
+| `pnpm -F dmc dev` | Start the DMC template on port `3100` |
+| `pnpm -F operator dev` | Start the operator template on port `3300` |
+| `pnpm -F dev dev` | Start the internal playground on port `3200` |
+
+## Architecture
+
+Voyant keeps a strict boundary:
+
+- `packages/*` hold reusable business logic, schemas, services, routes, adapters, and contracts
+- `templates/*` and app shells own UI, auth wiring, deployment shape, and runtime-specific configuration
+- Core packages stay framework-agnostic even when first-party starters use React, TanStack Start, Hono, Better Auth, and Cloudflare Workers
+- Transport adapters stay thin and call shared domain services rather than owning business logic
+
+## License
+
+Functional Source License, Version 1.1, Apache 2.0 Future License (`FSL-1.1-Apache-2.0`). See [LICENSE](./LICENSE).

@@ -1,0 +1,429 @@
+import { newId } from "@voyantjs/db/lib/typeid"
+import { cleanupTestDb, createTestDb } from "@voyantjs/db/test-utils"
+import { products } from "@voyantjs/products/schema"
+import { Hono } from "hono"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+
+import { availabilityRoutes } from "../../src/routes.js"
+
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
+const DB_AVAILABLE = !!TEST_DATABASE_URL
+
+const db = DB_AVAILABLE ? createTestDb() : (null as never)
+
+const json = (body: Record<string, unknown>) => ({
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+})
+
+describe.skipIf(!DB_AVAILABLE)("Availability routes", () => {
+  let app: Hono
+  let productId: string
+
+  beforeAll(() => {
+    productId = newId("products")
+
+    app = new Hono()
+    app.use("*", async (c, next) => {
+      c.set("db" as never, db)
+      c.set("userId" as never, "test-user-id")
+      await next()
+    })
+    app.route("/", availabilityRoutes)
+  })
+
+  beforeEach(async () => {
+    await cleanupTestDb(db)
+    await db.insert(products).values({
+      id: productId,
+      name: "Test Product",
+      sellCurrency: "USD",
+    })
+  })
+
+  describe("Rules", () => {
+    const validRule = () => ({
+      productId,
+      timezone: "Europe/London",
+      recurrenceRule: "FREQ=DAILY",
+      maxCapacity: 20,
+    })
+
+    it("creates a rule", async () => {
+      const res = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.productId).toBe(productId)
+      expect(body.data.active).toBe(true)
+      expect(body.data.id).toBeTruthy()
+    })
+
+    it("lists rules", async () => {
+      await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const res = await app.request("/rules", { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toBeInstanceOf(Array)
+      expect(body.total).toBe(1)
+    })
+
+    it("gets a rule by id", async () => {
+      const createRes = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const { data: created } = await createRes.json()
+      const res = await app.request(`/rules/${created.id}`, { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.recurrenceRule).toBe("FREQ=DAILY")
+    })
+
+    it("updates a rule", async () => {
+      const createRes = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const { data: created } = await createRes.json()
+      const res = await app.request(`/rules/${created.id}`, {
+        method: "PATCH",
+        ...json({ maxCapacity: 50 }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.maxCapacity).toBe(50)
+    })
+
+    it("deletes a rule", async () => {
+      const createRes = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const { data: created } = await createRes.json()
+      const res = await app.request(`/rules/${created.id}`, { method: "DELETE" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+
+    it("returns 404 for non-existent rule", async () => {
+      const res = await app.request("/rules/avrl_00000000000000000000000000", { method: "GET" })
+      expect(res.status).toBe(404)
+    })
+
+    it("batch-deletes rules", async () => {
+      const r1 = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const r2 = await app.request("/rules", {
+        method: "POST",
+        ...json({ ...validRule(), maxCapacity: 10 }),
+      })
+      const { data: d1 } = await r1.json()
+      const { data: d2 } = await r2.json()
+
+      const res = await app.request("/rules/batch-delete", {
+        method: "POST",
+        ...json({ ids: [d1.id, d2.id] }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.succeeded).toBe(2)
+      expect(body.failed).toEqual([])
+    })
+
+    it("batch-updates rules", async () => {
+      const r1 = await app.request("/rules", { method: "POST", ...json(validRule()) })
+      const { data: d1 } = await r1.json()
+
+      const res = await app.request("/rules/batch-update", {
+        method: "POST",
+        ...json({ ids: [d1.id], patch: { active: false } }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.succeeded).toBe(1)
+      expect(body.data[0].active).toBe(false)
+    })
+  })
+
+  describe("Start Times", () => {
+    const validStartTime = () => ({ productId, startTimeLocal: "09:00" })
+
+    it("creates a start time", async () => {
+      const res = await app.request("/start-times", {
+        method: "POST",
+        ...json(validStartTime()),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.startTimeLocal).toBe("09:00")
+    })
+
+    it("CRUD cycle", async () => {
+      const createRes = await app.request("/start-times", {
+        method: "POST",
+        ...json(validStartTime()),
+      })
+      const { data: created } = await createRes.json()
+
+      const getRes = await app.request(`/start-times/${created.id}`, { method: "GET" })
+      expect(getRes.status).toBe(200)
+
+      const updateRes = await app.request(`/start-times/${created.id}`, {
+        method: "PATCH",
+        ...json({ label: "Morning" }),
+      })
+      expect((await updateRes.json()).data.label).toBe("Morning")
+
+      const deleteRes = await app.request(`/start-times/${created.id}`, { method: "DELETE" })
+      expect((await deleteRes.json()).success).toBe(true)
+    })
+
+    it("returns 404 for non-existent start time", async () => {
+      const res = await app.request("/start-times/avst_00000000000000000000000000", {
+        method: "GET",
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Slots", () => {
+    const validSlot = () => ({
+      productId,
+      dateLocal: "2025-06-15",
+      startsAt: "2025-06-15T09:00:00Z",
+      timezone: "Europe/London",
+    })
+
+    it("creates a slot", async () => {
+      const res = await app.request("/slots", { method: "POST", ...json(validSlot()) })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.status).toBe("open")
+      expect(body.data.dateLocal).toBe("2025-06-15")
+    })
+
+    it("updates slot status", async () => {
+      const createRes = await app.request("/slots", { method: "POST", ...json(validSlot()) })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/slots/${created.id}`, {
+        method: "PATCH",
+        ...json({ status: "sold_out" }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.status).toBe("sold_out")
+    })
+
+    it("returns 404 for non-existent slot", async () => {
+      const res = await app.request("/slots/avsl_00000000000000000000000000", { method: "GET" })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Closeouts", () => {
+    const validCloseout = () => ({ productId, dateLocal: "2025-12-25" })
+
+    it("creates a closeout", async () => {
+      const res = await app.request("/closeouts", { method: "POST", ...json(validCloseout()) })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.dateLocal).toBe("2025-12-25")
+    })
+
+    it("CRUD cycle", async () => {
+      const createRes = await app.request("/closeouts", {
+        method: "POST",
+        ...json(validCloseout()),
+      })
+      const { data: created } = await createRes.json()
+
+      const updateRes = await app.request(`/closeouts/${created.id}`, {
+        method: "PATCH",
+        ...json({ reason: "Holiday" }),
+      })
+      expect((await updateRes.json()).data.reason).toBe("Holiday")
+
+      const deleteRes = await app.request(`/closeouts/${created.id}`, { method: "DELETE" })
+      expect((await deleteRes.json()).success).toBe(true)
+    })
+  })
+
+  describe("Pickup Points", () => {
+    const validPickupPoint = () => ({ productId, name: "Hotel Lobby" })
+
+    it("creates a pickup point", async () => {
+      const res = await app.request("/pickup-points", {
+        method: "POST",
+        ...json(validPickupPoint()),
+      })
+      expect(res.status).toBe(201)
+      expect((await res.json()).data.name).toBe("Hotel Lobby")
+    })
+
+    it("lists filtered by productId", async () => {
+      await app.request("/pickup-points", { method: "POST", ...json(validPickupPoint()) })
+      const res = await app.request(`/pickup-points?productId=${productId}`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("returns 404 for non-existent pickup point", async () => {
+      const res = await app.request("/pickup-points/avpp_00000000000000000000000000", {
+        method: "GET",
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Meeting Configs → Pickup Groups → Pickup Locations", () => {
+    async function seedMeetingConfig() {
+      const res = await app.request("/meeting-configs", {
+        method: "POST",
+        ...json({ productId, mode: "meet_or_pickup" }),
+      })
+      return (await res.json()).data
+    }
+
+    async function seedPickupGroup(meetingConfigId: string) {
+      const res = await app.request("/pickup-groups", {
+        method: "POST",
+        ...json({ meetingConfigId, kind: "pickup", name: "Hotels" }),
+      })
+      return (await res.json()).data
+    }
+
+    it("creates a meeting config", async () => {
+      const config = await seedMeetingConfig()
+      expect(config.mode).toBe("meet_or_pickup")
+      expect(config.active).toBe(true)
+    })
+
+    it("CRUD meeting config", async () => {
+      const config = await seedMeetingConfig()
+
+      const getRes = await app.request(`/meeting-configs/${config.id}`, { method: "GET" })
+      expect(getRes.status).toBe(200)
+
+      const updateRes = await app.request(`/meeting-configs/${config.id}`, {
+        method: "PATCH",
+        ...json({ allowCustomPickup: true }),
+      })
+      expect((await updateRes.json()).data.allowCustomPickup).toBe(true)
+
+      const deleteRes = await app.request(`/meeting-configs/${config.id}`, { method: "DELETE" })
+      expect((await deleteRes.json()).success).toBe(true)
+    })
+
+    it("creates a pickup group under a meeting config", async () => {
+      const config = await seedMeetingConfig()
+      const group = await seedPickupGroup(config.id)
+      expect(group.kind).toBe("pickup")
+      expect(group.meetingConfigId).toBe(config.id)
+    })
+
+    it("lists pickup groups filtered by meetingConfigId", async () => {
+      const config = await seedMeetingConfig()
+      await seedPickupGroup(config.id)
+
+      const res = await app.request(`/pickup-groups?meetingConfigId=${config.id}`, {
+        method: "GET",
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("creates a pickup location under a group", async () => {
+      const config = await seedMeetingConfig()
+      const group = await seedPickupGroup(config.id)
+
+      const res = await app.request("/pickup-locations", {
+        method: "POST",
+        ...json({ groupId: group.id, name: "Hilton Entrance" }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.name).toBe("Hilton Entrance")
+      expect(body.data.groupId).toBe(group.id)
+    })
+
+    it("CRUD pickup location", async () => {
+      const config = await seedMeetingConfig()
+      const group = await seedPickupGroup(config.id)
+
+      const createRes = await app.request("/pickup-locations", {
+        method: "POST",
+        ...json({ groupId: group.id, name: "Airport" }),
+      })
+      const { data: loc } = await createRes.json()
+
+      const updateRes = await app.request(`/pickup-locations/${loc.id}`, {
+        method: "PATCH",
+        ...json({ leadTimeMinutes: 15 }),
+      })
+      expect((await updateRes.json()).data.leadTimeMinutes).toBe(15)
+
+      const deleteRes = await app.request(`/pickup-locations/${loc.id}`, { method: "DELETE" })
+      expect((await deleteRes.json()).success).toBe(true)
+    })
+
+    it("returns 404 for non-existent meeting config", async () => {
+      const res = await app.request("/meeting-configs/avmc_00000000000000000000000000", {
+        method: "GET",
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Custom Pickup Areas", () => {
+    async function seedMeetingConfig() {
+      const res = await app.request("/meeting-configs", {
+        method: "POST",
+        ...json({ productId }),
+      })
+      return (await res.json()).data
+    }
+
+    it("creates a custom pickup area", async () => {
+      const config = await seedMeetingConfig()
+      const res = await app.request("/custom-pickup-areas", {
+        method: "POST",
+        ...json({ meetingConfigId: config.id, name: "North Shore" }),
+      })
+      expect(res.status).toBe(201)
+      expect((await res.json()).data.name).toBe("North Shore")
+    })
+
+    it("CRUD custom pickup area", async () => {
+      const config = await seedMeetingConfig()
+      const createRes = await app.request("/custom-pickup-areas", {
+        method: "POST",
+        ...json({ meetingConfigId: config.id, name: "South Bay" }),
+      })
+      const { data: area } = await createRes.json()
+
+      const updateRes = await app.request(`/custom-pickup-areas/${area.id}`, {
+        method: "PATCH",
+        ...json({ geographicText: "South Bay area" }),
+      })
+      expect((await updateRes.json()).data.geographicText).toBe("South Bay area")
+
+      const deleteRes = await app.request(`/custom-pickup-areas/${area.id}`, { method: "DELETE" })
+      expect((await deleteRes.json()).success).toBe(true)
+    })
+  })
+
+  describe("Batch operations (non-existent IDs)", () => {
+    it("batch-delete reports failures for non-existent IDs", async () => {
+      const res = await app.request("/rules/batch-delete", {
+        method: "POST",
+        ...json({ ids: ["avrl_00000000000000000000000000"] }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.succeeded).toBe(0)
+      expect(body.failed.length).toBe(1)
+      expect(body.failed[0].error).toBe("Not found")
+    })
+
+    it("batch-update reports failures for non-existent IDs", async () => {
+      const res = await app.request("/rules/batch-update", {
+        method: "POST",
+        ...json({ ids: ["avrl_00000000000000000000000000"], patch: { active: false } }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.succeeded).toBe(0)
+      expect(body.failed.length).toBe(1)
+    })
+  })
+})

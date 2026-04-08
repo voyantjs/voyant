@@ -1,0 +1,108 @@
+{
+  "name": "@voyantjs/utils",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/utils"
+  },
+  "description": "Utility functions for the workspace",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./countries": "./src/countries.ts",
+    "./currencies": "./src/currencies.ts",
+    "./languages": "./src/languages.ts",
+    "./timezones": "./src/timezones.ts",
+    "./localized-countries-regions": "./src/localized-countries-regions.ts",
+    "./localized-regions": "./src/localized-regions.ts",
+    "./geographic-regions": "./src/geographic-regions.ts",
+    "./rate-limits": "./src/rate-limits.ts",
+    "./kv": "./src/kv.ts",
+    "./kms": "./src/kms.ts",
+    "./session-claims": "./src/session-claims.ts",
+    "./cache": "./src/cache.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./countries": {
+        "types": "./dist/countries.d.ts",
+        "import": "./dist/countries.js"
+      },
+      "./currencies": {
+        "types": "./dist/currencies.d.ts",
+        "import": "./dist/currencies.js"
+      },
+      "./languages": {
+        "types": "./dist/languages.d.ts",
+        "import": "./dist/languages.js"
+      },
+      "./timezones": {
+        "types": "./dist/timezones.d.ts",
+        "import": "./dist/timezones.js"
+      },
+      "./localized-countries-regions": {
+        "types": "./dist/localized-countries-regions.d.ts",
+        "import": "./dist/localized-countries-regions.js"
+      },
+      "./localized-regions": {
+        "types": "./dist/localized-regions.d.ts",
+        "import": "./dist/localized-regions.js"
+      },
+      "./geographic-regions": {
+        "types": "./dist/geographic-regions.d.ts",
+        "import": "./dist/geographic-regions.js"
+      },
+      "./rate-limits": {
+        "types": "./dist/rate-limits.d.ts",
+        "import": "./dist/rate-limits.js"
+      },
+      "./kv": {
+        "types": "./dist/kv.d.ts",
+        "import": "./dist/kv.js"
+      },
+      "./kms": {
+        "types": "./dist/kms.d.ts",
+        "import": "./dist/kms.js"
+      },
+      "./session-claims": {
+        "types": "./dist/session-claims.d.ts",
+        "import": "./dist/session-claims.js"
+      },
+      "./cache": {
+        "types": "./dist/cache.d.ts",
+        "import": "./dist/cache.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "biome check src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@voyantjs/types": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "@types/node": "^25.5.2",
+    "typescript": "^6.0.2",
+    "vitest": "4.1.2"
+  }
+}

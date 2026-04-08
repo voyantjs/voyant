@@ -1,0 +1,399 @@
+import { z } from "zod"
+
+const bookingStatusSchema = z.enum([
+  "draft",
+  "on_hold",
+  "confirmed",
+  "in_progress",
+  "completed",
+  "expired",
+  "cancelled",
+])
+const supplierConfirmationStatusSchema = z.enum(["pending", "confirmed", "rejected", "cancelled"])
+const bookingSourceTypeSchema = z.enum([
+  "direct",
+  "manual",
+  "affiliate",
+  "ota",
+  "reseller",
+  "api_partner",
+  "internal",
+])
+const bookingParticipantTypeSchema = z.enum([
+  "traveler",
+  "booker",
+  "contact",
+  "occupant",
+  "staff",
+  "other",
+])
+const bookingTravelerCategorySchema = z.enum(["adult", "child", "infant", "senior", "other"])
+const bookingItemTypeSchema = z.enum([
+  "unit",
+  "extra",
+  "service",
+  "fee",
+  "tax",
+  "discount",
+  "adjustment",
+  "accommodation",
+  "transport",
+  "other",
+])
+const bookingItemStatusSchema = z.enum([
+  "draft",
+  "on_hold",
+  "confirmed",
+  "cancelled",
+  "expired",
+  "fulfilled",
+])
+const bookingItemParticipantRoleSchema = z.enum([
+  "traveler",
+  "occupant",
+  "primary_contact",
+  "service_assignee",
+  "beneficiary",
+  "other",
+])
+const bookingAllocationTypeSchema = z.enum(["unit", "pickup", "resource"])
+const bookingAllocationStatusSchema = z.enum([
+  "held",
+  "confirmed",
+  "released",
+  "expired",
+  "cancelled",
+  "fulfilled",
+])
+const bookingFulfillmentTypeSchema = z.enum([
+  "voucher",
+  "ticket",
+  "pdf",
+  "qr_code",
+  "barcode",
+  "mobile",
+  "other",
+])
+const bookingFulfillmentDeliveryChannelSchema = z.enum([
+  "download",
+  "email",
+  "api",
+  "wallet",
+  "other",
+])
+const bookingFulfillmentStatusSchema = z.enum([
+  "pending",
+  "issued",
+  "reissued",
+  "revoked",
+  "failed",
+])
+const bookingRedemptionMethodSchema = z.enum(["manual", "scan", "api", "other"])
+
+// ---------- bookings ----------
+
+const bookingCoreSchema = z.object({
+  bookingNumber: z.string().min(1).max(50),
+  status: bookingStatusSchema.default("draft"),
+  personId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  sourceType: bookingSourceTypeSchema.default("manual"),
+  externalBookingRef: z.string().optional().nullable(),
+  communicationLanguage: z.string().max(35).optional().nullable(),
+  sellCurrency: z.string().min(3).max(3),
+  baseCurrency: z.string().min(3).max(3).optional().nullable(),
+  sellAmountCents: z.number().int().min(0).optional().nullable(),
+  baseSellAmountCents: z.number().int().min(0).optional().nullable(),
+  costAmountCents: z.number().int().min(0).optional().nullable(),
+  baseCostAmountCents: z.number().int().min(0).optional().nullable(),
+  marginPercent: z.number().int().optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  pax: z.number().int().positive().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
+  holdExpiresAt: z.string().datetime().optional().nullable(),
+  confirmedAt: z.string().datetime().optional().nullable(),
+  expiredAt: z.string().datetime().optional().nullable(),
+  cancelledAt: z.string().datetime().optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  redeemedAt: z.string().datetime().optional().nullable(),
+})
+
+export const insertBookingSchema = bookingCoreSchema
+export const updateBookingSchema = bookingCoreSchema.partial()
+
+export const createBookingSchema = bookingCoreSchema
+  .extend({
+    sourceType: z.enum(["manual", "internal"]).default("manual"),
+  })
+  .refine((value) => value.status !== "on_hold", {
+    message: "Use the reservation flow to create on-hold bookings",
+    path: ["status"],
+  })
+  .refine((value) => value.holdExpiresAt == null, {
+    message: "Use the reservation flow to manage booking hold expiry",
+    path: ["holdExpiresAt"],
+  })
+
+export const bookingListQuerySchema = z.object({
+  status: bookingStatusSchema.optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const convertProductSchema = z.object({
+  productId: z.string().min(1),
+  optionId: z.string().optional().nullable(),
+  bookingNumber: z.string().min(1).max(50),
+  personId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
+})
+
+export const updateBookingStatusSchema = z.object({
+  status: bookingStatusSchema,
+  note: z.string().optional().nullable(),
+})
+
+export const reserveBookingItemSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional().nullable(),
+  itemType: bookingItemTypeSchema.default("unit"),
+  quantity: z.number().int().positive().default(1),
+  sellCurrency: z.string().min(3).max(3).optional().nullable(),
+  unitSellAmountCents: z.number().int().min(0).optional().nullable(),
+  totalSellAmountCents: z.number().int().min(0).optional().nullable(),
+  costCurrency: z.string().min(3).max(3).optional().nullable(),
+  unitCostAmountCents: z.number().int().min(0).optional().nullable(),
+  totalCostAmountCents: z.number().int().min(0).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  optionId: z.string().optional().nullable(),
+  optionUnitId: z.string().optional().nullable(),
+  pricingCategoryId: z.string().optional().nullable(),
+  sourceSnapshotId: z.string().optional().nullable(),
+  sourceOfferId: z.string().optional().nullable(),
+  availabilitySlotId: z.string().min(1),
+  allocationType: bookingAllocationTypeSchema.default("unit"),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+
+export const reserveBookingSchema = bookingCoreSchema
+  .omit({
+    status: true,
+    holdExpiresAt: true,
+    confirmedAt: true,
+    expiredAt: true,
+    cancelledAt: true,
+    completedAt: true,
+    redeemedAt: true,
+  })
+  .extend({
+    holdMinutes: z.number().int().positive().max(24 * 60).default(30),
+    holdExpiresAt: z.string().datetime().optional().nullable(),
+    items: z.array(reserveBookingItemSchema).min(1),
+  })
+
+export const extendBookingHoldSchema = z
+  .object({
+    holdMinutes: z.number().int().positive().max(24 * 60).optional(),
+    holdExpiresAt: z.string().datetime().optional().nullable(),
+  })
+  .refine((value) => value.holdMinutes !== undefined || value.holdExpiresAt !== undefined, {
+    message: "holdMinutes or holdExpiresAt is required",
+  })
+
+export const confirmBookingSchema = z.object({
+  note: z.string().optional().nullable(),
+})
+
+export const cancelBookingSchema = z.object({
+  note: z.string().optional().nullable(),
+})
+
+export const expireBookingSchema = z.object({
+  note: z.string().optional().nullable(),
+})
+
+export const expireStaleBookingsSchema = z.object({
+  before: z.string().datetime().optional().nullable(),
+  note: z.string().optional().nullable(),
+})
+
+export const reserveBookingFromTransactionSchema = z.object({
+  bookingNumber: z.string().min(1).max(50),
+  sourceType: bookingSourceTypeSchema.default("internal"),
+  holdMinutes: z.number().int().positive().max(24 * 60).default(30),
+  holdExpiresAt: z.string().datetime().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
+  note: z.string().optional().nullable(),
+  includeParticipants: z.boolean().default(true),
+})
+
+// ---------- participants ----------
+
+const participantCoreSchema = z.object({
+  personId: z.string().optional().nullable(),
+  participantType: bookingParticipantTypeSchema.default("traveler"),
+  travelerCategory: bookingTravelerCategorySchema.optional().nullable(),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  preferredLanguage: z.string().max(35).optional().nullable(),
+  accessibilityNeeds: z.string().optional().nullable(),
+  specialRequests: z.string().optional().nullable(),
+  isPrimary: z.boolean().default(false),
+  notes: z.string().optional().nullable(),
+})
+
+export const insertParticipantSchema = participantCoreSchema
+export const updateParticipantSchema = participantCoreSchema.partial()
+
+// ---------- passengers (legacy compatibility) ----------
+
+const passengerCoreSchema = z.object({
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  specialRequests: z.string().optional().nullable(),
+  isLeadPassenger: z.boolean().optional().nullable(),
+})
+
+export const insertPassengerSchema = passengerCoreSchema
+export const updatePassengerSchema = passengerCoreSchema.partial()
+
+// ---------- participant travel details ----------
+
+export const upsertParticipantTravelDetailsSchema = z.object({
+  nationality: z.string().max(100).optional().nullable(),
+  passportNumber: z.string().max(255).optional().nullable(),
+  passportExpiry: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  dietaryRequirements: z.string().optional().nullable(),
+  isLeadTraveler: z.boolean().optional().nullable(),
+})
+
+// ---------- booking items ----------
+
+const bookingItemCoreSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional().nullable(),
+  itemType: bookingItemTypeSchema.default("unit"),
+  status: bookingItemStatusSchema.default("draft"),
+  serviceDate: z.string().optional().nullable(),
+  startsAt: z.string().optional().nullable(),
+  endsAt: z.string().optional().nullable(),
+  quantity: z.number().int().positive().default(1),
+  sellCurrency: z.string().min(3).max(3),
+  unitSellAmountCents: z.number().int().optional().nullable(),
+  totalSellAmountCents: z.number().int().optional().nullable(),
+  costCurrency: z.string().min(3).max(3).optional().nullable(),
+  unitCostAmountCents: z.number().int().optional().nullable(),
+  totalCostAmountCents: z.number().int().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  optionId: z.string().optional().nullable(),
+  optionUnitId: z.string().optional().nullable(),
+  pricingCategoryId: z.string().optional().nullable(),
+  sourceSnapshotId: z.string().optional().nullable(),
+  sourceOfferId: z.string().optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+
+export const insertBookingItemSchema = bookingItemCoreSchema
+export const updateBookingItemSchema = bookingItemCoreSchema.partial()
+
+export const insertBookingAllocationSchema = z.object({
+  bookingItemId: z.string().min(1),
+  productId: z.string().optional().nullable(),
+  optionId: z.string().optional().nullable(),
+  optionUnitId: z.string().optional().nullable(),
+  pricingCategoryId: z.string().optional().nullable(),
+  availabilitySlotId: z.string().optional().nullable(),
+  quantity: z.number().int().positive().default(1),
+  allocationType: bookingAllocationTypeSchema.default("unit"),
+  status: bookingAllocationStatusSchema.default("held"),
+  holdExpiresAt: z.string().datetime().optional().nullable(),
+  confirmedAt: z.string().datetime().optional().nullable(),
+  releasedAt: z.string().datetime().optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+
+export const updateBookingAllocationSchema = insertBookingAllocationSchema.partial()
+
+// ---------- booking fulfillments ----------
+
+const bookingFulfillmentCoreSchema = z.object({
+  bookingItemId: z.string().optional().nullable(),
+  participantId: z.string().optional().nullable(),
+  fulfillmentType: bookingFulfillmentTypeSchema,
+  deliveryChannel: bookingFulfillmentDeliveryChannelSchema,
+  status: bookingFulfillmentStatusSchema.default("issued"),
+  artifactUrl: z.string().url().optional().nullable(),
+  payload: z.record(z.string(), z.unknown()).optional().nullable(),
+  issuedAt: z.string().datetime().optional().nullable(),
+  revokedAt: z.string().datetime().optional().nullable(),
+})
+
+export const insertBookingFulfillmentSchema = bookingFulfillmentCoreSchema
+export const updateBookingFulfillmentSchema = bookingFulfillmentCoreSchema.partial()
+
+// ---------- booking redemption events ----------
+
+export const recordBookingRedemptionSchema = z.object({
+  bookingItemId: z.string().optional().nullable(),
+  participantId: z.string().optional().nullable(),
+  redeemedAt: z.string().datetime().optional().nullable(),
+  redeemedBy: z.string().max(255).optional().nullable(),
+  location: z.string().max(500).optional().nullable(),
+  method: bookingRedemptionMethodSchema.default("manual"),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+
+// ---------- booking item participants ----------
+
+export const insertBookingItemParticipantSchema = z.object({
+  participantId: z.string().min(1),
+  role: bookingItemParticipantRoleSchema.default("traveler"),
+  isPrimary: z.boolean().default(false),
+})
+
+// ---------- supplier statuses ----------
+
+const supplierStatusCoreSchema = z.object({
+  supplierServiceId: z.string().optional().nullable(),
+  serviceName: z.string().min(1).max(255),
+  status: supplierConfirmationStatusSchema.default("pending"),
+  supplierReference: z.string().max(255).optional().nullable(),
+  costCurrency: z.string().min(3).max(3),
+  costAmountCents: z.number().int().min(0),
+  notes: z.string().optional().nullable(),
+})
+
+export const insertSupplierStatusSchema = supplierStatusCoreSchema
+export const updateSupplierStatusSchema = supplierStatusCoreSchema.partial().extend({
+  confirmedAt: z.string().optional().nullable(),
+})
+
+// ---------- notes ----------
+
+export const insertBookingNoteSchema = z.object({
+  content: z.string().min(1).max(10000),
+})
+
+// ---------- documents ----------
+
+const bookingDocumentTypeSchema = z.enum(["visa", "insurance", "health", "passport_copy", "other"])
+
+export const insertBookingDocumentSchema = z.object({
+  participantId: z.string().optional().nullable(),
+  passengerId: z.string().optional().nullable(),
+  type: bookingDocumentTypeSchema,
+  fileName: z.string().min(1).max(500),
+  fileUrl: z.string().url(),
+  expiresAt: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+})

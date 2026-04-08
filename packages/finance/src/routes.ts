@@ -1,0 +1,1051 @@
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import { Hono } from "hono"
+
+import { financeService } from "./service.js"
+import {
+  agingReportQuerySchema,
+  insertBookingGuaranteeSchema,
+  insertBookingItemCommissionSchema,
+  insertBookingItemTaxLineSchema,
+  insertBookingPaymentScheduleSchema,
+  insertCreditNoteLineItemSchema,
+  insertCreditNoteSchema,
+  insertFinanceNoteSchema,
+  insertInvoiceExternalRefSchema,
+  insertInvoiceLineItemSchema,
+  insertInvoiceNumberSeriesSchema,
+  insertInvoiceSchema,
+  insertInvoiceTemplateSchema,
+  insertPaymentAuthorizationSchema,
+  insertPaymentCaptureSchema,
+  insertPaymentInstrumentSchema,
+  insertPaymentSessionSchema,
+  insertPaymentSchema,
+  insertSupplierPaymentSchema,
+  insertTaxRegimeSchema,
+
+  invoiceListQuerySchema,
+  invoiceNumberSeriesListQuerySchema,
+  invoiceTemplateListQuerySchema,
+  paymentAuthorizationListQuerySchema,
+  paymentCaptureListQuerySchema,
+  paymentInstrumentListQuerySchema,
+  paymentSessionListQuerySchema,
+  profitabilityQuerySchema,
+  renderInvoiceInputSchema,
+  revenueReportQuerySchema,
+  supplierPaymentListQuerySchema,
+  taxRegimeListQuerySchema,
+  updateBookingGuaranteeSchema,
+  updateBookingItemCommissionSchema,
+  updateBookingItemTaxLineSchema,
+  updateBookingPaymentScheduleSchema,
+  updateCreditNoteSchema,
+  updateInvoiceLineItemSchema,
+  updateInvoiceNumberSeriesSchema,
+  updateInvoiceSchema,
+  updateInvoiceTemplateSchema,
+  updatePaymentAuthorizationSchema,
+  updatePaymentCaptureSchema,
+  updatePaymentInstrumentSchema,
+  updatePaymentSessionSchema,
+  updateSupplierPaymentSchema,
+  updateTaxRegimeSchema,
+  createPaymentSessionFromGuaranteeSchema,
+  createPaymentSessionFromInvoiceSchema,
+  createPaymentSessionFromScheduleSchema,
+  applyDefaultBookingPaymentPlanSchema,
+  markPaymentSessionRequiresRedirectSchema,
+  completePaymentSessionSchema,
+  failPaymentSessionSchema,
+  cancelPaymentSessionSchema,
+  expirePaymentSessionSchema,
+} from "./validation.js"
+
+type Env = {
+  Variables: {
+    db: PostgresJsDatabase
+    userId?: string
+  }
+}
+
+// ==========================================================================
+// Finance Routes — method-chained for Hono RPC type inference
+// ==========================================================================
+
+export const financeRoutes = new Hono<Env>()
+
+  // ========================================================================
+  // Payment Sessions
+  // ========================================================================
+
+  .get("/payment-sessions", async (c) => {
+    const query = paymentSessionListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listPaymentSessions(c.get("db"), query))
+  })
+
+  .post("/payment-sessions", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createPaymentSession(
+          c.get("db"),
+          insertPaymentSessionSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  .get("/payment-sessions/:id", async (c) => {
+    const row = await financeService.getPaymentSessionById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/payment-sessions/:id", async (c) => {
+    const row = await financeService.updatePaymentSession(
+      c.get("db"),
+      c.req.param("id"),
+      updatePaymentSessionSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/payment-sessions/:id/requires-redirect", async (c) => {
+    const row = await financeService.markPaymentSessionRequiresRedirect(
+      c.get("db"),
+      c.req.param("id"),
+      markPaymentSessionRequiresRedirectSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/payment-sessions/:id/complete", async (c) => {
+    const row = await financeService.completePaymentSession(
+      c.get("db"),
+      c.req.param("id"),
+      completePaymentSessionSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/payment-sessions/:id/fail", async (c) => {
+    const row = await financeService.failPaymentSession(
+      c.get("db"),
+      c.req.param("id"),
+      failPaymentSessionSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/payment-sessions/:id/cancel", async (c) => {
+    const row = await financeService.cancelPaymentSession(
+      c.get("db"),
+      c.req.param("id"),
+      cancelPaymentSessionSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/payment-sessions/:id/expire", async (c) => {
+    const row = await financeService.expirePaymentSession(
+      c.get("db"),
+      c.req.param("id"),
+      expirePaymentSessionSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment session not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  // ========================================================================
+  // Payment Instruments
+  // ========================================================================
+
+  .get("/payment-instruments", async (c) => {
+    const query = paymentInstrumentListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listPaymentInstruments(c.get("db"), query))
+  })
+
+  .post("/payment-instruments", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createPaymentInstrument(
+          c.get("db"),
+          insertPaymentInstrumentSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  .get("/payment-instruments/:id", async (c) => {
+    const row = await financeService.getPaymentInstrumentById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment instrument not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/payment-instruments/:id", async (c) => {
+    const row = await financeService.updatePaymentInstrument(
+      c.get("db"),
+      c.req.param("id"),
+      updatePaymentInstrumentSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment instrument not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/payment-instruments/:id", async (c) => {
+    const row = await financeService.deletePaymentInstrument(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment instrument not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  // ========================================================================
+  // Payment Authorizations
+  // ========================================================================
+
+  .get("/payment-authorizations", async (c) => {
+    const query = paymentAuthorizationListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listPaymentAuthorizations(c.get("db"), query))
+  })
+
+  .post("/payment-authorizations", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createPaymentAuthorization(
+          c.get("db"),
+          insertPaymentAuthorizationSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  .get("/payment-authorizations/:id", async (c) => {
+    const row = await financeService.getPaymentAuthorizationById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment authorization not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/payment-authorizations/:id", async (c) => {
+    const row = await financeService.updatePaymentAuthorization(
+      c.get("db"),
+      c.req.param("id"),
+      updatePaymentAuthorizationSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment authorization not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/payment-authorizations/:id", async (c) => {
+    const row = await financeService.deletePaymentAuthorization(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment authorization not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  // ========================================================================
+  // Payment Captures
+  // ========================================================================
+
+  .get("/payment-captures", async (c) => {
+    const query = paymentCaptureListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listPaymentCaptures(c.get("db"), query))
+  })
+
+  .post("/payment-captures", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createPaymentCapture(
+          c.get("db"),
+          insertPaymentCaptureSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  .get("/payment-captures/:id", async (c) => {
+    const row = await financeService.getPaymentCaptureById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment capture not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/payment-captures/:id", async (c) => {
+    const row = await financeService.updatePaymentCapture(
+      c.get("db"),
+      c.req.param("id"),
+      updatePaymentCaptureSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Payment capture not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/payment-captures/:id", async (c) => {
+    const row = await financeService.deletePaymentCapture(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Payment capture not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  // ========================================================================
+  // Reports (static paths first)
+  // ========================================================================
+
+  // GET /reports/revenue — Revenue by month
+  .get("/reports/revenue", async (c) => {
+    const query = revenueReportQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json({ data: await financeService.getRevenueReport(c.get("db"), query) })
+  })
+
+  // GET /reports/aging — Outstanding invoices by age buckets
+  .get("/reports/aging", async (c) => {
+    const query = agingReportQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    return c.json({ data: await financeService.getAgingReport(c.get("db"), query) })
+  })
+
+  // GET /reports/profitability — Per-booking margin summary
+  .get("/reports/profitability", async (c) => {
+    const query = profitabilityQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json({ data: await financeService.getProfitabilityReport(c.get("db"), query) })
+  })
+
+  // ========================================================================
+  // Booking Payment Schedules
+  // ========================================================================
+
+  .get("/bookings/:bookingId/payment-schedules", async (c) => {
+    return c.json({
+      data: await financeService.listBookingPaymentSchedules(c.get("db"), c.req.param("bookingId")),
+    })
+  })
+
+  .post("/bookings/:bookingId/payment-schedules", async (c) => {
+    const row = await financeService.createBookingPaymentSchedule(
+      c.get("db"),
+      c.req.param("bookingId"),
+      insertBookingPaymentScheduleSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .post("/bookings/:bookingId/payment-schedules/default-plan", async (c) => {
+    const rows = await financeService.applyDefaultBookingPaymentPlan(
+      c.get("db"),
+      c.req.param("bookingId"),
+      applyDefaultBookingPaymentPlanSchema.parse(await c.req.json()),
+    )
+
+    if (!rows) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: rows }, 201)
+  })
+
+  .patch("/bookings/:bookingId/payment-schedules/:scheduleId", async (c) => {
+    const row = await financeService.updateBookingPaymentSchedule(
+      c.get("db"),
+      c.req.param("scheduleId"),
+      updateBookingPaymentScheduleSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Payment schedule not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .post("/bookings/:bookingId/payment-schedules/:scheduleId/payment-session", async (c) => {
+    try {
+      const row = await financeService.createPaymentSessionFromBookingSchedule(
+        c.get("db"),
+        c.req.param("scheduleId"),
+        createPaymentSessionFromScheduleSchema.parse(await c.req.json()),
+      )
+
+      if (!row) {
+        return c.json({ error: "Payment schedule not found" }, 404)
+      }
+
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create payment session"
+      return c.json({ error: message }, 409)
+    }
+  })
+
+  .delete("/bookings/:bookingId/payment-schedules/:scheduleId", async (c) => {
+    const row = await financeService.deleteBookingPaymentSchedule(
+      c.get("db"),
+      c.req.param("scheduleId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Payment schedule not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ========================================================================
+  // Booking Guarantees
+  // ========================================================================
+
+  .get("/bookings/:bookingId/guarantees", async (c) => {
+    return c.json({
+      data: await financeService.listBookingGuarantees(c.get("db"), c.req.param("bookingId")),
+    })
+  })
+
+  .post("/bookings/:bookingId/guarantees", async (c) => {
+    const row = await financeService.createBookingGuarantee(
+      c.get("db"),
+      c.req.param("bookingId"),
+      insertBookingGuaranteeSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .post("/bookings/:bookingId/guarantees/:guaranteeId/payment-session", async (c) => {
+    try {
+      const row = await financeService.createPaymentSessionFromBookingGuarantee(
+        c.get("db"),
+        c.req.param("guaranteeId"),
+        createPaymentSessionFromGuaranteeSchema.parse(await c.req.json()),
+      )
+
+      if (!row) {
+        return c.json({ error: "Booking guarantee not found" }, 404)
+      }
+
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create payment session"
+      return c.json({ error: message }, 409)
+    }
+  })
+
+  .patch("/bookings/:bookingId/guarantees/:guaranteeId", async (c) => {
+    const row = await financeService.updateBookingGuarantee(
+      c.get("db"),
+      c.req.param("guaranteeId"),
+      updateBookingGuaranteeSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking guarantee not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/bookings/:bookingId/guarantees/:guaranteeId", async (c) => {
+    const row = await financeService.deleteBookingGuarantee(c.get("db"), c.req.param("guaranteeId"))
+
+    if (!row) {
+      return c.json({ error: "Booking guarantee not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ========================================================================
+  // Booking Item Taxes
+  // ========================================================================
+
+  .get("/booking-items/:bookingItemId/tax-lines", async (c) => {
+    return c.json({
+      data: await financeService.listBookingItemTaxLines(c.get("db"), c.req.param("bookingItemId")),
+    })
+  })
+
+  .post("/booking-items/:bookingItemId/tax-lines", async (c) => {
+    const row = await financeService.createBookingItemTaxLine(
+      c.get("db"),
+      c.req.param("bookingItemId"),
+      insertBookingItemTaxLineSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/booking-items/:bookingItemId/tax-lines/:taxLineId", async (c) => {
+    const row = await financeService.updateBookingItemTaxLine(
+      c.get("db"),
+      c.req.param("taxLineId"),
+      updateBookingItemTaxLineSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item tax line not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/booking-items/:bookingItemId/tax-lines/:taxLineId", async (c) => {
+    const row = await financeService.deleteBookingItemTaxLine(c.get("db"), c.req.param("taxLineId"))
+
+    if (!row) {
+      return c.json({ error: "Booking item tax line not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ========================================================================
+  // Booking Item Commissions
+  // ========================================================================
+
+  .get("/booking-items/:bookingItemId/commissions", async (c) => {
+    return c.json({
+      data: await financeService.listBookingItemCommissions(
+        c.get("db"),
+        c.req.param("bookingItemId"),
+      ),
+    })
+  })
+
+  .post("/booking-items/:bookingItemId/commissions", async (c) => {
+    const row = await financeService.createBookingItemCommission(
+      c.get("db"),
+      c.req.param("bookingItemId"),
+      insertBookingItemCommissionSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/booking-items/:bookingItemId/commissions/:commissionId", async (c) => {
+    const row = await financeService.updateBookingItemCommission(
+      c.get("db"),
+      c.req.param("commissionId"),
+      updateBookingItemCommissionSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item commission not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/booking-items/:bookingItemId/commissions/:commissionId", async (c) => {
+    const row = await financeService.deleteBookingItemCommission(
+      c.get("db"),
+      c.req.param("commissionId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Booking item commission not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ========================================================================
+  // Supplier Payments
+  // ========================================================================
+
+  // GET /supplier-payments — List supplier payments
+  .get("/supplier-payments", async (c) => {
+    const query = supplierPaymentListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listSupplierPayments(c.get("db"), query))
+  })
+
+  // POST /supplier-payments — Record supplier payment
+  .post("/supplier-payments", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createSupplierPayment(
+          c.get("db"),
+          insertSupplierPaymentSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  // PATCH /supplier-payments/:id — Update supplier payment
+  .patch("/supplier-payments/:id", async (c) => {
+    const row = await financeService.updateSupplierPayment(
+      c.get("db"),
+      c.req.param("id"),
+      updateSupplierPaymentSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Supplier payment not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // ========================================================================
+  // Invoices CRUD
+  // ========================================================================
+
+  // GET /invoices — List invoices
+  .get("/invoices", async (c) => {
+    const query = invoiceListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    return c.json(await financeService.listInvoices(c.get("db"), query))
+  })
+
+  // POST /invoices — Create invoice
+  .post("/invoices", async (c) => {
+    return c.json(
+      {
+        data: await financeService.createInvoice(
+          c.get("db"),
+          insertInvoiceSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    )
+  })
+
+  // GET /invoices/:id — Get single invoice
+  .get("/invoices/:id", async (c) => {
+    const row = await financeService.getInvoiceById(c.get("db"), c.req.param("id"))
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // PATCH /invoices/:id — Update invoice
+  .patch("/invoices/:id", async (c) => {
+    const row = await financeService.updateInvoice(
+      c.get("db"),
+      c.req.param("id"),
+      updateInvoiceSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // DELETE /invoices/:id — Delete invoice (draft only)
+  .delete("/invoices/:id", async (c) => {
+    const result = await financeService.deleteInvoice(c.get("db"), c.req.param("id"))
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    if (result.status === "not_draft") {
+      return c.json({ error: "Only draft invoices can be deleted" }, 400)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  .post("/invoices/:id/payment-session", async (c) => {
+    try {
+      const row = await financeService.createPaymentSessionFromInvoice(
+        c.get("db"),
+        c.req.param("id"),
+        createPaymentSessionFromInvoiceSchema.parse(await c.req.json()),
+      )
+
+      if (!row) {
+        return c.json({ error: "Invoice not found" }, 404)
+      }
+
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create payment session"
+      return c.json({ error: message }, 409)
+    }
+  })
+
+  // ========================================================================
+  // Invoice Line Items
+  // ========================================================================
+
+  // GET /invoices/:id/line-items — List line items
+  .get("/invoices/:id/line-items", async (c) => {
+    return c.json({
+      data: await financeService.listInvoiceLineItems(c.get("db"), c.req.param("id")),
+    })
+  })
+
+  // POST /invoices/:id/line-items — Add line item
+  .post("/invoices/:id/line-items", async (c) => {
+    const row = await financeService.createInvoiceLineItem(
+      c.get("db"),
+      c.req.param("id"),
+      insertInvoiceLineItemSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // PATCH /invoices/:id/line-items/:lineId — Update line item
+  .patch("/invoices/:id/line-items/:lineId", async (c) => {
+    const row = await financeService.updateInvoiceLineItem(
+      c.get("db"),
+      c.req.param("lineId"),
+      updateInvoiceLineItemSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Line item not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // DELETE /invoices/:id/line-items/:lineId — Delete line item
+  .delete("/invoices/:id/line-items/:lineId", async (c) => {
+    const row = await financeService.deleteInvoiceLineItem(c.get("db"), c.req.param("lineId"))
+
+    if (!row) {
+      return c.json({ error: "Line item not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  // ========================================================================
+  // Payments
+  // ========================================================================
+
+  // GET /invoices/:id/payments — List payments
+  .get("/invoices/:id/payments", async (c) => {
+    return c.json({ data: await financeService.listPayments(c.get("db"), c.req.param("id")) })
+  })
+
+  // POST /invoices/:id/payments — Record payment (transaction)
+  .post("/invoices/:id/payments", async (c) => {
+    const row = await financeService.createPayment(
+      c.get("db"),
+      c.req.param("id"),
+      insertPaymentSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ========================================================================
+  // Credit Notes
+  // ========================================================================
+
+  // GET /invoices/:id/credit-notes — List credit notes
+  .get("/invoices/:id/credit-notes", async (c) => {
+    return c.json({
+      data: await financeService.listCreditNotes(c.get("db"), c.req.param("id")),
+    })
+  })
+
+  // POST /invoices/:id/credit-notes — Create credit note
+  .post("/invoices/:id/credit-notes", async (c) => {
+    const row = await financeService.createCreditNote(
+      c.get("db"),
+      c.req.param("id"),
+      insertCreditNoteSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // PATCH /invoices/:id/credit-notes/:creditNoteId — Update credit note
+  .patch("/invoices/:id/credit-notes/:creditNoteId", async (c) => {
+    const row = await financeService.updateCreditNote(
+      c.get("db"),
+      c.req.param("creditNoteId"),
+      updateCreditNoteSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Credit note not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  // ========================================================================
+  // Credit Note Line Items
+  // ========================================================================
+
+  // GET /invoices/:id/credit-notes/:creditNoteId/line-items — List credit note line items
+  .get("/invoices/:id/credit-notes/:creditNoteId/line-items", async (c) => {
+    return c.json({
+      data: await financeService.listCreditNoteLineItems(c.get("db"), c.req.param("creditNoteId")),
+    })
+  })
+
+  // POST /invoices/:id/credit-notes/:creditNoteId/line-items — Add credit note line item
+  .post("/invoices/:id/credit-notes/:creditNoteId/line-items", async (c) => {
+    const row = await financeService.createCreditNoteLineItem(
+      c.get("db"),
+      c.req.param("creditNoteId"),
+      insertCreditNoteLineItemSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Credit note not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ========================================================================
+  // Finance Notes
+  // ========================================================================
+
+  // GET /invoices/:id/notes — List notes
+  .get("/invoices/:id/notes", async (c) => {
+    return c.json({ data: await financeService.listNotes(c.get("db"), c.req.param("id")) })
+  })
+
+  // POST /invoices/:id/notes — Add note
+  .post("/invoices/:id/notes", async (c) => {
+    const userId = c.get("userId")
+
+    if (!userId) {
+      return c.json({ error: "User ID required to create notes" }, 400)
+    }
+
+    const row = await financeService.createNote(
+      c.get("db"),
+      c.req.param("id"),
+      userId,
+      insertFinanceNoteSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Invoice not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ========================================================================
+  // Invoice Number Series
+  // ========================================================================
+
+  .get("/invoice-number-series", async (c) => {
+    const query = invoiceNumberSeriesListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listInvoiceNumberSeries(c.get("db"), query))
+  })
+
+  .post("/invoice-number-series", async (c) => {
+    const row = await financeService.createInvoiceNumberSeries(
+      c.get("db"),
+      insertInvoiceNumberSeriesSchema.parse(await c.req.json()),
+    )
+    return c.json({ data: row }, 201)
+  })
+
+  .get("/invoice-number-series/:id", async (c) => {
+    const row = await financeService.getInvoiceNumberSeriesById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Invoice number series not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/invoice-number-series/:id", async (c) => {
+    const row = await financeService.updateInvoiceNumberSeries(
+      c.get("db"),
+      c.req.param("id"),
+      updateInvoiceNumberSeriesSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Invoice number series not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/invoice-number-series/:id", async (c) => {
+    const row = await financeService.deleteInvoiceNumberSeries(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Invoice number series not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  .post("/invoice-number-series/:id/allocate", async (c) => {
+    const result = await financeService.allocateInvoiceNumber(c.get("db"), c.req.param("id"))
+    if (result.status === "not_found") {
+      return c.json({ error: "Invoice number series not found" }, 404)
+    }
+    if (result.status === "inactive") {
+      return c.json({ error: "Invoice number series is inactive" }, 409)
+    }
+    return c.json({
+      data: { sequence: result.sequence, formattedNumber: result.formattedNumber },
+    })
+  })
+
+  // ========================================================================
+  // Invoice Templates
+  // ========================================================================
+
+  .get("/invoice-templates", async (c) => {
+    const query = invoiceTemplateListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listInvoiceTemplates(c.get("db"), query))
+  })
+
+  .post("/invoice-templates", async (c) => {
+    const row = await financeService.createInvoiceTemplate(
+      c.get("db"),
+      insertInvoiceTemplateSchema.parse(await c.req.json()),
+    )
+    return c.json({ data: row }, 201)
+  })
+
+  .get("/invoice-templates/:id", async (c) => {
+    const row = await financeService.getInvoiceTemplateById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Invoice template not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/invoice-templates/:id", async (c) => {
+    const row = await financeService.updateInvoiceTemplate(
+      c.get("db"),
+      c.req.param("id"),
+      updateInvoiceTemplateSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Invoice template not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/invoice-templates/:id", async (c) => {
+    const row = await financeService.deleteInvoiceTemplate(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Invoice template not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  // ========================================================================
+  // Tax Regimes
+  // ========================================================================
+
+  .get("/tax-regimes", async (c) => {
+    const query = taxRegimeListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await financeService.listTaxRegimes(c.get("db"), query))
+  })
+
+  .post("/tax-regimes", async (c) => {
+    const row = await financeService.createTaxRegime(
+      c.get("db"),
+      insertTaxRegimeSchema.parse(await c.req.json()),
+    )
+    return c.json({ data: row }, 201)
+  })
+
+  .get("/tax-regimes/:id", async (c) => {
+    const row = await financeService.getTaxRegimeById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Tax regime not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/tax-regimes/:id", async (c) => {
+    const row = await financeService.updateTaxRegime(
+      c.get("db"),
+      c.req.param("id"),
+      updateTaxRegimeSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Tax regime not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/tax-regimes/:id", async (c) => {
+    const row = await financeService.deleteTaxRegime(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Tax regime not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  // ========================================================================
+  // Invoice Renditions & External Refs (nested under invoice)
+  // ========================================================================
+
+  .get("/invoices/:id/renditions", async (c) => {
+    const rows = await financeService.listInvoiceRenditions(c.get("db"), c.req.param("id"))
+    return c.json({ data: rows })
+  })
+
+  .post("/invoices/:id/render", async (c) => {
+    const input = renderInvoiceInputSchema.parse(await c.req.json())
+    const result = await financeService.renderInvoice(c.get("db"), c.req.param("id"), input)
+    if (result.status === "not_found") return c.json({ error: "Invoice not found" }, 404)
+    return c.json({ data: result.rendition }, 201)
+  })
+
+  .get("/invoices/:id/external-refs", async (c) => {
+    const rows = await financeService.listInvoiceExternalRefs(c.get("db"), c.req.param("id"))
+    return c.json({ data: rows })
+  })
+
+  .post("/invoices/:id/external-refs", async (c) => {
+    const row = await financeService.registerInvoiceExternalRef(
+      c.get("db"),
+      c.req.param("id"),
+      insertInvoiceExternalRefSchema.parse(await c.req.json()),
+    )
+    if (!row) return c.json({ error: "Invoice not found" }, 404)
+    return c.json({ data: row }, 201)
+  })
+
+  .delete("/invoices/:id/external-refs/:refId", async (c) => {
+    const row = await financeService.deleteInvoiceExternalRef(c.get("db"), c.req.param("refId"))
+    if (!row) return c.json({ error: "External ref not found" }, 404)
+    return c.json({ success: true })
+  })
+
+export type FinanceRoutes = typeof financeRoutes

@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "operator",
+  "main": "src/entry.ts",
+  "compatibility_date": "2025-10-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "APP_URL": "http://localhost:3300/api",
+    "DASH_BASE_URL": "http://localhost:3300",
+    "KMS_PROVIDER": "local",
+    "EMAIL_FROM": "Voyant <voyant@notifications.example.com>"
+  },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "voyant-media"
+    }
+  ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "dev-placeholder",
+      "localConnectionString": "postgresql://voyant:voyant@localhost:5434/voyant_dev"
+    }
+  ]
+}

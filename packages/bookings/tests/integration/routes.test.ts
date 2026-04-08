@@ -1,0 +1,1585 @@
+import { eq, sql } from "drizzle-orm"
+import { Hono } from "hono"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+
+import { availabilitySlotsRef } from "../../src/availability-ref.js"
+import {
+  bookingItemProductDetailsRef,
+  bookingProductDetailsRef,
+  optionUnitsRef,
+  productDayServicesRef,
+  productDaysRef,
+  productOptionsRef,
+  productTicketSettingsRef,
+  productsRef,
+} from "../../src/products-ref.js"
+import { bookingRoutes } from "../../src/routes.js"
+import { bookingAllocations, bookingPiiAccessLog } from "../../src/schema.js"
+import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
+import {
+  bookingTransactionDetailsRef,
+  offerItemParticipantsRef,
+  offerItemsRef,
+  offerParticipantsRef,
+  offersRef,
+  orderItemParticipantsRef,
+  orderItemsRef,
+  orderParticipantsRef,
+  ordersRef,
+} from "../../src/transactions-ref.js"
+
+const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
+const json = (body: Record<string, unknown>) => ({
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+})
+
+let bookingSeq = 0
+function nextBookingNumber() {
+  bookingSeq++
+  return `BK-TEST-${String(bookingSeq).padStart(6, "0")}`
+}
+
+const originalKmsProvider = process.env.KMS_PROVIDER
+const originalKmsEnvKey = process.env.KMS_ENV_KEY
+
+describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
+  let app: Hono
+  let db: ReturnType<typeof import("@voyantjs/db/test-utils").createTestDb>
+
+  beforeAll(async () => {
+    const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
+    const { generateEnvKmsKey } = await import("@voyantjs/utils")
+    db = createTestDb()
+    await cleanupTestDb(db)
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        CREATE TYPE booking_pii_access_action AS ENUM ('read', 'update', 'delete');
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `)
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        CREATE TYPE booking_pii_access_outcome AS ENUM ('allowed', 'denied');
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS booking_pii_access_log (
+        id text PRIMARY KEY NOT NULL,
+        booking_id text,
+        participant_id text,
+        actor_id text,
+        actor_type text,
+        caller_type text,
+        action booking_pii_access_action NOT NULL,
+        outcome booking_pii_access_outcome NOT NULL,
+        reason text,
+        metadata jsonb,
+        created_at timestamp with time zone DEFAULT now() NOT NULL
+      )
+    `)
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_booking ON booking_pii_access_log (booking_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_participant ON booking_pii_access_log (participant_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_actor ON booking_pii_access_log (actor_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_created_at ON booking_pii_access_log (created_at)`,
+    )
+
+    process.env.KMS_PROVIDER = "env"
+    process.env.KMS_ENV_KEY = generateEnvKmsKey()
+
+    app = new Hono()
+    app.use("*", async (c, next) => {
+      c.set("db" as never, db)
+      c.set("userId" as never, "test-user-id")
+      c.set("actor" as never, "staff")
+      await next()
+    })
+    app.route("/", bookingRoutes)
+  })
+
+  beforeEach(async () => {
+    const { cleanupTestDb } = await import("@voyantjs/db/test-utils")
+    await cleanupTestDb(db)
+  })
+
+  afterAll(async () => {
+    const { closeTestDb } = await import("@voyantjs/db/test-utils")
+
+    if (originalKmsProvider === undefined) {
+      delete process.env.KMS_PROVIDER
+    } else {
+      process.env.KMS_PROVIDER = originalKmsProvider
+    }
+
+    if (originalKmsEnvKey === undefined) {
+      delete process.env.KMS_ENV_KEY
+    } else {
+      process.env.KMS_ENV_KEY = originalKmsEnvKey
+    }
+
+    await closeTestDb()
+  })
+
+  async function seedBooking(overrides: Record<string, unknown> = {}) {
+    const res = await app.request("/", {
+      method: "POST",
+      ...json({
+        bookingNumber: nextBookingNumber(),
+        sellCurrency: "USD",
+        ...overrides,
+      }),
+    })
+    return (await res.json()).data
+  }
+
+  async function seedSlot(overrides: Record<string, unknown> = {}) {
+    const [slot] = await db
+      .insert(availabilitySlotsRef)
+      .values({
+        productId: "prod_test",
+        optionId: "opt_test",
+        dateLocal: "2026-06-01",
+        startsAt: new Date("2026-06-01T09:00:00.000Z"),
+        endsAt: new Date("2026-06-01T11:00:00.000Z"),
+        timezone: "Europe/Bucharest",
+        status: "open",
+        unlimited: false,
+        initialPax: 10,
+        remainingPax: 10,
+        ...overrides,
+      })
+      .returning()
+
+    return slot
+  }
+
+  async function seedOfferBundle(slotId: string) {
+    const [offer] = await db
+      .insert(offersRef)
+      .values({
+        offerNumber: `OFF-${String(bookingSeq + 1).padStart(6, "0")}`,
+        title: "City pass",
+        status: "published",
+        currency: "USD",
+        totalAmountCents: 12000,
+        costAmountCents: 8000,
+      })
+      .returning()
+
+    const [participant] = await db
+      .insert(offerParticipantsRef)
+      .values({
+        offerId: offer.id,
+        participantType: "traveler",
+        firstName: "Offer",
+        lastName: "Guest",
+        isPrimary: true,
+      })
+      .returning()
+
+    const [item] = await db
+      .insert(offerItemsRef)
+      .values({
+        offerId: offer.id,
+        productId: "prod_test",
+        optionId: "opt_test",
+        unitId: "ount_test",
+        slotId,
+        title: "Entry ticket",
+        itemType: "unit",
+        status: "priced",
+        quantity: 2,
+        sellCurrency: "USD",
+        totalSellAmountCents: 12000,
+        totalCostAmountCents: 8000,
+      })
+      .returning()
+
+    await db.insert(offerItemParticipantsRef).values({
+      offerItemId: item.id,
+      participantId: participant.id,
+      role: "traveler",
+      isPrimary: true,
+    })
+
+    return { offer, participant, item }
+  }
+
+  async function seedOrderBundle(slotId: string) {
+    const [order] = await db
+      .insert(ordersRef)
+      .values({
+        orderNumber: `ORD-${String(bookingSeq + 1).padStart(6, "0")}`,
+        title: "Museum booking",
+        status: "pending",
+        currency: "USD",
+        totalAmountCents: 6000,
+        costAmountCents: 3500,
+      })
+      .returning()
+
+    const [participant] = await db
+      .insert(orderParticipantsRef)
+      .values({
+        orderId: order.id,
+        participantType: "traveler",
+        firstName: "Order",
+        lastName: "Guest",
+        isPrimary: true,
+      })
+      .returning()
+
+    const [item] = await db
+      .insert(orderItemsRef)
+      .values({
+        orderId: order.id,
+        productId: "prod_test",
+        optionId: "opt_test",
+        unitId: "ount_test",
+        slotId,
+        title: "Museum ticket",
+        itemType: "unit",
+        status: "confirmed",
+        quantity: 1,
+        sellCurrency: "USD",
+        totalSellAmountCents: 6000,
+        totalCostAmountCents: 3500,
+      })
+      .returning()
+
+    await db.insert(orderItemParticipantsRef).values({
+      orderItemId: item.id,
+      participantId: participant.id,
+      role: "traveler",
+      isPrimary: true,
+    })
+
+    return { order, participant, item }
+  }
+
+  async function seedProductBundle() {
+    const [product] = await db
+      .insert(productsRef)
+      .values({
+        name: "Danube cruise",
+        sellCurrency: "EUR",
+        sellAmountCents: 18000,
+        costAmountCents: 12000,
+        marginPercent: 33,
+        startDate: "2026-07-01",
+        endDate: "2026-07-03",
+        pax: 2,
+      })
+      .returning()
+
+    const [option] = await db
+      .insert(productOptionsRef)
+      .values({
+        productId: product.id,
+        name: "Standard",
+        status: "active",
+        isDefault: true,
+      })
+      .returning()
+
+    const [unit] = await db
+      .insert(optionUnitsRef)
+      .values({
+        optionId: option.id,
+        name: "Adult",
+        unitType: "person",
+        isRequired: true,
+        minQuantity: 1,
+      })
+      .returning()
+
+    const [day] = await db
+      .insert(productDaysRef)
+      .values({
+        productId: product.id,
+        dayNumber: 1,
+      })
+      .returning()
+
+    await db.insert(productDayServicesRef).values({
+      dayId: day.id,
+      serviceType: "experience",
+      name: "Boat operator",
+      costCurrency: "EUR",
+      costAmountCents: 12000,
+    })
+
+    await db.insert(productTicketSettingsRef).values({
+      productId: product.id,
+      fulfillmentMode: "per_item",
+      defaultDeliveryFormat: "qr_code",
+      ticketPerUnit: false,
+    })
+
+    return { product, option, unit }
+  }
+
+  describe("Bookings CRUD", () => {
+    it("creates a booking from a product", async () => {
+      const { product, option, unit } = await seedProductBundle()
+
+      const res = await app.request("/from-product", {
+        method: "POST",
+        ...json({
+          productId: product.id,
+          bookingNumber: nextBookingNumber(),
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.status).toBe("draft")
+      expect(body.data.sellCurrency).toBe("EUR")
+
+      const itemsRes = await app.request(`/${body.data.id}/items`, { method: "GET" })
+      const itemsBody = await itemsRes.json()
+      expect(itemsBody.data).toHaveLength(1)
+      expect(itemsBody.data[0]?.productId).toBe(product.id)
+      expect(itemsBody.data[0]?.optionId).toBe(option.id)
+      expect(itemsBody.data[0]?.optionUnitId).toBe(unit.id)
+
+      const productDetails = await db
+        .select()
+        .from(bookingProductDetailsRef)
+        .where(eq(bookingProductDetailsRef.bookingId, body.data.id))
+      expect(productDetails[0]?.productId).toBe(product.id)
+      expect(productDetails[0]?.optionId).toBe(option.id)
+
+      const itemProductDetails = await db
+        .select()
+        .from(bookingItemProductDetailsRef)
+        .where(eq(bookingItemProductDetailsRef.bookingItemId, itemsBody.data[0]?.id))
+      expect(itemProductDetails[0]?.productId).toBe(product.id)
+      expect(itemProductDetails[0]?.optionId).toBe(option.id)
+      expect(itemProductDetails[0]?.unitId).toBe(unit.id)
+
+      const supplierStatusesRes = await app.request(`/${body.data.id}/supplier-statuses`, {
+        method: "GET",
+      })
+      expect((await supplierStatusesRes.json()).data).toHaveLength(1)
+
+      const confirmRes = await app.request(`/${body.data.id}/status`, {
+        method: "PATCH",
+        ...json({ status: "confirmed" }),
+      })
+      expect(confirmRes.status).toBe(200)
+
+      const fulfillmentsRes = await app.request(`/${body.data.id}/fulfillments`, { method: "GET" })
+      const fulfillmentsBody = await fulfillmentsRes.json()
+      expect(fulfillmentsBody.data).toHaveLength(1)
+      expect(fulfillmentsBody.data[0]?.fulfillmentType).toBe("qr_code")
+      expect(fulfillmentsBody.data[0]?.deliveryChannel).toBe("download")
+    })
+
+    it("creates a booking", async () => {
+      const res = await app.request("/", {
+        method: "POST",
+        ...json({ bookingNumber: nextBookingNumber(), sellCurrency: "EUR" }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.id).toBeTruthy()
+      expect(body.data.status).toBe("draft")
+      expect(body.data.sellCurrency).toBe("EUR")
+      expect(body.data.sourceType).toBe("manual")
+    })
+
+    it("rejects external-source booking creation without reservation flow", async () => {
+      const res = await app.request("/", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "EUR",
+          sourceType: "direct",
+        }),
+      })
+
+      expect(res.status).toBe(400)
+      expect((await res.json()).error).toContain("Invalid")
+    })
+
+    it("rejects on-hold booking creation without reservation flow", async () => {
+      const res = await app.request("/", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "EUR",
+          status: "on_hold",
+        }),
+      })
+
+      expect(res.status).toBe(400)
+      expect((await res.json()).error).toContain("reservation flow")
+    })
+
+    it("lists bookings", async () => {
+      await seedBooking()
+      const res = await app.request("/", { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toBeInstanceOf(Array)
+      expect(body.total).toBeGreaterThanOrEqual(1)
+    })
+
+    it("gets a booking by id", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.id).toBe(booking.id)
+    })
+
+    it("updates a booking", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}`, {
+        method: "PATCH",
+        ...json({ internalNotes: "Updated" }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.internalNotes).toBe("Updated")
+    })
+
+    it("deletes a booking", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}`, { method: "DELETE" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+
+    it("returns 404 for non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000", { method: "GET" })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Booking Status", () => {
+    it("changes booking status", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/status`, {
+        method: "PATCH",
+        ...json({ status: "confirmed" }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.status).toBe("confirmed")
+    })
+
+    it("creates activity log entry on status change", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/status`, {
+        method: "PATCH",
+        ...json({ status: "confirmed" }),
+      })
+
+      const actRes = await app.request(`/${booking.id}/activity`, { method: "GET" })
+      const actBody = await actRes.json()
+      const statusEntry = actBody.data.find(
+        (a: Record<string, unknown>) => a.activityType === "status_change",
+      )
+      expect(statusEntry).toBeTruthy()
+    })
+
+    it("creates note when status change includes note", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/status`, {
+        method: "PATCH",
+        ...json({ status: "cancelled", note: "Client requested" }),
+      })
+
+      const notesRes = await app.request(`/${booking.id}/notes`, { method: "GET" })
+      const notesBody = await notesRes.json()
+      const note = notesBody.data.find(
+        (n: Record<string, unknown>) => n.content === "Client requested",
+      )
+      expect(note).toBeTruthy()
+    })
+
+    it("returns 404 for non-existent booking status change", async () => {
+      const res = await app.request("/book_00000000000000000000000000/status", {
+        method: "PATCH",
+        ...json({ status: "confirmed" }),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Reservation flow", () => {
+    it("reserves a slot and creates on-hold allocations", async () => {
+      const slot = await seedSlot()
+
+      const res = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [
+            {
+              title: "Adult ticket",
+              productId: slot.productId,
+              optionId: slot.optionId,
+              sourceSnapshotId: "sels_test_001",
+              sourceOfferId: "offr_test_001",
+              availabilitySlotId: slot.id,
+              quantity: 2,
+            },
+          ],
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.status).toBe("on_hold")
+      expect(body.data.holdExpiresAt).toBeTruthy()
+
+      const allocationsRes = await app.request(`/${body.data.id}/allocations`, { method: "GET" })
+      const allocationsBody = await allocationsRes.json()
+      expect(allocationsBody.data).toHaveLength(1)
+      expect(allocationsBody.data[0]?.status).toBe("held")
+      expect(allocationsBody.data[0]?.availabilitySlotId).toBe(slot.id)
+
+      const itemsRes = await app.request(`/${body.data.id}/items`, { method: "GET" })
+      const itemsBody = await itemsRes.json()
+      expect(itemsBody.data[0]?.sourceSnapshotId).toBe("sels_test_001")
+      expect(itemsBody.data[0]?.sourceOfferId).toBe("offr_test_001")
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+      expect(updatedSlot?.remainingPax).toBe(8)
+    })
+
+    it("rejects reservation when slot capacity is insufficient", async () => {
+      const slot = await seedSlot({ initialPax: 1, remainingPax: 1 })
+
+      const res = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 2 }],
+        }),
+      })
+
+      expect(res.status).toBe(409)
+      expect((await res.json()).error).toContain("Insufficient")
+    })
+
+    it("prevents oversell under concurrent reservations", async () => {
+      const slot = await seedSlot({ initialPax: 1, remainingPax: 1 })
+
+      const [firstRes, secondRes] = await Promise.all([
+        app.request("/reserve", {
+          method: "POST",
+          ...json({
+            bookingNumber: nextBookingNumber(),
+            sellCurrency: "USD",
+            items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+          }),
+        }),
+        app.request("/reserve", {
+          method: "POST",
+          ...json({
+            bookingNumber: nextBookingNumber(),
+            sellCurrency: "USD",
+            items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+          }),
+        }),
+      ])
+
+      const statuses = [firstRes.status, secondRes.status].sort((a, b) => a - b)
+      expect(statuses).toEqual([201, 409])
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+
+      expect(updatedSlot?.remainingPax).toBe(0)
+      expect(updatedSlot?.status).toBe("sold_out")
+
+      const heldAllocations = await db
+        .select()
+        .from(bookingAllocations)
+        .where(eq(bookingAllocations.availabilitySlotId, slot.id))
+      expect(heldAllocations).toHaveLength(1)
+    })
+
+    it("confirms an on-hold booking", async () => {
+      const slot = await seedSlot()
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const res = await app.request(`/${booking.id}/confirm`, {
+        method: "POST",
+        ...json({}),
+      })
+
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.status).toBe("confirmed")
+    })
+
+    it("extends an on-hold booking", async () => {
+      const slot = await seedSlot()
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const res = await app.request(`/${booking.id}/extend-hold`, {
+        method: "POST",
+        ...json({ holdMinutes: 45 }),
+      })
+
+      expect(res.status).toBe(200)
+      expect(new Date((await res.json()).data.holdExpiresAt).getTime()).toBeGreaterThan(
+        new Date(booking.holdExpiresAt).getTime(),
+      )
+    })
+
+    it("expires an on-hold booking and releases capacity", async () => {
+      const slot = await seedSlot({ initialPax: 2, remainingPax: 2 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 2 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const expireRes = await app.request(`/${booking.id}/expire`, {
+        method: "POST",
+        ...json({}),
+      })
+
+      expect(expireRes.status).toBe(200)
+      expect((await expireRes.json()).data.status).toBe("expired")
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+      expect(updatedSlot?.remainingPax).toBe(2)
+      expect(updatedSlot?.status).toBe("open")
+    })
+
+    it("cancels a confirmed booking and releases capacity", async () => {
+      const slot = await seedSlot({ initialPax: 3, remainingPax: 3 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 2 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+      await app.request(`/${booking.id}/confirm`, { method: "POST", ...json({}) })
+
+      const cancelRes = await app.request(`/${booking.id}/cancel`, {
+        method: "POST",
+        ...json({ note: "Client requested" }),
+      })
+
+      expect(cancelRes.status).toBe(200)
+      expect((await cancelRes.json()).data.status).toBe("cancelled")
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+      expect(updatedSlot?.remainingPax).toBe(3)
+    })
+
+    it("expires stale on-hold bookings in batch", async () => {
+      const slot = await seedSlot({ initialPax: 4, remainingPax: 4 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 2 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      await app.request(`/${booking.id}/extend-hold`, {
+        method: "POST",
+        ...json({ holdExpiresAt: "2020-01-01T00:00:00.000Z" }),
+      })
+
+      const sweepRes = await app.request("/expire-stale", {
+        method: "POST",
+        ...json({ before: "2026-12-31T00:00:00.000Z" }),
+      })
+      const sweepBody = await sweepRes.json()
+
+      expect(sweepRes.status).toBe(200)
+      expect(sweepBody.count).toBeGreaterThanOrEqual(1)
+      expect(sweepBody.expiredIds).toContain(booking.id)
+
+      const bookingRes = await app.request(`/${booking.id}`, { method: "GET" })
+      expect((await bookingRes.json()).data.status).toBe("expired")
+    })
+  })
+
+  describe("Transaction reservation flow", () => {
+    it("reserves a booking from an offer and preserves transaction linkage", async () => {
+      const slot = await seedSlot({ initialPax: 5, remainingPax: 5 })
+      const { offer } = await seedOfferBundle(slot.id)
+
+      const res = await app.request(`/from-offer/${offer.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          note: "Reserved from offer",
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.status).toBe("on_hold")
+
+      const participantsRes = await app.request(`/${body.data.id}/participants`, { method: "GET" })
+      expect((await participantsRes.json()).data).toHaveLength(1)
+
+      const itemsRes = await app.request(`/${body.data.id}/items`, { method: "GET" })
+      const itemsBody = await itemsRes.json()
+      expect(itemsBody.data[0]?.sourceOfferId).toBe(offer.id)
+
+      const links = await db
+        .select()
+        .from(bookingTransactionDetailsRef)
+        .where(eq(bookingTransactionDetailsRef.bookingId, body.data.id))
+      expect(links[0]?.offerId).toBe(offer.id)
+      expect(links[0]?.orderId).toBeNull()
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+      expect(updatedSlot?.remainingPax).toBe(3)
+
+      await app.request(`/${body.data.id}/confirm`, { method: "POST", ...json({}) })
+
+      const [updatedOffer] = await db
+        .select()
+        .from(offersRef)
+        .where(eq(offersRef.id, offer.id))
+      expect(updatedOffer?.status).toBe("converted")
+      expect(updatedOffer?.convertedAt).toBeTruthy()
+    })
+
+    it("reserves a booking from an order and links order provenance", async () => {
+      const slot = await seedSlot({ initialPax: 3, remainingPax: 3 })
+      const { order } = await seedOrderBundle(slot.id)
+
+      const res = await app.request(`/from-order/${order.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          includeParticipants: true,
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.status).toBe("on_hold")
+
+      const allocationsRes = await app.request(`/${body.data.id}/allocations`, { method: "GET" })
+      expect((await allocationsRes.json()).data[0]?.status).toBe("held")
+
+      const links = await db
+        .select()
+        .from(bookingTransactionDetailsRef)
+        .where(eq(bookingTransactionDetailsRef.bookingId, body.data.id))
+      expect(links[0]?.orderId).toBe(order.id)
+
+      const [updatedSlot] = await db
+        .select()
+        .from(availabilitySlotsRef)
+        .where(eq(availabilitySlotsRef.id, slot.id))
+      expect(updatedSlot?.remainingPax).toBe(2)
+
+      await app.request(`/${body.data.id}/confirm`, { method: "POST", ...json({}) })
+
+      const [confirmedOrder] = await db
+        .select()
+        .from(ordersRef)
+        .where(eq(ordersRef.id, order.id))
+      expect(confirmedOrder?.status).toBe("confirmed")
+      expect(confirmedOrder?.confirmedAt).toBeTruthy()
+
+      await app.request(`/${body.data.id}/cancel`, {
+        method: "POST",
+        ...json({ note: "Client cancelled" }),
+      })
+
+      const [cancelledOrder] = await db
+        .select()
+        .from(ordersRef)
+        .where(eq(ordersRef.id, order.id))
+      expect(cancelledOrder?.status).toBe("cancelled")
+      expect(cancelledOrder?.cancelledAt).toBeTruthy()
+    })
+
+    it("expires pending transaction orders with booking holds", async () => {
+      const slot = await seedSlot({ initialPax: 2, remainingPax: 2 })
+      const { order } = await seedOrderBundle(slot.id)
+
+      const reserveRes = await app.request(`/from-order/${order.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const expireRes = await app.request(`/${booking.id}/expire`, {
+        method: "POST",
+        ...json({}),
+      })
+      expect(expireRes.status).toBe(200)
+
+      const [expiredOrder] = await db.select().from(ordersRef).where(eq(ordersRef.id, order.id))
+      expect(expiredOrder?.status).toBe("expired")
+      expect(expiredOrder?.expiresAt).toBeTruthy()
+    })
+
+    it("marks linked orders fulfilled when a booking is redeemed", async () => {
+      const slot = await seedSlot({ initialPax: 2, remainingPax: 2 })
+      const { order } = await seedOrderBundle(slot.id)
+
+      const reserveRes = await app.request(`/from-order/${order.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      await app.request(`/${booking.id}/confirm`, { method: "POST", ...json({}) })
+
+      const itemsRes = await app.request(`/${booking.id}/items`, { method: "GET" })
+      const itemsBody = await itemsRes.json()
+      const itemId = itemsBody.data[0]?.id
+      expect(itemId).toBeTruthy()
+
+      const participantRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Redeem", lastName: "Guest" }),
+      })
+      const { data: participant } = await participantRes.json()
+
+      await app.request(`/${booking.id}/redemptions`, {
+        method: "POST",
+        ...json({
+          bookingItemId: itemId,
+          participantId: participant.id,
+        }),
+      })
+
+      const [fulfilledOrder] = await db
+        .select()
+        .from(ordersRef)
+        .where(eq(ordersRef.id, order.id))
+      expect(fulfilledOrder?.status).toBe("fulfilled")
+    })
+  })
+
+  describe("Participants", () => {
+    it("creates a participant", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.firstName).toBe("John")
+      expect(body.data.participantType).toBe("traveler")
+    })
+
+    it("lists participants", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Jane", lastName: "Smith" }),
+      })
+
+      const res = await app.request(`/${booking.id}/participants`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("updates a participant", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/participants/${participant.id}`, {
+        method: "PATCH",
+        ...json({ firstName: "Jonathan" }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.firstName).toBe("Jonathan")
+    })
+
+    it("deletes a participant", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/participants/${participant.id}`, {
+        method: "DELETE",
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+
+    it("returns 404 when adding participant to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/participants", {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it("stores participant travel details encrypted and reads them back through the route", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Ana", lastName: "Traveler" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      const patchRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "PATCH",
+        ...json({
+          nationality: "RO",
+          passportNumber: "X1234567",
+          dietaryRequirements: "vegetarian",
+          isLeadTraveler: true,
+        }),
+      })
+
+      expect(patchRes.status).toBe(200)
+      expect((await patchRes.json()).data.passportNumber).toBe("X1234567")
+
+      const [stored] = await db
+        .select()
+        .from(bookingParticipantTravelDetails)
+        .where(eq(bookingParticipantTravelDetails.participantId, participant.id))
+
+      expect(stored?.identityEncrypted?.enc).toMatch(/^env:v1:/)
+      expect(stored?.identityEncrypted?.enc).not.toContain("X1234567")
+
+      const getRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "GET",
+      })
+
+      expect(getRes.status).toBe(200)
+      const body = await getRes.json()
+      expect(body.data.nationality).toBe("RO")
+      expect(body.data.dietaryRequirements).toBe("vegetarian")
+      expect(body.data.isLeadTraveler).toBe(true)
+    })
+
+    it("preserves unspecified travel detail fields on partial update", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Mira", lastName: "Traveler" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "PATCH",
+        ...json({
+          passportNumber: "AB12345",
+          dietaryRequirements: "vegan",
+        }),
+      })
+
+      const patchRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "PATCH",
+        ...json({
+          dietaryRequirements: "gluten-free",
+        }),
+      })
+
+      expect(patchRes.status).toBe(200)
+      const body = await patchRes.json()
+      expect(body.data.passportNumber).toBe("AB12345")
+      expect(body.data.dietaryRequirements).toBe("gluten-free")
+    })
+
+    it("keeps travel details out of the standard participant list response", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Safe", lastName: "Boundary" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "PATCH",
+        ...json({
+          passportNumber: "SECRET123",
+          dateOfBirth: "1991-04-03",
+        }),
+      })
+
+      const listRes = await app.request(`/${booking.id}/participants`, { method: "GET" })
+      expect(listRes.status).toBe(200)
+      const body = await listRes.json()
+
+      expect(body.data[0]).not.toHaveProperty("passportNumber")
+      expect(body.data[0]).not.toHaveProperty("dateOfBirth")
+      expect(body.data[0]).not.toHaveProperty("dietaryRequirements")
+    })
+
+    it("returns 404 when reading travel details for a participant outside the booking scope", async () => {
+      const bookingA = await seedBooking()
+      const bookingB = await seedBooking()
+      const createRes = await app.request(`/${bookingA.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Scoped", lastName: "Traveler" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      const res = await app.request(`/${bookingB.id}/participants/${participant.id}/travel-details`, {
+        method: "GET",
+      })
+
+      expect(res.status).toBe(404)
+    })
+
+    it("persists pii access audit rows for allowed access", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Audit", lastName: "Allowed" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "PATCH",
+        ...json({ passportNumber: "AUDIT-1" }),
+      })
+
+      const rows = await db
+        .select()
+        .from(bookingPiiAccessLog)
+        .where(eq(bookingPiiAccessLog.participantId, participant.id))
+
+      expect(rows.some((row: { action: string; outcome: string }) => row.action === "update" && row.outcome === "allowed")).toBe(true)
+      expect(rows.some((row: { action: string; outcome: string }) => row.action === "read" && row.outcome === "allowed")).toBe(true)
+    })
+
+    it("forbids pii access for non-staff actors without explicit scope and audits the denial", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Audit", lastName: "Denied" }),
+      })
+      const { data: participant } = await createRes.json()
+
+      const restrictedApp = new Hono()
+      restrictedApp.use("*", async (c, next) => {
+        c.set("db" as never, db)
+        c.set("userId" as never, "test-customer-id")
+        c.set("actor" as never, "customer")
+        await next()
+      })
+      restrictedApp.route("/", bookingRoutes)
+
+      const res = await restrictedApp.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+        method: "GET",
+      })
+
+      expect(res.status).toBe(403)
+
+      const rows = await db
+        .select()
+        .from(bookingPiiAccessLog)
+        .where(eq(bookingPiiAccessLog.participantId, participant.id))
+
+      expect(
+        rows.some(
+          (row: { action: string; outcome: string; reason: string | null; actorId: string | null }) =>
+            row.action === "read" &&
+            row.outcome === "denied" &&
+            row.reason === "insufficient_scope" &&
+            row.actorId === "test-customer-id",
+        ),
+      ).toBe(true)
+    })
+  })
+
+  describe("Passengers (legacy)", () => {
+    it("creates a passenger", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/passengers`, {
+        method: "POST",
+        ...json({ firstName: "Jane", lastName: "Smith" }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.firstName).toBe("Jane")
+      expect(body.data.isLeadPassenger).toBe(false)
+    })
+
+    it("lists passengers (filtered to traveler types)", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/passengers`, {
+        method: "POST",
+        ...json({ firstName: "Traveler", lastName: "One" }),
+      })
+
+      const res = await app.request(`/${booking.id}/passengers`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("updates a passenger", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/passengers`, {
+        method: "POST",
+        ...json({ firstName: "Jane", lastName: "Smith" }),
+      })
+      const { data: passenger } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/passengers/${passenger.id}`, {
+        method: "PATCH",
+        ...json({ isLeadPassenger: true }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.isLeadPassenger).toBe(true)
+    })
+
+    it("deletes a passenger", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/passengers`, {
+        method: "POST",
+        ...json({ firstName: "Jane", lastName: "Smith" }),
+      })
+      const { data: passenger } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/passengers/${passenger.id}`, {
+        method: "DELETE",
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+  })
+
+  describe("Items", () => {
+    it("creates a booking item", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Airport Transfer", sellCurrency: "USD" }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.title).toBe("Airport Transfer")
+      expect(body.data.itemType).toBe("unit")
+      expect(body.data.quantity).toBe(1)
+    })
+
+    it("lists booking items", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Hotel", sellCurrency: "USD" }),
+      })
+
+      const res = await app.request(`/${booking.id}/items`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("updates a booking item", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Transfer", sellCurrency: "USD" }),
+      })
+      const { data: item } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/items/${item.id}`, {
+        method: "PATCH",
+        ...json({ title: "VIP Transfer" }),
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.title).toBe("VIP Transfer")
+    })
+
+    it("deletes a booking item", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Transfer", sellCurrency: "USD" }),
+      })
+      const { data: item } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/items/${item.id}`, { method: "DELETE" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+
+    it("returns 404 when adding item to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/items", {
+        method: "POST",
+        ...json({ title: "Transfer", sellCurrency: "USD" }),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Item Participants", () => {
+    async function seedBookingWithItemAndParticipant() {
+      const booking = await seedBooking()
+      const itemRes = await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Tour", sellCurrency: "USD" }),
+      })
+      const { data: item } = await itemRes.json()
+
+      const partRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+      const { data: participant } = await partRes.json()
+
+      return { booking, item, participant }
+    }
+
+    it("links a participant to an item", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
+      const res = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+        method: "POST",
+        ...json({ participantId: participant.id }),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.participantId).toBe(participant.id)
+      expect(body.data.role).toBe("traveler")
+    })
+
+    it("lists item participants", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
+      await app.request(`/${booking.id}/items/${item.id}/participants`, {
+        method: "POST",
+        ...json({ participantId: participant.id }),
+      })
+
+      const res = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+        method: "GET",
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("unlinks a participant from an item", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
+      const linkRes = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+        method: "POST",
+        ...json({ participantId: participant.id }),
+      })
+      const { data: link } = await linkRes.json()
+
+      const res = await app.request(`/${booking.id}/items/${item.id}/participants/${link.id}`, {
+        method: "DELETE",
+      })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+  })
+
+  describe("Supplier Statuses", () => {
+    const validStatus = {
+      serviceName: "Hotel Transfer",
+      costCurrency: "USD",
+      costAmountCents: 5000,
+    }
+
+    it("creates a supplier status", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/supplier-statuses`, {
+        method: "POST",
+        ...json(validStatus),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.serviceName).toBe("Hotel Transfer")
+      expect(body.data.status).toBe("pending")
+    })
+
+    it("lists supplier statuses", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/supplier-statuses`, {
+        method: "POST",
+        ...json(validStatus),
+      })
+
+      const res = await app.request(`/${booking.id}/supplier-statuses`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("updates supplier status and auto-sets confirmedAt", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/supplier-statuses`, {
+        method: "POST",
+        ...json(validStatus),
+      })
+      const { data: ss } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/supplier-statuses/${ss.id}`, {
+        method: "PATCH",
+        ...json({ status: "confirmed" }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.status).toBe("confirmed")
+      expect(body.data.confirmedAt).toBeTruthy()
+    })
+
+    it("returns 404 when adding to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/supplier-statuses", {
+        method: "POST",
+        ...json(validStatus),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Fulfillment", () => {
+    it("creates, lists, and updates booking fulfillments", async () => {
+      const booking = await seedBooking()
+      const itemRes = await app.request(`/${booking.id}/items`, {
+        method: "POST",
+        ...json({ title: "Museum entry", sellCurrency: "USD" }),
+      })
+      const { data: item } = await itemRes.json()
+
+      const participantRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Ana", lastName: "Traveler" }),
+      })
+      const { data: participant } = await participantRes.json()
+
+      const createRes = await app.request(`/${booking.id}/fulfillments`, {
+        method: "POST",
+        ...json({
+          bookingItemId: item.id,
+          participantId: participant.id,
+          fulfillmentType: "voucher",
+          deliveryChannel: "download",
+          artifactUrl: "https://example.com/voucher.pdf",
+        }),
+      })
+
+      expect(createRes.status).toBe(201)
+      const { data: fulfillment } = await createRes.json()
+      expect(fulfillment.status).toBe("issued")
+      expect(fulfillment.bookingItemId).toBe(item.id)
+      expect(fulfillment.participantId).toBe(participant.id)
+
+      const listRes = await app.request(`/${booking.id}/fulfillments`, { method: "GET" })
+      expect(listRes.status).toBe(200)
+      expect((await listRes.json()).data).toHaveLength(1)
+
+      const updateRes = await app.request(`/${booking.id}/fulfillments/${fulfillment.id}`, {
+        method: "PATCH",
+        ...json({ status: "revoked" }),
+      })
+      expect(updateRes.status).toBe(200)
+      expect((await updateRes.json()).data.status).toBe("revoked")
+    })
+  })
+
+  describe("Redemption", () => {
+    it("records redemption and stamps booking redemption state", async () => {
+      const slot = await seedSlot()
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+      await app.request(`/${booking.id}/confirm`, { method: "POST", ...json({}) })
+
+      const itemsRes = await app.request(`/${booking.id}/items`, { method: "GET" })
+      const { data: items } = await itemsRes.json()
+      const item = items[0]
+
+      const participantRes = await app.request(`/${booking.id}/participants`, {
+        method: "POST",
+        ...json({ firstName: "Mihai", lastName: "Guest" }),
+      })
+      const { data: participant } = await participantRes.json()
+
+      const redemptionRes = await app.request(`/${booking.id}/redemptions`, {
+        method: "POST",
+        ...json({
+          bookingItemId: item.id,
+          participantId: participant.id,
+          method: "scan",
+          location: "North gate",
+        }),
+      })
+
+      expect(redemptionRes.status).toBe(201)
+      expect((await redemptionRes.json()).data.method).toBe("scan")
+
+      const bookingRes = await app.request(`/${booking.id}`, { method: "GET" })
+      expect((await bookingRes.json()).data.redeemedAt).toBeTruthy()
+
+      const refreshedItemsRes = await app.request(`/${booking.id}/items`, { method: "GET" })
+      expect((await refreshedItemsRes.json()).data[0]?.status).toBe("fulfilled")
+
+      const allocationsRes = await app.request(`/${booking.id}/allocations`, { method: "GET" })
+      expect((await allocationsRes.json()).data[0]?.status).toBe("fulfilled")
+
+      const redemptionsRes = await app.request(`/${booking.id}/redemptions`, { method: "GET" })
+      expect(redemptionsRes.status).toBe(200)
+      expect((await redemptionsRes.json()).data).toHaveLength(1)
+    })
+  })
+
+  describe("Activity Log", () => {
+    it("records booking creation in activity log", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/activity`, { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      const created = body.data.find(
+        (a: Record<string, unknown>) => a.activityType === "booking_created",
+      )
+      expect(created).toBeTruthy()
+    })
+  })
+
+  describe("Notes", () => {
+    it("creates a note", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/notes`, {
+        method: "POST",
+        ...json({ content: "Important note" }),
+      })
+      expect(res.status).toBe(201)
+      expect((await res.json()).data.content).toBe("Important note")
+    })
+
+    it("lists notes", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/notes`, {
+        method: "POST",
+        ...json({ content: "Note 1" }),
+      })
+
+      const res = await app.request(`/${booking.id}/notes`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("returns 404 when adding note to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/notes", {
+        method: "POST",
+        ...json({ content: "Note" }),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("Documents", () => {
+    const validDoc = {
+      type: "visa",
+      fileName: "visa.pdf",
+      fileUrl: "https://example.com/visa.pdf",
+    }
+
+    it("creates a document", async () => {
+      const booking = await seedBooking()
+      const res = await app.request(`/${booking.id}/documents`, {
+        method: "POST",
+        ...json(validDoc),
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.type).toBe("visa")
+      expect(body.data.fileName).toBe("visa.pdf")
+    })
+
+    it("lists documents", async () => {
+      const booking = await seedBooking()
+      await app.request(`/${booking.id}/documents`, { method: "POST", ...json(validDoc) })
+
+      const res = await app.request(`/${booking.id}/documents`, { method: "GET" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).data.length).toBe(1)
+    })
+
+    it("deletes a document", async () => {
+      const booking = await seedBooking()
+      const createRes = await app.request(`/${booking.id}/documents`, {
+        method: "POST",
+        ...json(validDoc),
+      })
+      const { data: doc } = await createRes.json()
+
+      const res = await app.request(`/${booking.id}/documents/${doc.id}`, { method: "DELETE" })
+      expect(res.status).toBe(200)
+      expect((await res.json()).success).toBe(true)
+    })
+
+    it("returns 404 when adding to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/documents", {
+        method: "POST",
+        ...json(validDoc),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+})

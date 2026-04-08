@@ -1,0 +1,79 @@
+{
+  "name": "@voyantjs/bookings",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pii": "./src/pii.ts",
+    "./schema": "./src/schema.ts",
+    "./tasks": "./src/tasks/index.ts",
+    "./validation": "./src/validation.ts",
+    "./routes": "./src/routes.ts",
+    "./schema/travel-details": "./src/schema/travel-details.ts",
+    "./extensions/suppliers": "./src/extensions/suppliers.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@voyantjs/core": "workspace:*",
+    "@voyantjs/db": "workspace:*",
+    "@voyantjs/hono": "workspace:*",
+    "@voyantjs/utils": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.10",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^6.0.2"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./pii": {
+        "types": "./dist/pii.d.ts",
+        "import": "./dist/pii.js"
+      },
+      "./schema": {
+        "types": "./dist/schema.d.ts",
+        "import": "./dist/schema.js"
+      },
+      "./tasks": {
+        "types": "./dist/tasks/index.d.ts",
+        "import": "./dist/tasks/index.js"
+      },
+      "./validation": {
+        "types": "./dist/validation.d.ts",
+        "import": "./dist/validation.js"
+      },
+      "./routes": {
+        "types": "./dist/routes.d.ts",
+        "import": "./dist/routes.js"
+      },
+      "./schema/travel-details": {
+        "types": "./dist/schema/travel-details.d.ts",
+        "import": "./dist/schema/travel-details.js"
+      },
+      "./extensions/suppliers": {
+        "types": "./dist/extensions/suppliers.d.ts",
+        "import": "./dist/extensions/suppliers.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  }
+}

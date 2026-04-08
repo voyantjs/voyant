@@ -1,0 +1,240 @@
+import { booleanQueryParam } from "@voyantjs/db/helpers"
+import { z } from "zod"
+
+const paginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const availabilitySlotStatusSchema = z.enum(["open", "closed", "sold_out", "cancelled"])
+export const meetingModeSchema = z.enum(["meeting_only", "pickup_only", "meet_or_pickup"])
+export const pickupGroupKindSchema = z.enum(["pickup", "dropoff", "meeting"])
+export const pickupTimingModeSchema = z.enum(["fixed_time", "offset_from_start"])
+
+const isoDateSchema = z.string().date()
+const isoDateTimeSchema = z.string().datetime()
+
+export const availabilityRuleCoreSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable().optional(),
+  facilityId: z.string().nullable().optional(),
+  timezone: z.string().min(1),
+  recurrenceRule: z.string().min(1),
+  maxCapacity: z.number().int().min(0),
+  maxPickupCapacity: z.number().int().min(0).nullable().optional(),
+  minTotalPax: z.number().int().min(0).nullable().optional(),
+  cutoffMinutes: z.number().int().min(0).nullable().optional(),
+  earlyBookingLimitMinutes: z.number().int().min(0).nullable().optional(),
+  active: z.boolean().default(true),
+})
+
+export const insertAvailabilityRuleSchema = availabilityRuleCoreSchema
+export const updateAvailabilityRuleSchema = availabilityRuleCoreSchema.partial()
+export const availabilityRuleListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  optionId: z.string().optional(),
+  facilityId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const availabilityStartTimeCoreSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable().optional(),
+  facilityId: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  startTimeLocal: z.string().min(1),
+  durationMinutes: z.number().int().min(0).nullable().optional(),
+  sortOrder: z.number().int().default(0),
+  active: z.boolean().default(true),
+})
+
+export const insertAvailabilityStartTimeSchema = availabilityStartTimeCoreSchema
+export const updateAvailabilityStartTimeSchema = availabilityStartTimeCoreSchema.partial()
+export const availabilityStartTimeListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  optionId: z.string().optional(),
+  facilityId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const availabilitySlotCoreSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable().optional(),
+  facilityId: z.string().nullable().optional(),
+  availabilityRuleId: z.string().nullable().optional(),
+  startTimeId: z.string().nullable().optional(),
+  dateLocal: isoDateSchema,
+  startsAt: isoDateTimeSchema,
+  endsAt: isoDateTimeSchema.nullable().optional(),
+  timezone: z.string().min(1),
+  status: availabilitySlotStatusSchema.default("open"),
+  unlimited: z.boolean().default(false),
+  initialPax: z.number().int().min(0).nullable().optional(),
+  remainingPax: z.number().int().min(0).nullable().optional(),
+  initialPickups: z.number().int().min(0).nullable().optional(),
+  remainingPickups: z.number().int().min(0).nullable().optional(),
+  remainingResources: z.number().int().min(0).nullable().optional(),
+  pastCutoff: z.boolean().default(false),
+  tooEarly: z.boolean().default(false),
+  nights: z.number().int().min(0).nullable().optional(),
+  days: z.number().int().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+})
+
+export const insertAvailabilitySlotSchema = availabilitySlotCoreSchema
+export const updateAvailabilitySlotSchema = availabilitySlotCoreSchema.partial()
+export const availabilitySlotListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  optionId: z.string().optional(),
+  facilityId: z.string().optional(),
+  availabilityRuleId: z.string().optional(),
+  startTimeId: z.string().optional(),
+  dateLocal: isoDateSchema.optional(),
+  status: availabilitySlotStatusSchema.optional(),
+})
+
+export const availabilityCloseoutCoreSchema = z.object({
+  productId: z.string(),
+  slotId: z.string().nullable().optional(),
+  dateLocal: isoDateSchema,
+  reason: z.string().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+})
+
+export const insertAvailabilityCloseoutSchema = availabilityCloseoutCoreSchema
+export const updateAvailabilityCloseoutSchema = availabilityCloseoutCoreSchema.partial()
+export const availabilityCloseoutListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  slotId: z.string().optional(),
+  dateLocal: isoDateSchema.optional(),
+})
+
+export const availabilityPickupPointCoreSchema = z.object({
+  productId: z.string(),
+  facilityId: z.string().nullable().optional(),
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  locationText: z.string().nullable().optional(),
+  active: z.boolean().default(true),
+})
+
+export const insertAvailabilityPickupPointSchema = availabilityPickupPointCoreSchema
+export const updateAvailabilityPickupPointSchema = availabilityPickupPointCoreSchema.partial()
+export const availabilityPickupPointListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  facilityId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const availabilitySlotPickupCoreSchema = z.object({
+  slotId: z.string(),
+  pickupPointId: z.string(),
+  initialCapacity: z.number().int().min(0).nullable().optional(),
+  remainingCapacity: z.number().int().min(0).nullable().optional(),
+})
+
+export const insertAvailabilitySlotPickupSchema = availabilitySlotPickupCoreSchema
+export const updateAvailabilitySlotPickupSchema = availabilitySlotPickupCoreSchema.partial()
+export const availabilitySlotPickupListQuerySchema = paginationSchema.extend({
+  slotId: z.string().optional(),
+  pickupPointId: z.string().optional(),
+})
+
+export const productMeetingConfigCoreSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable().optional(),
+  facilityId: z.string().nullable().optional(),
+  mode: meetingModeSchema.default("meeting_only"),
+  allowCustomPickup: z.boolean().default(false),
+  allowCustomDropoff: z.boolean().default(false),
+  requiresPickupSelection: z.boolean().default(false),
+  requiresDropoffSelection: z.boolean().default(false),
+  usePickupAllotment: z.boolean().default(false),
+  meetingInstructions: z.string().nullable().optional(),
+  pickupInstructions: z.string().nullable().optional(),
+  dropoffInstructions: z.string().nullable().optional(),
+  active: z.boolean().default(true),
+})
+
+export const insertProductMeetingConfigSchema = productMeetingConfigCoreSchema
+export const updateProductMeetingConfigSchema = productMeetingConfigCoreSchema.partial()
+export const productMeetingConfigListQuerySchema = paginationSchema.extend({
+  productId: z.string().optional(),
+  optionId: z.string().optional(),
+  facilityId: z.string().optional(),
+  mode: meetingModeSchema.optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const pickupGroupCoreSchema = z.object({
+  meetingConfigId: z.string(),
+  kind: pickupGroupKindSchema,
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  active: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
+})
+
+export const insertPickupGroupSchema = pickupGroupCoreSchema
+export const updatePickupGroupSchema = pickupGroupCoreSchema.partial()
+export const pickupGroupListQuerySchema = paginationSchema.extend({
+  meetingConfigId: z.string().optional(),
+  kind: pickupGroupKindSchema.optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const pickupLocationCoreSchema = z.object({
+  groupId: z.string(),
+  facilityId: z.string().nullable().optional(),
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  locationText: z.string().nullable().optional(),
+  leadTimeMinutes: z.number().int().min(0).nullable().optional(),
+  active: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
+})
+
+export const insertPickupLocationSchema = pickupLocationCoreSchema
+export const updatePickupLocationSchema = pickupLocationCoreSchema.partial()
+export const pickupLocationListQuerySchema = paginationSchema.extend({
+  groupId: z.string().optional(),
+  facilityId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const locationPickupTimeCoreSchema = z.object({
+  pickupLocationId: z.string(),
+  slotId: z.string().nullable().optional(),
+  startTimeId: z.string().nullable().optional(),
+  timingMode: pickupTimingModeSchema.default("fixed_time"),
+  localTime: z.string().nullable().optional(),
+  offsetMinutes: z.number().int().nullable().optional(),
+  instructions: z.string().nullable().optional(),
+  initialCapacity: z.number().int().min(0).nullable().optional(),
+  remainingCapacity: z.number().int().min(0).nullable().optional(),
+  active: z.boolean().default(true),
+})
+
+export const insertLocationPickupTimeSchema = locationPickupTimeCoreSchema
+export const updateLocationPickupTimeSchema = locationPickupTimeCoreSchema.partial()
+export const locationPickupTimeListQuerySchema = paginationSchema.extend({
+  pickupLocationId: z.string().optional(),
+  slotId: z.string().optional(),
+  startTimeId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})
+
+export const customPickupAreaCoreSchema = z.object({
+  meetingConfigId: z.string(),
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  geographicText: z.string().nullable().optional(),
+  active: z.boolean().default(true),
+})
+
+export const insertCustomPickupAreaSchema = customPickupAreaCoreSchema
+export const updateCustomPickupAreaSchema = customPickupAreaCoreSchema.partial()
+export const customPickupAreaListQuerySchema = paginationSchema.extend({
+  meetingConfigId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+})

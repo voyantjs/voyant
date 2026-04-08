@@ -1,0 +1,194 @@
+import { eq, getTableColumns, type SQL, sql } from "drizzle-orm"
+import type { AnyPgTable, PgColumn } from "drizzle-orm/pg-core"
+import type { z } from "zod"
+
+import type { InsertModel, SelectModel } from "./helpers.js"
+import type { DrizzleClient } from "./types.js"
+
+/**
+ * Options accepted by {@link createCrudService}.
+ */
+export interface CrudServiceOptions<
+  TInsertSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TUpdateSchema extends z.ZodTypeAny = z.ZodTypeAny,
+> {
+  /** Optional Zod schema run against inputs passed to `create`. */
+  insertSchema?: TInsertSchema
+  /** Optional Zod schema run against inputs passed to `update`. */
+  updateSchema?: TUpdateSchema
+}
+
+/**
+ * Options for list-style queries.
+ */
+export interface ListOptions {
+  /** WHERE clause, typically composed with `and()`. */
+  where?: SQL
+  /** Max number of rows to return. */
+  limit?: number
+  /** Offset for pagination. */
+  offset?: number
+  /**
+   * ORDER BY clauses. Accept a single clause or array. Consumers pass
+   * `asc(table.column)` / `desc(table.column)` builders.
+   */
+  orderBy?: SQL | SQL[]
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle generic inference breaks on TTable extends AnyPgTable — casts are isolated to the query-builder boundary
+type AnyDb = any
+
+/**
+ * A generic CRUD service bound to a single Drizzle table.
+ *
+ * Generated methods:
+ * - `list(db, opts)` — returns rows
+ * - `count(db, where?)` — returns integer count
+ * - `listAndCount(db, opts)` — returns `{ data, total }`
+ * - `retrieve(db, id)` — returns row or `null`
+ * - `create(db, data)` — inserts and returns the row
+ * - `update(db, id, data)` — updates and returns the row (or `null` if missing);
+ *   automatically sets `updatedAt: new Date()` when the table has that column
+ * - `delete(db, id)` — hard-deletes and returns `{ id }` or `null`
+ * - `softDelete(db, id)` — sets `deletedAt: new Date()` when the column exists
+ * - `restore(db, id)` — clears `deletedAt` when the column exists
+ *
+ * Consumers compose custom methods by spreading the result:
+ * ```ts
+ * const crud = createCrudService(peopleTable)
+ * export const peopleService = {
+ *   ...crud,
+ *   async findByEmail(db: DrizzleClient, email: string) { ... },
+ * }
+ * ```
+ */
+export function createCrudService<
+  TTable extends AnyPgTable,
+  TInsertSchema extends z.ZodTypeAny = z.ZodTypeAny,
+  TUpdateSchema extends z.ZodTypeAny = z.ZodTypeAny,
+>(table: TTable, options: CrudServiceOptions<TInsertSchema, TUpdateSchema> = {}) {
+  const columns = getTableColumns(table) as Record<string, PgColumn>
+  if (!columns.id) {
+    throw new Error("createCrudService: table must declare an 'id' column")
+  }
+  const idColumn: PgColumn = columns.id
+  const updatedAtColumn: PgColumn | undefined = columns.updatedAt
+  const deletedAtColumn: PgColumn | undefined = columns.deletedAt
+
+  type Row = SelectModel<TTable>
+  type InsertInput = InsertModel<TTable>
+
+  // Drizzle's query builder types lose fidelity under generic TTable — cast
+  // db to AnyDb only at the Drizzle call site; return types stay strict.
+  const asDb = (db: DrizzleClient): AnyDb => db
+
+  async function list(db: DrizzleClient, opts: ListOptions = {}): Promise<Row[]> {
+    let query = asDb(db).select().from(table)
+    if (opts.where) query = query.where(opts.where)
+    if (opts.orderBy) {
+      const orders = Array.isArray(opts.orderBy) ? opts.orderBy : [opts.orderBy]
+      query = query.orderBy(...orders)
+    }
+    if (typeof opts.limit === "number") query = query.limit(opts.limit)
+    if (typeof opts.offset === "number") query = query.offset(opts.offset)
+    const rows = (await query) as Row[]
+    return rows
+  }
+
+  async function count(db: DrizzleClient, where?: SQL): Promise<number> {
+    const base = asDb(db).select({ count: sql<number>`count(*)::int` }).from(table)
+    const rows = (where ? await base.where(where) : await base) as Array<{ count: number }>
+    return rows[0]?.count ?? 0
+  }
+
+  async function listAndCount(
+    db: DrizzleClient,
+    opts: ListOptions = {},
+  ): Promise<{ data: Row[]; total: number }> {
+    const [data, total] = await Promise.all([list(db, opts), count(db, opts.where)])
+    return { data, total }
+  }
+
+  async function retrieve(db: DrizzleClient, id: string): Promise<Row | null> {
+    const rows = (await asDb(db).select().from(table).where(eq(idColumn, id)).limit(1)) as Row[]
+    return rows[0] ?? null
+  }
+
+  async function create(db: DrizzleClient, data: InsertInput): Promise<Row> {
+    const validated = options.insertSchema
+      ? (options.insertSchema.parse(data) as InsertInput)
+      : data
+    const rows = (await asDb(db).insert(table).values(validated).returning()) as Row[]
+    const row = rows[0]
+    if (!row) {
+      throw new Error("createCrudService: insert returned no rows")
+    }
+    return row
+  }
+
+  async function update(
+    db: DrizzleClient,
+    id: string,
+    data: Partial<InsertInput>,
+  ): Promise<Row | null> {
+    const validated = options.updateSchema
+      ? (options.updateSchema.parse(data) as Partial<InsertInput>)
+      : data
+    const patch: Record<string, unknown> = { ...(validated as object) }
+    if (updatedAtColumn) {
+      patch.updatedAt = new Date()
+    }
+    const rows = (await asDb(db)
+      .update(table)
+      .set(patch)
+      .where(eq(idColumn, id))
+      .returning()) as Row[]
+    return rows[0] ?? null
+  }
+
+  async function remove(db: DrizzleClient, id: string): Promise<{ id: string } | null> {
+    const rows = (await asDb(db)
+      .delete(table)
+      .where(eq(idColumn, id))
+      .returning({ id: idColumn })) as Array<{ id: string }>
+    return rows[0] ?? null
+  }
+
+  async function softDelete(db: DrizzleClient, id: string): Promise<Row | null> {
+    if (!deletedAtColumn) {
+      throw new Error("createCrudService: softDelete requires a 'deletedAt' column")
+    }
+    const rows = (await asDb(db)
+      .update(table)
+      .set({ deletedAt: new Date() })
+      .where(eq(idColumn, id))
+      .returning()) as Row[]
+    return rows[0] ?? null
+  }
+
+  async function restore(db: DrizzleClient, id: string): Promise<Row | null> {
+    if (!deletedAtColumn) {
+      throw new Error("createCrudService: restore requires a 'deletedAt' column")
+    }
+    const rows = (await asDb(db)
+      .update(table)
+      .set({ deletedAt: null })
+      .where(eq(idColumn, id))
+      .returning()) as Row[]
+    return rows[0] ?? null
+  }
+
+  return {
+    table,
+    list,
+    count,
+    listAndCount,
+    retrieve,
+    create,
+    update,
+    delete: remove,
+    softDelete,
+    restore,
+    hasSoftDelete: Boolean(deletedAtColumn),
+  }
+}

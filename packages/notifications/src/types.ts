@@ -1,0 +1,60 @@
+/**
+ * Channel over which a notification is delivered. Built-in channels are
+ * `"email"` and `"sms"`, but providers may declare additional channel
+ * identifiers (e.g. `"slack"`, `"push"`).
+ */
+export type NotificationChannel = "email" | "sms" | (string & {})
+
+/**
+ * Payload describing a single notification to send. The `template` and
+ * `data` fields are interpreted by the handling provider.
+ */
+export interface NotificationPayload {
+  /** Recipient address (email address, phone number, channel id, ...). */
+  to: string
+  /** Channel this notification targets. */
+  channel: NotificationChannel
+  /** Optional provider hint when the caller wants a specific provider. */
+  provider?: string
+  /** Template identifier — interpretation is provider-specific. */
+  template: string
+  /** Data passed to the template for rendering. */
+  data?: unknown
+  /** Optional sender override. Providers may have their own defaults. */
+  from?: string
+  /** Optional subject line (email-only). */
+  subject?: string
+  /** Optional pre-rendered HTML body. */
+  html?: string
+  /** Optional pre-rendered text body. */
+  text?: string
+}
+
+/**
+ * Result returned after a provider handles a send.
+ */
+export interface NotificationResult {
+  /** Provider-assigned message/send id, if available. */
+  id?: string
+  /** Name of the provider that handled the send. */
+  provider: string
+}
+
+/**
+ * A pluggable notification provider. Implementations target one or more
+ * channels and handle the actual delivery (HTTP call, SMTP, etc.).
+ *
+ * Built-in implementations:
+ * - {@link createLocalProvider} — logs to console (dev)
+ * - {@link createResendProvider} — Resend email API
+ *
+ * Additional providers can be added by implementing this interface.
+ */
+export interface NotificationProvider {
+  /** Unique provider name (e.g. "resend", "local", "twilio"). */
+  readonly name: string
+  /** Channels this provider can handle. */
+  readonly channels: ReadonlyArray<NotificationChannel>
+  /** Deliver the notification. Throws on failure. */
+  send(payload: NotificationPayload): Promise<NotificationResult>
+}

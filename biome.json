@@ -1,0 +1,55 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "asNeeded"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.next",
+      "!**/.wrangler",
+      "!**/.vinxi",
+      "!**/.output",
+      "!**/.turbo",
+      "!**/.agents",
+      "!**/.claude",
+      "!**/docs/open-travel",
+      "!**/*.gen.ts",
+      "!**/migrations",
+      "!templates/dmc/src/components/ui",
+      "!templates/dmc/src/lib/async-utils.ts",
+      "!templates/dmc/src/styles.css"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+interface CloudflareBindings {
+  // KV namespaces
+  RATE_LIMIT: KVNamespace
+  CACHE: KVNamespace
+
+  // R2 (file storage)
+  MEDIA_BUCKET: R2Bucket
+
+  // Hyperdrive (connection pooling)
+  HYPERDRIVE: Hyperdrive
+
+  // Secrets
+  INTERNAL_API_KEY: string
+  SESSION_CLAIMS_SECRET: string
+  BETTER_AUTH_SECRET: string
+  DATABASE_URL: string
+
+  // Email (Resend)
+  RESEND_API_KEY: string
+  EMAIL_FROM: string
+
+  // KMS provider selection
+  KMS_PROVIDER: "gcp" | "aws" | "env" | "local"
+  KMS_ENV_KEY?: string
+  KMS_LOCAL_KEY?: string
+
+  // AWS KMS (required when KMS_PROVIDER=aws)
+  AWS_REGION?: string
+  AWS_ACCESS_KEY_ID?: string
+  AWS_SECRET_ACCESS_KEY?: string
+  AWS_SESSION_TOKEN?: string
+  AWS_KMS_ENDPOINT?: string
+  AWS_KMS_PEOPLE_KEY_ID?: string
+  AWS_KMS_INTEGRATIONS_KEY_ID?: string
+
+  // GCP KMS (required when KMS_PROVIDER=gcp)
+  GCP_PROJECT_ID?: string
+  GCP_KMS_KEYRING?: string
+  GCP_KMS_LOCATION?: string
+  GCP_KMS_PEOPLE_KEY_NAME?: string
+  GCP_KMS_INTEGRATIONS_KEY_NAME?: string
+  GCP_SERVICE_ACCOUNT_EMAIL?: string
+  GCP_PRIVATE_KEY?: string
+
+  // App URLs
+  APP_URL: string
+  API_BASE_URL: string
+  CORS_ALLOWLIST: string
+  DASH_BASE_URL: string
+}

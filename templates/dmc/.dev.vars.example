@@ -1,0 +1,45 @@
+# Cloudflare Workers runtime secrets — loaded by wrangler in dev.
+# Copy to `.dev.vars` and fill in values. Never commit .dev.vars.
+#
+# Public vars (APP_URL, DASH_BASE_URL, GCP_* non-key fields, EMAIL_FROM) already
+# live in wrangler.jsonc under env.dev.vars — only secrets belong here.
+
+# Database (Neon Postgres — used by Hyperdrive in prod, direct connection in dev)
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+
+# Auth
+BETTER_AUTH_SECRET="<generate with: openssl rand -base64 32>"
+SESSION_CLAIMS_SECRET="<generate with: openssl rand -base64 32>"
+INTERNAL_API_KEY="<generate with: openssl rand -hex 32>"
+
+# CORS / URLs
+API_BASE_URL="http://localhost:3100/api"
+CORS_ALLOWLIST="http://localhost:3100"
+
+# Email (Resend)
+RESEND_API_KEY="re_..."
+
+# KMS provider — "local" for dev, "env" for self-managed symmetric keys,
+# "gcp" for Cloud KMS, "aws" for AWS KMS.
+# wrangler.jsonc defaults this to "local" for the dev env; override here if
+# you need to test a different provider locally.
+# KMS_PROVIDER="local"
+
+# KMS_PROVIDER=local: master key (base64-encoded 32 bytes).
+KMS_LOCAL_KEY="<generate with: openssl rand -base64 32>"
+
+# KMS_PROVIDER=env: master key (base64-encoded 32 bytes).
+KMS_ENV_KEY="<generate with: openssl rand -base64 32>"
+
+# KMS_PROVIDER=aws only:
+# AWS_REGION=""
+# AWS_ACCESS_KEY_ID=""
+# AWS_SECRET_ACCESS_KEY=""
+# AWS_SESSION_TOKEN=""
+# AWS_KMS_ENDPOINT=""
+# AWS_KMS_PEOPLE_KEY_ID=""
+# AWS_KMS_INTEGRATIONS_KEY_ID=""
+
+# KMS_PROVIDER=gcp only: GCP service-account private key as PEM,
+# newlines escaped as \n. Not needed when KMS_PROVIDER=local.
+GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"

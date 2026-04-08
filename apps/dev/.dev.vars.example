@@ -1,0 +1,46 @@
+# Cloudflare Workers runtime secrets — loaded by wrangler in dev.
+# Copy to `.dev.vars` and fill in values. Never commit .dev.vars.
+#
+# Public vars (APP_URL, DASH_BASE_URL, KMS_PROVIDER, EMAIL_FROM) live in
+# wrangler.jsonc — only secrets belong here.
+
+# Database
+# Spin up the dockerized dev postgres: `docker compose -f dev/docker-compose.yml up -d`
+# The HYPERDRIVE binding's localConnectionString (in wrangler.jsonc) already
+# points the worker at this URL. DATABASE_URL is used by drizzle-kit and Node
+# scripts that don't go through the Hyperdrive binding.
+DATABASE_URL="postgresql://voyant:voyant@localhost:5432/voyant_dev"
+
+# Auth
+BETTER_AUTH_SECRET="<generate with: openssl rand -base64 32>"
+SESSION_CLAIMS_SECRET="<generate with: openssl rand -base64 32>"
+INTERNAL_API_KEY="<generate with: openssl rand -hex 32>"
+
+# CORS
+CORS_ALLOWLIST="http://localhost:3200"
+
+# Email (Resend) — optional; auth falls back to console logs if unset
+RESEND_API_KEY="re_..."
+
+# KMS provider support:
+# - local: dev-only symmetric key
+# - env: self-managed symmetric key from secrets/env
+# - gcp: Cloud KMS
+# - aws: AWS KMS
+#
+# KMS_PROVIDER itself lives in wrangler.jsonc. The local dev default is "local".
+
+# KMS_PROVIDER=local: base64-encoded 32-byte master key.
+KMS_LOCAL_KEY="<generate with: openssl rand -base64 32>"
+
+# KMS_PROVIDER=env: base64-encoded 32-byte master key.
+KMS_ENV_KEY="<generate with: openssl rand -base64 32>"
+
+# KMS_PROVIDER=aws only:
+# AWS_REGION="eu-central-1"
+# AWS_ACCESS_KEY_ID=""
+# AWS_SECRET_ACCESS_KEY=""
+# AWS_SESSION_TOKEN=""
+# AWS_KMS_ENDPOINT=""
+# AWS_KMS_PEOPLE_KEY_ID=""
+# AWS_KMS_INTEGRATIONS_KEY_ID=""

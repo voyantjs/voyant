@@ -1,0 +1,64 @@
+name: Neon - Migrate Main Branch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/**"
+      - "templates/dmc/drizzle.config.ts"
+      - "templates/dmc/migrations/**"
+      - "templates/operator/drizzle.config.ts"
+      - "templates/operator/migrations/**"
+      - ".github/workflows/neon-migrate-main.yml"
+
+  workflow_dispatch:
+    inputs:
+      force_migrate:
+        description: "Force migration even without schema changes"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: neon-migrate-main-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate Production Database
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrate Database
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Migration Summary
+        if: always()
+        run: |
+          echo "## 🚀 Production Database Migration"
+          echo ""
+          echo "### Branch"
+          echo "Deployed from: \`${{ github.ref_name }}\`"
+          echo ""
+          echo "### Commit"
+          echo "${{ github.event.head_commit.message }}"
+          echo ""
+          echo "Triggered by: @${{ github.actor }}"

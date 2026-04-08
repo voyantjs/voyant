@@ -1,0 +1,41 @@
+# @voyantjs/core
+
+Module system and framework primitives for Voyant. Transport-agnostic — provides the contracts, registry, container, event bus, links, query, workflows, plugins, and config shape that every Voyant module and transport adapter builds on.
+
+## Install
+
+```bash
+pnpm add @voyantjs/core
+```
+
+## Usage
+
+```typescript
+import { defineModule } from "@voyantjs/core/module"
+import { defineLink } from "@voyantjs/core/links"
+import { definePlugin } from "@voyantjs/core/plugin"
+import { defineVoyantConfig } from "@voyantjs/core/config"
+import { createWorkflow, step } from "@voyantjs/core/workflows"
+```
+
+## Exports
+
+| Entry | Description |
+| --- | --- |
+| `.` | Barrel re-exports |
+| `./module` | `Module`, `defineModule` |
+| `./registry` | Module registry |
+| `./container` | `createContainer` dependency container |
+| `./events` | `createEventBus` in-process event bus |
+| `./hooks` | Lifecycle hook contracts |
+| `./orchestration` | `JobRunner` interface for background jobs |
+| `./links` | Module Links — `defineLink`, `generateLinkTableSql`, `LinkService` |
+| `./query` | Cross-module reads — `queryGraph`, `createQueryContext` |
+| `./workflows` | In-process saga primitive with compensation |
+| `./plugin` | Plugin bundles — `definePlugin`, `registerPlugins` |
+| `./config` | `VoyantConfig` manifest shape + `defineVoyantConfig` |
+| `./env` | Environment helpers |
+
+## License
+
+FSL-1.1-Apache-2.0

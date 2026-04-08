@@ -1,0 +1,71 @@
+import type { LinkableDefinition } from "@voyantjs/core"
+
+export type { ContractsAdminRoutes, ContractsPublicRoutes } from "./routes.js"
+
+export const contractLinkable: LinkableDefinition = {
+  module: "legal",
+  entity: "contract",
+  table: "contracts",
+  idPrefix: "cont",
+}
+
+export const contractTemplateLinkable: LinkableDefinition = {
+  module: "legal",
+  entity: "contractTemplate",
+  table: "contract_templates",
+  idPrefix: "ctpl",
+}
+
+export const contractsLinkable = {
+  contract: contractLinkable,
+  contractTemplate: contractTemplateLinkable,
+}
+
+export type {
+  Contract,
+  ContractAttachment,
+  ContractNumberSeries,
+  ContractSignature,
+  ContractTemplate,
+  ContractTemplateVersion,
+  NewContract,
+  NewContractAttachment,
+  NewContractNumberSeries,
+  NewContractSignature,
+  NewContractTemplate,
+  NewContractTemplateVersion,
+} from "./schema.js"
+export {
+  contractAttachments,
+  contractNumberSeries,
+  contractSignatures,
+  contracts,
+  contractTemplates,
+  contractTemplateVersions,
+} from "./schema.js"
+export {
+  allocateContractNumber,
+  contractsService,
+  renderTemplate,
+  validateTemplateVariables,
+} from "./service.js"
+export {
+  contractBodyFormatSchema,
+  contractListQuerySchema,
+  contractNumberResetStrategySchema,
+  contractScopeSchema,
+  contractSignatureMethodSchema,
+  contractStatusSchema,
+  contractTemplateListQuerySchema,
+  insertContractAttachmentSchema,
+  insertContractNumberSeriesSchema,
+  insertContractSchema,
+  insertContractSignatureSchema,
+  insertContractTemplateSchema,
+  insertContractTemplateVersionSchema,
+  renderTemplateInputSchema,
+  updateContractAttachmentSchema,
+  updateContractNumberSeriesSchema,
+  updateContractSchema,
+  updateContractTemplateSchema,
+} from "./validation.js"

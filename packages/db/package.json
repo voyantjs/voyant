@@ -1,0 +1,174 @@
+{
+  "name": "@voyantjs/db",
+  "version": "0.1.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/db"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./operators": "./src/operators.ts",
+    "./lib": "./src/lib/index.ts",
+    "./lib/typeid": "./src/lib/typeid.ts",
+    "./lib/typeid-column": "./src/lib/typeid-column.ts",
+    "./columns": "./src/columns/index.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./primitives/*": "./src/primitives/*.ts",
+    "./utils": "./src/utils.ts",
+    "./helpers": "./src/helpers.ts",
+    "./types": "./src/types.ts",
+    "./crud": "./src/crud.ts",
+    "./links": "./src/links.ts",
+    "./queries": "./src/queries/index.ts",
+    "./runtime": "./src/runtime/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./schema/iam": "./src/schema/iam/index.ts",
+    "./schema/iam/*": "./src/schema/iam/*.ts",
+    "./schema/infra": "./src/schema/infra/index.ts",
+    "./schema/infra/*": "./src/schema/infra/*.ts",
+    "./schema/voyant/*": "./src/schema/voyant/*.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./schema/*/*": "./src/schema/*/*.ts",
+    "./schema/*/*/*": "./src/schema/*/*/*.ts",
+    "./schema/*/*/*/*": "./src/schema/*/*/*/*.ts",
+    "./test-utils": "./src/test-utils.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./operators": {
+        "types": "./dist/operators.d.ts",
+        "import": "./dist/operators.js"
+      },
+      "./lib": {
+        "types": "./dist/lib/index.d.ts",
+        "import": "./dist/lib/index.js"
+      },
+      "./lib/typeid": {
+        "types": "./dist/lib/typeid.d.ts",
+        "import": "./dist/lib/typeid.js"
+      },
+      "./lib/typeid-column": {
+        "types": "./dist/lib/typeid-column.d.ts",
+        "import": "./dist/lib/typeid-column.js"
+      },
+      "./columns": {
+        "types": "./dist/columns/index.d.ts",
+        "import": "./dist/columns/index.js"
+      },
+      "./primitives": {
+        "types": "./dist/primitives/index.d.ts",
+        "import": "./dist/primitives/index.js"
+      },
+      "./primitives/*": {
+        "types": "./dist/primitives/*.d.ts",
+        "import": "./dist/primitives/*.js"
+      },
+      "./utils": {
+        "types": "./dist/utils.d.ts",
+        "import": "./dist/utils.js"
+      },
+      "./helpers": {
+        "types": "./dist/helpers.d.ts",
+        "import": "./dist/helpers.js"
+      },
+      "./types": {
+        "types": "./dist/types.d.ts",
+        "import": "./dist/types.js"
+      },
+      "./crud": {
+        "types": "./dist/crud.d.ts",
+        "import": "./dist/crud.js"
+      },
+      "./links": {
+        "types": "./dist/links.d.ts",
+        "import": "./dist/links.js"
+      },
+      "./queries": {
+        "types": "./dist/queries/index.d.ts",
+        "import": "./dist/queries/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime/index.d.ts",
+        "import": "./dist/runtime/index.js"
+      },
+      "./schema": {
+        "types": "./dist/schema/index.d.ts",
+        "import": "./dist/schema/index.js"
+      },
+      "./schema/iam": {
+        "types": "./dist/schema/iam/index.d.ts",
+        "import": "./dist/schema/iam/index.js"
+      },
+      "./schema/iam/*": {
+        "types": "./dist/schema/iam/*.d.ts",
+        "import": "./dist/schema/iam/*.js"
+      },
+      "./schema/infra": {
+        "types": "./dist/schema/infra/index.d.ts",
+        "import": "./dist/schema/infra/index.js"
+      },
+      "./schema/infra/*": {
+        "types": "./dist/schema/infra/*.d.ts",
+        "import": "./dist/schema/infra/*.js"
+      },
+      "./schema/voyant/*": {
+        "types": "./dist/schema/voyant/*.d.ts",
+        "import": "./dist/schema/voyant/*.js"
+      },
+      "./schema/*": {
+        "types": "./dist/schema/*.d.ts",
+        "import": "./dist/schema/*.js"
+      },
+      "./schema/*/*": {
+        "types": "./dist/schema/*/*.d.ts",
+        "import": "./dist/schema/*/*.js"
+      },
+      "./schema/*/*/*": {
+        "types": "./dist/schema/*/*/*.d.ts",
+        "import": "./dist/schema/*/*/*.js"
+      },
+      "./schema/*/*/*/*": {
+        "types": "./dist/schema/*/*/*/*.d.ts",
+        "import": "./dist/schema/*/*/*/*.js"
+      },
+      "./test-utils": {
+        "types": "./dist/test-utils.d.ts",
+        "import": "./dist/test-utils.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/fix-esm-imports.mjs",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@voyantjs/core": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.8",
+    "typeid-js": "^1.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

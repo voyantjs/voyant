@@ -1,0 +1,56 @@
+import type * as React from "react"
+
+/**
+ * Minimal user shape the admin shell needs to render its user menu.
+ * Templates can pass their own richer user object — only these fields matter.
+ */
+export interface AdminUser {
+  id?: string
+  email: string
+  firstName?: string | null
+  lastName?: string | null
+  /** Legacy combined name field. `firstName`/`lastName` take precedence. */
+  name?: string
+  avatar?: string | null
+}
+
+export const COMING_SOON = "COMING_SOON" as const
+export const BETA = "BETA" as const
+export type NavItemStatus = typeof COMING_SOON | typeof BETA
+
+/**
+ * Nav tree item. Icons are passed as React components (from `lucide-react`
+ * or elsewhere) so templates control the icon set.
+ */
+export interface NavItem {
+  title: string
+  url: string
+  icon?: React.ComponentType<{ className?: string }>
+  status?: NavItemStatus
+  /** Link target attribute for external URLs. Defaults to "_self". */
+  target?: "_self" | "_blank"
+  /** Collapsible sub-items. */
+  items?: ReadonlyArray<NavSubItem>
+}
+
+export interface NavSubItem {
+  title: string
+  url: string
+  icon?: React.ComponentType<{ className?: string }>
+  status?: NavItemStatus
+  target?: "_self" | "_blank"
+}
+
+/**
+ * Actions the admin shell delegates back to the template's auth layer.
+ * Templates wire these up to their chosen auth stack (Better Auth, etc).
+ */
+export interface AuthActions {
+  /** Fired when the user clicks "Log out" in the user menu. */
+  signOut: () => void | Promise<void>
+}
+
+/**
+ * Theme mode. "system" follows `prefers-color-scheme`.
+ */
+export type ThemeMode = "light" | "dark" | "system"

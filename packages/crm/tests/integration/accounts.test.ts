@@ -1,0 +1,194 @@
+import { Hono } from "hono"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+
+import { crmRoutes } from "../../src/routes/index.js"
+
+const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
+const json = (body: Record<string, unknown>) => ({
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+})
+
+describe.skipIf(!DB_AVAILABLE)("Account routes", () => {
+  let app: Hono
+
+  beforeAll(async () => {
+    const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
+    const db = createTestDb()
+    await cleanupTestDb(db)
+
+    app = new Hono()
+    app.use("*", async (c, next) => {
+      c.set("db" as never, db)
+      c.set("userId" as never, "test-user-id")
+      await next()
+    })
+    app.route("/", crmRoutes)
+  })
+
+  beforeEach(async () => {
+    const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
+    await cleanupTestDb(createTestDb())
+  })
+
+  describe("Organizations", () => {
+    it("creates an organization", async () => {
+      const res = await app.request("/organizations", {
+        method: "POST",
+        ...json({ name: "Acme Corp" }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.name).toBe("Acme Corp")
+      expect(body.data.id).toBeTruthy()
+      expect(body.data.status).toBe("active")
+    })
+
+    it("lists organizations", async () => {
+      await app.request("/organizations", { method: "POST", ...json({ name: "Org A" }) })
+      await app.request("/organizations", { method: "POST", ...json({ name: "Org B" }) })
+
+      const res = await app.request("/organizations", { method: "GET" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toBeInstanceOf(Array)
+      expect(body.data.length).toBe(2)
+      expect(body.total).toBe(2)
+    })
+
+    it("gets an organization by id", async () => {
+      const createRes = await app.request("/organizations", {
+        method: "POST",
+        ...json({ name: "GetMe" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/organizations/${created.id}`, { method: "GET" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.name).toBe("GetMe")
+    })
+
+    it("updates an organization", async () => {
+      const createRes = await app.request("/organizations", {
+        method: "POST",
+        ...json({ name: "Old Name" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/organizations/${created.id}`, {
+        method: "PATCH",
+        ...json({ name: "New Name" }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.name).toBe("New Name")
+    })
+
+    it("deletes an organization", async () => {
+      const createRes = await app.request("/organizations", {
+        method: "POST",
+        ...json({ name: "ToDelete" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/organizations/${created.id}`, { method: "DELETE" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.success).toBe(true)
+    })
+
+    it("returns 404 for non-existent organization", async () => {
+      const res = await app.request("/organizations/crm_org_00000000000000000000000000", {
+        method: "GET",
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe("People", () => {
+    it("creates a person", async () => {
+      const res = await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "John", lastName: "Doe" }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.firstName).toBe("John")
+      expect(body.data.lastName).toBe("Doe")
+      expect(body.data.id).toBeTruthy()
+    })
+
+    it("lists people", async () => {
+      await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "A", lastName: "One" }),
+      })
+
+      const res = await app.request("/people", { method: "GET" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toBeInstanceOf(Array)
+      expect(body.total).toBeTypeOf("number")
+    })
+
+    it("gets a person by id", async () => {
+      const createRes = await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "Jane", lastName: "Doe" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/people/${created.id}`, { method: "GET" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.firstName).toBe("Jane")
+    })
+
+    it("updates a person", async () => {
+      const createRes = await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "Old", lastName: "Name" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/people/${created.id}`, {
+        method: "PATCH",
+        ...json({ firstName: "New" }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.firstName).toBe("New")
+    })
+
+    it("deletes a person", async () => {
+      const createRes = await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "Del", lastName: "Ete" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/people/${created.id}`, { method: "DELETE" })
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.success).toBe(true)
+    })
+
+    it("returns 404 for non-existent person", async () => {
+      const res = await app.request("/people/crm_ppl_00000000000000000000000000", {
+        method: "GET",
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+})

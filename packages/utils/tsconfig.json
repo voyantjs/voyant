@@ -1,0 +1,11 @@
+{
+  "extends": "@voyantjs/voyant-typescript-config/base.json",
+  "compilerOptions": {
+    "composite": false,
+    "outDir": "dist",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "tsup.config.ts"]
+}

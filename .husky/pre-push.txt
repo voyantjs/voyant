@@ -1,0 +1,6 @@
+#!/bin/sh
+#. "$(dirname "$0")/_/husky.sh"
+#pnpm -w run typecheck && pnpm -w run test
+# Non-blocking dependency audits (report only)
+#pnpm -w run deps:outdated || true
+#pnpm -w run deps:unused || true

@@ -1,0 +1,177 @@
+import type { SanityDocBody, SanityFetch } from "./types.js"
+
+/**
+ * Options for {@link createSanityClient}.
+ */
+export interface SanityClientOptions {
+  /** Sanity project ID (the short slug from sanity.io/manage). */
+  projectId: string
+  /** Sanity dataset (e.g. `"production"`). */
+  dataset: string
+  /**
+   * Sanity API token with write access. Sent as
+   * `Authorization: Bearer ${token}`.
+   */
+  token: string
+  /**
+   * Sanity API version (date-based, e.g. `"2024-01-01"`). Defaults to
+   * `"2024-01-01"`.
+   */
+  apiVersion?: string
+  /**
+   * Field on the Sanity document that stores the Voyant record's ID.
+   * Defaults to `"voyantId"`. A matching field (+unique index) must be
+   * declared in the Sanity schema.
+   */
+  voyantIdField?: string
+  /**
+   * Sanity API host. Defaults to `"api.sanity.io"`. Override for regional
+   * hosts, proxies, or self-hosted deployments.
+   */
+  apiHost?: string
+  /** Override `fetch` (e.g. in tests). Defaults to global `fetch`. */
+  fetch?: SanityFetch
+}
+
+interface SanityQueryResponse {
+  result?: { _id: string; [key: string]: unknown } | null
+}
+
+interface SanityMutateResponse {
+  transactionId?: string
+  results?: Array<{ id?: string; operation?: string }>
+}
+
+export interface SanityClient {
+  /**
+   * Create or replace a document whose {@link SanityClientOptions.voyantIdField}
+   * equals `voyantId`.
+   */
+  upsertByVoyantId(
+    documentType: string,
+    voyantId: string,
+    body: SanityDocBody,
+  ): Promise<{ _id: string; created: boolean }>
+  /**
+   * Delete a document whose `voyantId` field equals the given value.
+   * Returns `false` if no matching document was found.
+   */
+  deleteByVoyantId(documentType: string, voyantId: string): Promise<boolean>
+  /** Find at most one document whose `voyantId` field equals the given value. */
+  findByVoyantId(documentType: string, voyantId: string): Promise<{ _id: string } | null>
+}
+
+export function createSanityClient(options: SanityClientOptions): SanityClient {
+  const apiVersion = options.apiVersion ?? "2024-01-01"
+  const voyantIdField = options.voyantIdField ?? "voyantId"
+  const apiHost = options.apiHost ?? "api.sanity.io"
+  const baseUrl = `https://${options.projectId}.${apiHost}/v${apiVersion}/data`
+  const fetchImpl = options.fetch ?? (globalThis.fetch as unknown as SanityFetch | undefined)
+
+  function headers(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${options.token}`,
+      "Content-Type": "application/json",
+    }
+  }
+
+  async function request(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<{ ok: boolean; status: number; json: unknown; text: string }> {
+    if (!fetchImpl) {
+      throw new Error("Sanity client requires a fetch implementation")
+    }
+    const init: { method: string; headers: Record<string, string>; body?: string } = {
+      method,
+      headers: headers(),
+    }
+    if (body !== undefined) init.body = JSON.stringify(body)
+    const response = await fetchImpl(`${baseUrl}${path}`, init)
+    let text = ""
+    let json: unknown = null
+    try {
+      text = await response.text()
+      json = text ? JSON.parse(text) : null
+    } catch {
+      // leave json as null, surface text
+    }
+    return { ok: response.ok, status: response.status, json, text }
+  }
+
+  async function findByVoyantId(
+    documentType: string,
+    voyantId: string,
+  ): Promise<{ _id: string } | null> {
+    // GROQ parameters are JSON-encoded values attached as $-prefixed query params.
+    const groq = `*[_type == $type && ${voyantIdField} == $vid][0]{_id}`
+    const query = [
+      `query=${encodeURIComponent(groq)}`,
+      `$type=${encodeURIComponent(JSON.stringify(documentType))}`,
+      `$vid=${encodeURIComponent(JSON.stringify(voyantId))}`,
+    ].join("&")
+    const res = await request("GET", `/query/${options.dataset}?${query}`)
+    if (!res.ok) {
+      throw new Error(`Sanity findByVoyantId(${documentType}) failed (${res.status}): ${res.text}`)
+    }
+    const body = (res.json ?? {}) as SanityQueryResponse
+    const first = body.result
+    if (!first) return null
+    return { _id: first._id }
+  }
+
+  async function mutate(mutations: unknown[]): Promise<{
+    ok: boolean
+    status: number
+    json: unknown
+    text: string
+  }> {
+    return request("POST", `/mutate/${options.dataset}?returnIds=true&visibility=sync`, {
+      mutations,
+    })
+  }
+
+  async function upsertByVoyantId(
+    documentType: string,
+    voyantId: string,
+    body: SanityDocBody,
+  ): Promise<{ _id: string; created: boolean }> {
+    const existing = await findByVoyantId(documentType, voyantId)
+    const docFields: SanityDocBody = { ...body, [voyantIdField]: voyantId }
+    if (existing) {
+      const res = await mutate([{ patch: { id: existing._id, set: docFields } }])
+      if (!res.ok) {
+        throw new Error(
+          `Sanity update(${documentType}/${existing._id}) failed (${res.status}): ${res.text}`,
+        )
+      }
+      return { _id: existing._id, created: false }
+    }
+    const createDoc = { _type: documentType, ...docFields }
+    const res = await mutate([{ create: createDoc }])
+    if (!res.ok) {
+      throw new Error(`Sanity create(${documentType}) failed (${res.status}): ${res.text}`)
+    }
+    const json = (res.json ?? {}) as SanityMutateResponse
+    const id = json.results?.[0]?.id
+    if (!id) {
+      throw new Error(`Sanity create(${documentType}) response missing id`)
+    }
+    return { _id: id, created: true }
+  }
+
+  async function deleteByVoyantId(documentType: string, voyantId: string): Promise<boolean> {
+    const existing = await findByVoyantId(documentType, voyantId)
+    if (!existing) return false
+    const res = await mutate([{ delete: { id: existing._id } }])
+    if (!res.ok) {
+      throw new Error(
+        `Sanity delete(${documentType}/${existing._id}) failed (${res.status}): ${res.text}`,
+      )
+    }
+    return true
+  }
+
+  return { upsertByVoyantId, deleteByVoyantId, findByVoyantId }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "voyant",
+  "description": "Voyant shadcn registry index",
+  "items": [
+    "voyant-crm-person-card",
+    "voyant-crm-person-card-connected",
+    "voyant-crm-person-form",
+    "voyant-crm-person-dialog",
+    "voyant-crm-person-list",
+    "voyant-crm-organization-card"
+  ]
+}

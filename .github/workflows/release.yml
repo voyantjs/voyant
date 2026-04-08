@@ -6,8 +6,8 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      bootstrap:
-        description: "Create the initial GitHub release and starter assets for the current checked-in version"
+      release_assets:
+        description: "Create or refresh the GitHub release and starter assets for the current checked-in version"
         required: false
         default: false
         type: boolean
@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  bootstrap-release:
-    if: github.event_name == 'workflow_dispatch' && inputs.bootstrap
+  release-assets:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_assets
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,6 +47,15 @@ jobs:
 
       - name: Package starter archives
         run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
+
+      - name: Ensure repo tag exists
+        run: |
+          if git rev-parse -q --verify refs/tags/v${{ steps.version.outputs.value }} >/dev/null; then
+            echo "Tag v${{ steps.version.outputs.value }} already exists"
+          else
+            git tag v${{ steps.version.outputs.value }}
+            git push origin v${{ steps.version.outputs.value }}
+          fi
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -97,6 +106,16 @@ jobs:
       - name: Package starter archives
         if: steps.changesets.outputs.published == 'true'
         run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
+
+      - name: Ensure repo tag exists
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          if git rev-parse -q --verify refs/tags/v${{ steps.version.outputs.value }} >/dev/null; then
+            echo "Tag v${{ steps.version.outputs.value }} already exists"
+          else
+            git tag v${{ steps.version.outputs.value }}
+            git push origin v${{ steps.version.outputs.value }}
+          fi
 
       - name: Create GitHub release
         if: steps.changesets.outputs.published == 'true'

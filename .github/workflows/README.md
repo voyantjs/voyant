@@ -18,9 +18,14 @@ Runs the main repository checks for pull requests and pushes to `main` and `deve
 Handles package releases:
 
 - normal Changesets release flow on pushes to `main`
-- one-time manual bootstrap GitHub release for the initial `0.1.0` release
+- manual GitHub release + starter asset refresh for the current checked-in version
 - npm Trusted Publishing via GitHub Actions OIDC
 - versioned starter tarballs attached to each GitHub Release for CLI scaffolding
+
+Notes:
+
+- the push flow publishes packages, ensures a repo tag like `v0.1.1` exists, then creates the GitHub Release and uploads starter tarballs
+- the manual dispatch path is for release asset recovery or refresh when npm packages already exist but the GitHub Release/tag/assets need to be created or repaired
 
 ## Required GitHub Secrets
 

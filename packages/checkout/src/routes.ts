@@ -1,17 +1,14 @@
-import { createNotificationService } from "@voyantjs/notifications"
 import type { NotificationProvider } from "@voyantjs/notifications"
+import { createNotificationService } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import {
+  type CheckoutPolicyOptions,
   initiateCheckoutCollection,
   previewCheckoutCollection,
-  type CheckoutPolicyOptions,
 } from "./service.js"
-import {
-  initiateCheckoutCollectionSchema,
-  previewCheckoutCollectionSchema,
-} from "./validation.js"
+import { initiateCheckoutCollectionSchema, previewCheckoutCollectionSchema } from "./validation.js"
 
 type Env = {
   Bindings: Record<string, unknown>
@@ -21,11 +18,13 @@ type Env = {
   }
 }
 
-export function createCheckoutRoutes(options: {
-  policy?: CheckoutPolicyOptions
-  providers?: ReadonlyArray<NotificationProvider>
-  resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
-} = {}) {
+export function createCheckoutRoutes(
+  options: {
+    policy?: CheckoutPolicyOptions
+    providers?: ReadonlyArray<NotificationProvider>
+    resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
+  } = {},
+) {
   return new Hono<Env>()
     .post("/v1/checkout/bookings/:bookingId/collection-plan", async (c) => {
       try {
@@ -42,7 +41,8 @@ export function createCheckoutRoutes(options: {
 
         return c.json({ data: plan })
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to preview checkout collection"
+        const message =
+          error instanceof Error ? error.message : "Failed to preview checkout collection"
         return c.json({ error: message }, 400)
       }
     })
@@ -65,7 +65,8 @@ export function createCheckoutRoutes(options: {
 
         return c.json({ data: result }, 201)
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to initiate checkout collection"
+        const message =
+          error instanceof Error ? error.message : "Failed to initiate checkout collection"
         if (message.includes("Booking not found")) {
           return c.json({ error: message }, 404)
         }

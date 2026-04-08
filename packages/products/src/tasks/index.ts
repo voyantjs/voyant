@@ -1,1 +1,1 @@
-export { generateProductPdf, type GenerateProductPdfResult } from "./generate-pdf.js"
+export { type GenerateProductPdfResult, generateProductPdf } from "./generate-pdf.js"

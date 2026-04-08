@@ -1,12 +1,10 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 import { Hono } from "hono"
-
-import { contractsAdminRoutes, contractsPublicRoutes } from "./contracts/routes.js"
-import { policiesAdminRoutes, policiesPublicRoutes } from "./policies/routes.js"
-
 import { contractsLinkable } from "./contracts/index.js"
+import { contractsAdminRoutes, contractsPublicRoutes } from "./contracts/routes.js"
 import { policiesLinkable } from "./policies/index.js"
+import { policiesAdminRoutes, policiesPublicRoutes } from "./policies/routes.js"
 
 export const legalLinkable = {
   ...contractsLinkable,

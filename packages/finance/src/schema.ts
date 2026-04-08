@@ -341,7 +341,10 @@ export const paymentSessions = pgTable(
     index("idx_payment_sessions_provider_session").on(table.providerSessionId),
     index("idx_payment_sessions_expires_at").on(table.expiresAt),
     uniqueIndex("uidx_payment_sessions_idempotency").on(table.idempotencyKey),
-    uniqueIndex("uidx_payment_sessions_provider_session").on(table.provider, table.providerSessionId),
+    uniqueIndex("uidx_payment_sessions_provider_session").on(
+      table.provider,
+      table.providerSessionId,
+    ),
   ],
 )
 
@@ -1013,12 +1016,9 @@ export const paymentCapturesRelations = relations(paymentCaptures, ({ one, many 
   payments: many(payments),
 }))
 
-export const bookingPaymentSchedulesRelations = relations(
-  bookingPaymentSchedules,
-  ({ many }) => ({
-    guarantees: many(bookingGuarantees),
-  }),
-)
+export const bookingPaymentSchedulesRelations = relations(bookingPaymentSchedules, ({ many }) => ({
+  guarantees: many(bookingGuarantees),
+}))
 
 export const bookingGuaranteesRelations = relations(bookingGuarantees, ({ one }) => ({
   bookingPaymentSchedule: one(bookingPaymentSchedules, {

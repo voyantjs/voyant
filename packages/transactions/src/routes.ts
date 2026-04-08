@@ -1,7 +1,6 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-import { Hono, type Context } from "hono"
-
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import { type Context, Hono } from "hono"
 
 import { createTransactionPiiService } from "./pii.js"
 import { transactionPiiAccessLog } from "./schema.js"
@@ -79,11 +78,12 @@ type Env = {
 }
 
 function getRuntimeEnv(c: Context<Env>) {
-  const processEnv = (
-    globalThis as typeof globalThis & {
-      process?: { env?: Record<string, string | undefined> }
-    }
-  ).process?.env ?? {}
+  const processEnv =
+    (
+      globalThis as typeof globalThis & {
+        process?: { env?: Record<string, string | undefined> }
+      }
+    ).process?.env ?? {}
 
   return {
     ...processEnv,
@@ -119,18 +119,21 @@ async function logTransactionPiiAccess(
     metadata?: Record<string, unknown>
   },
 ) {
-  await c.get("db").insert(transactionPiiAccessLog).values({
-    participantKind: input.participantKind,
-    parentId: input.parentId ?? null,
-    participantId: input.participantId ?? null,
-    actorId: c.get("userId") ?? null,
-    actorType: c.get("actor") ?? null,
-    callerType: c.get("callerType") ?? null,
-    action: input.action,
-    outcome: input.outcome,
-    reason: input.reason ?? null,
-    metadata: input.metadata ?? null,
-  })
+  await c
+    .get("db")
+    .insert(transactionPiiAccessLog)
+    .values({
+      participantKind: input.participantKind,
+      parentId: input.parentId ?? null,
+      participantId: input.participantId ?? null,
+      actorId: c.get("userId") ?? null,
+      actorType: c.get("actor") ?? null,
+      callerType: c.get("callerType") ?? null,
+      action: input.action,
+      outcome: input.outcome,
+      reason: input.reason ?? null,
+      metadata: input.metadata ?? null,
+    })
 }
 
 async function authorizeTransactionPiiAccess(
@@ -257,7 +260,13 @@ export const transactionsRoutes = new Hono<Env>()
               },
             })
 
-            await pii.upsertParticipantIdentity(c.get("db"), "offer", row.id, payload, c.get("userId"))
+            await pii.upsertParticipantIdentity(
+              c.get("db"),
+              "offer",
+              row.id,
+              payload,
+              c.get("userId"),
+            )
             return transactionsService.getOfferParticipantById(c.get("db"), row.id)
           }
 
@@ -274,7 +283,11 @@ export const transactionsRoutes = new Hono<Env>()
   })
   .patch("/offer-participants/:id", async (c) => {
     const payload = updateOfferParticipantSchema.parse(await c.req.json())
-    const row = await transactionsService.updateOfferParticipant(c.get("db"), c.req.param("id"), payload)
+    const row = await transactionsService.updateOfferParticipant(
+      c.get("db"),
+      c.req.param("id"),
+      payload,
+    )
     if (!row) return c.json({ error: "Offer participant not found" }, 404)
     if (hasParticipantIdentityInput(payload)) {
       const pii = createTransactionPiiService({
@@ -290,12 +303,17 @@ export const transactionsRoutes = new Hono<Env>()
         },
       })
       await pii.upsertParticipantIdentity(c.get("db"), "offer", row.id, payload, c.get("userId"))
-      return c.json({ data: await transactionsService.getOfferParticipantById(c.get("db"), row.id) })
+      return c.json({
+        data: await transactionsService.getOfferParticipantById(c.get("db"), row.id),
+      })
     }
     return c.json({ data: row })
   })
   .get("/offer-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOfferParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOfferParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Offer participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -318,7 +336,12 @@ export const transactionsRoutes = new Hono<Env>()
         })
       },
     })
-    const row = await pii.getParticipantIdentity(c.get("db"), "offer", participant.id, c.get("userId"))
+    const row = await pii.getParticipantIdentity(
+      c.get("db"),
+      "offer",
+      participant.id,
+      c.get("userId"),
+    )
     if (!row) {
       await logTransactionPiiAccess(c, {
         participantKind: "offer",
@@ -333,7 +356,10 @@ export const transactionsRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .patch("/offer-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOfferParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOfferParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Offer participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -367,7 +393,10 @@ export const transactionsRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .delete("/offer-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOfferParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOfferParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Offer participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -390,7 +419,12 @@ export const transactionsRoutes = new Hono<Env>()
         })
       },
     })
-    const row = await pii.deleteParticipantIdentity(c.get("db"), "offer", participant.id, c.get("userId"))
+    const row = await pii.deleteParticipantIdentity(
+      c.get("db"),
+      "offer",
+      participant.id,
+      c.get("userId"),
+    )
     if (!row) return c.json({ error: "Offer participant travel details not found" }, 404)
     return c.json({ success: true })
   })
@@ -536,7 +570,13 @@ export const transactionsRoutes = new Hono<Env>()
               },
             })
 
-            await pii.upsertParticipantIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
+            await pii.upsertParticipantIdentity(
+              c.get("db"),
+              "order",
+              row.id,
+              payload,
+              c.get("userId"),
+            )
             return transactionsService.getOrderParticipantById(c.get("db"), row.id)
           }
 
@@ -553,7 +593,11 @@ export const transactionsRoutes = new Hono<Env>()
   })
   .patch("/order-participants/:id", async (c) => {
     const payload = updateOrderParticipantSchema.parse(await c.req.json())
-    const row = await transactionsService.updateOrderParticipant(c.get("db"), c.req.param("id"), payload)
+    const row = await transactionsService.updateOrderParticipant(
+      c.get("db"),
+      c.req.param("id"),
+      payload,
+    )
     if (!row) return c.json({ error: "Order participant not found" }, 404)
     if (hasParticipantIdentityInput(payload)) {
       const pii = createTransactionPiiService({
@@ -569,12 +613,17 @@ export const transactionsRoutes = new Hono<Env>()
         },
       })
       await pii.upsertParticipantIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
-      return c.json({ data: await transactionsService.getOrderParticipantById(c.get("db"), row.id) })
+      return c.json({
+        data: await transactionsService.getOrderParticipantById(c.get("db"), row.id),
+      })
     }
     return c.json({ data: row })
   })
   .get("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOrderParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Order participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -597,7 +646,12 @@ export const transactionsRoutes = new Hono<Env>()
         })
       },
     })
-    const row = await pii.getParticipantIdentity(c.get("db"), "order", participant.id, c.get("userId"))
+    const row = await pii.getParticipantIdentity(
+      c.get("db"),
+      "order",
+      participant.id,
+      c.get("userId"),
+    )
     if (!row) {
       await logTransactionPiiAccess(c, {
         participantKind: "order",
@@ -612,7 +666,10 @@ export const transactionsRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .patch("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOrderParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Order participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -646,7 +703,10 @@ export const transactionsRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .delete("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(c.get("db"), c.req.param("id"))
+    const participant = await transactionsService.getOrderParticipantById(
+      c.get("db"),
+      c.req.param("id"),
+    )
     if (!participant) return c.json({ error: "Order participant not found" }, 404)
 
     const auth = await authorizeTransactionPiiAccess(c, {
@@ -669,7 +729,12 @@ export const transactionsRoutes = new Hono<Env>()
         })
       },
     })
-    const row = await pii.deleteParticipantIdentity(c.get("db"), "order", participant.id, c.get("userId"))
+    const row = await pii.deleteParticipantIdentity(
+      c.get("db"),
+      "order",
+      participant.id,
+      c.get("userId"),
+    )
     if (!row) return c.json({ error: "Order participant travel details not found" }, 404)
     return c.json({ success: true })
   })

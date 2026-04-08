@@ -50,9 +50,7 @@ export const octoAvailabilityListQuerySchema = paginationSchema
   })
   .refine(
     (value) =>
-      !value.localDateStart ||
-      !value.localDateEnd ||
-      value.localDateStart <= value.localDateEnd,
+      !value.localDateStart || !value.localDateEnd || value.localDateStart <= value.localDateEnd,
     {
       message: "localDateStart must be before or equal to localDateEnd",
       path: ["localDateEnd"],
@@ -67,9 +65,7 @@ export const octoAvailabilityCalendarQuerySchema = z
   })
   .refine(
     (value) =>
-      !value.localDateStart ||
-      !value.localDateEnd ||
-      value.localDateStart <= value.localDateEnd,
+      !value.localDateStart || !value.localDateEnd || value.localDateStart <= value.localDateEnd,
     {
       message: "localDateStart must be before or equal to localDateEnd",
       path: ["localDateEnd"],

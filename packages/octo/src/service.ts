@@ -1,7 +1,5 @@
 import { availabilitySlots, availabilityStartTimes } from "@voyantjs/availability/schema"
 import { bookingsService } from "@voyantjs/bookings"
-import { productsService } from "@voyantjs/products"
-import { offers, orders } from "@voyantjs/transactions/schema"
 import {
   bookingAllocations,
   bookingFulfillments,
@@ -12,6 +10,7 @@ import {
   bookingSupplierStatuses,
   bookings,
 } from "@voyantjs/bookings/schema"
+import { productsService } from "@voyantjs/products"
 import {
   optionUnits,
   productCapabilities,
@@ -22,10 +21,11 @@ import {
   productOptions,
   products,
 } from "@voyantjs/products/schema"
+import { offers, orders } from "@voyantjs/transactions/schema"
 import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
-
+import { bookingTransactionDetailsRef } from "./transactions-ref.js"
 import type {
   OctoAvailabilityStatus,
   OctoAvailabilityType,
@@ -43,7 +43,6 @@ import type {
   octoBookingListQuerySchema,
   octoProductListQuerySchema,
 } from "./validation.js"
-import { bookingTransactionDetailsRef } from "./transactions-ref.js"
 
 type ProductRow = typeof products.$inferSelect
 type OptionRow = typeof productOptions.$inferSelect
@@ -235,9 +234,7 @@ function pickOptionStartTimes(
   return source.map((startTime) => startTime.startTimeLocal)
 }
 
-function pickBookingContact(
-  participants: Array<typeof bookingParticipants.$inferSelect>,
-) {
+function pickBookingContact(participants: Array<typeof bookingParticipants.$inferSelect>) {
   const preferred =
     participants.find((participant) => participant.participantType === "booker") ??
     participants.find((participant) => participant.participantType === "contact") ??
@@ -256,10 +253,7 @@ function pickBookingContact(
   }
 }
 
-function pickPayloadString(
-  payload: Record<string, unknown> | null | undefined,
-  keys: string[],
-) {
+function pickPayloadString(payload: Record<string, unknown> | null | undefined, keys: string[]) {
   if (!payload) return null
 
   for (const key of keys) {
@@ -404,7 +398,11 @@ export const octoService = {
     db: PostgresJsDatabase,
     id: string,
   ): Promise<OctoProjectedAvailability | null> {
-    const [row] = await db.select().from(availabilitySlots).where(eq(availabilitySlots.id, id)).limit(1)
+    const [row] = await db
+      .select()
+      .from(availabilitySlots)
+      .where(eq(availabilitySlots.id, id))
+      .limit(1)
     if (!row) return null
 
     const [product] = await db
@@ -420,7 +418,8 @@ export const octoService = {
     const conditions = []
     if (query.productId) conditions.push(eq(availabilitySlots.productId, query.productId))
     if (query.optionId) conditions.push(eq(availabilitySlots.optionId, query.optionId))
-    if (query.localDateStart) conditions.push(gte(availabilitySlots.dateLocal, query.localDateStart))
+    if (query.localDateStart)
+      conditions.push(gte(availabilitySlots.dateLocal, query.localDateStart))
     if (query.localDateEnd) conditions.push(lte(availabilitySlots.dateLocal, query.localDateEnd))
 
     const where = conditions.length > 0 ? and(...conditions) : undefined
@@ -542,52 +541,64 @@ export const octoService = {
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1)
     if (!booking) return null
 
-    const [participants, items, allocations, fulfillments, redemptions, supplierStatuses, transactionLink] =
-      await Promise.all([
-        db
-          .select()
-          .from(bookingParticipants)
-          .where(eq(bookingParticipants.bookingId, booking.id))
-          .orderBy(asc(bookingParticipants.createdAt)),
-        db
-          .select()
-          .from(bookingItems)
-          .where(eq(bookingItems.bookingId, booking.id))
-          .orderBy(asc(bookingItems.createdAt)),
-        db
-          .select()
-          .from(bookingAllocations)
-          .where(eq(bookingAllocations.bookingId, booking.id))
-          .orderBy(asc(bookingAllocations.createdAt)),
-        db
-          .select()
-          .from(bookingFulfillments)
-          .where(eq(bookingFulfillments.bookingId, booking.id))
-          .orderBy(asc(bookingFulfillments.createdAt)),
-        db
-          .select()
-          .from(bookingRedemptionEvents)
-          .where(eq(bookingRedemptionEvents.bookingId, booking.id))
-          .orderBy(asc(bookingRedemptionEvents.redeemedAt), asc(bookingRedemptionEvents.createdAt)),
-        db
-          .select()
-          .from(bookingSupplierStatuses)
-          .where(eq(bookingSupplierStatuses.bookingId, booking.id))
-          .orderBy(asc(bookingSupplierStatuses.createdAt)),
-        db
-          .select()
-          .from(bookingTransactionDetailsRef)
-          .where(eq(bookingTransactionDetailsRef.bookingId, booking.id))
-          .limit(1)
-          .then((rows) => rows[0] ?? null),
-      ])
+    const [
+      participants,
+      items,
+      allocations,
+      fulfillments,
+      redemptions,
+      supplierStatuses,
+      transactionLink,
+    ] = await Promise.all([
+      db
+        .select()
+        .from(bookingParticipants)
+        .where(eq(bookingParticipants.bookingId, booking.id))
+        .orderBy(asc(bookingParticipants.createdAt)),
+      db
+        .select()
+        .from(bookingItems)
+        .where(eq(bookingItems.bookingId, booking.id))
+        .orderBy(asc(bookingItems.createdAt)),
+      db
+        .select()
+        .from(bookingAllocations)
+        .where(eq(bookingAllocations.bookingId, booking.id))
+        .orderBy(asc(bookingAllocations.createdAt)),
+      db
+        .select()
+        .from(bookingFulfillments)
+        .where(eq(bookingFulfillments.bookingId, booking.id))
+        .orderBy(asc(bookingFulfillments.createdAt)),
+      db
+        .select()
+        .from(bookingRedemptionEvents)
+        .where(eq(bookingRedemptionEvents.bookingId, booking.id))
+        .orderBy(asc(bookingRedemptionEvents.redeemedAt), asc(bookingRedemptionEvents.createdAt)),
+      db
+        .select()
+        .from(bookingSupplierStatuses)
+        .where(eq(bookingSupplierStatuses.bookingId, booking.id))
+        .orderBy(asc(bookingSupplierStatuses.createdAt)),
+      db
+        .select()
+        .from(bookingTransactionDetailsRef)
+        .where(eq(bookingTransactionDetailsRef.bookingId, booking.id))
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
+    ])
 
     const itemParticipants =
       items.length > 0
         ? await db
             .select()
             .from(bookingItemParticipants)
-            .where(inArray(bookingItemParticipants.bookingItemId, items.map((item) => item.id)))
+            .where(
+              inArray(
+                bookingItemParticipants.bookingItemId,
+                items.map((item) => item.id),
+              ),
+            )
             .orderBy(asc(bookingItemParticipants.createdAt))
         : []
 

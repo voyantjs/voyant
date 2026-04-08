@@ -1,12 +1,5 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import {
-  boolean,
-  date,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core"
+import { boolean, date, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 
 export const productsRef = pgTable("products", {
   id: typeId("products").primaryKey(),

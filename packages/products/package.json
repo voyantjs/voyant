@@ -65,5 +65,10 @@
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/products"
   }
 }

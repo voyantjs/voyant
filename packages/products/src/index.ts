@@ -3,9 +3,9 @@ import type { HonoModule } from "@voyantjs/hono/module"
 
 import { productRoutes } from "./routes.js"
 
+export { productsBookingExtension } from "./booking-extension.js"
 export type { ProductRoutes } from "./routes.js"
 export { productsService } from "./service.js"
-export { productsBookingExtension } from "./booking-extension.js"
 
 export const productLinkable: LinkableDefinition = {
   module: "products",
@@ -100,10 +100,6 @@ export {
   productVisibilitySettings,
 } from "./schema.js"
 export {
-  insertProductMediaSchema,
-  productMediaListQuerySchema,
-  reorderProductMediaSchema,
-  updateProductMediaSchema,
   insertDaySchema,
   insertDayServiceSchema,
   insertOptionUnitSchema,
@@ -115,6 +111,7 @@ export {
   insertProductFaqSchema,
   insertProductFeatureSchema,
   insertProductLocationSchema,
+  insertProductMediaSchema,
   insertProductNoteSchema,
   insertProductOptionSchema,
   insertProductOptionTranslationSchema,
@@ -135,6 +132,7 @@ export {
   productFeatureListQuerySchema,
   productListQuerySchema,
   productLocationListQuerySchema,
+  productMediaListQuerySchema,
   productOptionListQuerySchema,
   productOptionTranslationListQuerySchema,
   productTagListQuerySchema,
@@ -142,6 +140,7 @@ export {
   productTranslationListQuerySchema,
   productTypeListQuerySchema,
   productVisibilitySettingListQuerySchema,
+  reorderProductMediaSchema,
   selectProductSchema,
   updateDaySchema,
   updateDayServiceSchema,
@@ -154,6 +153,7 @@ export {
   updateProductFaqSchema,
   updateProductFeatureSchema,
   updateProductLocationSchema,
+  updateProductMediaSchema,
   updateProductOptionSchema,
   updateProductOptionTranslationSchema,
   updateProductSchema,

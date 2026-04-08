@@ -130,14 +130,14 @@ export class AwsKmsProvider implements KmsProvider {
 
     return {
       endpoint: endpoint.toString(),
-      headers: Object.fromEntries([
-        ...headers,
-        ["authorization", authorization],
-      ]),
+      headers: Object.fromEntries([...headers, ["authorization", authorization]]),
     }
   }
 
-  private async callAws<TResponse>(target: "TrentService.Encrypt" | "TrentService.Decrypt", body: string) {
+  private async callAws<TResponse>(
+    target: "TrentService.Encrypt" | "TrentService.Decrypt",
+    body: string,
+  ) {
     const signed = await this.signedHeaders(target, body)
     const res = await fetch(signed.endpoint, {
       method: "POST",

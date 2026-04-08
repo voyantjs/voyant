@@ -1,7 +1,7 @@
 import type { Extension } from "@voyantjs/core"
 import type { HonoExtension } from "@voyantjs/hono/module"
-import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { eq } from "drizzle-orm"
+import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -107,10 +107,7 @@ type Env = {
 const bookingDistributionExtensionRoutes = new Hono<Env>()
 
   .get("/:bookingId/distribution-details", async (c) => {
-    const row = await bookingDistributionExtensionService.get(
-      c.get("db"),
-      c.req.param("bookingId"),
-    )
+    const row = await bookingDistributionExtensionService.get(c.get("db"), c.req.param("bookingId"))
     if (!row) {
       return c.json({ data: null })
     }

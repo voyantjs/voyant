@@ -51,8 +51,9 @@ const bookingParticipantTravelDetailCoreSchema = z.object({
 })
 
 export const bookingParticipantTravelDetailInsertSchema = bookingParticipantTravelDetailCoreSchema
-export const bookingParticipantTravelDetailUpdateSchema =
-  bookingParticipantTravelDetailCoreSchema.partial().omit({ participantId: true })
+export const bookingParticipantTravelDetailUpdateSchema = bookingParticipantTravelDetailCoreSchema
+  .partial()
+  .omit({ participantId: true })
 export const bookingParticipantTravelDetailSelectSchema =
   bookingParticipantTravelDetailCoreSchema.extend({
     createdAt: z.date(),
@@ -61,10 +62,8 @@ export const bookingParticipantTravelDetailSelectSchema =
 
 export type BookingParticipantIdentity = z.infer<typeof bookingParticipantIdentitySchema>
 export type BookingParticipantDietary = z.infer<typeof bookingParticipantDietarySchema>
-export type BookingParticipantTravelDetail =
-  typeof bookingParticipantTravelDetails.$inferSelect
-export type NewBookingParticipantTravelDetail =
-  typeof bookingParticipantTravelDetails.$inferInsert
+export type BookingParticipantTravelDetail = typeof bookingParticipantTravelDetails.$inferSelect
+export type NewBookingParticipantTravelDetail = typeof bookingParticipantTravelDetails.$inferInsert
 export type DecryptedBookingParticipantTravelDetail = z.infer<
   typeof decryptedBookingParticipantTravelDetailSchema
 >

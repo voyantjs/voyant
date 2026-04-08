@@ -1,4 +1,3 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import {
   cancelBookingSchema,
   confirmBookingSchema,
@@ -7,6 +6,7 @@ import {
   recordBookingRedemptionSchema,
   reserveBookingSchema,
 } from "@voyantjs/bookings"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import { octoService } from "./service.js"
@@ -53,7 +53,9 @@ export const octoRoutes = new Hono<Env>()
     const query = octoAvailabilityCalendarQuerySchema.parse(
       Object.fromEntries(new URL(c.req.url).searchParams),
     )
-    return c.json(await octoService.getProjectedAvailabilityCalendar(c.get("db"), c.req.param("id"), query))
+    return c.json(
+      await octoService.getProjectedAvailabilityCalendar(c.get("db"), c.req.param("id"), query),
+    )
   })
   .get("/availability/:id", async (c) => {
     const row = await octoService.getProjectedAvailabilityById(c.get("db"), c.req.param("id"))
@@ -70,9 +72,12 @@ export const octoRoutes = new Hono<Env>()
     if ("booking" in result && result.booking) {
       return c.json({ data: result.booking }, 201)
     }
-    if (result.status === "slot_not_found") return c.json({ error: "Availability slot not found" }, 404)
-    if (result.status === "insufficient_capacity") return c.json({ error: "Insufficient slot capacity" }, 409)
-    if (result.status === "slot_unavailable") return c.json({ error: "Availability slot is not bookable" }, 409)
+    if (result.status === "slot_not_found")
+      return c.json({ error: "Availability slot not found" }, 404)
+    if (result.status === "insufficient_capacity")
+      return c.json({ error: "Insufficient slot capacity" }, 409)
+    if (result.status === "slot_unavailable")
+      return c.json({ error: "Availability slot is not bookable" }, 409)
     if (result.status === "slot_product_mismatch" || result.status === "slot_option_mismatch") {
       return c.json({ error: "Reservation item does not match availability slot" }, 409)
     }
@@ -100,7 +105,8 @@ export const octoRoutes = new Hono<Env>()
 
     if ("booking" in result && result.booking) return c.json({ data: result.booking })
     if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
-    if (result.status === "invalid_transition") return c.json({ error: "Invalid booking status transition" }, 409)
+    if (result.status === "invalid_transition")
+      return c.json({ error: "Invalid booking status transition" }, 409)
     if (result.status === "hold_expired") return c.json({ error: "Booking hold has expired" }, 409)
     return c.json({ error: "Unable to confirm booking" }, 400)
   })
@@ -114,7 +120,8 @@ export const octoRoutes = new Hono<Env>()
 
     if ("booking" in result && result.booking) return c.json({ data: result.booking })
     if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
-    if (result.status === "invalid_transition") return c.json({ error: "Invalid booking status transition" }, 409)
+    if (result.status === "invalid_transition")
+      return c.json({ error: "Invalid booking status transition" }, 409)
     if (result.status === "hold_expired") return c.json({ error: "Booking hold has expired" }, 409)
     return c.json({ error: "Unable to extend booking hold" }, 400)
   })
@@ -128,7 +135,8 @@ export const octoRoutes = new Hono<Env>()
 
     if ("booking" in result && result.booking) return c.json({ data: result.booking })
     if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
-    if (result.status === "invalid_transition") return c.json({ error: "Invalid booking status transition" }, 409)
+    if (result.status === "invalid_transition")
+      return c.json({ error: "Invalid booking status transition" }, 409)
     return c.json({ error: "Unable to expire booking" }, 400)
   })
   .post("/bookings/:id/cancel", async (c) => {
@@ -141,7 +149,8 @@ export const octoRoutes = new Hono<Env>()
 
     if ("booking" in result && result.booking) return c.json({ data: result.booking })
     if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
-    if (result.status === "invalid_transition") return c.json({ error: "Invalid booking status transition" }, 409)
+    if (result.status === "invalid_transition")
+      return c.json({ error: "Invalid booking status transition" }, 409)
     return c.json({ error: "Unable to cancel booking" }, 400)
   })
   .get("/bookings/:id/redemptions", async (c) => {

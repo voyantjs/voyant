@@ -1,11 +1,11 @@
-import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import type { LinkableDefinition, Module } from "@voyantjs/core"
+import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import type { HonoModule } from "@voyantjs/hono/module"
 import { relations } from "drizzle-orm"
 import {
   boolean,
-  integer,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,

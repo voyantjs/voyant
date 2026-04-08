@@ -23,5 +23,10 @@
     "@voyantjs/voyant-typescript-config": "workspace:*",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/storage"
   }
 }

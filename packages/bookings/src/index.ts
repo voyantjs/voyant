@@ -3,19 +3,19 @@ import type { HonoModule } from "@voyantjs/hono/module"
 
 import { bookingRoutes } from "./routes.js"
 
-export { bookingsService } from "./service.js"
-export type { ConvertProductData } from "./service.js"
-export {
-  createBookingPiiService,
-  type BookingPiiAuditEvent,
-  type BookingPiiServiceOptions,
-  type UpsertBookingParticipantTravelDetailInput,
-} from "./pii.js"
 export { bookingsSupplierExtension } from "./extensions/suppliers.js"
 export {
-  expireStaleBookingHolds,
+  type BookingPiiAuditEvent,
+  type BookingPiiServiceOptions,
+  createBookingPiiService,
+  type UpsertBookingParticipantTravelDetailInput,
+} from "./pii.js"
+export type { ConvertProductData } from "./service.js"
+export { bookingsService } from "./service.js"
+export {
   type ExpireStaleBookingHoldsInput,
   type ExpireStaleBookingHoldsResult,
+  expireStaleBookingHolds,
 } from "./tasks/index.js"
 
 export const bookingLinkable: LinkableDefinition = {
@@ -40,6 +40,22 @@ export const bookingsHonoModule: HonoModule = {
 }
 
 export type { BookingRoutes } from "./routes.js"
+export type {
+  BookingParticipantDietary,
+  BookingParticipantIdentity,
+  BookingParticipantTravelDetail,
+  DecryptedBookingParticipantTravelDetail,
+  NewBookingParticipantTravelDetail,
+} from "./schema/travel-details.js"
+export {
+  bookingParticipantDietarySchema,
+  bookingParticipantIdentitySchema,
+  bookingParticipantTravelDetailInsertSchema,
+  bookingParticipantTravelDetailSelectSchema,
+  bookingParticipantTravelDetails,
+  bookingParticipantTravelDetailUpdateSchema,
+  decryptedBookingParticipantTravelDetailSchema,
+} from "./schema/travel-details.js"
 export type {
   Booking,
   BookingActivity,
@@ -83,28 +99,12 @@ export {
   bookingSupplierStatuses,
   bookings,
 } from "./schema.js"
-export type {
-  BookingParticipantDietary,
-  BookingParticipantIdentity,
-  BookingParticipantTravelDetail,
-  DecryptedBookingParticipantTravelDetail,
-  NewBookingParticipantTravelDetail,
-} from "./schema/travel-details.js"
-export {
-  bookingParticipantDietarySchema,
-  bookingParticipantIdentitySchema,
-  bookingParticipantTravelDetailInsertSchema,
-  bookingParticipantTravelDetails,
-  bookingParticipantTravelDetailSelectSchema,
-  bookingParticipantTravelDetailUpdateSchema,
-  decryptedBookingParticipantTravelDetailSchema,
-} from "./schema/travel-details.js"
 export {
   bookingListQuerySchema,
   cancelBookingSchema,
   confirmBookingSchema,
-  createBookingSchema,
   convertProductSchema,
+  createBookingSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
   extendBookingHoldSchema,
@@ -119,9 +119,8 @@ export {
   insertPassengerSchema,
   insertSupplierStatusSchema,
   recordBookingRedemptionSchema,
-  reserveBookingSchema,
   reserveBookingFromTransactionSchema,
-  upsertParticipantTravelDetailsSchema,
+  reserveBookingSchema,
   updateBookingAllocationSchema,
   updateBookingFulfillmentSchema,
   updateBookingItemSchema,
@@ -130,4 +129,5 @@ export {
   updateParticipantSchema,
   updatePassengerSchema,
   updateSupplierStatusSchema,
+  upsertParticipantTravelDetailsSchema,
 } from "./validation.js"

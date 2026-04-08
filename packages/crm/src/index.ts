@@ -33,6 +33,7 @@ export const crmHonoModule: HonoModule = {
   routes: crmRoutes,
 }
 
+export { crmBookingExtension } from "./booking-extension.js"
 export type {
   Activity,
   ActivityLink,
@@ -138,4 +139,3 @@ export {
   upsertCustomFieldValueSchema,
 } from "./validation.js"
 export { crmService }
-export { crmBookingExtension } from "./booking-extension.js"

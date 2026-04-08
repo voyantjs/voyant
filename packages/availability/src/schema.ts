@@ -332,13 +332,10 @@ export const availabilityRulesRelations = relations(availabilityRules, ({ many }
   slots: many(availabilitySlots),
 }))
 
-export const availabilityStartTimesRelations = relations(
-  availabilityStartTimes,
-  ({ many }) => ({
-    slots: many(availabilitySlots),
-    locationPickupTimes: many(locationPickupTimes),
-  }),
-)
+export const availabilityStartTimesRelations = relations(availabilityStartTimes, ({ many }) => ({
+  slots: many(availabilitySlots),
+  locationPickupTimes: many(locationPickupTimes),
+}))
 
 export const availabilitySlotsRelations = relations(availabilitySlots, ({ one, many }) => ({
   rule: one(availabilityRules, {

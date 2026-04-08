@@ -1,6 +1,6 @@
-import type { NotificationProvider } from "./types.js"
 import { createLocalProvider } from "./providers/local.js"
 import { createResendProvider } from "./providers/resend.js"
+import type { NotificationProvider } from "./types.js"
 
 type NotificationProviderEnv = {
   RESEND_API_KEY?: unknown

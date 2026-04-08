@@ -1,7 +1,7 @@
 import type { Extension } from "@voyantjs/core"
 import type { HonoExtension } from "@voyantjs/hono/module"
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { eq } from "drizzle-orm"
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -17,10 +17,7 @@ export const bookingProductDetails = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index("idx_bpd_product").on(t.productId),
-    index("idx_bpd_option").on(t.optionId),
-  ],
+  (t) => [index("idx_bpd_product").on(t.productId), index("idx_bpd_option").on(t.optionId)],
 )
 
 export type BookingProductDetail = typeof bookingProductDetails.$inferSelect

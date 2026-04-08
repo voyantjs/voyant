@@ -26,6 +26,14 @@ import {
 } from "./schema.js"
 import type {
   agingReportQuerySchema,
+  applyDefaultBookingPaymentPlanSchema,
+  cancelPaymentSessionSchema,
+  completePaymentSessionSchema,
+  createPaymentSessionFromGuaranteeSchema,
+  createPaymentSessionFromInvoiceSchema,
+  createPaymentSessionFromScheduleSchema,
+  expirePaymentSessionSchema,
+  failPaymentSessionSchema,
   insertBookingGuaranteeSchema,
   insertBookingItemCommissionSchema,
   insertBookingItemTaxLineSchema,
@@ -42,14 +50,15 @@ import type {
   insertPaymentAuthorizationSchema,
   insertPaymentCaptureSchema,
   insertPaymentInstrumentSchema,
-  insertPaymentSessionSchema,
   insertPaymentSchema,
+  insertPaymentSessionSchema,
   insertSupplierPaymentSchema,
   insertTaxRegimeSchema,
   invoiceFromBookingSchema,
   invoiceListQuerySchema,
   invoiceNumberSeriesListQuerySchema,
   invoiceTemplateListQuerySchema,
+  markPaymentSessionRequiresRedirectSchema,
   paymentAuthorizationListQuerySchema,
   paymentCaptureListQuerySchema,
   paymentInstrumentListQuerySchema,
@@ -75,15 +84,6 @@ import type {
   updatePaymentSessionSchema,
   updateSupplierPaymentSchema,
   updateTaxRegimeSchema,
-  createPaymentSessionFromGuaranteeSchema,
-  createPaymentSessionFromInvoiceSchema,
-  createPaymentSessionFromScheduleSchema,
-  applyDefaultBookingPaymentPlanSchema,
-  completePaymentSessionSchema,
-  failPaymentSessionSchema,
-  markPaymentSessionRequiresRedirectSchema,
-  cancelPaymentSessionSchema,
-  expirePaymentSessionSchema,
 } from "./validation.js"
 
 type RevenueReportQuery = z.infer<typeof revenueReportQuerySchema>
@@ -136,13 +136,17 @@ type CreateTaxRegimeInput = z.infer<typeof insertTaxRegimeSchema>
 type UpdateTaxRegimeInput = z.infer<typeof updateTaxRegimeSchema>
 type CreateInvoiceExternalRefInput = z.infer<typeof insertInvoiceExternalRefSchema>
 type RenderInvoiceInput = z.infer<typeof renderInvoiceInputSchema>
-type MarkPaymentSessionRequiresRedirectInput = z.infer<typeof markPaymentSessionRequiresRedirectSchema>
+type MarkPaymentSessionRequiresRedirectInput = z.infer<
+  typeof markPaymentSessionRequiresRedirectSchema
+>
 type CompletePaymentSessionInput = z.infer<typeof completePaymentSessionSchema>
 type FailPaymentSessionInput = z.infer<typeof failPaymentSessionSchema>
 type CancelPaymentSessionInput = z.infer<typeof cancelPaymentSessionSchema>
 type ExpirePaymentSessionInput = z.infer<typeof expirePaymentSessionSchema>
 type CreatePaymentSessionFromScheduleInput = z.infer<typeof createPaymentSessionFromScheduleSchema>
-type CreatePaymentSessionFromGuaranteeInput = z.infer<typeof createPaymentSessionFromGuaranteeSchema>
+type CreatePaymentSessionFromGuaranteeInput = z.infer<
+  typeof createPaymentSessionFromGuaranteeSchema
+>
 type CreatePaymentSessionFromInvoiceInput = z.infer<typeof createPaymentSessionFromInvoiceSchema>
 type ApplyDefaultBookingPaymentPlanInput = z.infer<typeof applyDefaultBookingPaymentPlanSchema>
 
@@ -205,7 +209,10 @@ function derivePaymentSessionTarget(input: CreatePaymentSessionInput | UpdatePay
   }
 
   if (input.bookingPaymentScheduleId) {
-    return { targetType: "booking_payment_schedule" as const, targetId: input.bookingPaymentScheduleId }
+    return {
+      targetType: "booking_payment_schedule" as const,
+      targetId: input.bookingPaymentScheduleId,
+    }
   }
   if (input.bookingGuaranteeId) {
     return { targetType: "booking_guarantee" as const, targetId: input.bookingGuaranteeId }
@@ -588,7 +595,11 @@ export const financeService = {
     return row ?? null
   },
 
-  async completePaymentSession(db: PostgresJsDatabase, id: string, data: CompletePaymentSessionInput) {
+  async completePaymentSession(
+    db: PostgresJsDatabase,
+    id: string,
+    data: CompletePaymentSessionInput,
+  ) {
     const [session] = await db
       .select()
       .from(paymentSessions)
@@ -636,13 +647,15 @@ export const financeService = {
           .update(paymentAuthorizations)
           .set({
             status: "captured",
-            paymentInstrumentId: data.paymentInstrumentId ?? session.paymentInstrumentId ?? undefined,
+            paymentInstrumentId:
+              data.paymentInstrumentId ?? session.paymentInstrumentId ?? undefined,
             externalAuthorizationId:
               data.externalAuthorizationId === undefined
                 ? undefined
                 : (data.externalAuthorizationId ?? null),
             approvalCode: data.approvalCode ?? undefined,
-            authorizedAt: data.authorizedAt === undefined ? undefined : toTimestamp(data.authorizedAt),
+            authorizedAt:
+              data.authorizedAt === undefined ? undefined : toTimestamp(data.authorizedAt),
             expiresAt: data.expiresAt === undefined ? undefined : toTimestamp(data.expiresAt),
             updatedAt: new Date(),
           })
@@ -691,10 +704,9 @@ export const financeService = {
               status: "completed",
               referenceNumber:
                 data.referenceNumber ?? data.externalReference ?? session.externalReference ?? null,
-              paymentDate:
-                (data.paymentDate ? new Date(data.paymentDate) : new Date())
-                  .toISOString()
-                  .slice(0, 10),
+              paymentDate: (data.paymentDate ? new Date(data.paymentDate) : new Date())
+                .toISOString()
+                .slice(0, 10),
               notes: data.notes ?? session.notes ?? null,
             })
             .returning({ id: payments.id })
@@ -738,7 +750,8 @@ export const financeService = {
           .update(bookingGuarantees)
           .set({
             paymentAuthorizationId: authorizationId,
-            paymentInstrumentId: data.paymentInstrumentId ?? session.paymentInstrumentId ?? undefined,
+            paymentInstrumentId:
+              data.paymentInstrumentId ?? session.paymentInstrumentId ?? undefined,
             status: "active",
             guaranteedAt: toTimestamp(data.authorizedAt) ?? new Date(),
             updatedAt: new Date(),
@@ -960,7 +973,10 @@ export const financeService = {
     if (data.depositMode === "fixed_amount") {
       depositAmountCents = Math.min(totalAmountCents, data.depositValue)
     } else if (data.depositMode === "percentage") {
-      depositAmountCents = Math.min(totalAmountCents, Math.round((totalAmountCents * data.depositValue) / 100))
+      depositAmountCents = Math.min(
+        totalAmountCents,
+        Math.round((totalAmountCents * data.depositValue) / 100),
+      )
     }
 
     if (data.clearExistingPending) {
@@ -1023,27 +1039,27 @@ export const financeService = {
       .returning()
 
     if (data.createGuarantee) {
-      const depositSchedule = createdSchedules.find((schedule) => schedule.scheduleType === "deposit")
+      const depositSchedule = createdSchedules.find(
+        (schedule) => schedule.scheduleType === "deposit",
+      )
       if (depositSchedule) {
-        await db
-          .insert(bookingGuarantees)
-          .values({
-            bookingId,
-            bookingPaymentScheduleId: depositSchedule.id,
-            bookingItemId: null,
-            guaranteeType: data.guaranteeType,
-            status: "pending",
-            paymentInstrumentId: null,
-            paymentAuthorizationId: null,
-            currency: depositSchedule.currency,
-            amountCents: depositSchedule.amountCents,
-            provider: null,
-            referenceNumber: null,
-            guaranteedAt: null,
-            expiresAt: null,
-            releasedAt: null,
-            notes: data.notes ?? null,
-          })
+        await db.insert(bookingGuarantees).values({
+          bookingId,
+          bookingPaymentScheduleId: depositSchedule.id,
+          bookingItemId: null,
+          guaranteeType: data.guaranteeType,
+          status: "pending",
+          paymentInstrumentId: null,
+          paymentAuthorizationId: null,
+          currency: depositSchedule.currency,
+          amountCents: depositSchedule.amountCents,
+          provider: null,
+          referenceNumber: null,
+          guaranteedAt: null,
+          expiresAt: null,
+          releasedAt: null,
+          notes: data.notes ?? null,
+        })
       }
     }
 
@@ -1088,7 +1104,11 @@ export const financeService = {
       return null
     }
 
-    if (schedule.status === "paid" || schedule.status === "waived" || schedule.status === "cancelled") {
+    if (
+      schedule.status === "paid" ||
+      schedule.status === "waived" ||
+      schedule.status === "cancelled"
+    ) {
       throw new Error(`Cannot create payment session for schedule in status "${schedule.status}"`)
     }
 
@@ -1224,14 +1244,20 @@ export const financeService = {
       return null
     }
 
-    if (guarantee.status === "active" || guarantee.status === "released" || guarantee.status === "cancelled") {
+    if (
+      guarantee.status === "active" ||
+      guarantee.status === "released" ||
+      guarantee.status === "cancelled"
+    ) {
       throw new Error(`Cannot create payment session for guarantee in status "${guarantee.status}"`)
     }
 
     const currency = guarantee.currency
     const amountCents = guarantee.amountCents
     if (!currency || amountCents === null || amountCents === undefined || amountCents <= 0) {
-      throw new Error("Booking guarantee must have currency and amount before creating a payment session")
+      throw new Error(
+        "Booking guarantee must have currency and amount before creating a payment session",
+      )
     }
 
     return this.createPaymentSession(db, {

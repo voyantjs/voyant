@@ -92,9 +92,7 @@ export async function newCommand(ctx: CommandContext): Promise<CommandResult> {
   }
 
   if (!templateSource) {
-    ctx.stderr(
-      "Could not find a template. Pass --template <name|path>.\n",
-    )
+    ctx.stderr("Could not find a template. Pass --template <name|path>.\n")
     return 1
   }
 
@@ -200,7 +198,10 @@ function shouldSkip(srcPath: string, templateRoot: string): boolean {
   return SKIP_PATHS.has(first)
 }
 
-async function downloadStarterTemplate(starter: string, voyantVersion: string): Promise<TemplateSource> {
+async function downloadStarterTemplate(
+  starter: string,
+  voyantVersion: string,
+): Promise<TemplateSource> {
   const root = mkdtempSync(join(tmpdir(), `voyant-starter-${starter}-`))
   const archivePath = join(root, `${starter}.tar.gz`)
   const extractDir = join(root, "template")
@@ -276,12 +277,13 @@ function ensureVoyantDependencyVersions(
   }
 }
 
-function normalizeWorkspaceRanges(
-  deps: Record<string, unknown>,
-  voyantVersion: string,
-): void {
+function normalizeWorkspaceRanges(deps: Record<string, unknown>, voyantVersion: string): void {
   for (const [name, value] of Object.entries(deps)) {
-    if (name.startsWith("@voyantjs/") && typeof value === "string" && value.startsWith("workspace:")) {
+    if (
+      name.startsWith("@voyantjs/") &&
+      typeof value === "string" &&
+      value.startsWith("workspace:")
+    ) {
       deps[name] = `^${voyantVersion}`
     }
   }

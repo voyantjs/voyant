@@ -15,7 +15,12 @@ export const notificationTargetTypeSchema = z.enum([
 ])
 export const notificationReminderStatusSchema = z.enum(["draft", "active", "archived"])
 export const notificationReminderTargetTypeSchema = z.enum(["booking_payment_schedule"])
-export const notificationReminderRunStatusSchema = z.enum(["processing", "sent", "skipped", "failed"])
+export const notificationReminderRunStatusSchema = z.enum([
+  "processing",
+  "sent",
+  "skipped",
+  "failed",
+])
 
 const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -123,14 +128,16 @@ const transportNotificationCoreSchema = z.object({
 })
 
 export const sendPaymentSessionNotificationSchema = transportNotificationCoreSchema.refine(
-  (value) => Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text),
+  (value) =>
+    Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text),
   {
     message: "templateId, templateSlug, or direct content is required",
   },
 )
 
 export const sendInvoiceNotificationSchema = transportNotificationCoreSchema.refine(
-  (value) => Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text),
+  (value) =>
+    Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text),
   {
     message: "templateId, templateSlug, or direct content is required",
   },
@@ -158,6 +165,10 @@ export const sendNotificationSchema = z
     metadata: z.record(z.string(), z.unknown()).optional().nullable(),
     scheduledFor: z.string().optional().nullable(),
   })
-  .refine((value) => Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text), {
-    message: "templateId, templateSlug, or direct content is required",
-  })
+  .refine(
+    (value) =>
+      Boolean(value.templateId || value.templateSlug || value.subject || value.html || value.text),
+    {
+      message: "templateId, templateSlug, or direct content is required",
+    },
+  )

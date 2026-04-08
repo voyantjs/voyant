@@ -33,5 +33,10 @@
     "react-dom": "^19.2.4",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/admin"
   }
 }

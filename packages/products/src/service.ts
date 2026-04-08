@@ -29,10 +29,6 @@ import {
   productVisibilitySettings,
 } from "./schema.js"
 import type {
-  insertProductMediaSchema,
-  productMediaListQuerySchema,
-  reorderProductMediaSchema,
-  updateProductMediaSchema,
   insertDaySchema,
   insertDayServiceSchema,
   insertOptionUnitSchema,
@@ -44,6 +40,7 @@ import type {
   insertProductFaqSchema,
   insertProductFeatureSchema,
   insertProductLocationSchema,
+  insertProductMediaSchema,
   insertProductNoteSchema,
   insertProductOptionSchema,
   insertProductOptionTranslationSchema,
@@ -64,6 +61,7 @@ import type {
   productFeatureListQuerySchema,
   productListQuerySchema,
   productLocationListQuerySchema,
+  productMediaListQuerySchema,
   productOptionListQuerySchema,
   productOptionTranslationListQuerySchema,
   productTagListQuerySchema,
@@ -71,6 +69,7 @@ import type {
   productTranslationListQuerySchema,
   productTypeListQuerySchema,
   productVisibilitySettingListQuerySchema,
+  reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
   updateOptionUnitSchema,
@@ -82,6 +81,7 @@ import type {
   updateProductFaqSchema,
   updateProductFeatureSchema,
   updateProductLocationSchema,
+  updateProductMediaSchema,
   updateProductOptionSchema,
   updateProductOptionTranslationSchema,
   updateProductSchema,
@@ -824,7 +824,10 @@ export const productsService = {
       return null
     }
 
-    const [row] = await db.insert(productFeatures).values({ productId, ...data }).returning()
+    const [row] = await db
+      .insert(productFeatures)
+      .values({ productId, ...data })
+      .returning()
     return row ?? null
   },
 
@@ -887,7 +890,10 @@ export const productsService = {
       return null
     }
 
-    const [row] = await db.insert(productFaqs).values({ productId, ...data }).returning()
+    const [row] = await db
+      .insert(productFaqs)
+      .values({ productId, ...data })
+      .returning()
     return row ?? null
   },
 
@@ -943,18 +949,29 @@ export const productsService = {
   },
 
   async getLocationById(db: PostgresJsDatabase, id: string) {
-    const [row] = await db.select().from(productLocations).where(eq(productLocations.id, id)).limit(1)
+    const [row] = await db
+      .select()
+      .from(productLocations)
+      .where(eq(productLocations.id, id))
+      .limit(1)
     return row ?? null
   },
 
-  async createLocation(db: PostgresJsDatabase, productId: string, data: CreateProductLocationInput) {
+  async createLocation(
+    db: PostgresJsDatabase,
+    productId: string,
+    data: CreateProductLocationInput,
+  ) {
     const product = await ensureProductExists(db, productId)
 
     if (!product) {
       return null
     }
 
-    const [row] = await db.insert(productLocations).values({ productId, ...data }).returning()
+    const [row] = await db
+      .insert(productLocations)
+      .values({ productId, ...data })
+      .returning()
     return row ?? null
   },
 
@@ -1740,9 +1757,7 @@ export const productsService = {
 
     if (query.search) {
       const term = `%${query.search}%`
-      conditions.push(
-        or(ilike(productCategories.name, term), ilike(productCategories.slug, term)),
-      )
+      conditions.push(or(ilike(productCategories.name, term), ilike(productCategories.slug, term)))
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined
@@ -1902,10 +1917,7 @@ export const productsService = {
     const rows = await db
       .select({ category: productCategories })
       .from(productCategoryProducts)
-      .innerJoin(
-        productCategories,
-        eq(productCategoryProducts.categoryId, productCategories.id),
-      )
+      .innerJoin(productCategories, eq(productCategoryProducts.categoryId, productCategories.id))
       .where(eq(productCategoryProducts.productId, productId))
       .orderBy(asc(productCategoryProducts.sortOrder))
 
@@ -1929,12 +1941,7 @@ export const productsService = {
   async removeProductTag(db: PostgresJsDatabase, productId: string, tagId: string) {
     const [row] = await db
       .delete(productTagProducts)
-      .where(
-        and(
-          eq(productTagProducts.productId, productId),
-          eq(productTagProducts.tagId, tagId),
-        ),
-      )
+      .where(and(eq(productTagProducts.productId, productId), eq(productTagProducts.tagId, tagId)))
       .returning({ productId: productTagProducts.productId })
 
     return row ?? null
@@ -1975,7 +1982,11 @@ export const productsService = {
         .where(where)
         .limit(query.limit)
         .offset(query.offset)
-        .orderBy(desc(productMedia.isCover), asc(productMedia.sortOrder), asc(productMedia.createdAt)),
+        .orderBy(
+          desc(productMedia.isCover),
+          asc(productMedia.sortOrder),
+          asc(productMedia.createdAt),
+        ),
       db.select({ count: sql<number>`count(*)::int` }).from(productMedia).where(where),
     ])
 
@@ -1987,11 +1998,12 @@ export const productsService = {
     }
   },
 
-  async listProductLevelMedia(db: PostgresJsDatabase, productId: string, query: ProductMediaListQuery) {
-    const conditions = [
-      eq(productMedia.productId, productId),
-      sql`${productMedia.dayId} is null`,
-    ]
+  async listProductLevelMedia(
+    db: PostgresJsDatabase,
+    productId: string,
+    query: ProductMediaListQuery,
+  ) {
+    const conditions = [eq(productMedia.productId, productId), sql`${productMedia.dayId} is null`]
 
     if (query.mediaType) {
       conditions.push(eq(productMedia.mediaType, query.mediaType))
@@ -2006,7 +2018,11 @@ export const productsService = {
         .where(where)
         .limit(query.limit)
         .offset(query.offset)
-        .orderBy(desc(productMedia.isCover), asc(productMedia.sortOrder), asc(productMedia.createdAt)),
+        .orderBy(
+          desc(productMedia.isCover),
+          asc(productMedia.sortOrder),
+          asc(productMedia.createdAt),
+        ),
       db.select({ count: sql<number>`count(*)::int` }).from(productMedia).where(where),
     ])
 
@@ -2072,15 +2088,17 @@ export const productsService = {
   },
 
   async deleteMedia(db: PostgresJsDatabase, id: string) {
-    const [row] = await db
-      .delete(productMedia)
-      .where(eq(productMedia.id, id))
-      .returning()
+    const [row] = await db.delete(productMedia).where(eq(productMedia.id, id)).returning()
 
     return row ?? null
   },
 
-  async setCoverMedia(db: PostgresJsDatabase, productId: string, mediaId: string, dayId?: string | null) {
+  async setCoverMedia(
+    db: PostgresJsDatabase,
+    productId: string,
+    mediaId: string,
+    dayId?: string | null,
+  ) {
     // Unset existing cover in the same scope (product-level or day-level)
     const scopeConditions = [eq(productMedia.productId, productId)]
     if (dayId) {

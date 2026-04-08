@@ -1,7 +1,7 @@
 import type { Extension } from "@voyantjs/core"
 import type { HonoExtension } from "@voyantjs/hono/module"
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { eq } from "drizzle-orm"
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -17,10 +17,7 @@ export const bookingCrmDetails = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index("idx_bcd_opportunity").on(t.opportunityId),
-    index("idx_bcd_quote").on(t.quoteId),
-  ],
+  (t) => [index("idx_bcd_opportunity").on(t.opportunityId), index("idx_bcd_quote").on(t.quoteId)],
 )
 
 export type BookingCrmDetail = typeof bookingCrmDetails.$inferSelect
@@ -99,11 +96,7 @@ const bookingCrmExtensionRoutes = new Hono<Env>()
 
   .put("/:bookingId/crm-details", async (c) => {
     const data = bookingCrmDetailSchema.parse(await c.req.json())
-    const row = await bookingCrmExtensionService.upsert(
-      c.get("db"),
-      c.req.param("bookingId"),
-      data,
-    )
+    const row = await bookingCrmExtensionService.upsert(c.get("db"), c.req.param("bookingId"), data)
     return c.json({ data: row })
   })
 

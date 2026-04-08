@@ -25,8 +25,8 @@ import type {
   notificationTemplateListQuerySchema,
   runDueRemindersSchema,
   sendInvoiceNotificationSchema,
-  sendPaymentSessionNotificationSchema,
   sendNotificationSchema,
+  sendPaymentSessionNotificationSchema,
   updateNotificationReminderRuleSchema,
   updateNotificationTemplateSchema,
 } from "./validation.js"
@@ -414,7 +414,9 @@ export const notificationsService = {
     if (query.status) conditions.push(eq(notificationTemplates.status, query.status))
     if (query.search) {
       const term = `%${query.search}%`
-      conditions.push(or(ilike(notificationTemplates.slug, term), ilike(notificationTemplates.name, term)))
+      conditions.push(
+        or(ilike(notificationTemplates.slug, term), ilike(notificationTemplates.name, term)),
+      )
     }
     const where = conditions.length > 0 ? and(...conditions) : undefined
     return paginate(
@@ -468,7 +470,8 @@ export const notificationsService = {
     if (query.channel) conditions.push(eq(notificationDeliveries.channel, query.channel))
     if (query.provider) conditions.push(eq(notificationDeliveries.provider, query.provider))
     if (query.status) conditions.push(eq(notificationDeliveries.status, query.status))
-    if (query.templateSlug) conditions.push(eq(notificationDeliveries.templateSlug, query.templateSlug))
+    if (query.templateSlug)
+      conditions.push(eq(notificationDeliveries.templateSlug, query.templateSlug))
     if (query.targetType) conditions.push(eq(notificationDeliveries.targetType, query.targetType))
     if (query.targetId) conditions.push(eq(notificationDeliveries.targetId, query.targetId))
     if (query.bookingId) conditions.push(eq(notificationDeliveries.bookingId, query.bookingId))
@@ -626,7 +629,8 @@ export const notificationsService = {
   async listReminderRules(db: PostgresJsDatabase, query: NotificationReminderRuleListQuery) {
     const conditions = []
     if (query.status) conditions.push(eq(notificationReminderRules.status, query.status))
-    if (query.targetType) conditions.push(eq(notificationReminderRules.targetType, query.targetType))
+    if (query.targetType)
+      conditions.push(eq(notificationReminderRules.targetType, query.targetType))
     if (query.channel) conditions.push(eq(notificationReminderRules.channel, query.channel))
     if (query.search) {
       const term = `%${query.search}%`
@@ -772,19 +776,13 @@ export const notificationsService = {
     }
 
     const booking = session.bookingId
-      ? ((await db
-          .select()
-          .from(bookings)
-          .where(eq(bookings.id, session.bookingId))
-          .limit(1))[0] ?? null)
+      ? ((await db.select().from(bookings).where(eq(bookings.id, session.bookingId)).limit(1))[0] ??
+        null)
       : null
 
     const invoice = session.invoiceId
-      ? ((await db
-          .select()
-          .from(invoices)
-          .where(eq(invoices.id, session.invoiceId))
-          .limit(1))[0] ?? null)
+      ? ((await db.select().from(invoices).where(eq(invoices.id, session.invoiceId)).limit(1))[0] ??
+        null)
       : null
 
     const participants = booking ? await listBookingNotificationParticipants(db, booking.id) : []

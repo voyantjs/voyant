@@ -10,8 +10,8 @@ import {
   productDayServicesRef,
   productDaysRef,
   productOptionsRef,
-  productTicketSettingsRef,
   productsRef,
+  productTicketSettingsRef,
 } from "./products-ref.js"
 import {
   bookingActivityLog,
@@ -42,19 +42,19 @@ import type {
   cancelBookingSchema,
   confirmBookingSchema,
   convertProductSchema,
-  extendBookingHoldSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
-  insertBookingFulfillmentSchema,
+  extendBookingHoldSchema,
   insertBookingDocumentSchema,
+  insertBookingFulfillmentSchema,
   insertBookingItemParticipantSchema,
   insertBookingItemSchema,
   insertBookingNoteSchema,
   insertBookingSchema,
   insertParticipantSchema,
   insertPassengerSchema,
-  reserveBookingFromTransactionSchema,
   recordBookingRedemptionSchema,
+  reserveBookingFromTransactionSchema,
   reserveBookingSchema,
   updateBookingFulfillmentSchema,
   updateBookingItemSchema,
@@ -127,7 +127,10 @@ type OptionUnitReference = typeof optionUnitsRef.$inferSelect
 const travelerParticipantTypes = ["traveler", "occupant"] as const
 
 class BookingServiceError extends Error {
-  constructor(readonly code: string, message?: string) {
+  constructor(
+    readonly code: string,
+    message?: string,
+  ) {
     super(message ?? code)
     this.name = "BookingServiceError"
   }
@@ -394,7 +397,11 @@ async function getConvertProductData(
       .select()
       .from(productOptionsRef)
       .where(eq(productOptionsRef.productId, product.id))
-      .orderBy(desc(productOptionsRef.isDefault), asc(productOptionsRef.sortOrder), asc(productOptionsRef.createdAt))
+      .orderBy(
+        desc(productOptionsRef.isDefault),
+        asc(productOptionsRef.sortOrder),
+        asc(productOptionsRef.createdAt),
+      )
       .limit(1)
 
     option = defaultOption ?? null
@@ -461,7 +468,7 @@ async function getConvertProductData(
   }
 }
 
-type BookingStatus = typeof bookings.$inferSelect["status"]
+type BookingStatus = (typeof bookings.$inferSelect)["status"]
 
 const VALID_BOOKING_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   draft: ["on_hold", "confirmed", "cancelled"],
@@ -504,18 +511,20 @@ async function lockAvailabilitySlot(db: PostgresJsDatabase, slotId: string) {
         FOR UPDATE`,
   )
 
-  const row = (rows as unknown as Array<{
-    id: string
-    product_id: string
-    option_id: string | null
-    date_local: string
-    starts_at: Date
-    ends_at: Date | null
-    timezone: string
-    status: string
-    unlimited: boolean
-    remaining_pax: number | null
-  }>)[0]
+  const row = (
+    rows as unknown as Array<{
+      id: string
+      product_id: string
+      option_id: string | null
+      date_local: string
+      starts_at: Date
+      ends_at: Date | null
+      timezone: string
+      status: string
+      unlimited: boolean
+      remaining_pax: number | null
+    }>
+  )[0]
 
   if (!row) {
     return null
@@ -528,11 +537,7 @@ async function lockAvailabilitySlot(db: PostgresJsDatabase, slotId: string) {
   }
 }
 
-async function adjustSlotCapacity(
-  db: PostgresJsDatabase,
-  slotId: string,
-  delta: number,
-) {
+async function adjustSlotCapacity(db: PostgresJsDatabase, slotId: string, delta: number) {
   const locked = await lockAvailabilitySlot(db, slotId)
   if (!locked) {
     return { status: "slot_not_found" as const }
@@ -550,7 +555,11 @@ async function adjustSlotCapacity(
   const nextRemaining = currentRemaining + delta
 
   if (nextRemaining < 0) {
-    return { status: "insufficient_capacity" as const, slot: locked, remainingPax: currentRemaining }
+    return {
+      status: "insufficient_capacity" as const,
+      slot: locked,
+      remainingPax: currentRemaining,
+    }
   }
 
   let nextStatus = locked.status as "open" | "closed" | "sold_out" | "cancelled"
@@ -634,9 +643,11 @@ async function reserveBookingFromTransactionSource(
             .values({
               bookingId: booking.id,
               personId: participant.personId ?? null,
-              participantType: participant.participantType as CreateParticipantInput["participantType"],
+              participantType:
+                participant.participantType as CreateParticipantInput["participantType"],
               travelerCategory:
-                (participant.travelerCategory as CreateParticipantInput["travelerCategory"]) ?? null,
+                (participant.travelerCategory as CreateParticipantInput["travelerCategory"]) ??
+                null,
               firstName: participant.firstName,
               lastName: participant.lastName,
               email: participant.email ?? null,
@@ -658,7 +669,11 @@ async function reserveBookingFromTransactionSource(
       const bookingItemMap = new Map<string, string>()
       for (const item of source.items) {
         if (item.slotId) {
-          const capacity = await adjustSlotCapacity(tx as PostgresJsDatabase, item.slotId, -item.quantity)
+          const capacity = await adjustSlotCapacity(
+            tx as PostgresJsDatabase,
+            item.slotId,
+            -item.quantity,
+          )
 
           if (capacity.status === "slot_not_found") {
             throw new BookingServiceError("slot_not_found")
@@ -937,7 +952,11 @@ async function autoIssueFulfillmentsForBooking(
     return
   }
 
-  const productIds = [...new Set(items.map((item) => item.productId).filter((value): value is string => Boolean(value)))]
+  const productIds = [
+    ...new Set(
+      items.map((item) => item.productId).filter((value): value is string => Boolean(value)),
+    ),
+  ]
   if (productIds.length === 0) {
     return
   }
@@ -990,7 +1009,11 @@ async function autoIssueFulfillmentsForBooking(
     }
 
     const setting = settingsByProductId.get(productId)
-    if (!setting || setting.fulfillmentMode === "none" || setting.defaultDeliveryFormat === "none") {
+    if (
+      !setting ||
+      setting.fulfillmentMode === "none" ||
+      setting.defaultDeliveryFormat === "none"
+    ) {
       continue
     }
 
@@ -1003,7 +1026,11 @@ async function autoIssueFulfillmentsForBooking(
     }
 
     if (setting.fulfillmentMode === "per_booking") {
-      if (fulfillmentsToInsert.some((row) => row.bookingItemId === item.id || row.bookingItemId === null)) {
+      if (
+        fulfillmentsToInsert.some(
+          (row) => row.bookingItemId === item.id || row.bookingItemId === null,
+        )
+      ) {
         continue
       }
 
@@ -1037,9 +1064,12 @@ async function autoIssueFulfillmentsForBooking(
     const linkedParticipants =
       participantLinksByItemId
         .get(item.id)
-        ?.map((link) => travelerParticipants.find((participant) => participant.id === link.participantId))
-        .filter((participant): participant is typeof bookingParticipants.$inferSelect => Boolean(participant)) ??
-      []
+        ?.map((link) =>
+          travelerParticipants.find((participant) => participant.id === link.participantId),
+        )
+        .filter((participant): participant is typeof bookingParticipants.$inferSelect =>
+          Boolean(participant),
+        ) ?? []
 
     const participantsForItem =
       linkedParticipants.length > 0 ? linkedParticipants : travelerParticipants
@@ -1573,7 +1603,8 @@ export const bookingsService = {
       .update(bookings)
       .set({
         ...data,
-        holdExpiresAt: data.holdExpiresAt === undefined ? undefined : toTimestamp(data.holdExpiresAt),
+        holdExpiresAt:
+          data.holdExpiresAt === undefined ? undefined : toTimestamp(data.holdExpiresAt),
         confirmedAt: data.confirmedAt === undefined ? undefined : toTimestamp(data.confirmedAt),
         expiredAt: data.expiredAt === undefined ? undefined : toTimestamp(data.expiredAt),
         cancelledAt: data.cancelledAt === undefined ? undefined : toTimestamp(data.cancelledAt),
@@ -1679,12 +1710,14 @@ export const bookingsService = {
               WHERE ${bookings.id} = ${id}
               FOR UPDATE`,
         )
-        const booking = (rows as unknown as Array<{
-          id: string
-          booking_number: string
-          status: BookingStatus
-          hold_expires_at: Date | null
-        }>)[0]
+        const booking = (
+          rows as unknown as Array<{
+            id: string
+            booking_number: string
+            status: BookingStatus
+            hold_expires_at: Date | null
+          }>
+        )[0]
 
         if (!booking) {
           throw new BookingServiceError("not_found")
@@ -1763,11 +1796,13 @@ export const bookingsService = {
               WHERE ${bookings.id} = ${id}
               FOR UPDATE`,
         )
-        const booking = (rows as unknown as Array<{
-          id: string
-          status: BookingStatus
-          hold_expires_at: Date | null
-        }>)[0]
+        const booking = (
+          rows as unknown as Array<{
+            id: string
+            status: BookingStatus
+            hold_expires_at: Date | null
+          }>
+        )[0]
 
         if (!booking) {
           throw new BookingServiceError("not_found")
@@ -1830,11 +1865,13 @@ export const bookingsService = {
               WHERE ${bookings.id} = ${id}
               FOR UPDATE`,
         )
-        const booking = (rows as unknown as Array<{
-          id: string
-          status: BookingStatus
-          hold_expires_at: Date | null
-        }>)[0]
+        const booking = (
+          rows as unknown as Array<{
+            id: string
+            status: BookingStatus
+            hold_expires_at: Date | null
+          }>
+        )[0]
 
         if (!booking) {
           throw new BookingServiceError("not_found")
@@ -1986,10 +2023,7 @@ export const bookingsService = {
           .where(
             and(
               eq(bookingAllocations.bookingId, id),
-              or(
-                eq(bookingAllocations.status, "held"),
-                eq(bookingAllocations.status, "confirmed"),
-              ),
+              or(eq(bookingAllocations.status, "held"), eq(bookingAllocations.status, "confirmed")),
             ),
           )
 
@@ -2548,7 +2582,10 @@ export const bookingsService = {
       .select({ id: bookingFulfillments.id })
       .from(bookingFulfillments)
       .where(
-        and(eq(bookingFulfillments.id, fulfillmentId), eq(bookingFulfillments.bookingId, bookingId)),
+        and(
+          eq(bookingFulfillments.id, fulfillmentId),
+          eq(bookingFulfillments.bookingId, bookingId),
+        ),
       )
       .limit(1)
 
@@ -2695,10 +2732,7 @@ export const bookingsService = {
             and(
               eq(bookingAllocations.bookingId, bookingId),
               eq(bookingAllocations.bookingItemId, data.bookingItemId),
-              or(
-                eq(bookingAllocations.status, "held"),
-                eq(bookingAllocations.status, "confirmed"),
-              ),
+              or(eq(bookingAllocations.status, "held"), eq(bookingAllocations.status, "confirmed")),
             ),
           )
       }

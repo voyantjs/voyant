@@ -1,19 +1,14 @@
+import type { KeyRef, KmsProvider } from "@voyantjs/utils"
+import { decryptOptionalJsonEnvelope, encryptOptionalJsonEnvelope } from "@voyantjs/utils"
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-
-import type { KmsProvider, KeyRef } from "@voyantjs/utils"
-import {
-  decryptOptionalJsonEnvelope,
-  encryptOptionalJsonEnvelope,
-} from "@voyantjs/utils"
-
-import { bookingParticipants } from "./schema.js"
 import {
   bookingParticipantDietarySchema,
   bookingParticipantIdentitySchema,
   bookingParticipantTravelDetails,
   type DecryptedBookingParticipantTravelDetail,
 } from "./schema/travel-details.js"
+import { bookingParticipants } from "./schema.js"
 
 export interface UpsertBookingParticipantTravelDetailInput {
   nationality?: string | null
@@ -44,7 +39,12 @@ function buildIdentityPayload(input: UpsertBookingParticipantTravelDetailInput) 
     dateOfBirth: input.dateOfBirth ?? null,
   })
 
-  if (!payload.nationality && !payload.passportNumber && !payload.passportExpiry && !payload.dateOfBirth) {
+  if (
+    !payload.nationality &&
+    !payload.passportNumber &&
+    !payload.passportExpiry &&
+    !payload.dateOfBirth
+  ) {
     return null
   }
 
@@ -107,18 +107,26 @@ function mergeTravelDetailInput(
   input: UpsertBookingParticipantTravelDetailInput,
 ): UpsertBookingParticipantTravelDetailInput {
   return {
-    nationality: input.nationality === undefined ? (existing?.nationality ?? null) : input.nationality,
+    nationality:
+      input.nationality === undefined ? (existing?.nationality ?? null) : input.nationality,
     passportNumber:
-      input.passportNumber === undefined ? (existing?.passportNumber ?? null) : input.passportNumber,
+      input.passportNumber === undefined
+        ? (existing?.passportNumber ?? null)
+        : input.passportNumber,
     passportExpiry:
-      input.passportExpiry === undefined ? (existing?.passportExpiry ?? null) : input.passportExpiry,
-    dateOfBirth: input.dateOfBirth === undefined ? (existing?.dateOfBirth ?? null) : input.dateOfBirth,
+      input.passportExpiry === undefined
+        ? (existing?.passportExpiry ?? null)
+        : input.passportExpiry,
+    dateOfBirth:
+      input.dateOfBirth === undefined ? (existing?.dateOfBirth ?? null) : input.dateOfBirth,
     dietaryRequirements:
       input.dietaryRequirements === undefined
         ? (existing?.dietaryRequirements ?? null)
         : input.dietaryRequirements,
     isLeadTraveler:
-      input.isLeadTraveler === undefined ? (existing?.isLeadTraveler ?? false) : input.isLeadTraveler,
+      input.isLeadTraveler === undefined
+        ? (existing?.isLeadTraveler ?? false)
+        : input.isLeadTraveler,
   }
 }
 

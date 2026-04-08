@@ -696,9 +696,7 @@ export const productTags = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    uniqueIndex("uidx_product_tags_name").on(table.name),
-  ],
+  (table) => [uniqueIndex("uidx_product_tags_name").on(table.name)],
 )
 
 export type ProductTag = typeof productTags.$inferSelect

@@ -1,7 +1,7 @@
 import type { Extension } from "@voyantjs/core"
 import type { HonoExtension } from "@voyantjs/hono/module"
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { eq } from "drizzle-orm"
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -17,10 +17,7 @@ export const bookingTransactionDetails = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index("idx_btd_offer").on(t.offerId),
-    index("idx_btd_order").on(t.orderId),
-  ],
+  (t) => [index("idx_btd_offer").on(t.offerId), index("idx_btd_order").on(t.orderId)],
 )
 
 export type BookingTransactionDetail = typeof bookingTransactionDetails.$inferSelect
@@ -90,10 +87,7 @@ type Env = {
 const bookingTransactionExtensionRoutes = new Hono<Env>()
 
   .get("/:bookingId/transaction-details", async (c) => {
-    const row = await bookingTransactionExtensionService.get(
-      c.get("db"),
-      c.req.param("bookingId"),
-    )
+    const row = await bookingTransactionExtensionService.get(c.get("db"), c.req.param("bookingId"))
     if (!row) {
       return c.json({ data: null })
     }

@@ -7,10 +7,7 @@ import {
   invoices,
   type PaymentSession,
 } from "@voyantjs/finance"
-import type {
-  NotificationDelivery,
-  NotificationService,
-} from "@voyantjs/notifications"
+import type { NotificationDelivery, NotificationService } from "@voyantjs/notifications"
 import { notificationsService } from "@voyantjs/notifications"
 import { and, asc, desc, eq, gt, inArray } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -30,7 +27,14 @@ export interface CheckoutPolicyOptions {
     balanceDueDaysBeforeStart: number
     clearExistingPending: boolean
     createGuarantee: boolean
-    guaranteeType: "deposit" | "credit_card" | "preauth" | "card_on_file" | "bank_transfer" | "voucher" | "agency_letter"
+    guaranteeType:
+      | "deposit"
+      | "credit_card"
+      | "preauth"
+      | "card_on_file"
+      | "bank_transfer"
+      | "voucher"
+      | "agency_letter"
     notes?: string | null
   }
 }
@@ -69,10 +73,9 @@ export interface InitiatedCheckoutCollection {
   paymentSessionNotification: NotificationDelivery | null
 }
 
-const OUTSTANDING_SCHEDULE_STATUSES: Array<(typeof bookingPaymentSchedules.$inferSelect)["status"]> = [
-  "pending",
-  "due",
-]
+const OUTSTANDING_SCHEDULE_STATUSES: Array<
+  (typeof bookingPaymentSchedules.$inferSelect)["status"]
+> = ["pending", "due"]
 const OUTSTANDING_INVOICE_STATUSES: Array<(typeof invoices.$inferSelect)["status"]> = [
   "draft",
   "sent",
@@ -143,12 +146,19 @@ function lineDescription(
   return `Booking ${booking.bookingNumber} ${kind}`
 }
 
-async function loadBookingContext(db: PostgresJsDatabase, bookingId: string): Promise<LoadedBookingContext | null> {
+async function loadBookingContext(
+  db: PostgresJsDatabase,
+  bookingId: string,
+): Promise<LoadedBookingContext | null> {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1)
   if (!booking) return null
 
   const [items, participants, schedules, outstandingInvoices] = await Promise.all([
-    db.select().from(bookingItems).where(eq(bookingItems.bookingId, bookingId)).orderBy(bookingItems.createdAt),
+    db
+      .select()
+      .from(bookingItems)
+      .where(eq(bookingItems.bookingId, bookingId))
+      .orderBy(bookingItems.createdAt),
     db
       .select()
       .from(bookingParticipants)
@@ -240,10 +250,7 @@ function pickSchedule(
   return schedules[0] ?? null
 }
 
-function pickInvoice(
-  outstandingInvoices: Array<typeof invoices.$inferSelect>,
-  invoiceId?: string,
-) {
+function pickInvoice(outstandingInvoices: Array<typeof invoices.$inferSelect>, invoiceId?: string) {
   if (invoiceId) {
     return outstandingInvoices.find((invoice) => invoice.id === invoiceId) ?? null
   }
@@ -279,7 +286,11 @@ export async function previewCheckoutCollection(
 
   let amountCents = 0
   if (paymentSessionTarget === "invoice") {
-    amountCents = selectedInvoice?.balanceDueCents ?? selectedSchedule?.amountCents ?? context.booking.sellAmountCents ?? 0
+    amountCents =
+      selectedInvoice?.balanceDueCents ??
+      selectedSchedule?.amountCents ??
+      context.booking.sellAmountCents ??
+      0
   } else if (paymentSessionTarget === "schedule") {
     amountCents = selectedSchedule?.amountCents ?? context.booking.sellAmountCents ?? 0
   }
@@ -288,7 +299,9 @@ export async function previewCheckoutCollection(
   if (input.method === "bank_transfer") {
     recommendedAction = "create_bank_transfer_document"
   } else if (paymentSessionTarget === "invoice") {
-    recommendedAction = selectedInvoice ? "create_payment_session" : "create_invoice_then_payment_session"
+    recommendedAction = selectedInvoice
+      ? "create_payment_session"
+      : "create_invoice_then_payment_session"
   } else if (paymentSessionTarget === "schedule") {
     recommendedAction = "create_payment_session"
   }
@@ -406,7 +419,12 @@ export async function initiateCheckoutCollection(
     }
   } else if (plan.paymentSessionTarget === "invoice") {
     if (!invoice) {
-      invoice = await createCollectionInvoice(db, context, { ...plan, documentType: "invoice" }, input.notes ?? null)
+      invoice = await createCollectionInvoice(
+        db,
+        context,
+        { ...plan, documentType: "invoice" },
+        input.notes ?? null,
+      )
     }
 
     paymentSession = await financeService.createPaymentSessionFromInvoice(db, invoice.id, {

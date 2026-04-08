@@ -5,5 +5,10 @@
   "license": "FSL-1.1-Apache-2.0",
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/typescript-config"
   }
 }

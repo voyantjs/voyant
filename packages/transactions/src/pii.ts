@@ -1,23 +1,18 @@
+import type { KeyRef, KmsProvider } from "@voyantjs/utils"
+import { decryptOptionalJsonEnvelope, encryptOptionalJsonEnvelope } from "@voyantjs/utils"
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-
-import type { KmsProvider, KeyRef } from "@voyantjs/utils"
 import {
-  decryptOptionalJsonEnvelope,
-  encryptOptionalJsonEnvelope,
-} from "@voyantjs/utils"
-
-import {
-  offerParticipants,
-  orderParticipants,
-  type OfferParticipant,
-  type OrderParticipant,
-} from "./schema.js"
-import {
+  type DecryptedTransactionParticipantIdentity,
   decryptedTransactionParticipantIdentitySchema,
   transactionParticipantIdentitySchema,
-  type DecryptedTransactionParticipantIdentity,
 } from "./schema/participant-identity.js"
+import {
+  type OfferParticipant,
+  type OrderParticipant,
+  offerParticipants,
+  orderParticipants,
+} from "./schema.js"
 
 export interface UpsertTransactionParticipantIdentityInput {
   dateOfBirth?: string | null
@@ -59,8 +54,10 @@ function mergeIdentityInput(
   input: UpsertTransactionParticipantIdentityInput,
 ): UpsertTransactionParticipantIdentityInput {
   return {
-    dateOfBirth: input.dateOfBirth === undefined ? (existing?.dateOfBirth ?? null) : input.dateOfBirth,
-    nationality: input.nationality === undefined ? (existing?.nationality ?? null) : input.nationality,
+    dateOfBirth:
+      input.dateOfBirth === undefined ? (existing?.dateOfBirth ?? null) : input.dateOfBirth,
+    nationality:
+      input.nationality === undefined ? (existing?.nationality ?? null) : input.nationality,
   }
 }
 
@@ -71,7 +68,7 @@ async function getOfferParticipant(db: PostgresJsDatabase, participantId: string
     .where(eq(offerParticipants.id, participantId))
     .limit(1)
 
-  return row ? ({ ...row, kind: "offer" as const }) : null
+  return row ? { ...row, kind: "offer" as const } : null
 }
 
 async function getOrderParticipant(db: PostgresJsDatabase, participantId: string) {
@@ -81,7 +78,7 @@ async function getOrderParticipant(db: PostgresJsDatabase, participantId: string
     .where(eq(orderParticipants.id, participantId))
     .limit(1)
 
-  return row ? ({ ...row, kind: "order" as const }) : null
+  return row ? { ...row, kind: "order" as const } : null
 }
 
 async function findParticipant(

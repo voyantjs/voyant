@@ -11,12 +11,7 @@ export type OctoUnitType =
   | "MILITARY"
   | "OTHER"
 
-export type OctoAvailabilityStatus =
-  | "AVAILABLE"
-  | "FREESALE"
-  | "SOLD_OUT"
-  | "LIMITED"
-  | "CLOSED"
+export type OctoAvailabilityStatus = "AVAILABLE" | "FREESALE" | "SOLD_OUT" | "LIMITED" | "CLOSED"
 
 export type OctoBookingStatus = "ON_HOLD" | "CONFIRMED" | "EXPIRED" | "CANCELLED"
 

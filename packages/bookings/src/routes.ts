@@ -1,23 +1,21 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-import { Hono, type Context } from "hono"
-
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
-import { bookingsService } from "./service.js"
 import { bookingPiiAccessLog } from "./schema.js"
+import { bookingsService } from "./service.js"
 import {
   bookingListQuerySchema,
   cancelBookingSchema,
   confirmBookingSchema,
-  createBookingSchema,
   convertProductSchema,
+  createBookingSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
   extendBookingHoldSchema,
-  reserveBookingFromTransactionSchema,
-  insertBookingFulfillmentSchema,
   insertBookingDocumentSchema,
+  insertBookingFulfillmentSchema,
   insertBookingItemParticipantSchema,
   insertBookingItemSchema,
   insertBookingNoteSchema,
@@ -25,15 +23,16 @@ import {
   insertPassengerSchema,
   insertSupplierStatusSchema,
   recordBookingRedemptionSchema,
+  reserveBookingFromTransactionSchema,
   reserveBookingSchema,
-  upsertParticipantTravelDetailsSchema,
   updateBookingFulfillmentSchema,
-  updateSupplierStatusSchema,
   updateBookingItemSchema,
   updateBookingSchema,
   updateBookingStatusSchema,
   updateParticipantSchema,
   updatePassengerSchema,
+  updateSupplierStatusSchema,
+  upsertParticipantTravelDetailsSchema,
 } from "./validation.js"
 
 type KmsBindings = Partial<{
@@ -80,11 +79,12 @@ type Env = {
 }
 
 function getRuntimeEnv(c: Context<Env>) {
-  const processEnv = (
-    globalThis as typeof globalThis & {
-      process?: { env?: Record<string, string | undefined> }
-    }
-  ).process?.env ?? {}
+  const processEnv =
+    (
+      globalThis as typeof globalThis & {
+        process?: { env?: Record<string, string | undefined> }
+      }
+    ).process?.env ?? {}
 
   return {
     ...processEnv,
@@ -115,17 +115,20 @@ async function logBookingPiiAccess(
     metadata?: Record<string, unknown>
   },
 ) {
-  await c.get("db").insert(bookingPiiAccessLog).values({
-    bookingId: input.bookingId ?? null,
-    participantId: input.participantId ?? null,
-    actorId: c.get("userId") ?? null,
-    actorType: c.get("actor") ?? null,
-    callerType: c.get("callerType") ?? null,
-    action: input.action,
-    outcome: input.outcome,
-    reason: input.reason ?? null,
-    metadata: input.metadata ?? null,
-  })
+  await c
+    .get("db")
+    .insert(bookingPiiAccessLog)
+    .values({
+      bookingId: input.bookingId ?? null,
+      participantId: input.participantId ?? null,
+      actorId: c.get("userId") ?? null,
+      actorType: c.get("actor") ?? null,
+      callerType: c.get("callerType") ?? null,
+      action: input.action,
+      outcome: input.outcome,
+      reason: input.reason ?? null,
+      metadata: input.metadata ?? null,
+    })
 }
 
 async function authorizeBookingPiiAccess(
@@ -367,11 +370,7 @@ export const bookingRoutes = new Hono<Env>()
 
     return c.json(
       {
-        data: await bookingsService.createBooking(
-          c.get("db"),
-          parsed.data,
-          c.get("userId"),
-        ),
+        data: await bookingsService.createBooking(c.get("db"), parsed.data, c.get("userId")),
       },
       201,
     )
@@ -595,7 +594,12 @@ export const bookingRoutes = new Hono<Env>()
           await logBookingPiiAccess(c, {
             bookingId: participant.bookingId,
             participantId: event.participantId,
-            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            action:
+              event.action === "encrypt"
+                ? "update"
+                : event.action === "decrypt"
+                  ? "read"
+                  : event.action,
             outcome: "allowed",
           })
         },
@@ -674,7 +678,12 @@ export const bookingRoutes = new Hono<Env>()
           await logBookingPiiAccess(c, {
             bookingId: participant.bookingId,
             participantId: event.participantId,
-            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            action:
+              event.action === "encrypt"
+                ? "update"
+                : event.action === "decrypt"
+                  ? "read"
+                  : event.action,
             outcome: "allowed",
           })
         },
@@ -746,7 +755,12 @@ export const bookingRoutes = new Hono<Env>()
           await logBookingPiiAccess(c, {
             bookingId: participant.bookingId,
             participantId: event.participantId,
-            action: event.action === "encrypt" ? "update" : event.action === "decrypt" ? "read" : event.action,
+            action:
+              event.action === "encrypt"
+                ? "update"
+                : event.action === "decrypt"
+                  ? "read"
+                  : event.action,
             outcome: "allowed",
           })
         },

@@ -7,6 +7,7 @@ export {
   type TransactionPiiServiceOptions,
   type UpsertTransactionParticipantIdentityInput,
 } from "./pii.js"
+
 import { transactionsRoutes } from "./routes.js"
 import { transactionsService } from "./service.js"
 
@@ -41,6 +42,17 @@ export const transactionsHonoModule: HonoModule = {
   routes: transactionsRoutes,
 }
 
+export { transactionsBookingExtension } from "./booking-extension.js"
+export type {
+  DecryptedTransactionParticipantIdentity,
+  TransactionParticipantIdentity,
+  TransactionParticipantIdentityEnvelope,
+} from "./schema/participant-identity.js"
+export {
+  decryptedTransactionParticipantIdentitySchema,
+  transactionParticipantIdentityEnvelopeSchema,
+  transactionParticipantIdentitySchema,
+} from "./schema/participant-identity.js"
 export type {
   NewOffer,
   NewOfferItem,
@@ -75,13 +87,13 @@ export {
   orderTermAcceptanceStatusEnum,
   orderTerms,
   orderTermTypeEnum,
-  transactionPiiAccessActionEnum,
-  transactionPiiAccessLog,
-  transactionPiiAccessOutcomeEnum,
   transactionItemParticipantRoleEnum,
   transactionItemStatusEnum,
   transactionItemTypeEnum,
   transactionParticipantTypeEnum,
+  transactionPiiAccessActionEnum,
+  transactionPiiAccessLog,
+  transactionPiiAccessOutcomeEnum,
   transactionTravelerCategoryEnum,
 } from "./schema.js"
 export {
@@ -122,15 +134,4 @@ export {
   updateOrderSchema,
   updateOrderTermSchema,
 } from "./validation.js"
-export type {
-  DecryptedTransactionParticipantIdentity,
-  TransactionParticipantIdentity,
-  TransactionParticipantIdentityEnvelope,
-} from "./schema/participant-identity.js"
-export {
-  decryptedTransactionParticipantIdentitySchema,
-  transactionParticipantIdentityEnvelopeSchema,
-  transactionParticipantIdentitySchema,
-} from "./schema/participant-identity.js"
 export { transactionsService }
-export { transactionsBookingExtension } from "./booking-extension.js"

@@ -7,7 +7,7 @@
  */
 
 import type { KmsEncryptedEnvelope } from "@voyantjs/types/schemas/kms/envelope"
-import { z } from "zod"
+import type { z } from "zod"
 
 import { type AwsKmsConfig, AwsKmsProvider } from "./kms-aws.js"
 import { type EnvKmsConfig, EnvKmsProvider, generateEnvKmsKey } from "./kms-env.js"

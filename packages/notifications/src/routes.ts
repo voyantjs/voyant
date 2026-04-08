@@ -4,6 +4,7 @@ import { Hono } from "hono"
 import { createNotificationService, notificationsService } from "./service.js"
 import type { NotificationProvider } from "./types.js"
 import {
+  insertNotificationReminderRuleSchema,
   insertNotificationTemplateSchema,
   notificationDeliveryListQuerySchema,
   notificationReminderRuleListQuerySchema,
@@ -11,11 +12,10 @@ import {
   notificationTemplateListQuerySchema,
   runDueRemindersSchema,
   sendInvoiceNotificationSchema,
-  sendPaymentSessionNotificationSchema,
   sendNotificationSchema,
-  insertNotificationReminderRuleSchema,
-  updateNotificationTemplateSchema,
+  sendPaymentSessionNotificationSchema,
   updateNotificationReminderRuleSchema,
+  updateNotificationTemplateSchema,
 } from "./validation.js"
 
 type Env = {
@@ -132,7 +132,8 @@ export function createNotificationsRoutes(options?: {
         if (!row) return c.json({ error: "Payment session not found" }, 404)
         return c.json({ data: row }, 201)
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Payment session notification failed"
+        const message =
+          error instanceof Error ? error.message : "Payment session notification failed"
         return c.json({ error: message }, 400)
       }
     })

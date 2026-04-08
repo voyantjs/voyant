@@ -1,8 +1,7 @@
-import type { NotificationProvider } from "../types.js"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-
 import { createDefaultNotificationProviders } from "../provider-resolution.js"
 import { createNotificationService, notificationsService } from "../service.js"
+import type { NotificationProvider } from "../types.js"
 
 type NotificationTaskEnv = {
   RESEND_API_KEY?: unknown

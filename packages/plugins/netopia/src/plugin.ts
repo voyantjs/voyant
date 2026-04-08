@@ -76,25 +76,29 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
         return c.json({ error: message }, 502)
       }
     })
-    .post("/providers/netopia/bookings/:bookingId/payment-schedules/:scheduleId/collect", async (c) => {
-      try {
-        const data = netopiaCollectBookingScheduleSchema.parse(await c.req.json())
-        const result = await netopiaService.collectBookingSchedule(
-          c.get("db"),
-          c.req.param("scheduleId"),
-          data,
-          options,
-          undefined,
-          undefined,
-          c.env,
-        )
-        return c.json({ data: result }, 201)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to collect schedule payment"
-        const response = handleNetopiaError(message)
-        return c.json({ error: response.message }, response.status)
-      }
-    })
+    .post(
+      "/providers/netopia/bookings/:bookingId/payment-schedules/:scheduleId/collect",
+      async (c) => {
+        try {
+          const data = netopiaCollectBookingScheduleSchema.parse(await c.req.json())
+          const result = await netopiaService.collectBookingSchedule(
+            c.get("db"),
+            c.req.param("scheduleId"),
+            data,
+            options,
+            undefined,
+            undefined,
+            c.env,
+          )
+          return c.json({ data: result }, 201)
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Failed to collect schedule payment"
+          const response = handleNetopiaError(message)
+          return c.json({ error: response.message }, response.status)
+        }
+      },
+    )
     .post("/providers/netopia/bookings/:bookingId/guarantees/:guaranteeId/collect", async (c) => {
       try {
         const data = netopiaCollectBookingGuaranteeSchema.parse(await c.req.json())
@@ -109,7 +113,8 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
         )
         return c.json({ data: result }, 201)
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to collect guarantee payment"
+        const message =
+          error instanceof Error ? error.message : "Failed to collect guarantee payment"
         const response = handleNetopiaError(message)
         return c.json({ error: response.message }, response.status)
       }

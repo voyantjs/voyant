@@ -15,11 +15,7 @@ export async function generateProductPdf(
   productId: string,
 ): Promise<GenerateProductPdfResult> {
   // 1. Fetch product
-  const [product] = await db
-    .select()
-    .from(products)
-    .where(eq(products.id, productId))
-    .limit(1)
+  const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1)
 
   if (!product) {
     throw new Error(`Product not found: ${productId}`)

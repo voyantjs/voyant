@@ -15,6 +15,7 @@ export const distributionHonoModule: HonoModule = {
   routes: distributionRoutes,
 }
 
+export { distributionBookingExtension } from "./booking-extension.js"
 export type {
   Channel,
   ChannelBookingLink,
@@ -146,4 +147,3 @@ export {
   updateChannelWebhookEventSchema,
 } from "./validation.js"
 export { distributionService }
-export { distributionBookingExtension } from "./booking-extension.js"

@@ -5,7 +5,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
 
-import { bookingActivityLog, bookings, bookingSupplierStatuses } from "../schema.js"
+import { bookingActivityLog, bookingSupplierStatuses, bookings } from "../schema.js"
 
 // ---------- validation ----------
 

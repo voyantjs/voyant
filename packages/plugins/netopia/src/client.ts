@@ -10,7 +10,8 @@ export interface NetopiaClientApi {
   startCardPayment(request: NetopiaStartPaymentRequest): Promise<NetopiaStartPaymentResponse>
 }
 
-export interface NetopiaClientOptions extends Pick<ResolvedNetopiaRuntimeOptions, "apiUrl" | "apiKey"> {
+export interface NetopiaClientOptions
+  extends Pick<ResolvedNetopiaRuntimeOptions, "apiUrl" | "apiKey"> {
   fetch?: NetopiaFetch
 }
 

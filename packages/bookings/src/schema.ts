@@ -350,9 +350,12 @@ export const bookingAllocations = pgTable(
     optionId: text("option_id"),
     optionUnitId: text("option_unit_id"),
     pricingCategoryId: text("pricing_category_id"),
-    availabilitySlotId: typeIdRef("availability_slot_id").references(() => availabilitySlotsRef.id, {
-      onDelete: "set null",
-    }),
+    availabilitySlotId: typeIdRef("availability_slot_id").references(
+      () => availabilitySlotsRef.id,
+      {
+        onDelete: "set null",
+      },
+    ),
     quantity: integer("quantity").notNull().default(1),
     allocationType: bookingAllocationTypeEnum("allocation_type").notNull().default("unit"),
     status: bookingAllocationStatusEnum("status").notNull().default("held"),
@@ -643,23 +646,20 @@ export const bookingFulfillmentsRelations = relations(bookingFulfillments, ({ on
   }),
 }))
 
-export const bookingRedemptionEventsRelations = relations(
-  bookingRedemptionEvents,
-  ({ one }) => ({
-    booking: one(bookings, {
-      fields: [bookingRedemptionEvents.bookingId],
-      references: [bookings.id],
-    }),
-    bookingItem: one(bookingItems, {
-      fields: [bookingRedemptionEvents.bookingItemId],
-      references: [bookingItems.id],
-    }),
-    participant: one(bookingParticipants, {
-      fields: [bookingRedemptionEvents.participantId],
-      references: [bookingParticipants.id],
-    }),
+export const bookingRedemptionEventsRelations = relations(bookingRedemptionEvents, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingRedemptionEvents.bookingId],
+    references: [bookings.id],
   }),
-)
+  bookingItem: one(bookingItems, {
+    fields: [bookingRedemptionEvents.bookingItemId],
+    references: [bookingItems.id],
+  }),
+  participant: one(bookingParticipants, {
+    fields: [bookingRedemptionEvents.participantId],
+    references: [bookingParticipants.id],
+  }),
+}))
 
 export const bookingActivityLogRelations = relations(bookingActivityLog, ({ one }) => ({
   booking: one(bookings, { fields: [bookingActivityLog.bookingId], references: [bookings.id] }),

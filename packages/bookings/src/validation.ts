@@ -190,14 +190,24 @@ export const reserveBookingSchema = bookingCoreSchema
     redeemedAt: true,
   })
   .extend({
-    holdMinutes: z.number().int().positive().max(24 * 60).default(30),
+    holdMinutes: z
+      .number()
+      .int()
+      .positive()
+      .max(24 * 60)
+      .default(30),
     holdExpiresAt: z.string().datetime().optional().nullable(),
     items: z.array(reserveBookingItemSchema).min(1),
   })
 
 export const extendBookingHoldSchema = z
   .object({
-    holdMinutes: z.number().int().positive().max(24 * 60).optional(),
+    holdMinutes: z
+      .number()
+      .int()
+      .positive()
+      .max(24 * 60)
+      .optional(),
     holdExpiresAt: z.string().datetime().optional().nullable(),
   })
   .refine((value) => value.holdMinutes !== undefined || value.holdExpiresAt !== undefined, {
@@ -224,7 +234,12 @@ export const expireStaleBookingsSchema = z.object({
 export const reserveBookingFromTransactionSchema = z.object({
   bookingNumber: z.string().min(1).max(50),
   sourceType: bookingSourceTypeSchema.default("internal"),
-  holdMinutes: z.number().int().positive().max(24 * 60).default(30),
+  holdMinutes: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 60)
+    .default(30),
   holdExpiresAt: z.string().datetime().optional().nullable(),
   internalNotes: z.string().optional().nullable(),
   note: z.string().optional().nullable(),

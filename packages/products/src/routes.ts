@@ -3,10 +3,6 @@ import { Hono } from "hono"
 
 import { productsService } from "./service.js"
 import {
-  insertProductMediaSchema,
-  productMediaListQuerySchema,
-  reorderProductMediaSchema,
-  updateProductMediaSchema,
   insertDaySchema,
   insertDayServiceSchema,
   insertOptionUnitSchema,
@@ -18,6 +14,7 @@ import {
   insertProductFaqSchema,
   insertProductFeatureSchema,
   insertProductLocationSchema,
+  insertProductMediaSchema,
   insertProductNoteSchema,
   insertProductOptionSchema,
   insertProductOptionTranslationSchema,
@@ -38,6 +35,7 @@ import {
   productFeatureListQuerySchema,
   productListQuerySchema,
   productLocationListQuerySchema,
+  productMediaListQuerySchema,
   productOptionListQuerySchema,
   productOptionTranslationListQuerySchema,
   productTagListQuerySchema,
@@ -45,6 +43,7 @@ import {
   productTranslationListQuerySchema,
   productTypeListQuerySchema,
   productVisibilitySettingListQuerySchema,
+  reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
   updateOptionUnitSchema,
@@ -56,6 +55,7 @@ import {
   updateProductFaqSchema,
   updateProductFeatureSchema,
   updateProductLocationSchema,
+  updateProductMediaSchema,
   updateProductOptionSchema,
   updateProductOptionTranslationSchema,
   updateProductSchema,
@@ -912,10 +912,7 @@ export const productRoutes = new Hono<Env>()
   })
 
   .get("/product-categories/:categoryId", async (c) => {
-    const row = await productsService.getProductCategoryById(
-      c.get("db"),
-      c.req.param("categoryId"),
-    )
+    const row = await productsService.getProductCategoryById(c.get("db"), c.req.param("categoryId"))
     if (!row) {
       return c.json({ error: "Product category not found" }, 404)
     }
@@ -947,10 +944,7 @@ export const productRoutes = new Hono<Env>()
   })
 
   .delete("/product-categories/:categoryId", async (c) => {
-    const row = await productsService.deleteProductCategory(
-      c.get("db"),
-      c.req.param("categoryId"),
-    )
+    const row = await productsService.deleteProductCategory(c.get("db"), c.req.param("categoryId"))
     if (!row) {
       return c.json({ error: "Product category not found" }, 404)
     }
@@ -1345,7 +1339,9 @@ export const productRoutes = new Hono<Env>()
     const query = productMediaListQuerySchema.parse(
       Object.fromEntries(new URL(c.req.url).searchParams),
     )
-    return c.json(await productsService.listProductLevelMedia(c.get("db"), c.req.param("id"), query))
+    return c.json(
+      await productsService.listProductLevelMedia(c.get("db"), c.req.param("id"), query),
+    )
   })
 
   // POST /:id/media — Create media for product

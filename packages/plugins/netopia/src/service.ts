@@ -2,21 +2,25 @@ import { financeService, type PaymentSession } from "@voyantjs/finance"
 import {
   createDefaultNotificationProviders,
   createNotificationService,
-  notificationsService,
   type NotificationDelivery,
   type NotificationService,
+  notificationsService,
 } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
-import { createNetopiaClient, resolveNetopiaRuntimeOptions, type NetopiaClientApi } from "./client.js"
+import {
+  createNetopiaClient,
+  type NetopiaClientApi,
+  resolveNetopiaRuntimeOptions,
+} from "./client.js"
 import type {
+  NetopiaProductLine,
   NetopiaRuntimeOptions,
   NetopiaStartPaymentInput,
   NetopiaStartPaymentRequest,
   NetopiaStartPaymentResponse,
   NetopiaWebhookPayload,
-  NetopiaProductLine,
   ResolvedNetopiaRuntimeOptions,
 } from "./types.js"
 import type {
@@ -122,11 +126,15 @@ export const netopiaService = {
     }
 
     if (session.provider && session.provider !== "netopia") {
-      throw new Error(`Payment session ${sessionId} is already assigned to provider "${session.provider}"`)
+      throw new Error(
+        `Payment session ${sessionId} is already assigned to provider "${session.provider}"`,
+      )
     }
 
     if (["paid", "authorized", "cancelled", "expired"].includes(session.status)) {
-      throw new Error(`Payment session ${sessionId} is not startable from status "${session.status}"`)
+      throw new Error(
+        `Payment session ${sessionId} is not startable from status "${session.status}"`,
+      )
     }
 
     const runtime = resolveNetopiaRuntimeOptions(bindings, runtimeOptions)
@@ -398,7 +406,8 @@ export const netopiaService = {
 
     if (
       callbackState === "completed" &&
-      (normalizedCurrency !== normalizeCurrency(session.currency) || amountCents !== session.amountCents)
+      (normalizedCurrency !== normalizeCurrency(session.currency) ||
+        amountCents !== session.amountCents)
     ) {
       const failed = await financeService.failPaymentSession(db, session.id, {
         providerSessionId: payload.payment.ntpID,

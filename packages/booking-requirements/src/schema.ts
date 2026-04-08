@@ -288,22 +288,16 @@ export type NewBookingQuestionExtraTrigger = typeof bookingQuestionExtraTriggers
 export type BookingAnswer = typeof bookingAnswers.$inferSelect
 export type NewBookingAnswer = typeof bookingAnswers.$inferInsert
 
-export const productContactRequirementsRelations = relations(
-  productContactRequirements,
-  () => ({}),
-)
+export const productContactRequirementsRelations = relations(productContactRequirements, () => ({}))
 
-export const productBookingQuestionsRelations = relations(
-  productBookingQuestions,
-  ({ many }) => ({
-    optionQuestions: many(optionBookingQuestions),
-    options: many(bookingQuestionOptions),
-    unitTriggers: many(bookingQuestionUnitTriggers),
-    optionTriggers: many(bookingQuestionOptionTriggers),
-    extraTriggers: many(bookingQuestionExtraTriggers),
-    answers: many(bookingAnswers),
-  }),
-)
+export const productBookingQuestionsRelations = relations(productBookingQuestions, ({ many }) => ({
+  optionQuestions: many(optionBookingQuestions),
+  options: many(bookingQuestionOptions),
+  unitTriggers: many(bookingQuestionUnitTriggers),
+  optionTriggers: many(bookingQuestionOptionTriggers),
+  extraTriggers: many(bookingQuestionExtraTriggers),
+  answers: many(bookingAnswers),
+}))
 
 export const optionBookingQuestionsRelations = relations(optionBookingQuestions, ({ one }) => ({
   productBookingQuestion: one(productBookingQuestions, {

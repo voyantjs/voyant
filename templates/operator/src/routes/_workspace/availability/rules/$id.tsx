@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, CalendarDays, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -30,8 +30,43 @@ type Slot = {
 type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 export const Route = createFileRoute("/_workspace/availability/rules/$id")({
+  loader: async ({ context, params }) => {
+    const ruleData = await context.queryClient.ensureQueryData(
+      getAvailabilityRuleQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(ruleData),
+      context.queryClient.ensureQueryData(getAvailabilityRuleSlotsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(
+        getAvailabilityRuleProductQueryOptions(ruleData.data.productId),
+      ),
+    ])
+  },
   component: AvailabilityRuleDetailPage,
 })
+
+function getAvailabilityRuleQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-rule", id],
+    queryFn: () => api.get<{ data: RuleDetail }>(`/v1/availability/rules/${id}`),
+  })
+}
+
+function getAvailabilityRuleProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["availability-rule-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
+
+function getAvailabilityRuleSlotsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-rule-slots", id],
+    queryFn: () =>
+      api.get<ListResponse<Slot>>(`/v1/availability/slots?availabilityRuleId=${id}&limit=200`),
+  })
+}
 
 function formatDateTime(value: string) {
   return value.replace("T", " ").slice(0, 16)
@@ -42,24 +77,16 @@ function AvailabilityRuleDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: ruleData, isPending } = useQuery({
-    queryKey: ["availability-rule", id],
-    queryFn: () => api.get<{ data: RuleDetail }>(`/v1/availability/rules/${id}`),
-  })
+  const { data: ruleData, isPending } = useQuery(getAvailabilityRuleQueryOptions(id))
 
   const rule = ruleData?.data
 
   const productQuery = useQuery({
-    queryKey: ["availability-rule-product", rule?.productId],
+    ...getAvailabilityRuleProductQueryOptions(rule?.productId ?? ""),
     enabled: Boolean(rule?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${rule?.productId}`),
   })
 
-  const slotsQuery = useQuery({
-    queryKey: ["availability-rule-slots", id],
-    queryFn: () =>
-      api.get<ListResponse<Slot>>(`/v1/availability/slots?availabilityRuleId=${id}&limit=200`),
-  })
+  const slotsQuery = useQuery(getAvailabilityRuleSlotsQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/availability/rules/${id}`),

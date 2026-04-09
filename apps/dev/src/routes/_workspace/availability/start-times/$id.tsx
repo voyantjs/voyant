@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Clock3, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -37,8 +37,43 @@ type ListResponse<T> = {
 }
 
 export const Route = createFileRoute("/_workspace/availability/start-times/$id")({
+  loader: async ({ context, params }) => {
+    const startTimeData = await context.queryClient.ensureQueryData(
+      getAvailabilityStartTimeQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(startTimeData),
+      context.queryClient.ensureQueryData(getAvailabilityStartTimeSlotsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(
+        getAvailabilityStartTimeProductQueryOptions(startTimeData.data.productId),
+      ),
+    ])
+  },
   component: AvailabilityStartTimeDetailPage,
 })
+
+function getAvailabilityStartTimeQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-start-time", id],
+    queryFn: () => api.get<{ data: StartTimeDetail }>(`/v1/availability/start-times/${id}`),
+  })
+}
+
+function getAvailabilityStartTimeProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["availability-start-time-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
+
+function getAvailabilityStartTimeSlotsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-start-time-slots", id],
+    queryFn: () =>
+      api.get<ListResponse<Slot>>(`/v1/availability/slots?startTimeId=${id}&limit=200`),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -49,24 +84,16 @@ function AvailabilityStartTimeDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: startTimeData, isPending } = useQuery({
-    queryKey: ["availability-start-time", id],
-    queryFn: () => api.get<{ data: StartTimeDetail }>(`/v1/availability/start-times/${id}`),
-  })
+  const { data: startTimeData, isPending } = useQuery(getAvailabilityStartTimeQueryOptions(id))
 
   const startTime = startTimeData?.data
 
   const productQuery = useQuery({
-    queryKey: ["availability-start-time-product", startTime?.productId],
+    ...getAvailabilityStartTimeProductQueryOptions(startTime?.productId ?? ""),
     enabled: Boolean(startTime?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${startTime?.productId}`),
   })
 
-  const slotsQuery = useQuery({
-    queryKey: ["availability-start-time-slots", id],
-    queryFn: () =>
-      api.get<ListResponse<Slot>>(`/v1/availability/slots?startTimeId=${id}&limit=200`),
-  })
+  const slotsQuery = useQuery(getAvailabilityStartTimeSlotsQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/availability/start-times/${id}`),

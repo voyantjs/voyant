@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table"
 import {
@@ -384,8 +384,62 @@ const pickupPointColumns = (products: ProductOption[]): ColumnDef<AvailabilityPi
 ]
 
 export const Route = createFileRoute("/_workspace/availability/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getAvailabilityProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilityRulesQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilityStartTimesQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilitySlotsQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilityCloseoutsQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilityPickupPointsQueryOptions()),
+    ]),
   component: AvailabilityPage,
 })
+
+function getAvailabilityProductsQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "products"],
+    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=200"),
+  })
+}
+
+function getAvailabilityRulesQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "rules"],
+    queryFn: () => api.get<ListResponse<AvailabilityRuleRow>>("/v1/availability/rules?limit=200"),
+  })
+}
+
+function getAvailabilityStartTimesQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "start-times"],
+    queryFn: () =>
+      api.get<ListResponse<AvailabilityStartTimeRow>>("/v1/availability/start-times?limit=200"),
+  })
+}
+
+function getAvailabilitySlotsQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "slots"],
+    queryFn: () => api.get<ListResponse<AvailabilitySlotRow>>("/v1/availability/slots?limit=200"),
+  })
+}
+
+function getAvailabilityCloseoutsQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "closeouts"],
+    queryFn: () =>
+      api.get<ListResponse<AvailabilityCloseoutRow>>("/v1/availability/closeouts?limit=200"),
+  })
+}
+
+function getAvailabilityPickupPointsQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability", "pickup-points"],
+    queryFn: () =>
+      api.get<ListResponse<AvailabilityPickupPointRow>>("/v1/availability/pickup-points?limit=200"),
+  })
+}
 
 function AvailabilityPage() {
   const navigate = useNavigate()
@@ -410,33 +464,12 @@ function AvailabilityPage() {
     AvailabilityPickupPointRow | undefined
   >()
 
-  const productsQuery = useQuery({
-    queryKey: ["availability", "products"],
-    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=200"),
-  })
-  const rulesQuery = useQuery({
-    queryKey: ["availability", "rules"],
-    queryFn: () => api.get<ListResponse<AvailabilityRuleRow>>("/v1/availability/rules?limit=200"),
-  })
-  const startTimesQuery = useQuery({
-    queryKey: ["availability", "start-times"],
-    queryFn: () =>
-      api.get<ListResponse<AvailabilityStartTimeRow>>("/v1/availability/start-times?limit=200"),
-  })
-  const slotsQuery = useQuery({
-    queryKey: ["availability", "slots"],
-    queryFn: () => api.get<ListResponse<AvailabilitySlotRow>>("/v1/availability/slots?limit=200"),
-  })
-  const closeoutsQuery = useQuery({
-    queryKey: ["availability", "closeouts"],
-    queryFn: () =>
-      api.get<ListResponse<AvailabilityCloseoutRow>>("/v1/availability/closeouts?limit=200"),
-  })
-  const pickupPointsQuery = useQuery({
-    queryKey: ["availability", "pickup-points"],
-    queryFn: () =>
-      api.get<ListResponse<AvailabilityPickupPointRow>>("/v1/availability/pickup-points?limit=200"),
-  })
+  const productsQuery = useQuery(getAvailabilityProductsQueryOptions())
+  const rulesQuery = useQuery(getAvailabilityRulesQueryOptions())
+  const startTimesQuery = useQuery(getAvailabilityStartTimesQueryOptions())
+  const slotsQuery = useQuery(getAvailabilitySlotsQueryOptions())
+  const closeoutsQuery = useQuery(getAvailabilityCloseoutsQueryOptions())
+  const pickupPointsQuery = useQuery(getAvailabilityPickupPointsQueryOptions())
 
   const products = productsQuery.data?.data ?? []
   const rules = rulesQuery.data?.data ?? []

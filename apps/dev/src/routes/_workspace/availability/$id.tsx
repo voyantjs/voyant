@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, CalendarDays, Loader2, Package, Trash2, Truck, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -82,8 +82,90 @@ type ListResponse<T> = {
 }
 
 export const Route = createFileRoute("/_workspace/availability/$id")({
+  loader: async ({ context, params }) => {
+    const slotData = await context.queryClient.ensureQueryData(
+      getAvailabilitySlotQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(slotData),
+      context.queryClient.ensureQueryData(getAvailabilitySlotPickupsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getAvailabilitySlotCloseoutsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getAvailabilitySlotAssignmentsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getAvailabilitySlotResourcesQueryOptions()),
+      context.queryClient.ensureQueryData(getAvailabilitySlotBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(
+        getAvailabilitySlotProductQueryOptions(slotData.data.productId),
+      ),
+      context.queryClient.ensureQueryData(
+        getAvailabilitySlotPickupPointsQueryOptions(slotData.data.productId),
+      ),
+    ])
+  },
   component: AvailabilitySlotDetailPage,
 })
+
+function getAvailabilitySlotQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-slot", id],
+    queryFn: () => api.get<{ data: SlotDetail }>(`/v1/availability/slots/${id}`),
+  })
+}
+
+function getAvailabilitySlotProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["availability-slot-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
+
+function getAvailabilitySlotPickupsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-slot-pickups", id],
+    queryFn: () =>
+      api.get<ListResponse<SlotPickup>>(`/v1/availability/slot-pickups?slotId=${id}&limit=200`),
+  })
+}
+
+function getAvailabilitySlotPickupPointsQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["availability-pickup-points", productId],
+    queryFn: () =>
+      api.get<ListResponse<PickupPoint>>(
+        `/v1/availability/pickup-points?productId=${productId}&limit=200`,
+      ),
+  })
+}
+
+function getAvailabilitySlotCloseoutsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-slot-closeouts", id],
+    queryFn: () =>
+      api.get<ListResponse<Closeout>>(`/v1/availability/closeouts?slotId=${id}&limit=200`),
+  })
+}
+
+function getAvailabilitySlotAssignmentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["availability-slot-assignments", id],
+    queryFn: () =>
+      api.get<ListResponse<Assignment>>(`/v1/resources/slot-assignments?slotId=${id}&limit=200`),
+  })
+}
+
+function getAvailabilitySlotResourcesQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability-slot-resources"],
+    queryFn: () => api.get<ListResponse<Resource>>("/v1/resources/resources?limit=200"),
+  })
+}
+
+function getAvailabilitySlotBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["availability-slot-bookings"],
+    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
+  })
+}
 
 const statusVariant: Record<
   SlotDetail["status"],
@@ -104,55 +186,29 @@ function AvailabilitySlotDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: slotData, isPending } = useQuery({
-    queryKey: ["availability-slot", id],
-    queryFn: () => api.get<{ data: SlotDetail }>(`/v1/availability/slots/${id}`),
-  })
+  const { data: slotData, isPending } = useQuery(getAvailabilitySlotQueryOptions(id))
 
   const slot = slotData?.data
 
   const productQuery = useQuery({
-    queryKey: ["availability-slot-product", slot?.productId],
+    ...getAvailabilitySlotProductQueryOptions(slot?.productId ?? ""),
     enabled: Boolean(slot?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${slot?.productId}`),
   })
 
-  const slotPickupsQuery = useQuery({
-    queryKey: ["availability-slot-pickups", id],
-    queryFn: () =>
-      api.get<ListResponse<SlotPickup>>(`/v1/availability/slot-pickups?slotId=${id}&limit=200`),
-  })
+  const slotPickupsQuery = useQuery(getAvailabilitySlotPickupsQueryOptions(id))
 
   const pickupPointsQuery = useQuery({
-    queryKey: ["availability-pickup-points", slot?.productId],
+    ...getAvailabilitySlotPickupPointsQueryOptions(slot?.productId ?? ""),
     enabled: Boolean(slot?.productId),
-    queryFn: () =>
-      api.get<ListResponse<PickupPoint>>(
-        `/v1/availability/pickup-points?productId=${slot?.productId}&limit=200`,
-      ),
   })
 
-  const closeoutsQuery = useQuery({
-    queryKey: ["availability-slot-closeouts", id],
-    queryFn: () =>
-      api.get<ListResponse<Closeout>>(`/v1/availability/closeouts?slotId=${id}&limit=200`),
-  })
+  const closeoutsQuery = useQuery(getAvailabilitySlotCloseoutsQueryOptions(id))
 
-  const assignmentsQuery = useQuery({
-    queryKey: ["availability-slot-assignments", id],
-    queryFn: () =>
-      api.get<ListResponse<Assignment>>(`/v1/resources/slot-assignments?slotId=${id}&limit=200`),
-  })
+  const assignmentsQuery = useQuery(getAvailabilitySlotAssignmentsQueryOptions(id))
 
-  const resourcesQuery = useQuery({
-    queryKey: ["availability-slot-resources"],
-    queryFn: () => api.get<ListResponse<Resource>>("/v1/resources/resources?limit=200"),
-  })
+  const resourcesQuery = useQuery(getAvailabilitySlotResourcesQueryOptions())
 
-  const bookingsQuery = useQuery({
-    queryKey: ["availability-slot-bookings"],
-    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
-  })
+  const bookingsQuery = useQuery(getAvailabilitySlotBookingsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/availability/slots/${id}`),

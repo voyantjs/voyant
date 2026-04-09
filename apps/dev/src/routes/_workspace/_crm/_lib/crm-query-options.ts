@@ -89,6 +89,33 @@ export function getPersonQueryOptions(id: string) {
   })
 }
 
+export function getPersonNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["person-notes", id],
+    queryFn: () => api.get<PaginatedResponse<{ id: string }>>(`/v1/crm/people/${id}/notes`),
+  })
+}
+
+export function getPersonActivitiesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["person-activities", id],
+    queryFn: () =>
+      api.get<PaginatedResponse<ActivityRecord>>(
+        `/v1/crm/activities?entityType=person&entityId=${id}&limit=50`,
+      ),
+  })
+}
+
+export function getPersonOpportunitiesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["person-opportunities", id],
+    queryFn: () =>
+      api.get<PaginatedResponse<OpportunityRecord>>(
+        `/v1/crm/opportunities?personId=${id}&limit=20`,
+      ),
+  })
+}
+
 export function getQuotesQueryOptions(filters: QuotesListFilters = {}) {
   const params = new URLSearchParams()
   if (filters.opportunityId) params.set("opportunityId", filters.opportunityId)

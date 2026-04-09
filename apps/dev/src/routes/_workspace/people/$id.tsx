@@ -75,6 +75,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PersonDialog } from "@/components/voyant/crm/person-dialog"
 import { api } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
+import {
+  getOrganizationQueryOptions,
+  getPersonActivitiesQueryOptions,
+  getPersonNotesQueryOptions,
+  getPersonOpportunitiesQueryOptions,
+  getPersonQueryOptions,
+} from "../_crm/_lib/crm-query-options"
 
 const ACTIVITY_TYPES = [
   { value: "note", label: "Note" },
@@ -123,6 +130,18 @@ type OpportunityRecord = {
 type ListEnvelope<T> = { data: T[]; total: number; limit: number; offset: number }
 
 export const Route = createFileRoute("/_workspace/people/$id")({
+  loader: async ({ context, params }) => {
+    const person = await context.queryClient.ensureQueryData(getPersonQueryOptions(params.id))
+
+    await Promise.all([
+      person.organizationId
+        ? context.queryClient.ensureQueryData(getOrganizationQueryOptions(person.organizationId))
+        : Promise.resolve(),
+      context.queryClient.ensureQueryData(getPersonNotesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getPersonActivitiesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getPersonOpportunitiesQueryOptions(params.id)),
+    ])
+  },
   component: PersonDetailPage,
 })
 

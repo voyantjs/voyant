@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
@@ -15,9 +15,19 @@ import {
 } from "@/components/ui"
 
 import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/(auth)/verify-email")({
+  loader: async () => {
+    const user = await getCurrentUser()
+
+    if (user) {
+      throw redirect({ to: "/" })
+    }
+
+    return null
+  },
   validateSearch: z.object({
     email: z.string(),
   }),

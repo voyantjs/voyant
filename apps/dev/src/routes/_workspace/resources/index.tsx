@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table"
 import { CalendarDays, ExternalLink, Loader2, Plus, Search, Users, Wrench } from "lucide-react"
@@ -449,8 +449,101 @@ const closeoutColumns = (resources: ResourceRow[]): ColumnDef<ResourceCloseoutRo
 ]
 
 export const Route = createFileRoute("/_workspace/resources/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getResourceSuppliersQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceSlotsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceRulesQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceStartTimesQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceResourcesQueryOptions()),
+      context.queryClient.ensureQueryData(getResourcePoolsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceAllocationsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceAssignmentsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceCloseoutsQueryOptions()),
+    ]),
   component: ResourcesPage,
 })
+
+function getResourceSuppliersQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "suppliers"],
+    queryFn: () => api.get<ListResponse<SupplierOption>>("/v1/suppliers?limit=200"),
+  })
+}
+
+function getResourceProductsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "products"],
+    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=100"),
+  })
+}
+
+function getResourceBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "bookings"],
+    queryFn: () => api.get<ListResponse<BookingOption>>("/v1/bookings?limit=200"),
+  })
+}
+
+function getResourceSlotsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "slots"],
+    queryFn: () => api.get<ListResponse<SlotOption>>("/v1/availability/slots?limit=200"),
+  })
+}
+
+function getResourceRulesQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "rules"],
+    queryFn: () => api.get<ListResponse<RuleOption>>("/v1/availability/rules?limit=200"),
+  })
+}
+
+function getResourceStartTimesQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "start-times"],
+    queryFn: () => api.get<ListResponse<StartTimeOption>>("/v1/availability/start-times?limit=200"),
+  })
+}
+
+function getResourceResourcesQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "resources"],
+    queryFn: () => api.get<ListResponse<ResourceRow>>("/v1/resources/resources?limit=200"),
+  })
+}
+
+function getResourcePoolsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "pools"],
+    queryFn: () => api.get<ListResponse<ResourcePoolRow>>("/v1/resources/pools?limit=200"),
+  })
+}
+
+function getResourceAllocationsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "allocations"],
+    queryFn: () =>
+      api.get<ListResponse<ResourceAllocationRow>>("/v1/resources/allocations?limit=200"),
+  })
+}
+
+function getResourceAssignmentsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "assignments"],
+    queryFn: () =>
+      api.get<ListResponse<ResourceSlotAssignmentRow>>("/v1/resources/slot-assignments?limit=200"),
+  })
+}
+
+function getResourceCloseoutsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resources", "closeouts"],
+    queryFn: () => api.get<ListResponse<ResourceCloseoutRow>>("/v1/resources/closeouts?limit=200"),
+  })
+}
 
 function ResourcesPage() {
   const navigate = useNavigate()
@@ -475,52 +568,17 @@ function ResourcesPage() {
   >()
   const [editingCloseout, setEditingCloseout] = useState<ResourceCloseoutRow | undefined>()
 
-  const suppliersQuery = useQuery({
-    queryKey: ["resources", "suppliers"],
-    queryFn: () => api.get<ListResponse<SupplierOption>>("/v1/suppliers?limit=200"),
-  })
-  const productsQuery = useQuery({
-    queryKey: ["resources", "products"],
-    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=100"),
-  })
-  const bookingsQuery = useQuery({
-    queryKey: ["resources", "bookings"],
-    queryFn: () => api.get<ListResponse<BookingOption>>("/v1/bookings?limit=200"),
-  })
-  const slotsQuery = useQuery({
-    queryKey: ["resources", "slots"],
-    queryFn: () => api.get<ListResponse<SlotOption>>("/v1/availability/slots?limit=200"),
-  })
-  const rulesQuery = useQuery({
-    queryKey: ["resources", "rules"],
-    queryFn: () => api.get<ListResponse<RuleOption>>("/v1/availability/rules?limit=200"),
-  })
-  const startTimesQuery = useQuery({
-    queryKey: ["resources", "start-times"],
-    queryFn: () => api.get<ListResponse<StartTimeOption>>("/v1/availability/start-times?limit=200"),
-  })
-  const resourcesQuery = useQuery({
-    queryKey: ["resources", "resources"],
-    queryFn: () => api.get<ListResponse<ResourceRow>>("/v1/resources/resources?limit=200"),
-  })
-  const poolsQuery = useQuery({
-    queryKey: ["resources", "pools"],
-    queryFn: () => api.get<ListResponse<ResourcePoolRow>>("/v1/resources/pools?limit=200"),
-  })
-  const allocationsQuery = useQuery({
-    queryKey: ["resources", "allocations"],
-    queryFn: () =>
-      api.get<ListResponse<ResourceAllocationRow>>("/v1/resources/allocations?limit=200"),
-  })
-  const assignmentsQuery = useQuery({
-    queryKey: ["resources", "assignments"],
-    queryFn: () =>
-      api.get<ListResponse<ResourceSlotAssignmentRow>>("/v1/resources/slot-assignments?limit=200"),
-  })
-  const closeoutsQuery = useQuery({
-    queryKey: ["resources", "closeouts"],
-    queryFn: () => api.get<ListResponse<ResourceCloseoutRow>>("/v1/resources/closeouts?limit=200"),
-  })
+  const suppliersQuery = useQuery(getResourceSuppliersQueryOptions())
+  const productsQuery = useQuery(getResourceProductsQueryOptions())
+  const bookingsQuery = useQuery(getResourceBookingsQueryOptions())
+  const slotsQuery = useQuery(getResourceSlotsQueryOptions())
+  const rulesQuery = useQuery(getResourceRulesQueryOptions())
+  const startTimesQuery = useQuery(getResourceStartTimesQueryOptions())
+  const resourcesQuery = useQuery(getResourceResourcesQueryOptions())
+  const poolsQuery = useQuery(getResourcePoolsQueryOptions())
+  const allocationsQuery = useQuery(getResourceAllocationsQueryOptions())
+  const assignmentsQuery = useQuery(getResourceAssignmentsQueryOptions())
+  const closeoutsQuery = useQuery(getResourceCloseoutsQueryOptions())
 
   const suppliers = suppliersQuery.data?.data ?? []
   const products = productsQuery.data?.data ?? []

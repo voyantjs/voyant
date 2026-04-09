@@ -84,7 +84,43 @@ type ProductNote = {
   createdAt: string
 }
 
+function getProductQueryOptions(id: string) {
+  return {
+    queryKey: ["product", id],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${id}`),
+  }
+}
+
+function getProductDaysQueryOptions(id: string) {
+  return {
+    queryKey: ["product-days", id],
+    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
+  }
+}
+
+function getProductVersionsQueryOptions(id: string) {
+  return {
+    queryKey: ["product-versions", id],
+    queryFn: () => api.get<{ data: ProductVersion[] }>(`/v1/products/${id}/versions`),
+  }
+}
+
+function getProductNotesQueryOptions(id: string) {
+  return {
+    queryKey: ["product-notes", id],
+    queryFn: () => api.get<{ data: ProductNote[] }>(`/v1/products/${id}/notes`),
+  }
+}
+
 export const Route = createFileRoute("/_workspace/products/$id")({
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(getProductQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductDaysQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductVersionsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductNotesQueryOptions(params.id)),
+    ])
+  },
   component: ProductDetailPage,
 })
 
@@ -119,25 +155,15 @@ function ProductDetailPage() {
   const [editingService, setEditingService] = useState<DayService | undefined>()
   const [versionDialogOpen, setVersionDialogOpen] = useState(false)
 
-  const { data: productData, isPending } = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${id}`),
-  })
+  const { data: productData, isPending } = useQuery(getProductQueryOptions(id))
 
-  const { data: daysData, refetch: refetchDays } = useQuery({
-    queryKey: ["product-days", id],
-    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
-  })
+  const { data: daysData, refetch: refetchDays } = useQuery(getProductDaysQueryOptions(id))
 
-  const { data: versionsData, refetch: refetchVersions } = useQuery({
-    queryKey: ["product-versions", id],
-    queryFn: () => api.get<{ data: ProductVersion[] }>(`/v1/products/${id}/versions`),
-  })
+  const { data: versionsData, refetch: refetchVersions } = useQuery(
+    getProductVersionsQueryOptions(id),
+  )
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["product-notes", id],
-    queryFn: () => api.get<{ data: ProductNote[] }>(`/v1/products/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getProductNotesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/products/${id}`),

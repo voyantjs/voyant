@@ -31,7 +31,21 @@ type ProductListResponse = {
   offset: number
 }
 
+function getProductsListQueryOptions(search = "") {
+  return {
+    queryKey: ["products", search],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const qs = params.toString()
+
+      return api.get<ProductListResponse>(`/v1/products${qs ? `?${qs}` : ""}`)
+    },
+  }
+}
+
 export const Route = createFileRoute("/_workspace/products/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getProductsListQueryOptions()),
   component: ProductsPage,
 })
 
@@ -82,15 +96,7 @@ function ProductsPage() {
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["products", search],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      const qs = params.toString()
-      return api.get<ProductListResponse>(`/v1/products${qs ? `?${qs}` : ""}`)
-    },
-  })
+  const { data, isPending, refetch } = useQuery(getProductsListQueryOptions(search))
 
   return (
     <div className="flex flex-col gap-6 p-6">

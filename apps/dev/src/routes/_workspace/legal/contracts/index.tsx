@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, Plus, Search } from "lucide-react"
@@ -38,8 +38,24 @@ type ContractListResponse = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/contracts/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getLegalContractsListQueryOptions("", "all", "all")),
   component: ContractsPage,
 })
+
+function getLegalContractsListQueryOptions(search: string, scope: string, status: string) {
+  return queryOptions({
+    queryKey: [...queryKeys.legal.contracts.all, { search, scope, status }],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      if (scope !== "all") params.set("scope", scope)
+      if (status !== "all") params.set("status", status)
+      const qs = params.toString()
+      return api.get<ContractListResponse>(`/v1/admin/legal/contracts${qs ? `?${qs}` : ""}`)
+    },
+  })
+}
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "outline",
@@ -103,17 +119,9 @@ function ContractsPage() {
   const [status, setStatus] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: queryKeys.legal.contracts.list(search),
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      if (scope !== "all") params.set("scope", scope)
-      if (status !== "all") params.set("status", status)
-      const qs = params.toString()
-      return api.get<ContractListResponse>(`/v1/admin/legal/contracts${qs ? `?${qs}` : ""}`)
-    },
-  })
+  const { data, isPending, refetch } = useQuery(
+    getLegalContractsListQueryOptions(search, scope, status),
+  )
 
   return (
     <div className="flex flex-col gap-6 p-6">

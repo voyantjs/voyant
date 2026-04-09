@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, Plus, Search } from "lucide-react"
@@ -36,8 +36,23 @@ type PolicyListResponse = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/policies/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getLegalPoliciesListQueryOptions("", "all")),
   component: PoliciesPage,
 })
+
+function getLegalPoliciesListQueryOptions(search: string, kind: string) {
+  return queryOptions({
+    queryKey: [...queryKeys.legal.policies.all, { search, kind }],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      if (kind !== "all") params.set("kind", kind)
+      const qs = params.toString()
+      return api.get<PolicyListResponse>(`/v1/admin/legal/policies${qs ? `?${qs}` : ""}`)
+    },
+  })
+}
 
 const KINDS = [
   "cancellation",
@@ -86,16 +101,7 @@ function PoliciesPage() {
   const [kind, setKind] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: queryKeys.legal.policies.list(search),
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      if (kind !== "all") params.set("kind", kind)
-      const qs = params.toString()
-      return api.get<PolicyListResponse>(`/v1/admin/legal/policies${qs ? `?${qs}` : ""}`)
-    },
-  })
+  const { data, isPending, refetch } = useQuery(getLegalPoliciesListQueryOptions(search, kind))
 
   return (
     <div className="flex flex-col gap-6 p-6">

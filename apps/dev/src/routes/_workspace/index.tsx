@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { useOrganizations, usePeople } from "@voyantjs/crm-react"
 import {
   Building2,
   CalendarCheck,
@@ -17,13 +16,22 @@ import { TypographyH1, TypographyLead } from "@/components/ui/typography"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/crm/people")),
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/crm/organizations")),
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/bookings/")),
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/suppliers/")),
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/products/")),
+      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/finance/invoices")),
+    ]),
   component: Dashboard,
 })
 
 type ListEnvelope = { total: number }
 
-function useModuleCount(path: string) {
-  return useQuery({
+function getDashboardCountQueryOptions(path: string) {
+  return queryOptions({
     queryKey: ["dashboard-count", path],
     queryFn: async (): Promise<ListEnvelope> => {
       const res = await fetch(`${getApiUrl()}${path}?limit=1`, {
@@ -35,6 +43,10 @@ function useModuleCount(path: string) {
       return res.json()
     },
   })
+}
+
+function useModuleCount(path: string) {
+  return useQuery(getDashboardCountQueryOptions(path))
 }
 
 function StatCard({
@@ -73,8 +85,8 @@ function StatCard({
 }
 
 function Dashboard() {
-  const people = usePeople({ limit: 1 })
-  const organizations = useOrganizations({ limit: 1 })
+  const people = useModuleCount("/v1/crm/people")
+  const organizations = useModuleCount("/v1/crm/organizations")
   const bookings = useModuleCount("/v1/bookings/")
   const suppliers = useModuleCount("/v1/suppliers/")
   const products = useModuleCount("/v1/products/")

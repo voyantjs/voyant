@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   ArrowDownRight,
@@ -32,10 +32,6 @@ import {
 } from "@/components/ui/chart"
 import { api } from "@/lib/api-client"
 
-export const Route = createFileRoute("/_workspace/")({
-  component: Dashboard,
-})
-
 // ---------- types for API responses ----------
 
 type BookingRow = {
@@ -68,6 +64,50 @@ type InvoiceRow = {
   issuedAt: string | null
   createdAt: string
 }
+
+function getDashboardBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["dashboard-bookings"],
+    queryFn: () => api.get<{ data: BookingRow[]; total: number }>("/v1/admin/bookings?limit=500"),
+    staleTime: 60_000,
+  })
+}
+
+function getDashboardProductsQueryOptions() {
+  return queryOptions({
+    queryKey: ["dashboard-products"],
+    queryFn: () => api.get<{ data: ProductRow[]; total: number }>("/v1/admin/products?limit=500"),
+    staleTime: 60_000,
+  })
+}
+
+function getDashboardSuppliersQueryOptions() {
+  return queryOptions({
+    queryKey: ["dashboard-suppliers"],
+    queryFn: () => api.get<{ data: SupplierRow[]; total: number }>("/v1/admin/suppliers?limit=500"),
+    staleTime: 60_000,
+  })
+}
+
+function getDashboardInvoicesQueryOptions() {
+  return queryOptions({
+    queryKey: ["dashboard-invoices"],
+    queryFn: () =>
+      api.get<{ data: InvoiceRow[]; total: number }>("/v1/admin/finance/invoices?limit=500"),
+    staleTime: 60_000,
+  })
+}
+
+export const Route = createFileRoute("/_workspace/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getDashboardBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(getDashboardProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getDashboardSuppliersQueryOptions()),
+      context.queryClient.ensureQueryData(getDashboardInvoicesQueryOptions()),
+    ]),
+  component: Dashboard,
+})
 
 // ---------- helpers ----------
 
@@ -186,30 +226,13 @@ function deriveUpcomingDepartures(bookings: BookingRow[]) {
 // ---------- component ----------
 
 function Dashboard() {
-  const { data: bookingsData } = useQuery({
-    queryKey: ["dashboard-bookings"],
-    queryFn: () => api.get<{ data: BookingRow[]; total: number }>("/v1/admin/bookings?limit=500"),
-    staleTime: 60_000,
-  })
+  const { data: bookingsData } = useQuery(getDashboardBookingsQueryOptions())
 
-  const { data: productsData } = useQuery({
-    queryKey: ["dashboard-products"],
-    queryFn: () => api.get<{ data: ProductRow[]; total: number }>("/v1/admin/products?limit=500"),
-    staleTime: 60_000,
-  })
+  const { data: productsData } = useQuery(getDashboardProductsQueryOptions())
 
-  const { data: suppliersData } = useQuery({
-    queryKey: ["dashboard-suppliers"],
-    queryFn: () => api.get<{ data: SupplierRow[]; total: number }>("/v1/admin/suppliers?limit=500"),
-    staleTime: 60_000,
-  })
+  const { data: suppliersData } = useQuery(getDashboardSuppliersQueryOptions())
 
-  const { data: invoicesData } = useQuery({
-    queryKey: ["dashboard-invoices"],
-    queryFn: () =>
-      api.get<{ data: InvoiceRow[]; total: number }>("/v1/admin/finance/invoices?limit=500"),
-    staleTime: 60_000,
-  })
+  const { data: invoicesData } = useQuery(getDashboardInvoicesQueryOptions())
 
   const bookings = bookingsData?.data ?? []
   const products = productsData?.data ?? []

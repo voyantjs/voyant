@@ -34,6 +34,7 @@
       "@voyantjs/plugin-smartbill",
       "@voyantjs/pricing",
       "@voyantjs/products",
+      "@voyantjs/products-react",
       "@voyantjs/resources",
       "@voyantjs/sellability",
       "@voyantjs/suppliers",

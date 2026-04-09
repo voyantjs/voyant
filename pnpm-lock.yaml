@@ -186,6 +186,9 @@ importers:
       '@voyantjs/products-react':
         specifier: workspace:*
         version: link:../../packages/products-react
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@voyantjs/resources':
         specifier: workspace:*
         version: link:../../packages/resources
@@ -530,6 +533,10 @@ importers:
         version: 6.0.2
 
   packages/bookings-react:
+    dependencies:
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../react
     devDependencies:
       '@tanstack/react-query':
         specifier: ^5.96.2
@@ -662,6 +669,10 @@ importers:
         version: 6.0.2
 
   packages/crm-react:
+    dependencies:
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../react
     devDependencies:
       '@tanstack/react-query':
         specifier: ^5.96.2
@@ -1297,6 +1308,10 @@ importers:
         version: 6.0.2
 
   packages/pricing-react:
+    dependencies:
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../react
     devDependencies:
       '@tanstack/react-query':
         specifier: ^5.96.2
@@ -1361,6 +1376,10 @@ importers:
         version: 6.0.2
 
   packages/products-react:
+    dependencies:
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../react
     devDependencies:
       '@tanstack/react-query':
         specifier: ^5.96.2
@@ -1392,6 +1411,30 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
+
+  packages/react:
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@voyantjs/voyant-typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/resources:
     dependencies:
@@ -1715,6 +1758,9 @@ importers:
       '@voyantjs/products':
         specifier: workspace:*
         version: link:../../packages/products
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@voyantjs/resources':
         specifier: workspace:*
         version: link:../../packages/resources
@@ -1962,6 +2008,9 @@ importers:
       '@voyantjs/products-react':
         specifier: workspace:*
         version: link:../../packages/products-react
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@voyantjs/resources':
         specifier: workspace:*
         version: link:../../packages/resources

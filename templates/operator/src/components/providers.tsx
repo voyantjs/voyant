@@ -1,8 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { VoyantBookingsProvider } from "@voyantjs/bookings-react"
-import { VoyantProvider } from "@voyantjs/crm-react"
-import { VoyantPricingProvider } from "@voyantjs/pricing-react"
-import { VoyantProductsProvider } from "@voyantjs/products-react"
+import { VoyantReactProvider } from "@voyantjs/react"
 import type * as React from "react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -26,19 +23,13 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <VoyantProvider baseUrl={getApiUrl()}>
-        <VoyantBookingsProvider baseUrl={getApiUrl()}>
-          <VoyantPricingProvider baseUrl={getApiUrl()}>
-            <VoyantProductsProvider baseUrl={getApiUrl()}>
-              <UserProvider>
-                <ThemeProvider>
-                  <TooltipProvider>{children}</TooltipProvider>
-                </ThemeProvider>
-              </UserProvider>
-            </VoyantProductsProvider>
-          </VoyantPricingProvider>
-        </VoyantBookingsProvider>
-      </VoyantProvider>
+      <VoyantReactProvider baseUrl={getApiUrl()}>
+        <UserProvider>
+          <ThemeProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </UserProvider>
+      </VoyantReactProvider>
     </QueryClientProvider>
   )
 }

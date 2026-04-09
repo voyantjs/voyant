@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { VoyantProvider } from "@voyantjs/crm-react"
+import { VoyantReactProvider } from "@voyantjs/react"
 import type * as React from "react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -23,13 +23,13 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <VoyantProvider baseUrl={getApiUrl()}>
+      <VoyantReactProvider baseUrl={getApiUrl()}>
         <UserProvider>
           <ThemeProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </ThemeProvider>
         </UserProvider>
-      </VoyantProvider>
+      </VoyantReactProvider>
     </QueryClientProvider>
   )
 }

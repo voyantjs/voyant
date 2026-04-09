@@ -27,15 +27,15 @@ export interface AdminProviderProps {
 /**
  * Composes the shared admin providers — QueryClient and Theme — so templates
  * don't have to wire each one individually. Note: this does NOT include
- * `<VoyantProvider>` (from `@voyantjs/crm-react`) because its API base
+ * `<VoyantReactProvider>` (from `@voyantjs/react`) because its API base
  * URL is template-specific. Wrap AdminProvider's children with your
- * VoyantProvider at the same level.
+ * VoyantReactProvider at the same level.
  *
  * @example
  * <AdminProvider>
- *   <VoyantProvider baseUrl="/api">
+ *   <VoyantReactProvider baseUrl="/api">
  *     <App />
- *   </VoyantProvider>
+ *   </VoyantReactProvider>
  * </AdminProvider>
  */
 export function AdminProvider({

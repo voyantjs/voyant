@@ -1,6 +1,6 @@
 # @voyantjs/voyant-registry-host
 
-Cloudflare Worker that serves aggregated shadcn registry JSON from `public/r/` with CORS. Registry files are built from each `packages/*-ui/` shadcn registry and flattened into a single host.
+Cloudflare Worker that serves aggregated shadcn registry JSON from `public/r/` with CORS. Registry files are built from each `packages/*/registry.json` source package and flattened into a single host.
 
 ## Building the registry
 
@@ -8,7 +8,7 @@ Cloudflare Worker that serves aggregated shadcn registry JSON from `public/r/` w
 pnpm registry:build
 ```
 
-This runs `scripts/build-registry.ts`, which calls `shadcn build` inside each UI package and aggregates output into `apps/registry/public/r/`.
+This runs `scripts/build-registry.ts`, which calls `shadcn build` inside each registry source package and aggregates output into `apps/registry/public/r/`.
 
 ## Running locally
 

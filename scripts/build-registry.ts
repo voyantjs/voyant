@@ -3,9 +3,9 @@
  * Builds all Voyant shadcn registry packages and aggregates their JSON
  * payloads into `apps/registry/public/r/`.
  *
- * Discovery: finds every `packages/*-ui/registry.json` file, runs `shadcn
- * build` inside that directory, then copies the generated JSON files into
- * the registry host's public assets.
+ * Discovery: finds every `packages/*/registry.json` file, runs `shadcn build`
+ * inside that directory, then copies the generated JSON files into the
+ * registry host's public assets.
  */
 
 import { execSync } from "node:child_process"
@@ -19,10 +19,9 @@ const repoRoot = resolve(__dirname, "..")
 const packagesDir = join(repoRoot, "packages")
 const registryHostPublic = join(repoRoot, "apps/registry/public/r")
 
-function findUiPackages(): string[] {
+function findRegistryPackages(): string[] {
   const entries = readdirSync(packagesDir)
   return entries
-    .filter((name) => name.endsWith("-ui"))
     .map((name) => join(packagesDir, name))
     .filter((path) => {
       try {
@@ -78,9 +77,9 @@ async function aggregateOutputs(outputDirs: string[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const packages = findUiPackages()
+  const packages = findRegistryPackages()
   if (packages.length === 0) {
-    console.log("[registry] no *-ui packages found")
+    console.log("[registry] no registry packages found")
     return
   }
   const outputs = packages.map(buildPackage)

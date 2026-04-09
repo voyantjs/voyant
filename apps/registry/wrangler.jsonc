@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "voyant-registry",
   "main": "src/index.ts",
-  "compatibility_date": "2025-10-03",
+  "compatibility_date": "2026-04-09",
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"

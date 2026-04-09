@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
-import { useUser } from "@/components/providers/user-provider"
+import { UserProvider, useUser } from "@/components/providers/user-provider"
 import { SidebarProvider } from "@/components/ui"
 
 export const Route = createFileRoute("/_workspace")({
@@ -9,6 +9,14 @@ export const Route = createFileRoute("/_workspace")({
 })
 
 function WorkspaceLayout() {
+  return (
+    <UserProvider>
+      <WorkspaceContent />
+    </UserProvider>
+  )
+}
+
+function WorkspaceContent() {
   const { user, isLoading } = useUser()
 
   if (isLoading) {

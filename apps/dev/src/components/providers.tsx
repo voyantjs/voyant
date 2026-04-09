@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { getApiUrl } from "@/lib/env"
 
 import { ThemeProvider } from "./providers/theme-provider"
-import { UserProvider } from "./providers/user-provider"
 
 export function Providers({
   children,
@@ -18,11 +17,9 @@ export function Providers({
   return (
     <QueryClientProvider client={queryClient}>
       <VoyantReactProvider baseUrl={getApiUrl()}>
-        <UserProvider>
-          <ThemeProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-          </ThemeProvider>
-        </UserProvider>
+        <ThemeProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </VoyantReactProvider>
     </QueryClientProvider>
   )

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
-import { useUser } from "@/components/providers/user-provider"
+import { UserProvider, useUser } from "@/components/providers/user-provider"
 import { SidebarProvider } from "@/components/ui"
 import { authClient } from "@/lib/auth"
 
@@ -11,6 +11,14 @@ export const Route = createFileRoute("/_workspace")({
 })
 
 function WorkspaceLayout() {
+  return (
+    <UserProvider>
+      <WorkspaceContent />
+    </UserProvider>
+  )
+}
+
+function WorkspaceContent() {
   const { user, isLoading } = useUser()
   const { data: orgList, isPending: orgsLoading } = authClient.useListOrganizations()
   const { data: activeOrg } = authClient.useActiveOrganization()

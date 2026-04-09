@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table"
 import { DollarSign, ExternalLink, Link2, Loader2, Plus, Search, Webhook } from "lucide-react"
@@ -532,8 +532,92 @@ const webhookColumns = (
 ]
 
 export const Route = createFileRoute("/_workspace/distribution/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getDistributionSuppliersQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionChannelsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionContractsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionCommissionRulesQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionMappingsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionBookingLinksQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionWebhookEventsQueryOptions()),
+    ]),
   component: DistributionPage,
 })
+
+function getDistributionSuppliersQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "suppliers"],
+    queryFn: () => api.get<ListResponse<SupplierOption>>("/v1/suppliers?limit=200"),
+  })
+}
+
+function getDistributionProductsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "products"],
+    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=200"),
+  })
+}
+
+function getDistributionBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "bookings"],
+    queryFn: () => api.get<ListResponse<BookingOption>>("/v1/bookings?limit=200"),
+  })
+}
+
+function getDistributionChannelsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "channels"],
+    queryFn: () => api.get<ListResponse<ChannelRow>>("/v1/distribution/channels?limit=200"),
+  })
+}
+
+function getDistributionContractsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "contracts"],
+    queryFn: () =>
+      api.get<ListResponse<ChannelContractRow>>("/v1/distribution/contracts?limit=200"),
+  })
+}
+
+function getDistributionCommissionRulesQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "commission-rules"],
+    queryFn: () =>
+      api.get<ListResponse<ChannelCommissionRuleRow>>(
+        "/v1/distribution/commission-rules?limit=200",
+      ),
+  })
+}
+
+function getDistributionMappingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "product-mappings"],
+    queryFn: () =>
+      api.get<ListResponse<ChannelProductMappingRow>>(
+        "/v1/distribution/product-mappings?limit=200",
+      ),
+  })
+}
+
+function getDistributionBookingLinksQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "booking-links"],
+    queryFn: () =>
+      api.get<ListResponse<ChannelBookingLinkRow>>("/v1/distribution/booking-links?limit=200"),
+  })
+}
+
+function getDistributionWebhookEventsQueryOptions() {
+  return queryOptions({
+    queryKey: ["distribution", "webhook-events"],
+    queryFn: () =>
+      api.get<ListResponse<ChannelWebhookEventRow>>("/v1/distribution/webhook-events?limit=200"),
+  })
+}
 
 function DistributionPage() {
   const navigate = useNavigate()
@@ -559,51 +643,15 @@ function DistributionPage() {
   const [editingBookingLink, setEditingBookingLink] = useState<ChannelBookingLinkRow | undefined>()
   const [editingWebhook, setEditingWebhook] = useState<ChannelWebhookEventRow | undefined>()
 
-  const suppliersQuery = useQuery({
-    queryKey: ["distribution", "suppliers"],
-    queryFn: () => api.get<ListResponse<SupplierOption>>("/v1/suppliers?limit=200"),
-  })
-  const productsQuery = useQuery({
-    queryKey: ["distribution", "products"],
-    queryFn: () => api.get<ListResponse<ProductOption>>("/v1/products?limit=200"),
-  })
-  const bookingsQuery = useQuery({
-    queryKey: ["distribution", "bookings"],
-    queryFn: () => api.get<ListResponse<BookingOption>>("/v1/bookings?limit=200"),
-  })
-  const channelsQuery = useQuery({
-    queryKey: ["distribution", "channels"],
-    queryFn: () => api.get<ListResponse<ChannelRow>>("/v1/distribution/channels?limit=200"),
-  })
-  const contractsQuery = useQuery({
-    queryKey: ["distribution", "contracts"],
-    queryFn: () =>
-      api.get<ListResponse<ChannelContractRow>>("/v1/distribution/contracts?limit=200"),
-  })
-  const commissionRulesQuery = useQuery({
-    queryKey: ["distribution", "commission-rules"],
-    queryFn: () =>
-      api.get<ListResponse<ChannelCommissionRuleRow>>(
-        "/v1/distribution/commission-rules?limit=200",
-      ),
-  })
-  const mappingsQuery = useQuery({
-    queryKey: ["distribution", "product-mappings"],
-    queryFn: () =>
-      api.get<ListResponse<ChannelProductMappingRow>>(
-        "/v1/distribution/product-mappings?limit=200",
-      ),
-  })
-  const bookingLinksQuery = useQuery({
-    queryKey: ["distribution", "booking-links"],
-    queryFn: () =>
-      api.get<ListResponse<ChannelBookingLinkRow>>("/v1/distribution/booking-links?limit=200"),
-  })
-  const webhookEventsQuery = useQuery({
-    queryKey: ["distribution", "webhook-events"],
-    queryFn: () =>
-      api.get<ListResponse<ChannelWebhookEventRow>>("/v1/distribution/webhook-events?limit=200"),
-  })
+  const suppliersQuery = useQuery(getDistributionSuppliersQueryOptions())
+  const productsQuery = useQuery(getDistributionProductsQueryOptions())
+  const bookingsQuery = useQuery(getDistributionBookingsQueryOptions())
+  const channelsQuery = useQuery(getDistributionChannelsQueryOptions())
+  const contractsQuery = useQuery(getDistributionContractsQueryOptions())
+  const commissionRulesQuery = useQuery(getDistributionCommissionRulesQueryOptions())
+  const mappingsQuery = useQuery(getDistributionMappingsQueryOptions())
+  const bookingLinksQuery = useQuery(getDistributionBookingLinksQueryOptions())
+  const webhookEventsQuery = useQuery(getDistributionWebhookEventsQueryOptions())
 
   const suppliers = suppliersQuery.data?.data ?? []
   const products = productsQuery.data?.data ?? []

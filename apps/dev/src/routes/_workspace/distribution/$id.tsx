@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Link2, Loader2, Package, Trash2, Webhook } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -69,8 +69,87 @@ type ListResponse<T> = {
 }
 
 export const Route = createFileRoute("/_workspace/distribution/$id")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getDistributionChannelQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getDistributionChannelContractsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getDistributionChannelMappingsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(
+        getDistributionChannelBookingLinksQueryOptions(params.id),
+      ),
+      context.queryClient.ensureQueryData(
+        getDistributionChannelWebhookEventsQueryOptions(params.id),
+      ),
+      context.queryClient.ensureQueryData(getDistributionChannelProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionChannelBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(getDistributionChannelSuppliersQueryOptions()),
+    ]),
   component: ChannelDetailPage,
 })
+
+function getDistributionChannelQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["channel", id],
+    queryFn: () => api.get<{ data: ChannelDetail }>(`/v1/distribution/channels/${id}`),
+  })
+}
+
+function getDistributionChannelContractsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["channel-contracts", id],
+    queryFn: () =>
+      api.get<ListResponse<Contract>>(`/v1/distribution/contracts?channelId=${id}&limit=200`),
+  })
+}
+
+function getDistributionChannelMappingsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["channel-mappings", id],
+    queryFn: () =>
+      api.get<ListResponse<Mapping>>(`/v1/distribution/product-mappings?channelId=${id}&limit=200`),
+  })
+}
+
+function getDistributionChannelBookingLinksQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["channel-booking-links", id],
+    queryFn: () =>
+      api.get<ListResponse<BookingLink>>(
+        `/v1/distribution/booking-links?channelId=${id}&limit=200`,
+      ),
+  })
+}
+
+function getDistributionChannelWebhookEventsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["channel-webhook-events", id],
+    queryFn: () =>
+      api.get<ListResponse<WebhookEvent>>(
+        `/v1/distribution/webhook-events?channelId=${id}&limit=200`,
+      ),
+  })
+}
+
+function getDistributionChannelProductsQueryOptions() {
+  return queryOptions({
+    queryKey: ["channel-products"],
+    queryFn: () => api.get<ListResponse<Product>>("/v1/products?limit=100"),
+  })
+}
+
+function getDistributionChannelBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["channel-bookings"],
+    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
+  })
+}
+
+function getDistributionChannelSuppliersQueryOptions() {
+  return queryOptions({
+    queryKey: ["channel-suppliers"],
+    queryFn: () => api.get<ListResponse<Supplier>>("/v1/suppliers?limit=200"),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -81,53 +160,21 @@ function ChannelDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: channelData, isPending } = useQuery({
-    queryKey: ["channel", id],
-    queryFn: () => api.get<{ data: ChannelDetail }>(`/v1/distribution/channels/${id}`),
-  })
+  const { data: channelData, isPending } = useQuery(getDistributionChannelQueryOptions(id))
 
-  const contractsQuery = useQuery({
-    queryKey: ["channel-contracts", id],
-    queryFn: () =>
-      api.get<ListResponse<Contract>>(`/v1/distribution/contracts?channelId=${id}&limit=200`),
-  })
+  const contractsQuery = useQuery(getDistributionChannelContractsQueryOptions(id))
 
-  const mappingsQuery = useQuery({
-    queryKey: ["channel-mappings", id],
-    queryFn: () =>
-      api.get<ListResponse<Mapping>>(`/v1/distribution/product-mappings?channelId=${id}&limit=200`),
-  })
+  const mappingsQuery = useQuery(getDistributionChannelMappingsQueryOptions(id))
 
-  const bookingLinksQuery = useQuery({
-    queryKey: ["channel-booking-links", id],
-    queryFn: () =>
-      api.get<ListResponse<BookingLink>>(
-        `/v1/distribution/booking-links?channelId=${id}&limit=200`,
-      ),
-  })
+  const bookingLinksQuery = useQuery(getDistributionChannelBookingLinksQueryOptions(id))
 
-  const webhookEventsQuery = useQuery({
-    queryKey: ["channel-webhook-events", id],
-    queryFn: () =>
-      api.get<ListResponse<WebhookEvent>>(
-        `/v1/distribution/webhook-events?channelId=${id}&limit=200`,
-      ),
-  })
+  const webhookEventsQuery = useQuery(getDistributionChannelWebhookEventsQueryOptions(id))
 
-  const productsQuery = useQuery({
-    queryKey: ["channel-products"],
-    queryFn: () => api.get<ListResponse<Product>>("/v1/products?limit=100"),
-  })
+  const productsQuery = useQuery(getDistributionChannelProductsQueryOptions())
 
-  const bookingsQuery = useQuery({
-    queryKey: ["channel-bookings"],
-    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
-  })
+  const bookingsQuery = useQuery(getDistributionChannelBookingsQueryOptions())
 
-  const suppliersQuery = useQuery({
-    queryKey: ["channel-suppliers"],
-    queryFn: () => api.get<ListResponse<Supplier>>("/v1/suppliers?limit=200"),
-  })
+  const suppliersQuery = useQuery(getDistributionChannelSuppliersQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/distribution/channels/${id}`),

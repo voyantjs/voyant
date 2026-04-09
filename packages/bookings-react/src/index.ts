@@ -12,4 +12,12 @@ export {
   type VoyantBookingsProviderProps,
 } from "./provider.js"
 export { bookingsQueryKeys } from "./query-keys.js"
+export {
+  getBookingActivityQueryOptions,
+  getBookingNotesQueryOptions,
+  getBookingQueryOptions,
+  getBookingsQueryOptions,
+  getPassengersQueryOptions,
+  getSupplierStatusesQueryOptions,
+} from "./query-options.js"
 export * from "./schemas.js"

@@ -1,0 +1,118 @@
+"use client"
+
+import { queryOptions } from "@tanstack/react-query"
+
+import { type FetchWithValidationOptions, fetchWithValidation } from "./client.js"
+import type { UseBookingOptions } from "./hooks/use-booking.js"
+import type { UseBookingActivityOptions } from "./hooks/use-booking-activity.js"
+import type { UseBookingNotesOptions } from "./hooks/use-booking-notes.js"
+import type { UseBookingsOptions } from "./hooks/use-bookings.js"
+import type { UsePassengersOptions } from "./hooks/use-passengers.js"
+import type { UseSupplierStatusesOptions } from "./hooks/use-supplier-statuses.js"
+import { bookingsQueryKeys } from "./query-keys.js"
+import {
+  bookingActivityResponse,
+  bookingListResponse,
+  bookingNotesResponse,
+  bookingPassengersResponse,
+  bookingSingleResponse,
+  bookingSupplierStatusesResponse,
+} from "./schemas.js"
+
+export function getBookingsQueryOptions(
+  client: FetchWithValidationOptions,
+  options: UseBookingsOptions = {},
+) {
+  const { enabled: _enabled = true, ...filters } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.bookingsList(filters),
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filters.status) params.set("status", filters.status)
+      if (filters.search) params.set("search", filters.search)
+      if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+      if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+      const qs = params.toString()
+
+      return fetchWithValidation(`/v1/bookings${qs ? `?${qs}` : ""}`, bookingListResponse, client)
+    },
+  })
+}
+
+export function getBookingQueryOptions(
+  client: FetchWithValidationOptions,
+  id: string | null | undefined,
+  options: UseBookingOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.booking(id ?? ""),
+    queryFn: () => fetchWithValidation(`/v1/bookings/${id}`, bookingSingleResponse, client),
+  })
+}
+
+export function getPassengersQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UsePassengersOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.passengers(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/bookings/${bookingId}/passengers`,
+        bookingPassengersResponse,
+        client,
+      ),
+  })
+}
+
+export function getSupplierStatusesQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseSupplierStatusesOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.supplierStatuses(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/bookings/${bookingId}/supplier-statuses`,
+        bookingSupplierStatusesResponse,
+        client,
+      ),
+  })
+}
+
+export function getBookingActivityQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseBookingActivityOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.activity(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(`/v1/bookings/${bookingId}/activity`, bookingActivityResponse, client),
+  })
+}
+
+export function getBookingNotesQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseBookingNotesOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.notes(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(`/v1/bookings/${bookingId}/notes`, bookingNotesResponse, client),
+  })
+}

@@ -1,5 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useBooking, useBookingMutation } from "@voyantjs/bookings-react"
+import {
+  defaultFetcher,
+  getBookingActivityQueryOptions,
+  getBookingNotesQueryOptions,
+  getBookingQueryOptions,
+  getPassengersQueryOptions,
+  getSupplierStatusesQueryOptions,
+  useBooking,
+  useBookingMutation,
+} from "@voyantjs/bookings-react"
 import { ArrowLeft, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -9,8 +18,20 @@ import { BookingNotes } from "@/components/voyant/bookings/booking-notes"
 import { PassengerList } from "@/components/voyant/bookings/passenger-list"
 import { StatusChangeDialog } from "@/components/voyant/bookings/status-change-dialog"
 import { SupplierStatusList } from "@/components/voyant/bookings/supplier-status-list"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/bookings/$id")({
+  loader: async ({ context, params }) => {
+    const client = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(getBookingQueryOptions(client, params.id)),
+      context.queryClient.ensureQueryData(getPassengersQueryOptions(client, params.id)),
+      context.queryClient.ensureQueryData(getSupplierStatusesQueryOptions(client, params.id)),
+      context.queryClient.ensureQueryData(getBookingActivityQueryOptions(client, params.id)),
+      context.queryClient.ensureQueryData(getBookingNotesQueryOptions(client, params.id)),
+    ])
+  },
   component: BookingDetailPage,
 })
 

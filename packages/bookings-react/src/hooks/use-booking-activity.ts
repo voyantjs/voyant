@@ -2,10 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query"
 
-import { fetchWithValidation } from "../client.js"
 import { useVoyantBookingsContext } from "../provider.js"
-import { bookingsQueryKeys } from "../query-keys.js"
-import { bookingActivityResponse } from "../schemas.js"
+import { getBookingActivityQueryOptions } from "../query-options.js"
 
 export interface UseBookingActivityOptions {
   enabled?: boolean
@@ -19,12 +17,7 @@ export function useBookingActivity(
   const { enabled = true } = options
 
   return useQuery({
-    queryKey: bookingsQueryKeys.activity(bookingId ?? ""),
-    queryFn: () =>
-      fetchWithValidation(`/v1/bookings/${bookingId}/activity`, bookingActivityResponse, {
-        baseUrl,
-        fetcher,
-      }),
+    ...getBookingActivityQueryOptions({ baseUrl, fetcher }, bookingId),
     enabled: enabled && Boolean(bookingId),
   })
 }

@@ -2,10 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query"
 
-import { fetchWithValidation } from "../client.js"
 import { useVoyantBookingsContext } from "../provider.js"
-import { bookingsQueryKeys } from "../query-keys.js"
-import { bookingSupplierStatusesResponse } from "../schemas.js"
+import { getSupplierStatusesQueryOptions } from "../query-options.js"
 
 export interface UseSupplierStatusesOptions {
   enabled?: boolean
@@ -19,13 +17,7 @@ export function useSupplierStatuses(
   const { enabled = true } = options
 
   return useQuery({
-    queryKey: bookingsQueryKeys.supplierStatuses(bookingId ?? ""),
-    queryFn: () =>
-      fetchWithValidation(
-        `/v1/bookings/${bookingId}/supplier-statuses`,
-        bookingSupplierStatusesResponse,
-        { baseUrl, fetcher },
-      ),
+    ...getSupplierStatusesQueryOptions({ baseUrl, fetcher }, bookingId),
     enabled: enabled && Boolean(bookingId),
   })
 }

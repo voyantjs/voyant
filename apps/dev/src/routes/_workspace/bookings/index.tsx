@@ -1,8 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { defaultFetcher, getBookingsQueryOptions } from "@voyantjs/bookings-react"
 
 import { BookingList } from "@/components/voyant/bookings/booking-list"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/bookings/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(
+      getBookingsQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }),
+    ),
   component: BookingsPage,
 })
 

@@ -3,9 +3,10 @@ import { VoyantReactProvider } from "@voyantjs/react"
 import { Loader2 } from "lucide-react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
+import { WorkspaceProvider } from "@/components/providers/workspace-provider"
 import { SidebarProvider } from "@/components/ui"
-import { authClient } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/current-user"
+import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
@@ -19,18 +20,33 @@ export const Route = createFileRoute("/_workspace")({
       })
     }
 
-    return { user }
+    const workspace = await getCurrentWorkspace()
+
+    if (!workspace) {
+      throw redirect({
+        to: "/sign-in",
+        search: { next: location.href },
+      })
+    }
+
+    if (workspace.organizations.length === 0) {
+      throw redirect({ to: "/onboarding" })
+    }
+
+    return { user, workspace }
   },
   component: WorkspaceLayout,
 })
 
 function WorkspaceLayout() {
-  const { user } = Route.useLoaderData()
+  const { user, workspace } = Route.useLoaderData()
 
   return (
     <VoyantReactProvider baseUrl={getApiUrl()}>
       <UserProvider initialUser={user}>
-        <WorkspaceContent />
+        <WorkspaceProvider initialWorkspace={workspace}>
+          <WorkspaceContent />
+        </WorkspaceProvider>
       </UserProvider>
     </VoyantReactProvider>
   )
@@ -38,10 +54,8 @@ function WorkspaceLayout() {
 
 function WorkspaceContent() {
   const { user, isLoading } = useUser()
-  const { data: orgList, isPending: orgsLoading } = authClient.useListOrganizations()
-  const { data: activeOrg } = authClient.useActiveOrganization()
 
-  if (isLoading || orgsLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -54,22 +68,6 @@ function WorkspaceContent() {
 
   if (!user) {
     return null
-  }
-
-  // No orgs → redirect to onboarding
-  if (!orgList || orgList.length === 0) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/onboarding"
-    }
-    return null
-  }
-
-  // Orgs exist but none active → set first org as active
-  if (!activeOrg && orgList.length > 0) {
-    const firstOrg = orgList[0]
-    if (firstOrg) {
-      void authClient.organization.setActive({ organizationId: firstOrg.id })
-    }
   }
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ")

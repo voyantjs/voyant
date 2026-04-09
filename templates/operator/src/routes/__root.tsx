@@ -33,8 +33,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   // shellComponent is always SSR'd — renders the <html> document shell
   shellComponent: RootShell,
   component: RootComponent,
-  // SPA mode: disable SSR of the route component (not the shell)
-  ssr: false,
 })
 
 function RootShell({ children }: { children: ReactNode }) {

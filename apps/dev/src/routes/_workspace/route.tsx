@@ -3,8 +3,10 @@ import { VoyantReactProvider } from "@voyantjs/react"
 import { Loader2 } from "lucide-react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
+import { WorkspaceProvider } from "@/components/providers/workspace-provider"
 import { SidebarProvider } from "@/components/ui"
 import { getCurrentUser } from "@/lib/current-user"
+import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
@@ -18,18 +20,29 @@ export const Route = createFileRoute("/_workspace")({
       })
     }
 
-    return { user }
+    const workspace = await getCurrentWorkspace()
+
+    return { user, workspace }
   },
   component: WorkspaceLayout,
 })
 
 function WorkspaceLayout() {
-  const { user } = Route.useLoaderData()
+  const { user, workspace } = Route.useLoaderData()
 
   return (
     <VoyantReactProvider baseUrl={getApiUrl()}>
       <UserProvider initialUser={user}>
-        <WorkspaceContent />
+        <WorkspaceProvider
+          initialWorkspace={
+            workspace ?? {
+              organizations: [],
+              activeOrganization: null,
+            }
+          }
+        >
+          <WorkspaceContent />
+        </WorkspaceProvider>
       </UserProvider>
     </VoyantReactProvider>
   )

@@ -1,12 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { VoyantReactProvider } from "@voyantjs/react"
 import { Loader2 } from "lucide-react"
-import { useEffect, useRef } from "react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
+import { WorkspaceProvider } from "@/components/providers/workspace-provider"
 import { SidebarProvider } from "@/components/ui"
-import { authClient } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/current-user"
+import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
@@ -20,18 +20,26 @@ export const Route = createFileRoute("/_workspace")({
       })
     }
 
-    return { user }
+    const workspace = await getCurrentWorkspace()
+
+    if (!workspace?.activeOrganization) {
+      throw new Error("Failed to resolve active workspace organization")
+    }
+
+    return { user, workspace }
   },
   component: WorkspaceLayout,
 })
 
 function WorkspaceLayout() {
-  const { user } = Route.useLoaderData()
+  const { user, workspace } = Route.useLoaderData()
 
   return (
     <VoyantReactProvider baseUrl={getApiUrl()}>
       <UserProvider initialUser={user}>
-        <WorkspaceContent />
+        <WorkspaceProvider initialWorkspace={workspace}>
+          <WorkspaceContent />
+        </WorkspaceProvider>
       </UserProvider>
     </VoyantReactProvider>
   )
@@ -39,29 +47,8 @@ function WorkspaceLayout() {
 
 function WorkspaceContent() {
   const { user, isLoading } = useUser()
-  const { data: orgList, isPending: orgsLoading } = authClient.useListOrganizations()
-  const { data: activeOrg } = authClient.useActiveOrganization()
-  const creatingOrg = useRef(false)
 
-  // Auto-create a default organization if none exist (single-tenant)
-  useEffect(() => {
-    if (!user || orgsLoading || creatingOrg.current) return
-    if (orgList && orgList.length === 0) {
-      creatingOrg.current = true
-      void authClient.organization
-        .create({ name: "My Organization", slug: "default" })
-        .then((res) => {
-          if (res.data) {
-            void authClient.organization.setActive({ organizationId: res.data.id })
-          }
-        })
-        .finally(() => {
-          creatingOrg.current = false
-        })
-    }
-  }, [user, orgList, orgsLoading])
-
-  if (isLoading || orgsLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -74,25 +61,6 @@ function WorkspaceContent() {
 
   if (!user) {
     return null
-  }
-
-  // Still waiting for org to be created/activated
-  if (!orgList || orgList.length === 0 || !activeOrg) {
-    // Orgs exist but none active → set first org as active
-    if (orgList && orgList.length > 0 && !activeOrg) {
-      const firstOrg = orgList[0]
-      if (firstOrg) {
-        void authClient.organization.setActive({ organizationId: firstOrg.id })
-      }
-    }
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Setting up workspace...</p>
-        </div>
-      </div>
-    )
   }
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ")

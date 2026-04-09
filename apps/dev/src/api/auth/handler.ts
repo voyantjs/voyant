@@ -8,9 +8,15 @@
  */
 
 import { createBetterAuth } from "@voyantjs/auth/server"
-import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
+import {
+  authMember,
+  authOrganization,
+  authSession,
+  authUser,
+  userProfilesTable,
+} from "@voyantjs/db/schema/iam"
 import type { VoyantPermission, VoyantRequestAuthContext } from "@voyantjs/hono"
-import { eq } from "drizzle-orm"
+import { asc, eq } from "drizzle-orm"
 import { Hono } from "hono"
 import { Resend } from "resend"
 
@@ -115,6 +121,31 @@ function getBetterAuth(env: CloudflareBindings) {
   })
 }
 
+async function listWorkspaceOrganizations(
+  env: CloudflareBindings,
+  userId: string,
+  activeOrganizationId: string | null,
+) {
+  const db = getDbFromHyperdrive(env)
+
+  const organizations = await db
+    .select({
+      id: authOrganization.id,
+      name: authOrganization.name,
+      slug: authOrganization.slug,
+      logo: authOrganization.logo,
+    })
+    .from(authMember)
+    .innerJoin(authOrganization, eq(authOrganization.id, authMember.organizationId))
+    .where(eq(authMember.userId, userId))
+    .orderBy(asc(authOrganization.createdAt))
+
+  const activeOrganization =
+    organizations.find((organization) => organization.id === activeOrganizationId) ?? null
+
+  return { activeOrganization, organizations }
+}
+
 export async function resolveAuthRequest(
   request: Request,
   env: CloudflareBindings,
@@ -194,6 +225,37 @@ auth.get("/auth/me", async (c) => {
     profilePictureUrl: row.avatarUrl ?? null,
     activeOrganizationId: session.session.activeOrganizationId ?? null,
   })
+})
+
+auth.get("/auth/workspace", async (c) => {
+  const betterAuth = getBetterAuth(c.env)
+  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
+
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const db = getDbFromHyperdrive(c.env)
+  let activeOrganizationId = session.session.activeOrganizationId ?? null
+
+  const existingWorkspace = await listWorkspaceOrganizations(
+    c.env,
+    session.user.id,
+    activeOrganizationId,
+  )
+
+  if (!activeOrganizationId && existingWorkspace.organizations.length > 0) {
+    activeOrganizationId = existingWorkspace.organizations[0]?.id ?? null
+
+    if (activeOrganizationId) {
+      await db
+        .update(authSession)
+        .set({ activeOrganizationId, updatedAt: new Date() })
+        .where(eq(authSession.id, session.session.id))
+    }
+  }
+
+  return c.json(await listWorkspaceOrganizations(c.env, session.user.id, activeOrganizationId))
 })
 
 /**

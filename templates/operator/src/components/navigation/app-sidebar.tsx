@@ -16,6 +16,7 @@ import {
 import type * as React from "react"
 import { NavGroup } from "@/components/navigation/nav-group"
 import { NavUser } from "@/components/navigation/nav-user"
+import { useWorkspace } from "@/components/providers/workspace-provider"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,6 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui"
-import { authClient } from "@/lib/auth"
 
 export const COMING_SOON = "COMING_SOON" as const
 export const BETA = "BETA" as const
@@ -105,12 +105,8 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 }
 
 function OrgSwitcher() {
-  const { data: orgList } = authClient.useListOrganizations()
-  const { data: activeOrg } = authClient.useActiveOrganization()
-
-  const handleSwitch = (orgId: string) => {
-    void authClient.organization.setActive({ organizationId: orgId })
-  }
+  const { activeOrganization, organizations, isSwitchingOrganization, setActiveOrganization } =
+    useWorkspace()
 
   return (
     <DropdownMenu>
@@ -120,19 +116,25 @@ function OrgSwitcher() {
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
-            {activeOrg?.name?.charAt(0)?.toUpperCase() ?? "V"}
+            {activeOrganization?.name?.charAt(0)?.toUpperCase() ?? "V"}
           </div>
           <span className="flex-1 truncate text-sm font-semibold">
-            {activeOrg?.name ?? "Voyant"}
+            {activeOrganization?.name ?? "Voyant"}
           </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        {orgList?.map((org) => (
-          <DropdownMenuItem key={org.id} onClick={() => handleSwitch(org.id)}>
+        {organizations.map((org) => (
+          <DropdownMenuItem
+            key={org.id}
+            disabled={isSwitchingOrganization}
+            onClick={() => {
+              void setActiveOrganization(org.id)
+            }}
+          >
             <span className="flex-1 truncate">{org.name}</span>
-            {activeOrg?.id === org.id && <Check className="ml-2 h-4 w-4" />}
+            {activeOrganization?.id === org.id && <Check className="ml-2 h-4 w-4" />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />

@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { type PropertyGroupData, PropertyGroupDialog } from "./_components/property-group-dialog"
 
 export const Route = createFileRoute("/_workspace/property-groups/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getPropertyGroupsQueryOptions()),
   component: PropertyGroupsPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 const GROUP_TYPES = [
   "chain",
@@ -42,11 +42,9 @@ function PropertyGroupsPage() {
   if (groupType) params.set("groupType", groupType)
   if (status) params.set("status", status)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["property-groups", search, groupType, status],
-    queryFn: () =>
-      api.get<ListResponse<PropertyGroupData>>(`/v1/facilities/property-groups?${params}`),
-  })
+  const { data, isPending, refetch } = useQuery(
+    getPropertyGroupsQueryOptions(search, groupType, status),
+  )
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/facilities/property-groups/${id}`),
@@ -217,5 +215,17 @@ function PropertyGroupsPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPropertyGroupsQueryOptions(search = "", groupType = "", status = "") {
+  const params = new URLSearchParams({ limit: "200" })
+  if (search.trim()) params.set("search", search.trim())
+  if (groupType) params.set("groupType", groupType)
+  if (status) params.set("status", status)
+
+  return getApiListQueryOptions<PropertyGroupData>(
+    ["property-groups", search, groupType, status],
+    `/v1/facilities/property-groups?${params}`,
   )
 }

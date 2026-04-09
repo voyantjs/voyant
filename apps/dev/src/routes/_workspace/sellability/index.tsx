@@ -4,22 +4,19 @@ import { Loader2, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { type PolicyData, PolicyDialog } from "./_components/policy-dialog"
 
 export const Route = createFileRoute("/_workspace/sellability/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getPoliciesQueryOptions()),
   component: SellabilityPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function SellabilityPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PolicyData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["sellability", "policies"],
-    queryFn: () => api.get<ListResponse<PolicyData>>("/v1/sellability/policies?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getPoliciesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/sellability/policies/${id}`),
@@ -142,5 +139,12 @@ function SellabilityPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPoliciesQueryOptions() {
+  return getApiListQueryOptions<PolicyData>(
+    ["sellability", "policies"],
+    "/v1/sellability/policies?limit=200",
   )
 }

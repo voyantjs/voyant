@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { api } from "@/lib/api-client"
+import { getApiDetailQueryOptions } from "../_lib/api-query-options"
 import { HousekeepingTasksTab } from "../hospitality/_components/housekeeping-tasks-tab"
 import { MaintenanceBlocksTab } from "../hospitality/_components/maintenance-blocks-tab"
 import { MealPlansTab } from "../hospitality/_components/meal-plans-tab"
@@ -24,6 +24,18 @@ import { StayRulesTab } from "../hospitality/_components/stay-rules-tab"
 import { type PropertyData, PropertyDialog } from "./_components/property-dialog"
 
 export const Route = createFileRoute("/_workspace/properties/$id")({
+  loader: async ({ context, params }) => {
+    const propertyResult = await context.queryClient.ensureQueryData(
+      getPropertyQueryOptions(params.id),
+    )
+    const property = propertyResult.data
+
+    if (property?.facilityId) {
+      await context.queryClient.ensureQueryData(
+        getPropertyFacilityQueryOptions(property.facilityId),
+      )
+    }
+  },
   component: PropertyDetailPage,
 })
 
@@ -38,21 +50,13 @@ function PropertyDetailPage() {
     isPending,
     refetch,
   } = useQuery({
-    queryKey: ["properties", "property", id],
-    queryFn: async () => {
-      const res = await api.get<{ data: PropertyData }>(`/v1/facilities/properties/${id}`)
-      return res.data
-    },
+    ...getPropertyQueryOptions(id),
+    select: (result) => result.data,
   })
 
   const { data: facility } = useQuery({
-    queryKey: ["properties", "facility", property?.facilityId],
-    queryFn: async () => {
-      const res = await api.get<{ data: FacilityLite }>(
-        `/v1/facilities/facilities/${property!.facilityId}`,
-      )
-      return res.data
-    },
+    ...getPropertyFacilityQueryOptions(property?.facilityId ?? ""),
+    select: (result) => result.data,
     enabled: !!property?.facilityId,
   })
 
@@ -240,5 +244,19 @@ function PropertyDetailPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPropertyQueryOptions(id: string) {
+  return getApiDetailQueryOptions<{ data: PropertyData }>(
+    ["properties", "property", id],
+    `/v1/facilities/properties/${id}`,
+  )
+}
+
+function getPropertyFacilityQueryOptions(facilityId: string) {
+  return getApiDetailQueryOptions<{ data: FacilityLite }>(
+    ["properties", "facility", facilityId],
+    `/v1/facilities/facilities/${facilityId}`,
   )
 }

@@ -4,21 +4,20 @@ import { ArrowLeft, Building, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui"
 import { buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { api } from "@/lib/api-client"
+import { getApiDetailQueryOptions } from "../_lib/api-query-options"
 import { MembersTab } from "./_components/members-tab"
 import type { PropertyGroupData } from "./_components/property-group-dialog"
 
 export const Route = createFileRoute("/_workspace/property-groups/$id")({
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(getPropertyGroupQueryOptions(params.id)),
   component: PropertyGroupDetailPage,
 })
 
 function PropertyGroupDetailPage() {
   const { id } = Route.useParams()
 
-  const { data: group, isPending } = useQuery({
-    queryKey: ["property-groups", "group", id],
-    queryFn: () => api.get<PropertyGroupData>(`/v1/facilities/property-groups/${id}`),
-  })
+  const { data: group, isPending } = useQuery(getPropertyGroupQueryOptions(id))
 
   if (isPending) {
     return (
@@ -85,5 +84,12 @@ function PropertyGroupDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function getPropertyGroupQueryOptions(id: string) {
+  return getApiDetailQueryOptions<PropertyGroupData>(
+    ["property-groups", "group", id],
+    `/v1/facilities/property-groups/${id}`,
   )
 }

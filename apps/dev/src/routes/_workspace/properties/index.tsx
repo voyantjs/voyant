@@ -11,13 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions, type ListResponse } from "../_lib/api-query-options"
 import { type PropertyData, PropertyDialog } from "./_components/property-dialog"
 
 export const Route = createFileRoute("/_workspace/properties/")({
+  loader: ({ context }) =>
+    Promise.all([context.queryClient.ensureQueryData(getPropertiesQueryOptions())]),
   component: PropertiesPage,
 })
 
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 type FacilityLite = { id: string; name: string }
 
 const PROPERTY_TYPES = [
@@ -40,10 +42,7 @@ function PropertiesPage() {
   const params = new URLSearchParams({ limit: "200" })
   if (propertyType) params.set("propertyType", propertyType)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["properties", propertyType],
-    queryFn: () => api.get<ListResponse<PropertyData>>(`/v1/facilities/properties?${params}`),
-  })
+  const { data, isPending, refetch } = useQuery(getPropertiesQueryOptions(propertyType))
 
   const facilitiesQuery = useQuery({
     queryKey: ["properties", "facilities"],
@@ -205,5 +204,15 @@ function PropertiesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPropertiesQueryOptions(propertyType = "") {
+  const params = new URLSearchParams({ limit: "200" })
+  if (propertyType) params.set("propertyType", propertyType)
+
+  return getApiListQueryOptions<PropertyData>(
+    ["properties", propertyType],
+    `/v1/facilities/properties?${params}`,
   )
 }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, CalendarDays, Loader2, Trash2, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -25,8 +25,92 @@ type Booking = { id: string; bookingNumber: string }
 type Product = { id: string; name: string }
 
 export const Route = createFileRoute("/_workspace/resources/assignments/$id")({
+  loader: async ({ context, params }) => {
+    const assignmentData = await context.queryClient.ensureQueryData(
+      getResourceAssignmentDetailQueryOptions(params.id),
+    )
+
+    const slotData = await context.queryClient.ensureQueryData(
+      getResourceAssignmentSlotQueryOptions(assignmentData.data.slotId),
+    )
+
+    return Promise.all([
+      Promise.resolve(assignmentData),
+      Promise.resolve(slotData),
+      ...(assignmentData.data.poolId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAssignmentPoolQueryOptions(assignmentData.data.poolId),
+            ),
+          ]
+        : []),
+      ...(assignmentData.data.resourceId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAssignmentResourceQueryOptions(assignmentData.data.resourceId),
+            ),
+          ]
+        : []),
+      ...(assignmentData.data.bookingId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAssignmentBookingQueryOptions(assignmentData.data.bookingId),
+            ),
+          ]
+        : []),
+      ...(slotData.data.productId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAssignmentProductQueryOptions(slotData.data.productId),
+            ),
+          ]
+        : []),
+    ])
+  },
   component: ResourceAssignmentDetailPage,
 })
+
+function getResourceAssignmentDetailQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment", id],
+    queryFn: () => api.get<{ data: AssignmentDetail }>(`/v1/resources/slot-assignments/${id}`),
+  })
+}
+
+function getResourceAssignmentSlotQueryOptions(slotId: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment-slot", slotId],
+    queryFn: () => api.get<{ data: Slot }>(`/v1/availability/slots/${slotId}`),
+  })
+}
+
+function getResourceAssignmentPoolQueryOptions(poolId: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment-pool", poolId],
+    queryFn: () => api.get<{ data: Pool }>(`/v1/resources/pools/${poolId}`),
+  })
+}
+
+function getResourceAssignmentResourceQueryOptions(resourceId: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment-resource", resourceId],
+    queryFn: () => api.get<{ data: Resource }>(`/v1/resources/resources/${resourceId}`),
+  })
+}
+
+function getResourceAssignmentBookingQueryOptions(bookingId: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment-booking", bookingId],
+    queryFn: () => api.get<{ data: Booking }>(`/v1/bookings/${bookingId}`),
+  })
+}
+
+function getResourceAssignmentProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["resource-assignment-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -37,41 +121,33 @@ function ResourceAssignmentDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: assignmentData, isPending } = useQuery({
-    queryKey: ["resource-assignment", id],
-    queryFn: () => api.get<{ data: AssignmentDetail }>(`/v1/resources/slot-assignments/${id}`),
-  })
+  const { data: assignmentData, isPending } = useQuery(getResourceAssignmentDetailQueryOptions(id))
 
   const assignment = assignmentData?.data
 
   const slotQuery = useQuery({
-    queryKey: ["resource-assignment-slot", assignment?.slotId],
+    ...getResourceAssignmentSlotQueryOptions(assignment?.slotId ?? ""),
     enabled: Boolean(assignment?.slotId),
-    queryFn: () => api.get<{ data: Slot }>(`/v1/availability/slots/${assignment?.slotId}`),
   })
 
   const poolQuery = useQuery({
-    queryKey: ["resource-assignment-pool", assignment?.poolId],
+    ...getResourceAssignmentPoolQueryOptions(assignment?.poolId ?? ""),
     enabled: Boolean(assignment?.poolId),
-    queryFn: () => api.get<{ data: Pool }>(`/v1/resources/pools/${assignment?.poolId}`),
   })
 
   const resourceQuery = useQuery({
-    queryKey: ["resource-assignment-resource", assignment?.resourceId],
+    ...getResourceAssignmentResourceQueryOptions(assignment?.resourceId ?? ""),
     enabled: Boolean(assignment?.resourceId),
-    queryFn: () => api.get<{ data: Resource }>(`/v1/resources/resources/${assignment?.resourceId}`),
   })
 
   const bookingQuery = useQuery({
-    queryKey: ["resource-assignment-booking", assignment?.bookingId],
+    ...getResourceAssignmentBookingQueryOptions(assignment?.bookingId ?? ""),
     enabled: Boolean(assignment?.bookingId),
-    queryFn: () => api.get<{ data: Booking }>(`/v1/bookings/${assignment?.bookingId}`),
   })
 
   const productQuery = useQuery({
-    queryKey: ["resource-assignment-product", slotQuery.data?.data.productId],
+    ...getResourceAssignmentProductQueryOptions(slotQuery.data?.data.productId ?? ""),
     enabled: Boolean(slotQuery.data?.data.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${slotQuery.data?.data.productId}`),
   })
 
   const deleteMutation = useMutation({

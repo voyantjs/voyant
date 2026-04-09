@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Package, Trash2, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -23,45 +23,100 @@ type Rule = { id: string; recurrenceRule: string }
 type StartTime = { id: string; label: string | null; startTimeLocal: string }
 
 export const Route = createFileRoute("/_workspace/resources/allocations/$id")({
+  loader: async ({ context, params }) => {
+    const allocationData = await context.queryClient.ensureQueryData(
+      getResourceAllocationDetailQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(allocationData),
+      context.queryClient.ensureQueryData(
+        getResourceAllocationPoolQueryOptions(allocationData.data.poolId),
+      ),
+      context.queryClient.ensureQueryData(
+        getResourceAllocationProductQueryOptions(allocationData.data.productId),
+      ),
+      ...(allocationData.data.availabilityRuleId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAllocationRuleQueryOptions(allocationData.data.availabilityRuleId),
+            ),
+          ]
+        : []),
+      ...(allocationData.data.startTimeId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceAllocationStartTimeQueryOptions(allocationData.data.startTimeId),
+            ),
+          ]
+        : []),
+    ])
+  },
   component: ResourceAllocationDetailPage,
 })
+
+function getResourceAllocationDetailQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-allocation", id],
+    queryFn: () => api.get<{ data: AllocationDetail }>(`/v1/resources/allocations/${id}`),
+  })
+}
+
+function getResourceAllocationPoolQueryOptions(poolId: string) {
+  return queryOptions({
+    queryKey: ["resource-allocation-pool", poolId],
+    queryFn: () => api.get<{ data: Pool }>(`/v1/resources/pools/${poolId}`),
+  })
+}
+
+function getResourceAllocationProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["resource-allocation-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
+
+function getResourceAllocationRuleQueryOptions(ruleId: string) {
+  return queryOptions({
+    queryKey: ["resource-allocation-rule", ruleId],
+    queryFn: () => api.get<{ data: Rule }>(`/v1/availability/rules/${ruleId}`),
+  })
+}
+
+function getResourceAllocationStartTimeQueryOptions(startTimeId: string) {
+  return queryOptions({
+    queryKey: ["resource-allocation-start-time", startTimeId],
+    queryFn: () => api.get<{ data: StartTime }>(`/v1/availability/start-times/${startTimeId}`),
+  })
+}
 
 function ResourceAllocationDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: allocationData, isPending } = useQuery({
-    queryKey: ["resource-allocation", id],
-    queryFn: () => api.get<{ data: AllocationDetail }>(`/v1/resources/allocations/${id}`),
-  })
+  const { data: allocationData, isPending } = useQuery(getResourceAllocationDetailQueryOptions(id))
 
   const allocation = allocationData?.data
 
   const poolQuery = useQuery({
-    queryKey: ["resource-allocation-pool", allocation?.poolId],
+    ...getResourceAllocationPoolQueryOptions(allocation?.poolId ?? ""),
     enabled: Boolean(allocation?.poolId),
-    queryFn: () => api.get<{ data: Pool }>(`/v1/resources/pools/${allocation?.poolId}`),
   })
 
   const productQuery = useQuery({
-    queryKey: ["resource-allocation-product", allocation?.productId],
+    ...getResourceAllocationProductQueryOptions(allocation?.productId ?? ""),
     enabled: Boolean(allocation?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${allocation?.productId}`),
   })
 
   const ruleQuery = useQuery({
-    queryKey: ["resource-allocation-rule", allocation?.availabilityRuleId],
+    ...getResourceAllocationRuleQueryOptions(allocation?.availabilityRuleId ?? ""),
     enabled: Boolean(allocation?.availabilityRuleId),
-    queryFn: () =>
-      api.get<{ data: Rule }>(`/v1/availability/rules/${allocation?.availabilityRuleId}`),
   })
 
   const startTimeQuery = useQuery({
-    queryKey: ["resource-allocation-start-time", allocation?.startTimeId],
+    ...getResourceAllocationStartTimeQueryOptions(allocation?.startTimeId ?? ""),
     enabled: Boolean(allocation?.startTimeId),
-    queryFn: () =>
-      api.get<{ data: StartTime }>(`/v1/availability/start-times/${allocation?.startTimeId}`),
   })
 
   const deleteMutation = useMutation({

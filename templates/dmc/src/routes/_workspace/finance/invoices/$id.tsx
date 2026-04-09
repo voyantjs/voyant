@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -76,7 +76,50 @@ type FinanceNote = {
   createdAt: string
 }
 
+function getInvoiceQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["invoice", id],
+    queryFn: () => api.get<{ data: InvoiceDetail }>(`/v1/finance/invoices/${id}`),
+  })
+}
+
+function getInvoiceLineItemsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["invoice-line-items", id],
+    queryFn: () => api.get<{ data: LineItem[] }>(`/v1/finance/invoices/${id}/line-items`),
+  })
+}
+
+function getInvoicePaymentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["invoice-payments", id],
+    queryFn: () => api.get<{ data: PaymentRow[] }>(`/v1/finance/invoices/${id}/payments`),
+  })
+}
+
+function getInvoiceCreditNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["invoice-credit-notes", id],
+    queryFn: () => api.get<{ data: CreditNoteRow[] }>(`/v1/finance/invoices/${id}/credit-notes`),
+  })
+}
+
+function getInvoiceNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["invoice-notes", id],
+    queryFn: () => api.get<{ data: FinanceNote[] }>(`/v1/finance/invoices/${id}/notes`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/finance/invoices/$id")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getInvoiceQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getInvoiceLineItemsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getInvoicePaymentsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getInvoiceCreditNotesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getInvoiceNotesQueryOptions(params.id)),
+    ]),
   component: InvoiceDetailPage,
 })
 
@@ -127,30 +170,21 @@ function InvoiceDetailPage() {
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
 
-  const { data: invoiceData, isPending } = useQuery({
-    queryKey: ["invoice", id],
-    queryFn: () => api.get<{ data: InvoiceDetail }>(`/v1/finance/invoices/${id}`),
-  })
+  const { data: invoiceData, isPending } = useQuery(getInvoiceQueryOptions(id))
 
-  const { data: lineItemsData, refetch: refetchLineItems } = useQuery({
-    queryKey: ["invoice-line-items", id],
-    queryFn: () => api.get<{ data: LineItem[] }>(`/v1/finance/invoices/${id}/line-items`),
-  })
+  const { data: lineItemsData, refetch: refetchLineItems } = useQuery(
+    getInvoiceLineItemsQueryOptions(id),
+  )
 
-  const { data: paymentsData, refetch: refetchPayments } = useQuery({
-    queryKey: ["invoice-payments", id],
-    queryFn: () => api.get<{ data: PaymentRow[] }>(`/v1/finance/invoices/${id}/payments`),
-  })
+  const { data: paymentsData, refetch: refetchPayments } = useQuery(
+    getInvoicePaymentsQueryOptions(id),
+  )
 
-  const { data: creditNotesData, refetch: refetchCreditNotes } = useQuery({
-    queryKey: ["invoice-credit-notes", id],
-    queryFn: () => api.get<{ data: CreditNoteRow[] }>(`/v1/finance/invoices/${id}/credit-notes`),
-  })
+  const { data: creditNotesData, refetch: refetchCreditNotes } = useQuery(
+    getInvoiceCreditNotesQueryOptions(id),
+  )
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["invoice-notes", id],
-    queryFn: () => api.get<{ data: FinanceNote[] }>(`/v1/finance/invoices/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getInvoiceNotesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/finance/invoices/${id}`),

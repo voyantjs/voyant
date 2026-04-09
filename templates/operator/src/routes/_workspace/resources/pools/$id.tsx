@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Package, Trash2, Users, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -40,8 +40,89 @@ type Booking = { id: string; bookingNumber: string }
 type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 export const Route = createFileRoute("/_workspace/resources/pools/$id")({
+  loader: async ({ context, params }) => {
+    const poolData = await context.queryClient.ensureQueryData(
+      getResourcePoolDetailQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(poolData),
+      context.queryClient.ensureQueryData(getResourcePoolMembersQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getResourcePoolResourcesQueryOptions()),
+      context.queryClient.ensureQueryData(getResourcePoolAllocationsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getResourcePoolAssignmentsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getResourcePoolSlotsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourcePoolBookingsQueryOptions()),
+      ...(poolData.data.productId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourcePoolProductQueryOptions(poolData.data.productId),
+            ),
+          ]
+        : []),
+    ])
+  },
   component: ResourcePoolDetailPage,
 })
+
+function getResourcePoolDetailQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-pool", id],
+    queryFn: () => api.get<{ data: PoolDetail }>(`/v1/resources/pools/${id}`),
+  })
+}
+
+function getResourcePoolProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["resource-pool-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
+
+function getResourcePoolMembersQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-pool-members", id],
+    queryFn: () =>
+      api.get<ListResponse<PoolMember>>(`/v1/resources/pool-members?poolId=${id}&limit=200`),
+  })
+}
+
+function getResourcePoolResourcesQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-pool-resources"],
+    queryFn: () => api.get<ListResponse<Resource>>("/v1/resources/resources?limit=200"),
+  })
+}
+
+function getResourcePoolAllocationsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-pool-allocations", id],
+    queryFn: () =>
+      api.get<ListResponse<Allocation>>(`/v1/resources/allocations?poolId=${id}&limit=200`),
+  })
+}
+
+function getResourcePoolAssignmentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-pool-assignments", id],
+    queryFn: () =>
+      api.get<ListResponse<Assignment>>(`/v1/resources/slot-assignments?poolId=${id}&limit=200`),
+  })
+}
+
+function getResourcePoolSlotsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-pool-slots"],
+    queryFn: () => api.get<ListResponse<Slot>>("/v1/availability/slots?limit=200"),
+  })
+}
+
+function getResourcePoolBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-pool-bookings"],
+    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
+  })
+}
 
 function formatDateTime(value: string) {
   return value.replace("T", " ").slice(0, 16)
@@ -52,51 +133,26 @@ function ResourcePoolDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: poolData, isPending } = useQuery({
-    queryKey: ["resource-pool", id],
-    queryFn: () => api.get<{ data: PoolDetail }>(`/v1/resources/pools/${id}`),
-  })
+  const { data: poolData, isPending } = useQuery(getResourcePoolDetailQueryOptions(id))
 
   const pool = poolData?.data
 
   const productQuery = useQuery({
-    queryKey: ["resource-pool-product", pool?.productId],
+    ...getResourcePoolProductQueryOptions(pool?.productId ?? ""),
     enabled: Boolean(pool?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${pool?.productId}`),
   })
 
-  const membersQuery = useQuery({
-    queryKey: ["resource-pool-members", id],
-    queryFn: () =>
-      api.get<ListResponse<PoolMember>>(`/v1/resources/pool-members?poolId=${id}&limit=200`),
-  })
+  const membersQuery = useQuery(getResourcePoolMembersQueryOptions(id))
 
-  const resourcesQuery = useQuery({
-    queryKey: ["resource-pool-resources"],
-    queryFn: () => api.get<ListResponse<Resource>>("/v1/resources/resources?limit=200"),
-  })
+  const resourcesQuery = useQuery(getResourcePoolResourcesQueryOptions())
 
-  const allocationsQuery = useQuery({
-    queryKey: ["resource-pool-allocations", id],
-    queryFn: () =>
-      api.get<ListResponse<Allocation>>(`/v1/resources/allocations?poolId=${id}&limit=200`),
-  })
+  const allocationsQuery = useQuery(getResourcePoolAllocationsQueryOptions(id))
 
-  const assignmentsQuery = useQuery({
-    queryKey: ["resource-pool-assignments", id],
-    queryFn: () =>
-      api.get<ListResponse<Assignment>>(`/v1/resources/slot-assignments?poolId=${id}&limit=200`),
-  })
+  const assignmentsQuery = useQuery(getResourcePoolAssignmentsQueryOptions(id))
 
-  const slotsQuery = useQuery({
-    queryKey: ["resource-pool-slots"],
-    queryFn: () => api.get<ListResponse<Slot>>("/v1/availability/slots?limit=200"),
-  })
+  const slotsQuery = useQuery(getResourcePoolSlotsQueryOptions())
 
-  const bookingsQuery = useQuery({
-    queryKey: ["resource-pool-bookings"],
-    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
-  })
+  const bookingsQuery = useQuery(getResourcePoolBookingsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/resources/pools/${id}`),

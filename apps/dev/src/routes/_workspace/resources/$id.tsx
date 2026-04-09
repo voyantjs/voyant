@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Package, Trash2, Users, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -48,8 +48,91 @@ type ListResponse<T> = {
 }
 
 export const Route = createFileRoute("/_workspace/resources/$id")({
+  loader: async ({ context, params }) => {
+    const resourceData = await context.queryClient.ensureQueryData(
+      getResourceDetailQueryOptions(params.id),
+    )
+
+    return Promise.all([
+      Promise.resolve(resourceData),
+      context.queryClient.ensureQueryData(getResourcePoolMembersQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getResourcePoolsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceAssignmentsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getResourceSlotsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceBookingsQueryOptions()),
+      context.queryClient.ensureQueryData(getResourceCloseoutsQueryOptions(params.id)),
+      ...(resourceData.data.supplierId
+        ? [
+            context.queryClient.ensureQueryData(
+              getResourceSupplierQueryOptions(resourceData.data.supplierId),
+            ),
+          ]
+        : []),
+    ])
+  },
   component: ResourceDetailPage,
 })
+
+function getResourceDetailQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource", id],
+    queryFn: () => api.get<{ data: ResourceDetail }>(`/v1/resources/resources/${id}`),
+  })
+}
+
+function getResourceSupplierQueryOptions(supplierId: string) {
+  return queryOptions({
+    queryKey: ["resource-supplier", supplierId],
+    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${supplierId}`),
+  })
+}
+
+function getResourcePoolMembersQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-pool-members", id],
+    queryFn: () =>
+      api.get<ListResponse<PoolMember>>(`/v1/resources/pool-members?resourceId=${id}&limit=200`),
+  })
+}
+
+function getResourcePoolsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-pools"],
+    queryFn: () => api.get<ListResponse<Pool>>("/v1/resources/pools?limit=200"),
+  })
+}
+
+function getResourceAssignmentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-assignments", id],
+    queryFn: () =>
+      api.get<ListResponse<Assignment>>(
+        `/v1/resources/slot-assignments?resourceId=${id}&limit=200`,
+      ),
+  })
+}
+
+function getResourceSlotsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-slots"],
+    queryFn: () => api.get<ListResponse<Slot>>("/v1/availability/slots?limit=200"),
+  })
+}
+
+function getResourceBookingsQueryOptions() {
+  return queryOptions({
+    queryKey: ["resource-bookings"],
+    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
+  })
+}
+
+function getResourceCloseoutsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["resource-closeouts", id],
+    queryFn: () =>
+      api.get<ListResponse<Closeout>>(`/v1/resources/closeouts?resourceId=${id}&limit=200`),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -60,53 +143,26 @@ function ResourceDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: resourceData, isPending } = useQuery({
-    queryKey: ["resource", id],
-    queryFn: () => api.get<{ data: ResourceDetail }>(`/v1/resources/resources/${id}`),
-  })
+  const { data: resourceData, isPending } = useQuery(getResourceDetailQueryOptions(id))
 
   const resource = resourceData?.data
 
   const supplierQuery = useQuery({
-    queryKey: ["resource-supplier", resource?.supplierId],
+    ...getResourceSupplierQueryOptions(resource?.supplierId ?? ""),
     enabled: Boolean(resource?.supplierId),
-    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${resource?.supplierId}`),
   })
 
-  const poolMembersQuery = useQuery({
-    queryKey: ["resource-pool-members", id],
-    queryFn: () =>
-      api.get<ListResponse<PoolMember>>(`/v1/resources/pool-members?resourceId=${id}&limit=200`),
-  })
+  const poolMembersQuery = useQuery(getResourcePoolMembersQueryOptions(id))
 
-  const poolsQuery = useQuery({
-    queryKey: ["resource-pools"],
-    queryFn: () => api.get<ListResponse<Pool>>("/v1/resources/pools?limit=200"),
-  })
+  const poolsQuery = useQuery(getResourcePoolsQueryOptions())
 
-  const assignmentsQuery = useQuery({
-    queryKey: ["resource-assignments", id],
-    queryFn: () =>
-      api.get<ListResponse<Assignment>>(
-        `/v1/resources/slot-assignments?resourceId=${id}&limit=200`,
-      ),
-  })
+  const assignmentsQuery = useQuery(getResourceAssignmentsQueryOptions(id))
 
-  const slotsQuery = useQuery({
-    queryKey: ["resource-slots"],
-    queryFn: () => api.get<ListResponse<Slot>>("/v1/availability/slots?limit=200"),
-  })
+  const slotsQuery = useQuery(getResourceSlotsQueryOptions())
 
-  const bookingsQuery = useQuery({
-    queryKey: ["resource-bookings"],
-    queryFn: () => api.get<ListResponse<Booking>>("/v1/bookings?limit=200"),
-  })
+  const bookingsQuery = useQuery(getResourceBookingsQueryOptions())
 
-  const closeoutsQuery = useQuery({
-    queryKey: ["resource-closeouts", id],
-    queryFn: () =>
-      api.get<ListResponse<Closeout>>(`/v1/resources/closeouts?resourceId=${id}&limit=200`),
-  })
+  const closeoutsQuery = useQuery(getResourceCloseoutsQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/resources/resources/${id}`),

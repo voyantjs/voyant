@@ -36,8 +36,11 @@ import {
   formatDate,
   formatRelative,
 } from "../_crm/_components/crm-constants"
+import { getActivitiesQueryOptions } from "../_crm/_lib/crm-query-options"
 
 export const Route = createFileRoute("/_workspace/activities/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getActivitiesQueryOptions({ limit: 100 })),
   component: ActivitiesPage,
 })
 

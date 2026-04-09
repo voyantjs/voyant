@@ -48,10 +48,13 @@ import {
   formatRelative,
   QUOTE_STATUS_OPTIONS,
 } from "../_crm/_components/crm-constants"
+import { getQuotesQueryOptions } from "../_crm/_lib/crm-query-options"
 
 const CURRENCY_CODES = Object.keys(currencies).sort()
 
 export const Route = createFileRoute("/_workspace/quotes/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getQuotesQueryOptions({ limit: 100 })),
   component: QuotesPage,
 })
 

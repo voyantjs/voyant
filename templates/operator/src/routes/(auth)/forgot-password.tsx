@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -14,8 +14,18 @@ import {
 } from "@/components/ui"
 
 import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
+  loader: async () => {
+    const user = await getCurrentUser()
+
+    if (user) {
+      throw redirect({ to: "/" })
+    }
+
+    return null
+  },
   component: ForgotPasswordPage,
 })
 

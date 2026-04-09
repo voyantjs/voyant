@@ -16,6 +16,20 @@ export interface ProductTypesListFilters {
   offset?: number | undefined
 }
 
+export interface ProductCategoriesListFilters {
+  parentId?: string | undefined
+  active?: boolean | undefined
+  search?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface ProductTagsListFilters {
+  search?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
 export const productsQueryKeys = {
   all: ["voyant", "products"] as const,
 
@@ -28,4 +42,15 @@ export const productsQueryKeys = {
   productTypesList: (filters: ProductTypesListFilters) =>
     [...productsQueryKeys.productTypes(), "list", filters] as const,
   productType: (id: string) => [...productsQueryKeys.productTypes(), "detail", id] as const,
+
+  productCategories: () => [...productsQueryKeys.all, "product-categories"] as const,
+  productCategoriesList: (filters: ProductCategoriesListFilters) =>
+    [...productsQueryKeys.productCategories(), "list", filters] as const,
+  productCategory: (id: string) =>
+    [...productsQueryKeys.productCategories(), "detail", id] as const,
+
+  productTags: () => [...productsQueryKeys.all, "product-tags"] as const,
+  productTagsList: (filters: ProductTagsListFilters) =>
+    [...productsQueryKeys.productTags(), "list", filters] as const,
+  productTag: (id: string) => [...productsQueryKeys.productTags(), "detail", id] as const,
 } as const

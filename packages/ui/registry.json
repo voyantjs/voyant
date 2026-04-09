@@ -194,6 +194,109 @@
           "target": "components/voyant/products/product-list.tsx"
         }
       ]
+    },
+    {
+      "name": "voyant-products-product-tag-form",
+      "type": "registry:component",
+      "title": "Product Tag Form",
+      "description": "Create/edit form for product tags, wired to products-react tag mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/products-react"],
+      "registryDependencies": ["button", "input", "label"],
+      "files": [
+        {
+          "path": "registry/products/product-tag-form.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-tag-form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-products-product-tag-dialog",
+      "type": "registry:component",
+      "title": "Product Tag Dialog",
+      "description": "Modal wrapper around Product Tag Form with create/edit modes.",
+      "dependencies": ["@voyantjs/products-react"],
+      "registryDependencies": ["dialog", "voyant-products-product-tag-form"],
+      "files": [
+        {
+          "path": "registry/products/product-tag-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-tag-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-products-product-tag-list",
+      "type": "registry:component",
+      "title": "Product Tag List",
+      "description": "Searchable CRUD table for reusable product tags.",
+      "dependencies": ["lucide-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "input",
+        "table",
+        "voyant-products-product-tag-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/products/product-tag-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-tag-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-products-product-category-form",
+      "type": "registry:component",
+      "title": "Product Category Form",
+      "description": "Create/edit form for product categories with parent selection and active state.",
+      "dependencies": ["lucide-react", "@voyantjs/products-react"],
+      "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/products/product-category-form.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-category-form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-products-product-category-dialog",
+      "type": "registry:component",
+      "title": "Product Category Dialog",
+      "description": "Modal wrapper around Product Category Form with create/edit modes.",
+      "dependencies": ["@voyantjs/products-react"],
+      "registryDependencies": ["dialog", "voyant-products-product-category-form"],
+      "files": [
+        {
+          "path": "registry/products/product-category-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-category-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-products-product-category-list",
+      "type": "registry:component",
+      "title": "Product Category List",
+      "description": "Searchable CRUD table for product categories, including parent hierarchy and active state.",
+      "dependencies": ["lucide-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "dropdown-menu",
+        "input",
+        "table",
+        "voyant-products-product-category-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/products/product-category-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-category-list.tsx"
+        }
+      ]
     }
   ]
 }

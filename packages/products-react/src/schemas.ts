@@ -53,7 +53,35 @@ export const productTypeRecordSchema = z.object({
 
 export type ProductTypeRecord = z.infer<typeof productTypeRecordSchema>
 
+export const productCategoryRecordSchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  sortOrder: z.number().int(),
+  active: z.boolean(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductCategoryRecord = z.infer<typeof productCategoryRecordSchema>
+
+export const productTagRecordSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductTagRecord = z.infer<typeof productTagRecordSchema>
+
 export const productListResponse = paginatedEnvelope(productRecordSchema)
 export const productSingleResponse = singleEnvelope(productRecordSchema)
 export const productTypeListResponse = paginatedEnvelope(productTypeRecordSchema)
 export const productTypeSingleResponse = singleEnvelope(productTypeRecordSchema)
+export const productCategoryListResponse = paginatedEnvelope(productCategoryRecordSchema)
+export const productCategorySingleResponse = singleEnvelope(productCategoryRecordSchema)
+export const productTagListResponse = paginatedEnvelope(productTagRecordSchema)
+export const productTagSingleResponse = singleEnvelope(productTagRecordSchema)

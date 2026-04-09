@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router"
 import {
   Building2,
   CalendarCheck,
@@ -98,6 +99,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 }
 
 function OrgSwitcher() {
+  const navigate = useNavigate()
   const { activeOrganization, organizations, isSwitchingOrganization, setActiveOrganization } =
     useWorkspace()
 
@@ -133,9 +135,7 @@ function OrgSwitcher() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
-            if (typeof window !== "undefined") {
-              window.location.href = "/onboarding"
-            }
+            void navigate({ to: "/onboarding" })
           }}
         >
           <Plus className="mr-2 h-4 w-4" />

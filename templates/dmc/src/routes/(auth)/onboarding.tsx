@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
@@ -12,10 +12,27 @@ import {
   Label,
 } from "@/components/ui"
 
-import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
+import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/(auth)/onboarding")({
+  loader: async ({ location }) => {
+    const [user, workspace] = await Promise.all([getCurrentUser(), getCurrentWorkspace()])
+
+    if (!user) {
+      throw redirect({
+        to: "/sign-in",
+        search: { next: location.href },
+      })
+    }
+
+    if (workspace?.activeOrganization) {
+      throw redirect({ to: "/" })
+    }
+
+    return { user }
+  },
   component: OnboardingPage,
 })
 
@@ -31,21 +48,14 @@ function toSlug(value: string): string {
 
 function OnboardingPage() {
   const navigate = useNavigate()
-  const { data: session } = authClient.useSession()
+  const { user } = Route.useLoaderData()
 
   const [companyName, setCompanyName] = useState("")
   const [slug, setSlug] = useState("")
   const [slugEdited, setSlugEdited] = useState(false)
-  const [contactEmail, setContactEmail] = useState("")
+  const [contactEmail, setContactEmail] = useState(user.email)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  // Pre-fill contact email from session
-  useEffect(() => {
-    if (session?.user?.email && !contactEmail) {
-      setContactEmail(session.user.email)
-    }
-  }, [session?.user?.email, contactEmail])
 
   // Auto-derive slug from company name (unless user has manually edited it)
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { describeRRule } from "@voyantjs/availability/rrule"
 import {
@@ -77,11 +77,57 @@ type ProductNote = {
   createdAt: string
 }
 
+function getProductDaysQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-days", id],
+    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
+  })
+}
+
+function getProductVersionsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-versions", id],
+    queryFn: () => api.get<{ data: ProductVersion[] }>(`/v1/products/${id}/versions`),
+  })
+}
+
+function getProductNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-notes", id],
+    queryFn: () => api.get<{ data: ProductNote[] }>(`/v1/products/${id}/notes`),
+  })
+}
+
+function getProductSlotsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-slots", id],
+    queryFn: () =>
+      api.get<{ data: DepartureSlot[] }>(`/v1/availability/slots?productId=${id}&limit=200`),
+  })
+}
+
+function getProductRulesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-rules", id],
+    queryFn: () =>
+      api.get<{ data: AvailabilityRule[] }>(`/v1/availability/rules?productId=${id}&limit=50`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/products/$id")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(
+  loader: async ({ context, params }) => {
+    await context.queryClient.ensureQueryData(
       getProductQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
-    ),
+    )
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(getProductDaysQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductVersionsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductNotesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductSlotsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductRulesQueryOptions(params.id)),
+    ])
+  },
   component: ProductDetailPage,
 })
 
@@ -177,32 +223,17 @@ function ProductDetailPage() {
 
   const { data: product, isPending } = useProduct(id)
 
-  const { data: daysData, refetch: refetchDays } = useQuery({
-    queryKey: ["product-days", id],
-    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
-  })
+  const { data: daysData, refetch: refetchDays } = useQuery(getProductDaysQueryOptions(id))
 
-  const { data: versionsData, refetch: refetchVersions } = useQuery({
-    queryKey: ["product-versions", id],
-    queryFn: () => api.get<{ data: ProductVersion[] }>(`/v1/products/${id}/versions`),
-  })
+  const { data: versionsData, refetch: refetchVersions } = useQuery(
+    getProductVersionsQueryOptions(id),
+  )
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["product-notes", id],
-    queryFn: () => api.get<{ data: ProductNote[] }>(`/v1/products/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getProductNotesQueryOptions(id))
 
-  const { data: slotsData, refetch: refetchSlots } = useQuery({
-    queryKey: ["product-slots", id],
-    queryFn: () =>
-      api.get<{ data: DepartureSlot[] }>(`/v1/availability/slots?productId=${id}&limit=200`),
-  })
+  const { data: slotsData, refetch: refetchSlots } = useQuery(getProductSlotsQueryOptions(id))
 
-  const { data: rulesData, refetch: refetchRules } = useQuery({
-    queryKey: ["product-rules", id],
-    queryFn: () =>
-      api.get<{ data: AvailabilityRule[] }>(`/v1/availability/rules?productId=${id}&limit=50`),
-  })
+  const { data: rulesData, refetch: refetchRules } = useQuery(getProductRulesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/products/${id}`),

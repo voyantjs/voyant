@@ -12,4 +12,5 @@ export {
   type VoyantProductsProviderProps,
 } from "./provider.js"
 export { productsQueryKeys } from "./query-keys.js"
+export { getProductQueryOptions, getProductsQueryOptions } from "./query-options.js"
 export * from "./schemas.js"

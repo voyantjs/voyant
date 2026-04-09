@@ -2,6 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { describeRRule } from "@voyantjs/availability/rrule"
 import {
+  defaultFetcher,
+  getProductQueryOptions,
+  productsQueryKeys,
+  useProduct,
+} from "@voyantjs/products-react"
+import {
   CalendarCheck,
   ChevronDown,
   ChevronRight,
@@ -27,6 +33,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 
 import { api } from "@/lib/api-client"
+import { getApiUrl } from "@/lib/env"
 
 import { DayDialog } from "./_components/day-dialog"
 import { DepartureDialog, type DepartureSlot } from "./_components/departure-dialog"
@@ -34,29 +41,6 @@ import { OptionsSection } from "./_components/options-section"
 import { ProductDialog } from "./_components/product-dialog"
 import { type AvailabilityRule, ScheduleDialog } from "./_components/schedule-dialog"
 import { ServiceDialog } from "./_components/service-dialog"
-
-type Product = {
-  id: string
-  name: string
-  status: "draft" | "active" | "archived"
-  description: string | null
-  bookingMode: "date" | "date_time" | "open" | "stay" | "transfer" | "itinerary" | "other"
-  capacityMode: "free_sale" | "limited" | "on_request"
-  visibility: "public" | "private" | "hidden"
-  sellCurrency: string
-  sellAmountCents: number | null
-  costAmountCents: number | null
-  marginPercent: number | null
-  personId: string | null
-  productTypeId: string | null
-  organizationId: string | null
-  startDate: string | null
-  endDate: string | null
-  pax: number | null
-  tags: string[]
-  createdAt: string
-  updatedAt: string
-}
 
 type ProductDay = {
   id: string
@@ -116,6 +100,10 @@ type ProductMediaItem = {
 }
 
 export const Route = createFileRoute("/_workspace/products/$id")({
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(
+      getProductQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
+    ),
   component: ProductDetailPage,
 })
 
@@ -257,10 +245,7 @@ function ProductDetailPage() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<AvailabilityRule | undefined>()
 
-  const { data: productData, isPending } = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${id}`),
-  })
+  const { data: product, isPending } = useProduct(id)
 
   const { data: daysData, refetch: refetchDays } = useQuery({
     queryKey: ["product-days", id],
@@ -412,7 +397,6 @@ function ProductDetailPage() {
     )
   }
 
-  const product = productData?.data
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
@@ -923,8 +907,8 @@ function ProductDetailPage() {
         product={product}
         onSuccess={() => {
           setEditOpen(false)
-          void queryClient.invalidateQueries({ queryKey: ["product", id] })
-          void queryClient.invalidateQueries({ queryKey: ["products"] })
+          void queryClient.invalidateQueries({ queryKey: productsQueryKeys.product(id) })
+          void queryClient.invalidateQueries({ queryKey: productsQueryKeys.products() })
         }}
       />
 

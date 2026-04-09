@@ -1,8 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { defaultFetcher, getProductsQueryOptions } from "@voyantjs/products-react"
 
 import { ProductList } from "@/components/voyant/products/product-list"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/products/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(
+      getProductsQueryOptions(
+        { baseUrl: getApiUrl(), fetcher: defaultFetcher },
+        { limit: 25, offset: 0 },
+      ),
+    ),
   component: ProductsPage,
 })
 

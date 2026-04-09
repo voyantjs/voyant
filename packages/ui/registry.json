@@ -350,6 +350,21 @@
       ]
     },
     {
+      "name": "voyant-bookings-passenger-list",
+      "type": "registry:component",
+      "title": "Passenger List",
+      "description": "Passenger section for a booking detail page, including create, edit, and delete actions.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["button", "card", "voyant-bookings-passenger-dialog"],
+      "files": [
+        {
+          "path": "registry/bookings/passenger-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/passenger-list.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",
@@ -361,6 +376,66 @@
           "path": "registry/bookings/status-change-dialog.tsx",
           "type": "registry:component",
           "target": "components/voyant/bookings/status-change-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-supplier-status-dialog",
+      "type": "registry:component",
+      "title": "Supplier Status Dialog",
+      "description": "Create/edit dialog for booking supplier confirmation records.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/supplier-status-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/supplier-status-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-supplier-status-list",
+      "type": "registry:component",
+      "title": "Supplier Status List",
+      "description": "Supplier confirmation section for booking detail pages.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "card", "voyant-bookings-supplier-status-dialog"],
+      "files": [
+        {
+          "path": "registry/bookings/supplier-status-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/supplier-status-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-activity-timeline",
+      "type": "registry:component",
+      "title": "Booking Activity Timeline",
+      "description": "Activity feed for booking lifecycle events and operator actions.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["card"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-activity-timeline.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-activity-timeline.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-notes",
+      "type": "registry:component",
+      "title": "Booking Notes",
+      "description": "Notes composer and timeline for a booking detail page.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["button", "card", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-notes.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-notes.tsx"
         }
       ]
     },

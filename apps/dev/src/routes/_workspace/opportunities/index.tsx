@@ -57,10 +57,37 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { formatDate, formatMoney } from "../_crm/_components/crm-constants"
+import {
+  getOpportunitiesQueryOptions,
+  getPipelinesQueryOptions,
+  getStagesQueryOptions,
+} from "../_crm/_lib/crm-query-options"
 
 const CURRENCY_CODES = Object.keys(currencies).sort()
 
 export const Route = createFileRoute("/_workspace/opportunities/")({
+  loader: async ({ context }) => {
+    const pipelinesResponse = await context.queryClient.ensureQueryData(
+      getPipelinesQueryOptions({ entityType: "opportunity", limit: 50 }),
+    )
+    const pipelines = pipelinesResponse.data ?? []
+    const defaultPipeline = pipelines.find((pipeline) => pipeline.isDefault) ?? pipelines[0]
+
+    if (defaultPipeline) {
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          getStagesQueryOptions({ pipelineId: defaultPipeline.id, limit: 100 }),
+        ),
+        context.queryClient.ensureQueryData(
+          getOpportunitiesQueryOptions({
+            pipelineId: defaultPipeline.id,
+            status: "open",
+            limit: 500,
+          }),
+        ),
+      ])
+    }
+  },
   component: OpportunitiesKanbanPage,
 })
 
@@ -68,18 +95,24 @@ function OpportunitiesKanbanPage() {
   const navigate = useNavigate()
   const pipelinesQuery = usePipelines({ entityType: "opportunity", limit: 50 })
   const pipelines = pipelinesQuery.data?.data ?? []
+  const defaultPipelineId =
+    (pipelines.find((pipeline) => pipeline.isDefault) ?? pipelines[0])?.id ?? null
 
-  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null)
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(defaultPipelineId)
   const [showCreatePipeline, setShowCreatePipeline] = useState(false)
   const [showManageStages, setShowManageStages] = useState(false)
   const [showCreateOpp, setShowCreateOpp] = useState(false)
 
   useEffect(() => {
-    if (!selectedPipelineId && pipelines.length > 0) {
-      const def = pipelines.find((p) => p.isDefault) ?? pipelines[0]
-      if (def) setSelectedPipelineId(def.id)
+    if (!selectedPipelineId && defaultPipelineId) {
+      setSelectedPipelineId(defaultPipelineId)
+      return
     }
-  }, [pipelines, selectedPipelineId])
+
+    if (selectedPipelineId && !pipelines.some((pipeline) => pipeline.id === selectedPipelineId)) {
+      setSelectedPipelineId(defaultPipelineId)
+    }
+  }, [defaultPipelineId, pipelines, selectedPipelineId])
 
   const stagesQuery = useStages({
     pipelineId: selectedPipelineId ?? undefined,

@@ -2,12 +2,18 @@ import { queryOptions } from "@tanstack/react-query"
 import type {
   ActivitiesListFilters,
   ActivityRecord,
+  OpportunitiesListFilters,
+  OpportunityRecord,
   OrganizationRecord,
   OrganizationsListFilters,
   PeopleListFilters,
   PersonRecord,
+  PipelineRecord,
+  PipelinesListFilters,
   QuoteRecord,
   QuotesListFilters,
+  StageRecord,
+  StagesListFilters,
 } from "@voyantjs/crm-react"
 import { crmQueryKeys } from "@voyantjs/crm-react"
 import { api } from "@/lib/api-client"
@@ -83,5 +89,52 @@ export function getQuotesQueryOptions(filters: QuotesListFilters = {}) {
   return queryOptions({
     queryKey: crmQueryKeys.quotesList(filters),
     queryFn: () => api.get<PaginatedResponse<QuoteRecord>>(`/v1/crm/quotes${qs ? `?${qs}` : ""}`),
+  })
+}
+
+export function getPipelinesQueryOptions(filters: PipelinesListFilters = {}) {
+  const params = new URLSearchParams()
+  if (filters.entityType) params.set("entityType", filters.entityType)
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+
+  const qs = params.toString()
+  return queryOptions({
+    queryKey: crmQueryKeys.pipelinesList(filters),
+    queryFn: () =>
+      api.get<PaginatedResponse<PipelineRecord>>(`/v1/crm/pipelines${qs ? `?${qs}` : ""}`),
+  })
+}
+
+export function getStagesQueryOptions(filters: StagesListFilters = {}) {
+  const params = new URLSearchParams()
+  if (filters.pipelineId) params.set("pipelineId", filters.pipelineId)
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+
+  const qs = params.toString()
+  return queryOptions({
+    queryKey: crmQueryKeys.stagesList(filters),
+    queryFn: () => api.get<PaginatedResponse<StageRecord>>(`/v1/crm/stages${qs ? `?${qs}` : ""}`),
+  })
+}
+
+export function getOpportunitiesQueryOptions(filters: OpportunitiesListFilters = {}) {
+  const params = new URLSearchParams()
+  if (filters.search) params.set("search", filters.search)
+  if (filters.personId) params.set("personId", filters.personId)
+  if (filters.organizationId) params.set("organizationId", filters.organizationId)
+  if (filters.pipelineId) params.set("pipelineId", filters.pipelineId)
+  if (filters.stageId) params.set("stageId", filters.stageId)
+  if (filters.ownerId) params.set("ownerId", filters.ownerId)
+  if (filters.status) params.set("status", filters.status)
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+
+  const qs = params.toString()
+  return queryOptions({
+    queryKey: crmQueryKeys.opportunitiesList(filters),
+    queryFn: () =>
+      api.get<PaginatedResponse<OpportunityRecord>>(`/v1/crm/opportunities${qs ? `?${qs}` : ""}`),
   })
 }

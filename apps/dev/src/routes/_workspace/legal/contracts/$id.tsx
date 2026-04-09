@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -50,8 +50,35 @@ type Attachment = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/contracts/$id")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getLegalContractQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getLegalContractSignaturesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getLegalContractAttachmentsQueryOptions(params.id)),
+    ]),
   component: ContractDetailPage,
 })
+
+function getLegalContractQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.contracts.detail(id),
+    queryFn: () => api.get<{ data: Contract }>(`/v1/admin/legal/contracts/${id}`),
+  })
+}
+
+function getLegalContractSignaturesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.contracts.signatures(id),
+    queryFn: () => api.get<{ data: Signature[] }>(`/v1/admin/legal/contracts/${id}/signatures`),
+  })
+}
+
+function getLegalContractAttachmentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.contracts.attachments(id),
+    queryFn: () => api.get<{ data: Attachment[] }>(`/v1/admin/legal/contracts/${id}/attachments`),
+  })
+}
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "outline",
@@ -73,20 +100,15 @@ function ContractDetailPage() {
   const [attachOpen, setAttachOpen] = useState(false)
   const [editingAttachment, setEditingAttachment] = useState<Attachment | undefined>()
 
-  const { data: contractData, isPending } = useQuery({
-    queryKey: queryKeys.legal.contracts.detail(id),
-    queryFn: () => api.get<{ data: Contract }>(`/v1/admin/legal/contracts/${id}`),
-  })
+  const { data: contractData, isPending } = useQuery(getLegalContractQueryOptions(id))
 
-  const { data: signaturesData, refetch: refetchSignatures } = useQuery({
-    queryKey: queryKeys.legal.contracts.signatures(id),
-    queryFn: () => api.get<{ data: Signature[] }>(`/v1/admin/legal/contracts/${id}/signatures`),
-  })
+  const { data: signaturesData, refetch: refetchSignatures } = useQuery(
+    getLegalContractSignaturesQueryOptions(id),
+  )
 
-  const { data: attachmentsData, refetch: refetchAttachments } = useQuery({
-    queryKey: queryKeys.legal.contracts.attachments(id),
-    queryFn: () => api.get<{ data: Attachment[] }>(`/v1/admin/legal/contracts/${id}/attachments`),
-  })
+  const { data: attachmentsData, refetch: refetchAttachments } = useQuery(
+    getLegalContractAttachmentsQueryOptions(id),
+  )
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/admin/legal/contracts/${id}`),

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -43,8 +43,44 @@ type Acceptance = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/policies/$id")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getLegalPolicyQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getLegalPolicyVersionsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getLegalPolicyAssignmentsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getLegalPolicyAcceptancesQueryOptions()),
+    ]),
   component: PolicyDetailPage,
 })
+
+function getLegalPolicyQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.policies.detail(id),
+    queryFn: () => api.get<{ data: Policy }>(`/v1/admin/legal/policies/${id}`),
+  })
+}
+
+function getLegalPolicyVersionsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.policies.versions(id),
+    queryFn: () => api.get<{ data: PolicyVersion[] }>(`/v1/admin/legal/policies/${id}/versions`),
+  })
+}
+
+function getLegalPolicyAssignmentsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.policies.assignments(),
+    queryFn: () =>
+      api.get<{ data: AssignmentData[] }>(`/v1/admin/legal/policies/assignments?policyId=${id}`),
+  })
+}
+
+function getLegalPolicyAcceptancesQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.legal.policies.acceptances(),
+    queryFn: () => api.get<{ data: Acceptance[] }>("/v1/admin/legal/policies/acceptances?limit=50"),
+  })
+}
 
 function PolicyDetailPage() {
   const { id } = Route.useParams()
@@ -61,26 +97,17 @@ function PolicyDetailPage() {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false)
   const [editingAssignment, setEditingAssignment] = useState<AssignmentData | undefined>()
 
-  const { data: policyData, isPending } = useQuery({
-    queryKey: queryKeys.legal.policies.detail(id),
-    queryFn: () => api.get<{ data: Policy }>(`/v1/admin/legal/policies/${id}`),
-  })
+  const { data: policyData, isPending } = useQuery(getLegalPolicyQueryOptions(id))
 
-  const { data: versionsData, refetch: refetchVersions } = useQuery({
-    queryKey: queryKeys.legal.policies.versions(id),
-    queryFn: () => api.get<{ data: PolicyVersion[] }>(`/v1/admin/legal/policies/${id}/versions`),
-  })
+  const { data: versionsData, refetch: refetchVersions } = useQuery(
+    getLegalPolicyVersionsQueryOptions(id),
+  )
 
-  const { data: assignmentsData, refetch: refetchAssignments } = useQuery({
-    queryKey: queryKeys.legal.policies.assignments(),
-    queryFn: () =>
-      api.get<{ data: AssignmentData[] }>(`/v1/admin/legal/policies/assignments?policyId=${id}`),
-  })
+  const { data: assignmentsData, refetch: refetchAssignments } = useQuery(
+    getLegalPolicyAssignmentsQueryOptions(id),
+  )
 
-  const { data: acceptancesData } = useQuery({
-    queryKey: queryKeys.legal.policies.acceptances(),
-    queryFn: () => api.get<{ data: Acceptance[] }>("/v1/admin/legal/policies/acceptances?limit=50"),
-  })
+  const { data: acceptancesData } = useQuery(getLegalPolicyAcceptancesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/admin/legal/policies/${id}`),

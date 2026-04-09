@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -51,22 +51,16 @@ type TemplateListResponse = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/templates/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getLegalTemplatesListQueryOptions("", "all")),
   component: TemplatesPage,
 })
 
 const SCOPES = ["customer", "supplier", "partner", "channel", "other"] as const
 
-function TemplatesPage() {
-  const [search, setSearch] = useState("")
-  const [scope, setScope] = useState<string>("all")
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | undefined>()
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-  const [versionDialogOpen, setVersionDialogOpen] = useState(false)
-  const [versionDialogTemplateId, setVersionDialogTemplateId] = useState<string>("")
-
-  const { data, isPending, refetch } = useQuery({
-    queryKey: queryKeys.legal.templates.list(search),
+function getLegalTemplatesListQueryOptions(search: string, scope: string) {
+  return queryOptions({
+    queryKey: [...queryKeys.legal.templates.all, { search, scope }],
     queryFn: () => {
       const params = new URLSearchParams()
       if (search) params.set("search", search)
@@ -77,6 +71,28 @@ function TemplatesPage() {
       )
     },
   })
+}
+
+function getLegalTemplateVersionsQueryOptions(templateId: string) {
+  return queryOptions({
+    queryKey: queryKeys.legal.templates.versions(templateId),
+    queryFn: () =>
+      api.get<{ data: TemplateVersion[] }>(
+        `/v1/admin/legal/contracts/templates/${templateId}/versions`,
+      ),
+  })
+}
+
+function TemplatesPage() {
+  const [search, setSearch] = useState("")
+  const [scope, setScope] = useState<string>("all")
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | undefined>()
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [versionDialogOpen, setVersionDialogOpen] = useState(false)
+  const [versionDialogTemplateId, setVersionDialogTemplateId] = useState<string>("")
+
+  const { data, isPending, refetch } = useQuery(getLegalTemplatesListQueryOptions(search, scope))
 
   const deleteTemplateMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/admin/legal/contracts/templates/${id}`),
@@ -224,11 +240,7 @@ function TemplateRow({
   onAddVersion: () => void
 }) {
   const { data: versionsData } = useQuery({
-    queryKey: queryKeys.legal.templates.versions(template.id),
-    queryFn: () =>
-      api.get<{ data: TemplateVersion[] }>(
-        `/v1/admin/legal/contracts/templates/${template.id}/versions`,
-      ),
+    ...getLegalTemplateVersionsQueryOptions(template.id),
     enabled: expanded,
   })
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -15,17 +15,22 @@ type SeriesListResponse = {
 }
 
 export const Route = createFileRoute("/_workspace/legal/number-series/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getLegalNumberSeriesQueryOptions()),
   component: NumberSeriesPage,
 })
+
+function getLegalNumberSeriesQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.legal.numberSeries.list(),
+    queryFn: () => api.get<SeriesListResponse>("/v1/admin/legal/contracts/number-series"),
+  })
+}
 
 function NumberSeriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSeries, setEditingSeries] = useState<NumberSeriesData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: queryKeys.legal.numberSeries.list(),
-    queryFn: () => api.get<SeriesListResponse>("/v1/admin/legal/contracts/number-series"),
-  })
+  const { data, isPending, refetch } = useQuery(getLegalNumberSeriesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/admin/legal/contracts/number-series/${id}`),

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -14,29 +14,40 @@ import { api } from "@/lib/api-client"
 import { type ProductExtraData, ProductExtraDialog } from "./_components/product-extra-dialog"
 
 export const Route = createFileRoute("/_workspace/extras/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getExtrasProductsQueryOptions()),
   component: ExtrasPage,
 })
 
 type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 type ProductLite = { id: string; name: string; code: string | null; status: string }
 
-function ExtrasPage() {
-  const [productId, setProductId] = useState<string>("")
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<ProductExtraData | undefined>()
-
-  const productsQuery = useQuery({
+function getExtrasProductsQueryOptions() {
+  return queryOptions({
     queryKey: ["extras", "products"],
     queryFn: () => api.get<ListResponse<ProductLite>>("/v1/products?limit=200"),
   })
-  const products = productsQuery.data?.data ?? []
+}
 
-  const { data, isPending, refetch } = useQuery({
+function getProductExtrasQueryOptions(productId: string) {
+  return queryOptions({
     queryKey: ["product-extras", productId],
     queryFn: () =>
       api.get<ListResponse<ProductExtraData>>(
         `/v1/extras/product-extras?productId=${productId}&limit=200`,
       ),
+  })
+}
+
+function ExtrasPage() {
+  const [productId, setProductId] = useState<string>("")
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ProductExtraData | undefined>()
+
+  const productsQuery = useQuery(getExtrasProductsQueryOptions())
+  const products = productsQuery.data?.data ?? []
+
+  const { data, isPending, refetch } = useQuery({
+    ...getProductExtrasQueryOptions(productId),
     enabled: !!productId,
   })
 

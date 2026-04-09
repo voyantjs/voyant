@@ -1,8 +1,10 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { VoyantReactProvider } from "@voyantjs/react"
 import { Loader2 } from "lucide-react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
 import { SidebarProvider } from "@/components/ui"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
   component: WorkspaceLayout,
@@ -10,9 +12,11 @@ export const Route = createFileRoute("/_workspace")({
 
 function WorkspaceLayout() {
   return (
-    <UserProvider>
-      <WorkspaceContent />
-    </UserProvider>
+    <VoyantReactProvider baseUrl={getApiUrl()}>
+      <UserProvider>
+        <WorkspaceContent />
+      </UserProvider>
+    </VoyantReactProvider>
   )
 }
 

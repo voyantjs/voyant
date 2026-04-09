@@ -1,9 +1,7 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { VoyantReactProvider } from "@voyantjs/react"
 import type * as React from "react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { getApiUrl } from "@/lib/env"
 
 import { ThemeProvider } from "./providers/theme-provider"
 
@@ -16,11 +14,9 @@ export function Providers({
 }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <VoyantReactProvider baseUrl={getApiUrl()}>
-        <ThemeProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
-      </VoyantReactProvider>
+      <ThemeProvider>
+        <TooltipProvider>{children}</TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }

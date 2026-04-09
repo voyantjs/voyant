@@ -1,10 +1,35 @@
+import { queryOptions } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Receipt } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { api } from "@/lib/api-client"
+import type { OfferData } from "./_components/offer-dialog"
 import { OffersTab } from "./_components/offers-tab"
+import type { OrderData } from "./_components/order-dialog"
 import { OrdersTab } from "./_components/orders-tab"
 
+type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
+
+function getOffersQueryOptions() {
+  return queryOptions({
+    queryKey: ["transactions", "offers"] as const,
+    queryFn: () => api.get<ListResponse<OfferData>>("/v1/transactions/offers?limit=200"),
+  })
+}
+
+function getOrdersQueryOptions() {
+  return queryOptions({
+    queryKey: ["transactions", "orders"] as const,
+    queryFn: () => api.get<ListResponse<OrderData>>("/v1/transactions/orders?limit=200"),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/transactions/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getOffersQueryOptions()),
+      context.queryClient.ensureQueryData(getOrdersQueryOptions()),
+    ]),
   component: TransactionsPage,
 })
 

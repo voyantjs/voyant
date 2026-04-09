@@ -43,7 +43,7 @@ jobs:
 
       - name: Determine release version
         id: version
-        run: echo "value=$(node -p \"JSON.parse(require('fs').readFileSync('./packages/cli/package.json', 'utf8')).version\")" >> "$GITHUB_OUTPUT"
+        run: echo "value=$(node -e 'console.log(require(\"./packages/cli/package.json\").version)')" >> "$GITHUB_OUTPUT"
 
       - name: Package starter archives
         run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
@@ -101,7 +101,7 @@ jobs:
       - name: Determine release version
         if: steps.changesets.outputs.published == 'true'
         id: version
-        run: echo "value=$(node -p \"JSON.parse(require('fs').readFileSync('./packages/cli/package.json', 'utf8')).version\")" >> "$GITHUB_OUTPUT"
+        run: echo "value=$(node -e 'console.log(require(\"./packages/cli/package.json\").version)')" >> "$GITHUB_OUTPUT"
 
       - name: Package starter archives
         if: steps.changesets.outputs.published == 'true'

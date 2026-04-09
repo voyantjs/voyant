@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { useOrganizations, usePeople } from "@voyantjs/voyant-crm-ui"
+import { useOrganizations, usePeople } from "@voyantjs/crm-react"
 import {
   Building2,
   CalendarCheck,

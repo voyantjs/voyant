@@ -1,6 +1,6 @@
 "use client"
 
-import { usePerson } from "@voyantjs/voyant-crm-ui"
+import { usePerson } from "@voyantjs/crm-react"
 import { Loader2 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"

@@ -1,6 +1,6 @@
 "use client"
 
-import { type PersonRecord, usePeople } from "@voyantjs/voyant-crm-ui"
+import { type PersonRecord, usePeople } from "@voyantjs/crm-react"
 import { Loader2, Plus, Search } from "lucide-react"
 import * as React from "react"
 

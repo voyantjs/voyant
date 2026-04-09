@@ -37,7 +37,7 @@
     "@voyantjs/checkout": "workspace:*",
     "@voyantjs/core": "workspace:*",
     "@voyantjs/crm": "workspace:*",
-    "@voyantjs/voyant-crm-ui": "workspace:*",
+    "@voyantjs/crm-react": "workspace:*",
     "@voyantjs/db": "workspace:*",
     "@voyantjs/distribution": "workspace:*",
     "@voyantjs/external-refs": "workspace:*",

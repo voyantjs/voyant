@@ -5,7 +5,7 @@ import {
   useOrganization,
   usePerson,
   usePersonMutation,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { currencies } from "@voyantjs/utils/currencies"
 import { languages } from "@voyantjs/utils/languages"
 import {

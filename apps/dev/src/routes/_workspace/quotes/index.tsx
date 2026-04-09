@@ -5,7 +5,7 @@ import {
   useOpportunities,
   useQuoteMutation,
   useQuotes,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, Plus } from "lucide-react"
 import { useMemo, useState } from "react"

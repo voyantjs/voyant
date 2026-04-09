@@ -6,7 +6,7 @@ import {
   useOrganization,
   useOrganizationMutation,
   usePeople,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import {
   ArrowLeft,
   Building,

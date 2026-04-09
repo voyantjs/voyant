@@ -4,7 +4,7 @@ import {
   type CreateActivityInput,
   useActivities,
   useActivityMutation,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { Loader2, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import {

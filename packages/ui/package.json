@@ -1,0 +1,16 @@
+{
+  "name": "@voyantjs/voyant-ui",
+  "version": "0.1.0",
+  "private": true,
+  "license": "FSL-1.1-Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "lint": "biome check registry/",
+    "registry:build": "shadcn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/ui"
+  }
+}

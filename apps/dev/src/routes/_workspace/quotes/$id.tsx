@@ -6,7 +6,7 @@ import {
   useQuote,
   useQuoteLines,
   useQuoteMutation,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {

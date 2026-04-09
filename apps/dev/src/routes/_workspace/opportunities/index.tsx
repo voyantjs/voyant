@@ -22,7 +22,7 @@ import {
   usePipelineMutation,
   usePipelines,
   useStages,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, Plus, Settings2, Trash2, TrendingUp } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"

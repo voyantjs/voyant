@@ -1,6 +1,6 @@
 "use client"
 
-import type { OrganizationRecord } from "@voyantjs/voyant-crm-ui"
+import type { OrganizationRecord } from "@voyantjs/crm-react"
 import { Building2, Globe } from "lucide-react"
 import type * as React from "react"
 

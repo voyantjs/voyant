@@ -1,6 +1,6 @@
 "use client"
 
-import type { PersonRecord } from "@voyantjs/voyant-crm-ui"
+import type { PersonRecord } from "@voyantjs/crm-react"
 
 import {
   Dialog,

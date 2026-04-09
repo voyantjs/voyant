@@ -12,6 +12,7 @@
       "@voyantjs/cli",
       "@voyantjs/core",
       "@voyantjs/crm",
+      "@voyantjs/crm-react",
       "@voyantjs/db",
       "@voyantjs/distribution",
       "@voyantjs/external-refs",
@@ -44,7 +45,7 @@
   "linked": [],
   "ignore": [
     "@voyantjs/voyant-admin",
-    "@voyantjs/voyant-crm-ui",
+    "@voyantjs/voyant-ui",
     "@voyantjs/voyant-storage",
     "@voyantjs/voyant-test-utils",
     "@voyantjs/voyant-typescript-config"

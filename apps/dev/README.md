@@ -14,7 +14,7 @@ pnpm -F dev dev
 
 ## Purpose
 
-This app is **not** a deployable template. It exists so you can iterate on `packages/crm-ui/`, `packages/admin/`, and registry components end-to-end without shipping changes to the DMC template.
+This app is **not** a deployable template. It exists so you can iterate on `packages/ui/`, `packages/admin/`, and registry components end-to-end without shipping changes to the DMC template.
 
 ## License
 

@@ -10,7 +10,7 @@ import {
   useQuoteMutation,
   useQuotes,
   useStages,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import {
   ArrowLeft,
   Ban,

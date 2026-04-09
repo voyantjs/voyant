@@ -4,7 +4,7 @@ import {
   type OrganizationRecord,
   useOrganizationMutation,
   useOrganizations,
-} from "@voyantjs/voyant-crm-ui"
+} from "@voyantjs/crm-react"
 import { Loader2, Plus, Search } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Input } from "@/components/ui"

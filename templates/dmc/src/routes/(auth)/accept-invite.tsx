@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { z } from "zod"
 import {
   Badge,
@@ -13,31 +13,34 @@ import {
 } from "@/components/ui"
 
 import { useInviteInfo, useRedeemInvite } from "@/hooks/use-invite-tokens"
-import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
 
 export const Route = createFileRoute("/(auth)/accept-invite")({
   validateSearch: z.object({
     token: z.string(),
   }),
+  loader: async ({ location }) => {
+    const user = await getCurrentUser()
+
+    if (!user) {
+      throw redirect({
+        to: "/sign-in",
+        search: { next: location.href },
+      })
+    }
+
+    return { user }
+  },
   component: AcceptInvitePage,
 })
 
 function AcceptInvitePage() {
   const navigate = useNavigate()
   const { token } = Route.useSearch()
-  const { data: session, isPending: sessionLoading } = authClient.useSession()
   const { data: invite, isLoading: inviteLoading, error: inviteError } = useInviteInfo(token)
   const redeemMutation = useRedeemInvite(token)
 
   const [redeemed, setRedeemed] = useState(false)
-
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (!sessionLoading && !session?.user) {
-      const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`
-      window.location.href = `/sign-in?next=${encodeURIComponent(returnUrl)}`
-    }
-  }, [sessionLoading, session?.user, token])
 
   const handleAccept = () => {
     redeemMutation.mutate(undefined, {
@@ -48,7 +51,7 @@ function AcceptInvitePage() {
     })
   }
 
-  if (sessionLoading || inviteLoading) {
+  if (inviteLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">

@@ -1,34 +1,38 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { z } from "zod"
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui"
 
 import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
 
 export const Route = createFileRoute("/(auth)/accept-invitation")({
   validateSearch: z.object({
     id: z.string(),
   }),
+  loader: async ({ location }) => {
+    const user = await getCurrentUser()
+
+    if (!user) {
+      throw redirect({
+        to: "/sign-in",
+        search: { next: location.href },
+      })
+    }
+
+    return { user }
+  },
   component: AcceptInvitationPage,
 })
 
 function AcceptInvitationPage() {
   const navigate = useNavigate()
   const { id } = Route.useSearch()
-  const { data: session, isPending: sessionLoading } = authClient.useSession()
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [accepted, setAccepted] = useState(false)
-
-  // If not signed in, redirect to sign-in with return URL
-  useEffect(() => {
-    if (!sessionLoading && !session?.user) {
-      const returnUrl = `/accept-invitation?id=${encodeURIComponent(id)}`
-      window.location.href = `/sign-in?next=${encodeURIComponent(returnUrl)}`
-    }
-  }, [sessionLoading, session?.user, id])
 
   const handleAccept = async () => {
     setError(null)
@@ -50,16 +54,6 @@ function AcceptInvitationPage() {
       setError("Something went wrong. Please try again.")
       setLoading(false)
     }
-  }
-
-  if (sessionLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    )
   }
 
   if (accepted) {

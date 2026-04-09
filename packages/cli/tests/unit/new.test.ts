@@ -83,7 +83,7 @@ describe("newCommand", () => {
   afterEach(() => {
     rmSync(tmp, { recursive: true, force: true })
     if (previousFetch === undefined) {
-      delete globalThis.fetch
+      globalThis.fetch = undefined as unknown as typeof globalThis.fetch
     } else {
       globalThis.fetch = previousFetch
     }
@@ -151,10 +151,10 @@ describe("newCommand", () => {
     expect(pkg.name).toBe("my-app")
     expect(pkg.version).toBe("0.0.1")
     expect(pkg.private).toBe(true)
-    expect(pkg.dependencies["@voyantjs/core"]).toBe("^0.1.0")
-    expect(pkg.dependencies["@voyantjs/crm"]).toBe("^0.1.0")
-    expect(pkg.dependencies["@voyantjs/legal"]).toBe("^0.1.0")
-    expect(pkg.devDependencies["@voyantjs/voyant-typescript-config"]).toBe("^0.1.0")
+    expect(pkg.dependencies["@voyantjs/core"]).toBe("^0.1.1")
+    expect(pkg.dependencies["@voyantjs/crm"]).toBe("^0.1.1")
+    expect(pkg.dependencies["@voyantjs/legal"]).toBe("^0.1.1")
+    expect(pkg.devDependencies["@voyantjs/voyant-typescript-config"]).toBe("^0.1.1")
   })
 
   it("skips node_modules, dist, .turbo, and secret env files when copying", async () => {

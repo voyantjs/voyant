@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, Plus, Search } from "lucide-react"
@@ -54,7 +54,31 @@ type SupplierPaymentListResponse = {
   offset: number
 }
 
+function getInvoicesQueryOptions(search = "") {
+  return queryOptions({
+    queryKey: ["invoices", search],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const qs = params.toString()
+      return api.get<InvoiceListResponse>(`/v1/finance/invoices${qs ? `?${qs}` : ""}`)
+    },
+  })
+}
+
+function getSupplierPaymentsQueryOptions() {
+  return queryOptions({
+    queryKey: ["supplier-payments"],
+    queryFn: () => api.get<SupplierPaymentListResponse>("/v1/finance/supplier-payments"),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/finance/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getInvoicesQueryOptions()),
+      context.queryClient.ensureQueryData(getSupplierPaymentsQueryOptions()),
+    ]),
   component: FinancePage,
 })
 
@@ -192,13 +216,7 @@ function FinancePage() {
     isPending: invoicesPending,
     refetch: refetchInvoices,
   } = useQuery({
-    queryKey: ["invoices", search],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      const qs = params.toString()
-      return api.get<InvoiceListResponse>(`/v1/finance/invoices${qs ? `?${qs}` : ""}`)
-    },
+    ...getInvoicesQueryOptions(search),
     enabled: tab === "invoices",
   })
 
@@ -207,8 +225,7 @@ function FinancePage() {
     isPending: supplierPaymentsPending,
     refetch: refetchSupplierPayments,
   } = useQuery({
-    queryKey: ["supplier-payments"],
-    queryFn: () => api.get<SupplierPaymentListResponse>("/v1/finance/supplier-payments"),
+    ...getSupplierPaymentsQueryOptions(),
     enabled: tab === "supplier-payments",
   })
 

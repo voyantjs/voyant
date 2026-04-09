@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Link2, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -20,31 +20,61 @@ type Channel = { id: string; name: string }
 type Product = { id: string; name: string }
 
 export const Route = createFileRoute("/_workspace/distribution/mappings/$id")({
+  loader: async ({ context, params }) => {
+    const mappingData = await context.queryClient.ensureQueryData(
+      getDistributionMappingQueryOptions(params.id),
+    )
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        getDistributionMappingChannelQueryOptions(mappingData.data.channelId),
+      ),
+      context.queryClient.ensureQueryData(
+        getDistributionMappingProductQueryOptions(mappingData.data.productId),
+      ),
+    ])
+  },
   component: DistributionMappingDetailPage,
 })
+
+function getDistributionMappingQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["distribution-mapping", id],
+    queryFn: () => api.get<{ data: MappingDetail }>(`/v1/distribution/product-mappings/${id}`),
+  })
+}
+
+function getDistributionMappingChannelQueryOptions(channelId: string) {
+  return queryOptions({
+    queryKey: ["distribution-mapping-channel", channelId],
+    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${channelId}`),
+  })
+}
+
+function getDistributionMappingProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["distribution-mapping-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
 
 function DistributionMappingDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: mappingData, isPending } = useQuery({
-    queryKey: ["distribution-mapping", id],
-    queryFn: () => api.get<{ data: MappingDetail }>(`/v1/distribution/product-mappings/${id}`),
-  })
+  const { data: mappingData, isPending } = useQuery(getDistributionMappingQueryOptions(id))
 
   const mapping = mappingData?.data
 
   const channelQuery = useQuery({
-    queryKey: ["distribution-mapping-channel", mapping?.channelId],
+    ...getDistributionMappingChannelQueryOptions(mapping?.channelId ?? ""),
     enabled: Boolean(mapping?.channelId),
-    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${mapping?.channelId}`),
   })
 
   const productQuery = useQuery({
-    queryKey: ["distribution-mapping-product", mapping?.productId],
+    ...getDistributionMappingProductQueryOptions(mapping?.productId ?? ""),
     enabled: Boolean(mapping?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${mapping?.productId}`),
   })
 
   const deleteMutation = useMutation({

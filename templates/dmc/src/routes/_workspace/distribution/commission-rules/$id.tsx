@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, DollarSign, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -25,39 +25,87 @@ type Channel = { id: string; name: string }
 type Product = { id: string; name: string }
 
 export const Route = createFileRoute("/_workspace/distribution/commission-rules/$id")({
+  loader: async ({ context, params }) => {
+    const ruleData = await context.queryClient.ensureQueryData(
+      getDistributionCommissionRuleQueryOptions(params.id),
+    )
+
+    const contractPromise = context.queryClient.ensureQueryData(
+      getDistributionCommissionRuleContractQueryOptions(ruleData.data.contractId),
+    )
+    const tasks: Promise<unknown>[] = [contractPromise]
+
+    if (ruleData.data.productId) {
+      tasks.push(
+        context.queryClient.ensureQueryData(
+          getDistributionCommissionRuleProductQueryOptions(ruleData.data.productId),
+        ),
+      )
+    }
+
+    const contractData = await contractPromise
+
+    await Promise.all([
+      ...tasks,
+      context.queryClient.ensureQueryData(
+        getDistributionCommissionRuleChannelQueryOptions(contractData.data.channelId),
+      ),
+    ])
+  },
   component: DistributionCommissionRuleDetailPage,
 })
+
+function getDistributionCommissionRuleQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["distribution-commission-rule", id],
+    queryFn: () =>
+      api.get<{ data: CommissionRuleDetail }>(`/v1/distribution/commission-rules/${id}`),
+  })
+}
+
+function getDistributionCommissionRuleContractQueryOptions(contractId: string) {
+  return queryOptions({
+    queryKey: ["distribution-commission-rule-contract", contractId],
+    queryFn: () => api.get<{ data: Contract }>(`/v1/distribution/contracts/${contractId}`),
+  })
+}
+
+function getDistributionCommissionRuleChannelQueryOptions(channelId: string) {
+  return queryOptions({
+    queryKey: ["distribution-commission-rule-channel", channelId],
+    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${channelId}`),
+  })
+}
+
+function getDistributionCommissionRuleProductQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["distribution-commission-rule-product", productId],
+    queryFn: () => api.get<{ data: Product }>(`/v1/products/${productId}`),
+  })
+}
 
 function DistributionCommissionRuleDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: ruleData, isPending } = useQuery({
-    queryKey: ["distribution-commission-rule", id],
-    queryFn: () =>
-      api.get<{ data: CommissionRuleDetail }>(`/v1/distribution/commission-rules/${id}`),
-  })
+  const { data: ruleData, isPending } = useQuery(getDistributionCommissionRuleQueryOptions(id))
 
   const rule = ruleData?.data
 
   const contractQuery = useQuery({
-    queryKey: ["distribution-commission-rule-contract", rule?.contractId],
+    ...getDistributionCommissionRuleContractQueryOptions(rule?.contractId ?? ""),
     enabled: Boolean(rule?.contractId),
-    queryFn: () => api.get<{ data: Contract }>(`/v1/distribution/contracts/${rule?.contractId}`),
   })
 
   const channelQuery = useQuery({
-    queryKey: ["distribution-commission-rule-channel", contractQuery.data?.data.channelId],
+    ...getDistributionCommissionRuleChannelQueryOptions(contractQuery.data?.data.channelId ?? ""),
     enabled: Boolean(contractQuery.data?.data.channelId),
-    queryFn: () =>
-      api.get<{ data: Channel }>(`/v1/distribution/channels/${contractQuery.data?.data.channelId}`),
   })
 
   const productQuery = useQuery({
-    queryKey: ["distribution-commission-rule-product", rule?.productId],
+    ...getDistributionCommissionRuleProductQueryOptions(rule?.productId ?? ""),
     enabled: Boolean(rule?.productId),
-    queryFn: () => api.get<{ data: Product }>(`/v1/products/${rule?.productId}`),
   })
 
   const deleteMutation = useMutation({

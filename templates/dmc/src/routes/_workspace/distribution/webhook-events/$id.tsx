@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Link2, Loader2, Trash2, Webhook } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -21,8 +21,31 @@ type WebhookEventDetail = {
 type Channel = { id: string; name: string }
 
 export const Route = createFileRoute("/_workspace/distribution/webhook-events/$id")({
+  loader: async ({ context, params }) => {
+    const eventData = await context.queryClient.ensureQueryData(
+      getDistributionWebhookEventQueryOptions(params.id),
+    )
+
+    await context.queryClient.ensureQueryData(
+      getDistributionWebhookEventChannelQueryOptions(eventData.data.channelId),
+    )
+  },
   component: DistributionWebhookEventDetailPage,
 })
+
+function getDistributionWebhookEventQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["distribution-webhook-event", id],
+    queryFn: () => api.get<{ data: WebhookEventDetail }>(`/v1/distribution/webhook-events/${id}`),
+  })
+}
+
+function getDistributionWebhookEventChannelQueryOptions(channelId: string) {
+  return queryOptions({
+    queryKey: ["distribution-webhook-event-channel", channelId],
+    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${channelId}`),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -33,17 +56,13 @@ function DistributionWebhookEventDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: eventData, isPending } = useQuery({
-    queryKey: ["distribution-webhook-event", id],
-    queryFn: () => api.get<{ data: WebhookEventDetail }>(`/v1/distribution/webhook-events/${id}`),
-  })
+  const { data: eventData, isPending } = useQuery(getDistributionWebhookEventQueryOptions(id))
 
   const event = eventData?.data
 
   const channelQuery = useQuery({
-    queryKey: ["distribution-webhook-event-channel", event?.channelId],
+    ...getDistributionWebhookEventChannelQueryOptions(event?.channelId ?? ""),
     enabled: Boolean(event?.channelId),
-    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${event?.channelId}`),
   })
 
   const deleteMutation = useMutation({

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Link2, Loader2, ReceiptText, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -21,8 +21,43 @@ type Channel = { id: string; name: string }
 type Booking = { id: string; bookingNumber: string }
 
 export const Route = createFileRoute("/_workspace/distribution/booking-links/$id")({
+  loader: async ({ context, params }) => {
+    const linkData = await context.queryClient.ensureQueryData(
+      getDistributionBookingLinkQueryOptions(params.id),
+    )
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        getDistributionBookingLinkChannelQueryOptions(linkData.data.channelId),
+      ),
+      context.queryClient.ensureQueryData(
+        getDistributionBookingLinkBookingQueryOptions(linkData.data.bookingId),
+      ),
+    ])
+  },
   component: DistributionBookingLinkDetailPage,
 })
+
+function getDistributionBookingLinkQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["distribution-booking-link", id],
+    queryFn: () => api.get<{ data: BookingLinkDetail }>(`/v1/distribution/booking-links/${id}`),
+  })
+}
+
+function getDistributionBookingLinkChannelQueryOptions(channelId: string) {
+  return queryOptions({
+    queryKey: ["distribution-booking-link-channel", channelId],
+    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${channelId}`),
+  })
+}
+
+function getDistributionBookingLinkBookingQueryOptions(bookingId: string) {
+  return queryOptions({
+    queryKey: ["distribution-booking-link-booking", bookingId],
+    queryFn: () => api.get<{ data: Booking }>(`/v1/bookings/${bookingId}`),
+  })
+}
 
 function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
@@ -33,23 +68,18 @@ function DistributionBookingLinkDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: linkData, isPending } = useQuery({
-    queryKey: ["distribution-booking-link", id],
-    queryFn: () => api.get<{ data: BookingLinkDetail }>(`/v1/distribution/booking-links/${id}`),
-  })
+  const { data: linkData, isPending } = useQuery(getDistributionBookingLinkQueryOptions(id))
 
   const link = linkData?.data
 
   const channelQuery = useQuery({
-    queryKey: ["distribution-booking-link-channel", link?.channelId],
+    ...getDistributionBookingLinkChannelQueryOptions(link?.channelId ?? ""),
     enabled: Boolean(link?.channelId),
-    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${link?.channelId}`),
   })
 
   const bookingQuery = useQuery({
-    queryKey: ["distribution-booking-link-booking", link?.bookingId],
+    ...getDistributionBookingLinkBookingQueryOptions(link?.bookingId ?? ""),
     enabled: Boolean(link?.bookingId),
-    queryFn: () => api.get<{ data: Booking }>(`/v1/bookings/${link?.bookingId}`),
   })
 
   const deleteMutation = useMutation({

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, DollarSign, Loader2, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -37,45 +37,89 @@ type Product = { id: string; name: string }
 type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 export const Route = createFileRoute("/_workspace/distribution/contracts/$id")({
+  loader: async ({ context, params }) => {
+    const contractData = await context.queryClient.ensureQueryData(
+      getDistributionContractQueryOptions(params.id),
+    )
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        getDistributionContractCommissionRulesQueryOptions(params.id),
+      ),
+      context.queryClient.ensureQueryData(getDistributionContractProductsQueryOptions()),
+      context.queryClient.ensureQueryData(
+        getDistributionContractChannelQueryOptions(contractData.data.channelId),
+      ),
+      contractData.data.supplierId
+        ? context.queryClient.ensureQueryData(
+            getDistributionContractSupplierQueryOptions(contractData.data.supplierId),
+          )
+        : Promise.resolve(),
+    ])
+  },
   component: DistributionContractDetailPage,
 })
 
-function DistributionContractDetailPage() {
-  const { id } = Route.useParams()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-
-  const { data: contractData, isPending } = useQuery({
+function getDistributionContractQueryOptions(id: string) {
+  return queryOptions({
     queryKey: ["distribution-contract", id],
     queryFn: () => api.get<{ data: ContractDetail }>(`/v1/distribution/contracts/${id}`),
   })
+}
 
-  const contract = contractData?.data
-
-  const channelQuery = useQuery({
-    queryKey: ["distribution-contract-channel", contract?.channelId],
-    enabled: Boolean(contract?.channelId),
-    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${contract?.channelId}`),
+function getDistributionContractChannelQueryOptions(channelId: string) {
+  return queryOptions({
+    queryKey: ["distribution-contract-channel", channelId],
+    queryFn: () => api.get<{ data: Channel }>(`/v1/distribution/channels/${channelId}`),
   })
+}
 
-  const supplierQuery = useQuery({
-    queryKey: ["distribution-contract-supplier", contract?.supplierId],
-    enabled: Boolean(contract?.supplierId),
-    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${contract?.supplierId}`),
+function getDistributionContractSupplierQueryOptions(supplierId: string) {
+  return queryOptions({
+    queryKey: ["distribution-contract-supplier", supplierId],
+    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${supplierId}`),
   })
+}
 
-  const commissionRulesQuery = useQuery({
+function getDistributionContractCommissionRulesQueryOptions(id: string) {
+  return queryOptions({
     queryKey: ["distribution-contract-commission-rules", id],
     queryFn: () =>
       api.get<ListResponse<CommissionRule>>(
         `/v1/distribution/commission-rules?contractId=${id}&limit=200`,
       ),
   })
+}
 
-  const productsQuery = useQuery({
+function getDistributionContractProductsQueryOptions() {
+  return queryOptions({
     queryKey: ["distribution-contract-products"],
     queryFn: () => api.get<ListResponse<Product>>("/v1/products?limit=200"),
   })
+}
+
+function DistributionContractDetailPage() {
+  const { id } = Route.useParams()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const { data: contractData, isPending } = useQuery(getDistributionContractQueryOptions(id))
+
+  const contract = contractData?.data
+
+  const channelQuery = useQuery({
+    ...getDistributionContractChannelQueryOptions(contract?.channelId ?? ""),
+    enabled: Boolean(contract?.channelId),
+  })
+
+  const supplierQuery = useQuery({
+    ...getDistributionContractSupplierQueryOptions(contract?.supplierId ?? ""),
+    enabled: Boolean(contract?.supplierId),
+  })
+
+  const commissionRulesQuery = useQuery(getDistributionContractCommissionRulesQueryOptions(id))
+
+  const productsQuery = useQuery(getDistributionContractProductsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/distribution/contracts/${id}`),

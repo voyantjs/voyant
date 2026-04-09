@@ -1,22 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { createContext, type ReactNode, useContext } from "react"
 
-import { getApiUrl } from "@/lib/env"
-
-export type User = {
-  id: string
-  email: string
-  firstName: string | null
-  lastName: string | null
-  isSuperAdmin: boolean
-  isSupportUser: boolean
-  createdAt: string
-  profilePictureUrl?: string | null
-  activeOrganizationId?: string | null
-}
+import { type CurrentUser, getCurrentUserQueryOptions } from "@/lib/current-user"
 
 type UserContextValue = {
-  user: User | null
+  user: CurrentUser | null
   isLoading: boolean
   error: Error | null
   refetch: () => Promise<unknown>
@@ -24,29 +12,20 @@ type UserContextValue = {
 
 const UserContext = createContext<UserContextValue | undefined>(undefined)
 
-export function UserProvider({ children }: { children: ReactNode }) {
+export function UserProvider({
+  children,
+  initialUser,
+}: {
+  children: ReactNode
+  initialUser?: CurrentUser | null
+}) {
   const {
     data: user,
     isPending,
     isFetching,
     error,
     refetch,
-  } = useQuery<User | null>({
-    queryKey: ["current-user"],
-    queryFn: async () => {
-      const res = await fetch(`${getApiUrl()}/auth/me`, {
-        credentials: "include",
-      })
-      if (!res.ok) {
-        if (res.status === 401) return null
-        throw new Error("Failed to fetch user")
-      }
-      return (await res.json()) as User
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
-  })
+  } = useQuery(getCurrentUserQueryOptions(initialUser))
 
   const isLoading = isPending || (isFetching && user === undefined)
 

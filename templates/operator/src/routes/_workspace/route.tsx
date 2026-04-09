@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { VoyantReactProvider } from "@voyantjs/react"
 import { Loader2 } from "lucide-react"
 import { useEffect, useRef } from "react"
@@ -6,16 +6,31 @@ import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
 import { SidebarProvider } from "@/components/ui"
 import { authClient } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/current-user"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
+  loader: async ({ location }) => {
+    const user = await getCurrentUser()
+
+    if (!user) {
+      throw redirect({
+        to: "/sign-in",
+        search: { next: location.href },
+      })
+    }
+
+    return { user }
+  },
   component: WorkspaceLayout,
 })
 
 function WorkspaceLayout() {
+  const { user } = Route.useLoaderData()
+
   return (
     <VoyantReactProvider baseUrl={getApiUrl()}>
-      <UserProvider>
+      <UserProvider initialUser={user}>
         <WorkspaceContent />
       </UserProvider>
     </VoyantReactProvider>
@@ -58,10 +73,6 @@ function WorkspaceContent() {
   }
 
   if (!user) {
-    if (typeof window !== "undefined") {
-      const next = window.location.pathname
-      window.location.href = `/sign-in?next=${encodeURIComponent(next)}`
-    }
     return null
   }
 

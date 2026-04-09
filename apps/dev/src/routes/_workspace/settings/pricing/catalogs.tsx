@@ -5,26 +5,18 @@ import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
 import { type PriceCatalogData, PriceCatalogDialog } from "../_components/price-catalog-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/catalogs")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getPriceCatalogsQueryOptions()),
   component: PriceCatalogsPage,
 })
-
-type PriceCatalogListResponse = {
-  data: PriceCatalogData[]
-  total: number
-  limit: number
-  offset: number
-}
 
 function PriceCatalogsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PriceCatalogData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["price-catalogs"],
-    queryFn: () => api.get<PriceCatalogListResponse>("/v1/pricing/price-catalogs?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getPriceCatalogsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/price-catalogs/${id}`),
@@ -144,5 +136,12 @@ function PriceCatalogsPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPriceCatalogsQueryOptions() {
+  return getPricingSettingsListQueryOptions<PriceCatalogData>(
+    ["price-catalogs"],
+    "/v1/pricing/price-catalogs?limit=200",
   )
 }

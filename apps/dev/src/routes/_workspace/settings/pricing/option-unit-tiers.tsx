@@ -8,22 +8,18 @@ import {
   type OptionUnitTierData,
   OptionUnitTierDialog,
 } from "../_components/option-unit-tier-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-unit-tiers")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getOptionUnitTiersQueryOptions()),
   component: OptionUnitTiersPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function OptionUnitTiersPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<OptionUnitTierData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "option-unit-tiers"],
-    queryFn: () =>
-      api.get<ListResponse<OptionUnitTierData>>("/v1/pricing/option-unit-tiers?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getOptionUnitTiersQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/option-unit-tiers/${id}`),
@@ -143,5 +139,12 @@ function OptionUnitTiersPage() {
         }}
       />
     </div>
+  )
+}
+
+function getOptionUnitTiersQueryOptions() {
+  return getPricingSettingsListQueryOptions<OptionUnitTierData>(
+    ["pricing", "option-unit-tiers"],
+    "/v1/pricing/option-unit-tiers?limit=200",
   )
 }

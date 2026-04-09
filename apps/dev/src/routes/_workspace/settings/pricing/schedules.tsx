@@ -5,26 +5,18 @@ import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
 import { type PriceScheduleData, PriceScheduleDialog } from "../_components/price-schedule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/schedules")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getPriceSchedulesQueryOptions()),
   component: PriceSchedulesPage,
 })
-
-type PriceScheduleListResponse = {
-  data: PriceScheduleData[]
-  total: number
-  limit: number
-  offset: number
-}
 
 function PriceSchedulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<PriceScheduleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["price-schedules"],
-    queryFn: () => api.get<PriceScheduleListResponse>("/v1/pricing/price-schedules?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getPriceSchedulesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/price-schedules/${id}`),
@@ -140,5 +132,12 @@ function PriceSchedulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getPriceSchedulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<PriceScheduleData>(
+    ["price-schedules"],
+    "/v1/pricing/price-schedules?limit=200",
   )
 }

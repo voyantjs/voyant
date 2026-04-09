@@ -12,17 +12,13 @@ import {
   type CancellationPolicyRuleData,
   CancellationPolicyRuleDialog,
 } from "../_components/cancellation-policy-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/cancellation-policies")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getCancellationPoliciesQueryOptions()),
   component: CancellationPoliciesPage,
 })
-
-type PolicyListResponse = {
-  data: CancellationPolicyData[]
-  total: number
-  limit: number
-  offset: number
-}
 
 type RuleListResponse = {
   data: CancellationPolicyRuleData[]
@@ -41,10 +37,7 @@ function CancellationPoliciesPage() {
   const [editingRule, setEditingRule] = useState<CancellationPolicyRuleData | undefined>()
   const [nextRuleSortOrder, setNextRuleSortOrder] = useState<number>(0)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["cancellation-policies"],
-    queryFn: () => api.get<PolicyListResponse>("/v1/pricing/cancellation-policies?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getCancellationPoliciesQueryOptions())
 
   const deletePolicyMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/cancellation-policies/${id}`),
@@ -159,6 +152,13 @@ function CancellationPoliciesPage() {
         />
       )}
     </div>
+  )
+}
+
+function getCancellationPoliciesQueryOptions() {
+  return getPricingSettingsListQueryOptions<CancellationPolicyData>(
+    ["cancellation-policies"],
+    "/v1/pricing/cancellation-policies?limit=200",
   )
 }
 

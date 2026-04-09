@@ -8,24 +8,19 @@ import {
   type OptionStartTimeRuleData,
   OptionStartTimeRuleDialog,
 } from "../_components/option-start-time-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-start-time-rules")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getOptionStartTimeRulesQueryOptions()),
   component: OptionStartTimeRulesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function OptionStartTimeRulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<OptionStartTimeRuleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "option-start-time-rules"],
-    queryFn: () =>
-      api.get<ListResponse<OptionStartTimeRuleData>>(
-        "/v1/pricing/option-start-time-rules?limit=200",
-      ),
-  })
+  const { data, isPending, refetch } = useQuery(getOptionStartTimeRulesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/option-start-time-rules/${id}`),
@@ -161,5 +156,12 @@ function OptionStartTimeRulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getOptionStartTimeRulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<OptionStartTimeRuleData>(
+    ["pricing", "option-start-time-rules"],
+    "/v1/pricing/option-start-time-rules?limit=200",
   )
 }

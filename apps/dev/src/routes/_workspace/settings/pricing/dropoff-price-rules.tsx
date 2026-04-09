@@ -8,22 +8,18 @@ import {
   type DropoffPriceRuleData,
   DropoffPriceRuleDialog,
 } from "../_components/dropoff-price-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/dropoff-price-rules")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getDropoffPriceRulesQueryOptions()),
   component: DropoffPriceRulesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function DropoffPriceRulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<DropoffPriceRuleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "dropoff-price-rules"],
-    queryFn: () =>
-      api.get<ListResponse<DropoffPriceRuleData>>("/v1/pricing/dropoff-price-rules?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getDropoffPriceRulesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/dropoff-price-rules/${id}`),
@@ -149,5 +145,12 @@ function DropoffPriceRulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getDropoffPriceRulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<DropoffPriceRuleData>(
+    ["pricing", "dropoff-price-rules"],
+    "/v1/pricing/dropoff-price-rules?limit=200",
   )
 }

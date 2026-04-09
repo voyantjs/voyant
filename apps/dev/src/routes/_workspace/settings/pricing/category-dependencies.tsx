@@ -1,8 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router"
+import {
+  defaultFetcher,
+  getPricingCategoriesQueryOptions,
+  getPricingCategoryDependenciesQueryOptions,
+} from "@voyantjs/pricing-react"
 
 import { PricingCategoryDependencyList } from "@/components/voyant/pricing/pricing-category-dependency-list"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/category-dependencies")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(
+        getPricingCategoryDependenciesQueryOptions(
+          { baseUrl: getApiUrl(), fetcher: defaultFetcher },
+          { limit: 200 },
+        ),
+      ),
+      context.queryClient.ensureQueryData(
+        getPricingCategoriesQueryOptions(
+          { baseUrl: getApiUrl(), fetcher: defaultFetcher },
+          { limit: 200 },
+        ),
+      ),
+    ]),
   component: CategoryDependenciesPage,
 })
 

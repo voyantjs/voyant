@@ -12,4 +12,8 @@ export {
   type VoyantPricingProviderProps,
 } from "./provider.js"
 export { pricingQueryKeys } from "./query-keys.js"
+export {
+  getPricingCategoriesQueryOptions,
+  getPricingCategoryDependenciesQueryOptions,
+} from "./query-options.js"
 export * from "./schemas.js"

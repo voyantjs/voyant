@@ -8,24 +8,19 @@ import {
   type OptionUnitPriceRuleData,
   OptionUnitPriceRuleDialog,
 } from "../_components/option-unit-price-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-unit-price-rules")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getOptionUnitPriceRulesQueryOptions()),
   component: OptionUnitPriceRulesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function OptionUnitPriceRulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<OptionUnitPriceRuleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "option-unit-price-rules"],
-    queryFn: () =>
-      api.get<ListResponse<OptionUnitPriceRuleData>>(
-        "/v1/pricing/option-unit-price-rules?limit=200",
-      ),
-  })
+  const { data, isPending, refetch } = useQuery(getOptionUnitPriceRulesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/option-unit-price-rules/${id}`),
@@ -151,5 +146,12 @@ function OptionUnitPriceRulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getOptionUnitPriceRulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<OptionUnitPriceRuleData>(
+    ["pricing", "option-unit-price-rules"],
+    "/v1/pricing/option-unit-price-rules?limit=200",
   )
 }

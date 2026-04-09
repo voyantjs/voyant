@@ -8,12 +8,18 @@ import {
   type SettingsOptionPriceRuleData,
   SettingsOptionPriceRuleDialog,
 } from "../_components/settings-option-price-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-price-rules")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getOptionPriceRulesQueryOptions()),
+      context.queryClient.ensureQueryData(getOptionPriceRuleProductsQueryOptions()),
+      context.queryClient.ensureQueryData(getOptionPriceRuleOptionsQueryOptions()),
+      context.queryClient.ensureQueryData(getOptionPriceRuleCatalogsQueryOptions()),
+    ]),
   component: OptionPriceRulesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 type ProductLite = { id: string; name: string; code: string | null }
 type OptionLite = { id: string; name: string; code: string | null }
 type CatalogLite = { id: string; name: string; code: string }
@@ -22,26 +28,11 @@ function OptionPriceRulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<SettingsOptionPriceRuleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "option-price-rules"],
-    queryFn: () =>
-      api.get<ListResponse<SettingsOptionPriceRuleData>>(
-        "/v1/pricing/option-price-rules?limit=200",
-      ),
-  })
+  const { data, isPending, refetch } = useQuery(getOptionPriceRulesQueryOptions())
 
-  const productsQuery = useQuery({
-    queryKey: ["pricing", "opr-list", "products"],
-    queryFn: () => api.get<ListResponse<ProductLite>>("/v1/products/products?limit=200"),
-  })
-  const optionsQuery = useQuery({
-    queryKey: ["pricing", "opr-list", "options"],
-    queryFn: () => api.get<ListResponse<OptionLite>>("/v1/products/product-options?limit=200"),
-  })
-  const catalogsQuery = useQuery({
-    queryKey: ["pricing", "opr-list", "catalogs"],
-    queryFn: () => api.get<ListResponse<CatalogLite>>("/v1/pricing/price-catalogs?limit=200"),
-  })
+  const productsQuery = useQuery(getOptionPriceRuleProductsQueryOptions())
+  const optionsQuery = useQuery(getOptionPriceRuleOptionsQueryOptions())
+  const catalogsQuery = useQuery(getOptionPriceRuleCatalogsQueryOptions())
   const productById = new Map((productsQuery.data?.data ?? []).map((p) => [p.id, p]))
   const optionById = new Map((optionsQuery.data?.data ?? []).map((o) => [o.id, o]))
   const catalogById = new Map((catalogsQuery.data?.data ?? []).map((c) => [c.id, c]))
@@ -175,5 +166,33 @@ function OptionPriceRulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getOptionPriceRulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<SettingsOptionPriceRuleData>(
+    ["pricing", "option-price-rules"],
+    "/v1/pricing/option-price-rules?limit=200",
+  )
+}
+
+function getOptionPriceRuleProductsQueryOptions() {
+  return getPricingSettingsListQueryOptions<ProductLite>(
+    ["pricing", "opr-list", "products"],
+    "/v1/products/products?limit=200",
+  )
+}
+
+function getOptionPriceRuleOptionsQueryOptions() {
+  return getPricingSettingsListQueryOptions<OptionLite>(
+    ["pricing", "opr-list", "options"],
+    "/v1/products/product-options?limit=200",
+  )
+}
+
+function getOptionPriceRuleCatalogsQueryOptions() {
+  return getPricingSettingsListQueryOptions<CatalogLite>(
+    ["pricing", "opr-list", "catalogs"],
+    "/v1/pricing/price-catalogs?limit=200",
   )
 }

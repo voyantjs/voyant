@@ -8,22 +8,18 @@ import {
   type ExtraPriceRuleData,
   ExtraPriceRuleDialog,
 } from "../_components/extra-price-rule-dialog"
+import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/extra-price-rules")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getExtraPriceRulesQueryOptions()),
   component: ExtraPriceRulesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function ExtraPriceRulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ExtraPriceRuleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["pricing", "extra-price-rules"],
-    queryFn: () =>
-      api.get<ListResponse<ExtraPriceRuleData>>("/v1/pricing/extra-price-rules?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getExtraPriceRulesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/extra-price-rules/${id}`),
@@ -151,5 +147,12 @@ function ExtraPriceRulesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getExtraPriceRulesQueryOptions() {
+  return getPricingSettingsListQueryOptions<ExtraPriceRuleData>(
+    ["pricing", "extra-price-rules"],
+    "/v1/pricing/extra-price-rules?limit=200",
   )
 }

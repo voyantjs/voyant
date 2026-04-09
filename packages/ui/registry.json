@@ -92,6 +92,57 @@
           "target": "components/voyant/crm/organization-card.tsx"
         }
       ]
+    },
+    {
+      "name": "voyant-crm-organization-form",
+      "type": "registry:component",
+      "title": "Organization Form",
+      "description": "Create/edit form for a CRM organization, wired to useOrganizationMutation.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["button", "input", "label"],
+      "files": [
+        {
+          "path": "registry/crm/organization-form.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-organization-dialog",
+      "type": "registry:component",
+      "title": "Organization Dialog",
+      "description": "Modal wrapper around Organization Form with create/edit modes.",
+      "dependencies": ["@voyantjs/crm-react"],
+      "registryDependencies": ["dialog", "voyant-crm-organization-form"],
+      "files": [
+        {
+          "path": "registry/crm/organization-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-organization-list",
+      "type": "registry:component",
+      "title": "Organization List",
+      "description": "Paginated table of CRM organizations with search, row actions, and create/edit dialog.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "table",
+        "voyant-crm-organization-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/crm/organization-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-list.tsx"
+        }
+      ]
     }
   ]
 }

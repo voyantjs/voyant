@@ -138,10 +138,20 @@ export function RoomTypeRateDialog({
         roomTypeId: roomTypeRate.roomTypeId,
         priceScheduleId: roomTypeRate.priceScheduleId ?? "",
         currencyCode: roomTypeRate.currencyCode,
-        baseAmountCents: roomTypeRate.baseAmountCents != null ? roomTypeRate.baseAmountCents / 100 : null,
-        extraAdultAmountCents: roomTypeRate.extraAdultAmountCents != null ? roomTypeRate.extraAdultAmountCents / 100 : null,
-        extraChildAmountCents: roomTypeRate.extraChildAmountCents != null ? roomTypeRate.extraChildAmountCents / 100 : null,
-        extraInfantAmountCents: roomTypeRate.extraInfantAmountCents != null ? roomTypeRate.extraInfantAmountCents / 100 : null,
+        baseAmountCents:
+          roomTypeRate.baseAmountCents != null ? roomTypeRate.baseAmountCents / 100 : null,
+        extraAdultAmountCents:
+          roomTypeRate.extraAdultAmountCents != null
+            ? roomTypeRate.extraAdultAmountCents / 100
+            : null,
+        extraChildAmountCents:
+          roomTypeRate.extraChildAmountCents != null
+            ? roomTypeRate.extraChildAmountCents / 100
+            : null,
+        extraInfantAmountCents:
+          roomTypeRate.extraInfantAmountCents != null
+            ? roomTypeRate.extraInfantAmountCents / 100
+            : null,
         active: roomTypeRate.active,
         notes: roomTypeRate.notes ?? "",
       })
@@ -247,9 +257,7 @@ export function RoomTypeRateDialog({
                 <Select
                   key={`ps-${priceSchedules.length}`}
                   value={form.watch("priceScheduleId") ?? ""}
-                  onValueChange={(v) =>
-                    form.setValue("priceScheduleId", v === "__none__" ? "" : v)
-                  }
+                  onValueChange={(v) => form.setValue("priceScheduleId", v === "__none__" ? "" : v)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Base / Default" />

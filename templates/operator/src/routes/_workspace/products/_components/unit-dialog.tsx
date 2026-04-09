@@ -4,12 +4,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
   Button,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   Input,
   Label,
   Select,
@@ -17,6 +11,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   Switch,
   Textarea,
 } from "@/components/ui"
@@ -174,7 +174,10 @@ export function UnitDialog({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Unit" : "New Unit"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
@@ -278,7 +281,9 @@ export function UnitDialog({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Unit"}

@@ -153,7 +153,10 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Booking" : "New Booking"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
@@ -238,7 +241,9 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Booking"}

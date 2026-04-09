@@ -118,7 +118,10 @@ function ChannelSheet({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Channel" : "New Channel"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="flex flex-col gap-2">
               <Label>Name</Label>
@@ -179,7 +182,9 @@ function ChannelSheet({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Channel"}
@@ -236,7 +241,8 @@ function ChannelsPage() {
           </div>
         ) : channels.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            No channels yet. Create channels like Website, Mobile App, or Viator to control where products are sold.
+            No channels yet. Create channels like Website, Mobile App, or Viator to control where
+            products are sold.
           </p>
         ) : (
           <div className="flex flex-col divide-y">
@@ -278,7 +284,9 @@ function ChannelsPage() {
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => {
-                        if (confirm("Delete this channel? Products assigned to it will be unlinked.")) {
+                        if (
+                          confirm("Delete this channel? Products assigned to it will be unlinked.")
+                        ) {
                           deleteMutation.mutate(ch.id)
                         }
                       }}

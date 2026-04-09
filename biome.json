@@ -47,9 +47,15 @@
       "!**/docs/open-travel",
       "!**/*.gen.ts",
       "!**/migrations",
+      "!apps/dev/src/components/ui",
+      "!apps/dev/src/lib/async-utils.ts",
+      "!apps/dev/src/styles.css",
       "!templates/dmc/src/components/ui",
       "!templates/dmc/src/lib/async-utils.ts",
-      "!templates/dmc/src/styles.css"
+      "!templates/dmc/src/styles.css",
+      "!templates/operator/src/components/ui",
+      "!templates/operator/src/lib/async-utils.ts",
+      "!templates/operator/src/styles.css"
     ]
   }
 }

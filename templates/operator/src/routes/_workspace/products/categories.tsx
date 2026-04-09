@@ -121,7 +121,10 @@ function CategorySheet({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Category" : "New Category"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
@@ -144,8 +147,13 @@ function CategorySheet({
               <Label>Parent Category</Label>
               <Select
                 value={form.watch("parentId") ?? ""}
-                onValueChange={(v) => form.setValue("parentId", v === "__none__" ? null : v, { shouldDirty: true })}
-                items={[{ value: "__none__", label: "None (top-level)" }, ...parentOptions.map((c) => ({ value: c.id, label: c.name }))]}
+                onValueChange={(v) =>
+                  form.setValue("parentId", v === "__none__" ? null : v, { shouldDirty: true })
+                }
+                items={[
+                  { value: "__none__", label: "None (top-level)" },
+                  ...parentOptions.map((c) => ({ value: c.id, label: c.name })),
+                ]}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="None (top-level)" />
@@ -181,7 +189,9 @@ function CategorySheet({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Category"}

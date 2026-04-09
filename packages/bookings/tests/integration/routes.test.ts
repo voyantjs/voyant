@@ -10,12 +10,12 @@ import {
   productDayServicesRef,
   productDaysRef,
   productOptionsRef,
-  productTicketSettingsRef,
   productsRef,
+  productTicketSettingsRef,
 } from "../../src/products-ref.js"
 import { bookingRoutes } from "../../src/routes.js"
-import { bookingAllocations, bookingPiiAccessLog } from "../../src/schema.js"
 import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
+import { bookingAllocations, bookingPiiAccessLog } from "../../src/schema.js"
 import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
@@ -791,10 +791,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
       await app.request(`/${body.data.id}/confirm`, { method: "POST", ...json({}) })
 
-      const [updatedOffer] = await db
-        .select()
-        .from(offersRef)
-        .where(eq(offersRef.id, offer.id))
+      const [updatedOffer] = await db.select().from(offersRef).where(eq(offersRef.id, offer.id))
       expect(updatedOffer?.status).toBe("converted")
       expect(updatedOffer?.convertedAt).toBeTruthy()
     })
@@ -832,10 +829,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
       await app.request(`/${body.data.id}/confirm`, { method: "POST", ...json({}) })
 
-      const [confirmedOrder] = await db
-        .select()
-        .from(ordersRef)
-        .where(eq(ordersRef.id, order.id))
+      const [confirmedOrder] = await db.select().from(ordersRef).where(eq(ordersRef.id, order.id))
       expect(confirmedOrder?.status).toBe("confirmed")
       expect(confirmedOrder?.confirmedAt).toBeTruthy()
 
@@ -844,10 +838,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         ...json({ note: "Client cancelled" }),
       })
 
-      const [cancelledOrder] = await db
-        .select()
-        .from(ordersRef)
-        .where(eq(ordersRef.id, order.id))
+      const [cancelledOrder] = await db.select().from(ordersRef).where(eq(ordersRef.id, order.id))
       expect(cancelledOrder?.status).toBe("cancelled")
       expect(cancelledOrder?.cancelledAt).toBeTruthy()
     })
@@ -908,10 +899,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         }),
       })
 
-      const [fulfilledOrder] = await db
-        .select()
-        .from(ordersRef)
-        .where(eq(ordersRef.id, order.id))
+      const [fulfilledOrder] = await db.select().from(ordersRef).where(eq(ordersRef.id, order.id))
       expect(fulfilledOrder?.status).toBe("fulfilled")
     })
   })
@@ -988,15 +976,18 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       const { data: participant } = await createRes.json()
 
-      const patchRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
-        method: "PATCH",
-        ...json({
-          nationality: "RO",
-          passportNumber: "X1234567",
-          dietaryRequirements: "vegetarian",
-          isLeadTraveler: true,
-        }),
-      })
+      const patchRes = await app.request(
+        `/${booking.id}/participants/${participant.id}/travel-details`,
+        {
+          method: "PATCH",
+          ...json({
+            nationality: "RO",
+            passportNumber: "X1234567",
+            dietaryRequirements: "vegetarian",
+            isLeadTraveler: true,
+          }),
+        },
+      )
 
       expect(patchRes.status).toBe(200)
       expect((await patchRes.json()).data.passportNumber).toBe("X1234567")
@@ -1009,9 +1000,12 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(stored?.identityEncrypted?.enc).toMatch(/^env:v1:/)
       expect(stored?.identityEncrypted?.enc).not.toContain("X1234567")
 
-      const getRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
-        method: "GET",
-      })
+      const getRes = await app.request(
+        `/${booking.id}/participants/${participant.id}/travel-details`,
+        {
+          method: "GET",
+        },
+      )
 
       expect(getRes.status).toBe(200)
       const body = await getRes.json()
@@ -1036,12 +1030,15 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         }),
       })
 
-      const patchRes = await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
-        method: "PATCH",
-        ...json({
-          dietaryRequirements: "gluten-free",
-        }),
-      })
+      const patchRes = await app.request(
+        `/${booking.id}/participants/${participant.id}/travel-details`,
+        {
+          method: "PATCH",
+          ...json({
+            dietaryRequirements: "gluten-free",
+          }),
+        },
+      )
 
       expect(patchRes.status).toBe(200)
       const body = await patchRes.json()
@@ -1083,9 +1080,12 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       const { data: participant } = await createRes.json()
 
-      const res = await app.request(`/${bookingB.id}/participants/${participant.id}/travel-details`, {
-        method: "GET",
-      })
+      const res = await app.request(
+        `/${bookingB.id}/participants/${participant.id}/travel-details`,
+        {
+          method: "GET",
+        },
+      )
 
       expect(res.status).toBe(404)
     })
@@ -1108,8 +1108,18 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         .from(bookingPiiAccessLog)
         .where(eq(bookingPiiAccessLog.participantId, participant.id))
 
-      expect(rows.some((row: { action: string; outcome: string }) => row.action === "update" && row.outcome === "allowed")).toBe(true)
-      expect(rows.some((row: { action: string; outcome: string }) => row.action === "read" && row.outcome === "allowed")).toBe(true)
+      expect(
+        rows.some(
+          (row: { action: string; outcome: string }) =>
+            row.action === "update" && row.outcome === "allowed",
+        ),
+      ).toBe(true)
+      expect(
+        rows.some(
+          (row: { action: string; outcome: string }) =>
+            row.action === "read" && row.outcome === "allowed",
+        ),
+      ).toBe(true)
     })
 
     it("forbids pii access for non-staff actors without explicit scope and audits the denial", async () => {
@@ -1129,9 +1139,12 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       restrictedApp.route("/", bookingRoutes)
 
-      const res = await restrictedApp.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
-        method: "GET",
-      })
+      const res = await restrictedApp.request(
+        `/${booking.id}/participants/${participant.id}/travel-details`,
+        {
+          method: "GET",
+        },
+      )
 
       expect(res.status).toBe(403)
 
@@ -1142,7 +1155,12 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
       expect(
         rows.some(
-          (row: { action: string; outcome: string; reason: string | null; actorId: string | null }) =>
+          (row: {
+            action: string
+            outcome: string
+            reason: string | null
+            actorId: string | null
+          }) =>
             row.action === "read" &&
             row.outcome === "denied" &&
             row.reason === "insufficient_scope" &&

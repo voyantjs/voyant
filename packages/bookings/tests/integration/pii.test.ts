@@ -1,9 +1,8 @@
 import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-
-import { bookingParticipants, bookings } from "../../src/schema.js"
 import { createBookingPiiService } from "../../src/pii.js"
 import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
+import { bookingParticipants, bookings } from "../../src/schema.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 

@@ -461,7 +461,9 @@ describe.skipIf(!DB_AVAILABLE)("Notifications routes", () => {
     const secondRunBody = await secondRunRes.json()
     expect(secondRunBody.data.processed).toBe(0)
 
-    const deliveriesRes = await app.request("/deliveries?targetType=booking_payment_schedule&targetId=bkpy_test")
+    const deliveriesRes = await app.request(
+      "/deliveries?targetType=booking_payment_schedule&targetId=bkpy_test",
+    )
     expect(deliveriesRes.status).toBe(200)
     const deliveriesBody = await deliveriesRes.json()
     expect(deliveriesBody.total).toBe(1)

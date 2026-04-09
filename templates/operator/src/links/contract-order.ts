@@ -1,5 +1,5 @@
-import { contractLinkable } from "@voyantjs/legal"
 import { defineLink } from "@voyantjs/core"
+import { contractLinkable } from "@voyantjs/legal"
 import { orderLinkable } from "@voyantjs/transactions"
 
 /**

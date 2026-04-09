@@ -44,9 +44,7 @@ export async function main(
       const subCtx = { ...ctx, argv: subArgs }
       if (sub === "module") return generateModuleCommand(subCtx)
       if (sub === "link") return generateLinkCommand(subCtx)
-      ctx.stderr(
-        `Unknown generate subcommand: ${sub ?? "(none)"}. ` + `Expected "module" or "link".\n`,
-      )
+      ctx.stderr(`Unknown generate subcommand: ${sub ?? "(none)"}. Expected "module" or "link".\n`)
       return 1
     }
     case "config": {

@@ -1,6 +1,6 @@
-import { currencies } from "@voyantjs/utils/currencies"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -139,7 +139,10 @@ function CatalogSheet({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Catalog" : "New Price Catalog"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
@@ -170,7 +173,9 @@ function CatalogSheet({
                 <Label>Type</Label>
                 <Select
                   value={form.watch("catalogType")}
-                  onValueChange={(v) => form.setValue("catalogType", v as CatalogFormValues["catalogType"])}
+                  onValueChange={(v) =>
+                    form.setValue("catalogType", v as CatalogFormValues["catalogType"])
+                  }
                   items={CATALOG_TYPES}
                 >
                   <SelectTrigger className="w-full">
@@ -205,7 +210,9 @@ function CatalogSheet({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Catalog"}
@@ -348,10 +355,7 @@ function CurrencyCombobox({
   onChange: (value: string) => void
 }) {
   return (
-    <Combobox
-      value={value}
-      onValueChange={(v) => onChange(v ?? "")}
-    >
+    <Combobox value={value} onValueChange={(v) => onChange(v ?? "")}>
       <ComboboxInput placeholder="Search currency..." className="w-full" />
       <ComboboxContent>
         <ComboboxList>

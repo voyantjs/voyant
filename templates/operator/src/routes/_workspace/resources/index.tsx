@@ -834,7 +834,11 @@ function ResourcesPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={kindFilter} onValueChange={(value) => setKindFilter(value ?? "all")} items={[{ value: "all", label: "All kinds" }, ...resourceKindOptions]}>
+              <Select
+                value={kindFilter}
+                onValueChange={(value) => setKindFilter(value ?? "all")}
+                items={[{ value: "all", label: "All kinds" }, ...resourceKindOptions]}
+              >
                 <SelectTrigger className="w-full md:w-56">
                   <SelectValue placeholder="All kinds" />
                 </SelectTrigger>
@@ -1400,7 +1404,10 @@ function ResourceDialog({
               <Select
                 value={form.watch("supplierId")}
                 onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
-                items={[{ value: NONE_VALUE, label: "No supplier" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+                items={[
+                  { value: NONE_VALUE, label: "No supplier" },
+                  ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+                ]}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1565,7 +1572,10 @@ function ResourcePoolDialog({
               <Select
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
-                items={[{ value: NONE_VALUE, label: "No product" }, ...products.map((p) => ({ value: p.id, label: p.name }))]}
+                items={[
+                  { value: NONE_VALUE, label: "No product" },
+                  ...products.map((p) => ({ value: p.id, label: p.name })),
+                ]}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1783,7 +1793,10 @@ function ResourceAllocationDialog({
                   onValueChange={(value) =>
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
                   }
-                  items={[{ value: NONE_VALUE, label: "No rule" }, ...filteredRules.map((r) => ({ value: r.id, label: r.recurrenceRule }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No rule" },
+                    ...filteredRules.map((r) => ({ value: r.id, label: r.recurrenceRule })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1803,7 +1816,13 @@ function ResourceAllocationDialog({
                 <Select
                   value={form.watch("startTimeId")}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
-                  items={[{ value: NONE_VALUE, label: "No start time" }, ...filteredStartTimes.map((st) => ({ value: st.id, label: st.label ?? st.startTimeLocal }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No start time" },
+                    ...filteredStartTimes.map((st) => ({
+                      value: st.id,
+                      label: st.label ?? st.startTimeLocal,
+                    })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1983,7 +2002,10 @@ function ResourceSlotAssignmentDialog({
                 <Select
                   value={form.watch("poolId")}
                   onValueChange={(value) => form.setValue("poolId", value ?? NONE_VALUE)}
-                  items={[{ value: NONE_VALUE, label: "No pool" }, ...pools.map((p) => ({ value: p.id, label: p.name }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No pool" },
+                    ...pools.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -2003,7 +2025,10 @@ function ResourceSlotAssignmentDialog({
                 <Select
                   value={form.watch("resourceId")}
                   onValueChange={(value) => form.setValue("resourceId", value ?? NONE_VALUE)}
-                  items={[{ value: NONE_VALUE, label: "No resource" }, ...resources.map((r) => ({ value: r.id, label: r.name }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No resource" },
+                    ...resources.map((r) => ({ value: r.id, label: r.name })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -2023,7 +2048,10 @@ function ResourceSlotAssignmentDialog({
                 <Select
                   value={form.watch("bookingId")}
                   onValueChange={(value) => form.setValue("bookingId", value ?? NONE_VALUE)}
-                  items={[{ value: NONE_VALUE, label: "No booking" }, ...bookings.map((b) => ({ value: b.id, label: b.bookingNumber }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No booking" },
+                    ...bookings.map((b) => ({ value: b.id, label: b.bookingNumber })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue />

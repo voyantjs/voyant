@@ -49,9 +49,7 @@ const baseData = {
       title: "Products",
       url: "/products",
       icon: Package,
-      items: [
-        { title: "Categories", url: "/products/categories" },
-      ],
+      items: [{ title: "Categories", url: "/products/categories" }],
     },
     {
       title: "Bookings",

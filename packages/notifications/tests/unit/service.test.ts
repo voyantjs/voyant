@@ -144,7 +144,9 @@ describe("renderNotificationTemplate", () => {
 
 describe("createDefaultNotificationProviders", () => {
   it("defaults to the local provider only", () => {
-    expect(createDefaultNotificationProviders({}).map((provider) => provider.name)).toEqual(["local"])
+    expect(createDefaultNotificationProviders({}).map((provider) => provider.name)).toEqual([
+      "local",
+    ])
     expect(
       createDefaultNotificationProviders({
         RESEND_API_KEY: "re_test",
@@ -155,12 +157,15 @@ describe("createDefaultNotificationProviders", () => {
 
   it("adds resend only when explicitly requested", () => {
     expect(
-      createDefaultNotificationProviders({
-        RESEND_API_KEY: "re_test",
-        EMAIL_FROM: "noreply@example.com",
-      }, {
-        emailProvider: "resend",
-      }).map((provider) => provider.name),
+      createDefaultNotificationProviders(
+        {
+          RESEND_API_KEY: "re_test",
+          EMAIL_FROM: "noreply@example.com",
+        },
+        {
+          emailProvider: "resend",
+        },
+      ).map((provider) => provider.name),
     ).toEqual(["local", "resend"])
   })
 })

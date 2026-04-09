@@ -51,7 +51,6 @@ export function createEventBus(): EventBus {
           await handler(data)
         } catch (err) {
           // Subscribers are fire-and-forget — log and continue.
-          // biome-ignore lint/suspicious/noConsole: runtime diagnostics
           console.error(`[events] subscriber error for "${event}":`, err)
         }
       }

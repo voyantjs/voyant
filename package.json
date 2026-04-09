@@ -14,7 +14,7 @@
     "release": "changeset publish",
     "package:starters": "node scripts/package-starters.mjs",
     "verify:publish-tarballs": "node scripts/verify-package-tarballs.mjs",
-    "__prepare": "husky",
+    "prepare": "husky",
     "typecheck": "turbo run typecheck --continue",
     "test": "turbo run test --continue",
     "deps:outdated": "pnpm -r outdated",

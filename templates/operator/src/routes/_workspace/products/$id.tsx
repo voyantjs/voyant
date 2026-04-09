@@ -295,9 +295,7 @@ function ProductDetailPage() {
   const { data: mediaData, refetch: refetchMedia } = useQuery({
     queryKey: ["product-media", id],
     queryFn: () =>
-      api.get<{ data: ProductMediaItem[]; total: number }>(
-        `/v1/products/${id}/media?limit=50`,
-      ),
+      api.get<{ data: ProductMediaItem[]; total: number }>(`/v1/products/${id}/media?limit=50`),
   })
 
   const addChannelMappingMutation = useMutation({
@@ -311,8 +309,7 @@ function ProductDetailPage() {
   })
 
   const removeChannelMappingMutation = useMutation({
-    mutationFn: (mappingId: string) =>
-      api.delete(`/v1/distribution/product-mappings/${mappingId}`),
+    mutationFn: (mappingId: string) => api.delete(`/v1/distribution/product-mappings/${mappingId}`),
     onSuccess: () => void refetchMappings(),
   })
 
@@ -383,9 +380,7 @@ function ProductDetailPage() {
           ? "image"
           : "document"
 
-      const endpoint = dayId
-        ? `/v1/products/${id}/days/${dayId}/media`
-        : `/v1/products/${id}/media`
+      const endpoint = dayId ? `/v1/products/${id}/days/${dayId}/media` : `/v1/products/${id}/media`
 
       return api.post(endpoint, {
         mediaType,
@@ -405,8 +400,7 @@ function ProductDetailPage() {
   })
 
   const setCoverMutation = useMutation({
-    mutationFn: (mediaId: string) =>
-      api.patch(`/v1/products/media/${mediaId}/set-cover`, {}),
+    mutationFn: (mediaId: string) => api.patch(`/v1/products/media/${mediaId}/set-cover`, {}),
     onSuccess: () => void refetchMedia(),
   })
 
@@ -533,7 +527,10 @@ function ProductDetailPage() {
                 value={<span className="font-mono">{formatMargin(product.marginPercent)}</span>}
               />
             )}
-            <DetailRow label="Currency" value={<span className="font-mono">{product.sellCurrency}</span>} />
+            <DetailRow
+              label="Currency"
+              value={<span className="font-mono">{product.sellCurrency}</span>}
+            />
           </Section>
 
           {/* Departures */}
@@ -766,7 +763,12 @@ function ProductDetailPage() {
                     onUploadMedia={(file) =>
                       uploadMediaMutation.mutate(
                         { file, dayId: day.id },
-                        { onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["day-media", id, day.id] }) },
+                        {
+                          onSuccess: () =>
+                            void queryClient.invalidateQueries({
+                              queryKey: ["day-media", id, day.id],
+                            }),
+                        },
                       )
                     }
                     isUploadingMedia={uploadMediaMutation.isPending}
@@ -895,11 +897,7 @@ function ProductDetailPage() {
             />
             <DetailRow
               label="Type"
-              value={
-                <span className="capitalize">
-                  {product.bookingMode.replace("_", " ")}
-                </span>
-              }
+              value={<span className="capitalize">{product.bookingMode.replace("_", " ")}</span>}
             />
           </Section>
 
@@ -1244,11 +1242,7 @@ function MediaSection({
               className="group relative aspect-square overflow-hidden rounded-md border"
             >
               {m.mediaType === "image" ? (
-                <img
-                  src={m.url}
-                  alt={m.altText ?? m.name}
-                  className="h-full w-full object-cover"
-                />
+                <img src={m.url} alt={m.altText ?? m.name} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-muted text-xs text-muted-foreground">
                   {m.mediaType}

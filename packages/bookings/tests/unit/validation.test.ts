@@ -4,8 +4,8 @@ import {
   bookingListQuerySchema,
   cancelBookingSchema,
   confirmBookingSchema,
-  createBookingSchema,
   convertProductSchema,
+  createBookingSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
   extendBookingHoldSchema,
@@ -19,8 +19,8 @@ import {
   insertParticipantSchema,
   insertPassengerSchema,
   recordBookingRedemptionSchema,
-  reserveBookingSchema,
   reserveBookingFromTransactionSchema,
+  reserveBookingSchema,
   updateBookingAllocationSchema,
   updateBookingFulfillmentSchema,
   updateBookingSchema,
@@ -228,7 +228,6 @@ describe("Participant schema", () => {
       ).toBe(c)
     }
   })
-
 })
 
 describe("Passenger schema (legacy)", () => {

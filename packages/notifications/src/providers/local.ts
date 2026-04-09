@@ -31,7 +31,6 @@ export function createLocalProvider(options: LocalProviderOptions = {}): Notific
   const sink =
     options.sink ??
     ((payload: NotificationPayload) => {
-      // biome-ignore lint/suspicious/noConsole: local provider is console-based by design
       console.log(`[notifications:${name}]`, payload)
     })
 

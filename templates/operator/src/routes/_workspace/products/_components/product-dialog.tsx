@@ -1,5 +1,5 @@
-import { currencies } from "@voyantjs/utils/currencies"
 import { useQuery } from "@tanstack/react-query"
+import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -7,12 +7,6 @@ import { z } from "zod/v4"
 import {
   Badge,
   Button,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   Input,
   Label,
   Select,
@@ -20,6 +14,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   Textarea,
 } from "@/components/ui"
 import {
@@ -162,7 +162,10 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Product" : "New Product"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="flex flex-col gap-2">
               <Label>Name</Label>
@@ -226,7 +229,9 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                 <Label>Booking Mode</Label>
                 <Select
                   value={form.watch("bookingMode")}
-                  onValueChange={(v) => form.setValue("bookingMode", v as ProductFormValues["bookingMode"])}
+                  onValueChange={(v) =>
+                    form.setValue("bookingMode", v as ProductFormValues["bookingMode"])
+                  }
                   items={BOOKING_MODES}
                 >
                   <SelectTrigger className="w-full">
@@ -245,8 +250,15 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                 <Label>Product Type</Label>
                 <Select
                   value={form.watch("productTypeId") ?? ""}
-                  onValueChange={(v) => form.setValue("productTypeId", v === "__none__" ? null : v, { shouldDirty: true })}
-                  items={[{ value: "__none__", label: "None" }, ...productTypes.map((t) => ({ value: t.id, label: t.name }))]}
+                  onValueChange={(v) =>
+                    form.setValue("productTypeId", v === "__none__" ? null : v, {
+                      shouldDirty: true,
+                    })
+                  }
+                  items={[
+                    { value: "__none__", label: "None" },
+                    ...productTypes.map((t) => ({ value: t.id, label: t.name })),
+                  ]}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="None" />
@@ -300,7 +312,9 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
             )}
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Product"}
@@ -320,10 +334,7 @@ function CurrencyCombobox({
   onChange: (value: string) => void
 }) {
   return (
-    <Combobox
-      value={value}
-      onValueChange={(v) => onChange(v ?? "")}
-    >
+    <Combobox value={value} onValueChange={(v) => onChange(v ?? "")}>
       <ComboboxInput placeholder="Search currency..." className="w-full" />
       <ComboboxContent>
         <ComboboxList>

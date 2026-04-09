@@ -1,7 +1,4 @@
-import {
-  availabilityPickupPoints,
-  availabilityStartTimes,
-} from "@voyantjs/availability/schema"
+import { availabilityPickupPoints, availabilityStartTimes } from "@voyantjs/availability/schema"
 import { newId } from "@voyantjs/db/lib/typeid"
 import { cleanupTestDb, createTestDb } from "@voyantjs/db/test-utils"
 import { optionExtraConfigs, productExtras } from "@voyantjs/extras/schema"

@@ -1,15 +1,15 @@
 export {
-  fetchWithValidation,
   defaultFetcher,
+  fetchWithValidation,
   VoyantApiError,
   type VoyantFetcher,
 } from "./client.js"
+export * from "./hooks/index.js"
 export {
-  VoyantProductsProvider,
   useVoyantProductsContext,
   type VoyantProductsContextValue,
+  VoyantProductsProvider,
   type VoyantProductsProviderProps,
 } from "./provider.js"
 export { productsQueryKeys } from "./query-keys.js"
 export * from "./schemas.js"
-export * from "./hooks/index.js"

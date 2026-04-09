@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import {
-  createKmsProviderFromEnv,
   createKmsProvider,
+  createKmsProviderFromEnv,
   decryptJsonEnvelope,
   decryptOptionalJsonEnvelope,
+  EnvKmsProvider,
   encryptJsonEnvelope,
   encryptOptionalJsonEnvelope,
-  EnvKmsProvider,
   generateEnvKmsKey,
   generateLocalKmsKey,
   type KeyRef,
@@ -253,10 +253,15 @@ describe("envelope helpers", () => {
     const value = { passportNumber: "ABC123", dateOfBirth: "1990-01-01" }
 
     const envelope = await encryptJsonEnvelope(provider, TEST_KEY_REF, value)
-    const decrypted = await decryptJsonEnvelope(provider, TEST_KEY_REF, envelope, z.object({
-      passportNumber: z.string(),
-      dateOfBirth: z.string(),
-    }))
+    const decrypted = await decryptJsonEnvelope(
+      provider,
+      TEST_KEY_REF,
+      envelope,
+      z.object({
+        passportNumber: z.string(),
+        dateOfBirth: z.string(),
+      }),
+    )
 
     expect(decrypted).toEqual(value)
   })
@@ -266,12 +271,7 @@ describe("envelope helpers", () => {
     const encrypted = await encryptOptionalJsonEnvelope(provider, TEST_KEY_REF, null)
     expect(encrypted).toBeNull()
 
-    const decrypted = await decryptOptionalJsonEnvelope(
-      provider,
-      TEST_KEY_REF,
-      null,
-      z.string(),
-    )
+    const decrypted = await decryptOptionalJsonEnvelope(provider, TEST_KEY_REF, null, z.string())
     expect(decrypted).toBeNull()
   })
 })

@@ -23,12 +23,12 @@ import {
 
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui"
 import {
+  type ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart"
 import { api } from "@/lib/api-client"
 
@@ -72,7 +72,11 @@ type InvoiceRow = {
 // ---------- helpers ----------
 
 function formatCurrency(cents: number, currency = "USD"): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(cents / 100)
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(cents / 100)
 }
 
 function getMonthLabel(date: Date): string {
@@ -184,22 +188,19 @@ function deriveUpcomingDepartures(bookings: BookingRow[]) {
 function Dashboard() {
   const { data: bookingsData } = useQuery({
     queryKey: ["dashboard-bookings"],
-    queryFn: () =>
-      api.get<{ data: BookingRow[]; total: number }>("/v1/admin/bookings?limit=500"),
+    queryFn: () => api.get<{ data: BookingRow[]; total: number }>("/v1/admin/bookings?limit=500"),
     staleTime: 60_000,
   })
 
   const { data: productsData } = useQuery({
     queryKey: ["dashboard-products"],
-    queryFn: () =>
-      api.get<{ data: ProductRow[]; total: number }>("/v1/admin/products?limit=500"),
+    queryFn: () => api.get<{ data: ProductRow[]; total: number }>("/v1/admin/products?limit=500"),
     staleTime: 60_000,
   })
 
   const { data: suppliersData } = useQuery({
     queryKey: ["dashboard-suppliers"],
-    queryFn: () =>
-      api.get<{ data: SupplierRow[]; total: number }>("/v1/admin/suppliers?limit=500"),
+    queryFn: () => api.get<{ data: SupplierRow[]; total: number }>("/v1/admin/suppliers?limit=500"),
     staleTime: 60_000,
   })
 
@@ -221,7 +222,9 @@ function Dashboard() {
     (b) => b.status === "confirmed" || b.status === "in_progress",
   ).length
   const totalPax = bookings.reduce((sum, b) => sum + (b.pax ?? 0), 0)
-  const activeProducts = products.filter((p) => p.status === "active" || p.status === "published").length
+  const activeProducts = products.filter(
+    (p) => p.status === "active" || p.status === "published",
+  ).length
 
   const outstandingInvoices = invoices.filter(
     (inv) => inv.status === "issued" || inv.status === "sent" || inv.status === "overdue",
@@ -241,9 +244,7 @@ function Dashboard() {
   const currentMonthRevenue = monthlyRevenue[monthlyRevenue.length - 1]?.revenue ?? 0
   const prevMonthRevenue = monthlyRevenue[monthlyRevenue.length - 2]?.revenue ?? 0
   const revenueTrend =
-    prevMonthRevenue > 0
-      ? ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100
-      : 0
+    prevMonthRevenue > 0 ? ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 : 0
 
   const currentMonthBookings = monthlyBookings[monthlyBookings.length - 1]?.count ?? 0
   const prevMonthBookings = monthlyBookings[monthlyBookings.length - 2]?.count ?? 0
@@ -313,7 +314,12 @@ function Dashboard() {
                 </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                />
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
@@ -471,9 +477,7 @@ function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold tabular-nums">{suppliers.length}</div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Contracted suppliers
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Contracted suppliers</p>
             <Link
               to="/suppliers"
               className="mt-3 inline-block text-sm text-primary hover:underline"
@@ -493,10 +497,7 @@ function Dashboard() {
             <p className="mt-1 text-sm text-muted-foreground">
               {activeProducts} active / {products.length - activeProducts} draft
             </p>
-            <Link
-              to="/products"
-              className="mt-3 inline-block text-sm text-primary hover:underline"
-            >
+            <Link to="/products" className="mt-3 inline-block text-sm text-primary hover:underline">
               Manage products
             </Link>
           </CardContent>

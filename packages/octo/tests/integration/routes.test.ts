@@ -44,13 +44,8 @@ describe.skipIf(!DB_AVAILABLE)("OCTO routes (integration)", () => {
   })
 
   async function seedProjectedProduct() {
-    const {
-      optionUnits,
-      productCapabilities,
-      productFeatures,
-      productOptions,
-      products,
-    } = await import("@voyantjs/products/schema")
+    const { optionUnits, productCapabilities, productFeatures, productOptions, products } =
+      await import("@voyantjs/products/schema")
     const { availabilityStartTimes, availabilitySlots } = await import(
       "@voyantjs/availability/schema"
     )
@@ -135,11 +130,9 @@ describe.skipIf(!DB_AVAILABLE)("OCTO routes (integration)", () => {
 
   async function seedBookingProjectionData() {
     const { availabilitySlots } = await import("@voyantjs/availability/schema")
-    const {
-      bookingFulfillments,
-      bookingSupplierStatuses,
-      bookings,
-    } = await import("@voyantjs/bookings/schema")
+    const { bookingFulfillments, bookingSupplierStatuses, bookings } = await import(
+      "@voyantjs/bookings/schema"
+    )
     const { offers, orders } = await import("@voyantjs/transactions/schema")
 
     const [slot] = await db
@@ -255,7 +248,9 @@ describe.skipIf(!DB_AVAILABLE)("OCTO routes (integration)", () => {
   it("GET /products/:id/calendar aggregates daily availability", async () => {
     const { product } = await seedProjectedProduct()
 
-    const res = await app.request(`/products/${product.id}/calendar?localDateStart=2026-08-01&localDateEnd=2026-08-02`)
+    const res = await app.request(
+      `/products/${product.id}/calendar?localDateStart=2026-08-01&localDateEnd=2026-08-02`,
+    )
     expect(res.status).toBe(200)
 
     const body = await res.json()

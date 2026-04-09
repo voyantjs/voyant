@@ -137,12 +137,12 @@ function PropertiesPage() {
                   <tr
                     key={row.id}
                     className="cursor-pointer border-b last:border-b-0 hover:bg-muted/50"
-                    onClick={() =>
-                      navigate({ to: "/properties/$id", params: { id: row.id } })
-                    }
+                    onClick={() => navigate({ to: "/properties/$id", params: { id: row.id } })}
                   >
                     <td className="p-3 font-medium">
-                      {facility ? facility.name : (
+                      {facility ? (
+                        facility.name
+                      ) : (
                         <span className="font-mono text-xs">{row.facilityId}</span>
                       )}
                     </td>

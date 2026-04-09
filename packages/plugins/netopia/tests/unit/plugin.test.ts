@@ -1,9 +1,8 @@
 import { financeService, type PaymentSession } from "@voyantjs/finance"
 import { notificationsService } from "@voyantjs/notifications"
 import { afterEach, describe, expect, it, vi } from "vitest"
-
-import { deriveNetopiaOrderId, mapNetopiaPaymentStatus, netopiaService } from "../../src/service.js"
 import type { NetopiaClientApi } from "../../src/client.js"
+import { deriveNetopiaOrderId, mapNetopiaPaymentStatus, netopiaService } from "../../src/service.js"
 
 const baseSession = {
   id: "pmss_123",
@@ -172,7 +171,9 @@ describe("netopiaService.collect flows", () => {
       bookingPaymentScheduleId: "bpms_123",
       provider: "netopia",
     }
-    vi.spyOn(financeService, "createPaymentSessionFromBookingSchedule").mockResolvedValue(createdSession)
+    vi.spyOn(financeService, "createPaymentSessionFromBookingSchedule").mockResolvedValue(
+      createdSession,
+    )
     const started = {
       session: {
         ...createdSession,

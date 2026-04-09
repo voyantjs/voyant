@@ -4,12 +4,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
   Button,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   Input,
   Label,
   Select,
@@ -17,6 +11,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   Switch,
   Textarea,
 } from "@/components/ui"
@@ -192,14 +192,19 @@ export function OptionPriceRuleDialog({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Price Rule" : "New Price Rule"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Catalog</Label>
                 <Select
                   value={form.watch("priceCatalogId") || undefined}
-                  onValueChange={(v) => form.setValue("priceCatalogId", v ?? "", { shouldValidate: true })}
+                  onValueChange={(v) =>
+                    form.setValue("priceCatalogId", v ?? "", { shouldValidate: true })
+                  }
                   items={catalogs.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))}
                 >
                   <SelectTrigger className="w-full">
@@ -234,7 +239,10 @@ export function OptionPriceRuleDialog({
                 <Select
                   value={form.watch("priceScheduleId") ?? "none"}
                   onValueChange={(v) => form.setValue("priceScheduleId", v === "none" ? null : v)}
-                  items={[{ value: "none", label: "None" }, ...schedules.map((s) => ({ value: s.id, label: s.name }))]}
+                  items={[
+                    { value: "none", label: "None" },
+                    ...schedules.map((s) => ({ value: s.id, label: s.name })),
+                  ]}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="None" />
@@ -253,8 +261,13 @@ export function OptionPriceRuleDialog({
                 <Label>Cancellation policy (optional)</Label>
                 <Select
                   value={form.watch("cancellationPolicyId") ?? "none"}
-                  onValueChange={(v) => form.setValue("cancellationPolicyId", v === "none" ? null : v)}
-                  items={[{ value: "none", label: "None" }, ...policies.map((p) => ({ value: p.id, label: p.name }))]}
+                  onValueChange={(v) =>
+                    form.setValue("cancellationPolicyId", v === "none" ? null : v)
+                  }
+                  items={[
+                    { value: "none", label: "None" },
+                    ...policies.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="None" />
@@ -355,7 +368,9 @@ export function OptionPriceRuleDialog({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Rule"}

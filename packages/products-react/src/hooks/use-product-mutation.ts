@@ -40,10 +40,15 @@ export function useProductMutation() {
 
   const create = useMutation({
     mutationFn: async (input: CreateProductInput) => {
-      const { data } = await fetchWithValidation("/v1/products", productSingleResponse, {
-        baseUrl,
-        fetcher,
-      }, { method: "POST", body: JSON.stringify(input) })
+      const { data } = await fetchWithValidation(
+        "/v1/products",
+        productSingleResponse,
+        {
+          baseUrl,
+          fetcher,
+        },
+        { method: "POST", body: JSON.stringify(input) },
+      )
       return data
     },
     onSuccess: () => {

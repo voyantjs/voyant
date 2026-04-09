@@ -168,11 +168,16 @@ describe("createNetopiaClient.startCardPayment", () => {
 
   it("throws when fetch is unavailable", async () => {
     const originalFetch = globalThis.fetch
-    // biome-ignore lint/suspicious/noExplicitAny: test stub
-    ;(globalThis as any).fetch = undefined
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    })
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: test stub
-      const client = createNetopiaClient({ apiUrl: "https://secure.mobilpay.ro/pay", apiKey: "api-key", fetch: undefined as any })
+      const client = createNetopiaClient({
+        apiUrl: "https://secure.mobilpay.ro/pay",
+        apiKey: "api-key",
+      })
       await expect(
         client.startCardPayment({
           config: {
@@ -219,7 +224,11 @@ describe("createNetopiaClient.startCardPayment", () => {
         }),
       ).rejects.toThrow(/requires a fetch implementation/)
     } finally {
-      globalThis.fetch = originalFetch
+      Object.defineProperty(globalThis, "fetch", {
+        configurable: true,
+        value: originalFetch,
+        writable: true,
+      })
     }
   })
 

@@ -3,7 +3,7 @@
  * Builds all Voyant shadcn registry packages and aggregates their JSON
  * payloads into `apps/registry/public/r/`.
  *
- * Discovery: finds every `packages/*/registry.json` file, runs `shadcn build`
+ * Discovery: finds every package-level `registry.json` file, runs `shadcn build`
  * inside that directory, then copies the generated JSON files into the
  * registry host's public assets.
  */

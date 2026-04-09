@@ -4,12 +4,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
   Button,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   Input,
   Label,
   Select,
@@ -17,6 +11,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   Switch,
   Textarea,
 } from "@/components/ui"
@@ -248,11 +248,16 @@ export function DepartureDialog({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Departure" : "New Departure"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-6">
             {/* ── Schedule ── */}
             <fieldset className="grid gap-3">
-              <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Schedule</legend>
+              <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Schedule
+              </legend>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label>Start date</Label>
@@ -320,7 +325,8 @@ export function DepartureDialog({
               {nights > 0 && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    Multi-day departure: {nights} night{nights === 1 ? "" : "s"} ({nights + 1} days) by calendar. Override if needed.
+                    Multi-day departure: {nights} night{nights === 1 ? "" : "s"} ({nights + 1} days)
+                    by calendar. Override if needed.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
@@ -394,13 +400,17 @@ export function DepartureDialog({
 
             {/* ── Availability ── */}
             <fieldset className="grid gap-3">
-              <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</legend>
+              <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Availability
+              </legend>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label>Status</Label>
                   <Select
                     value={form.watch("status")}
-                    onValueChange={(v) => form.setValue("status", v as DepartureFormValues["status"])}
+                    onValueChange={(v) =>
+                      form.setValue("status", v as DepartureFormValues["status"])
+                    }
                     items={SLOT_STATUSES}
                   >
                     <SelectTrigger className="w-full">
@@ -446,7 +456,9 @@ export function DepartureDialog({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Departure"}

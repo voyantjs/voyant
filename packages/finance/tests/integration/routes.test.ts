@@ -8,8 +8,8 @@ import {
   bookingPaymentSchedules,
   paymentAuthorizations,
   paymentCaptures,
-  payments,
   paymentSessions,
+  payments,
 } from "../../src/schema.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
@@ -168,17 +168,39 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
         updated_at timestamp with time zone DEFAULT now() NOT NULL
       )
     `)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_target ON payment_sessions (target_type, target_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_booking ON payment_sessions (booking_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_order ON payment_sessions (order_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_invoice ON payment_sessions (invoice_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_schedule ON payment_sessions (booking_payment_schedule_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_guarantee ON payment_sessions (booking_guarantee_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_status ON payment_sessions (status)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_provider ON payment_sessions (provider)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_provider_session ON payment_sessions (provider_session_id)`)
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_expires_at ON payment_sessions (expires_at)`)
-    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uidx_payment_sessions_idempotency ON payment_sessions (idempotency_key)`)
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_target ON payment_sessions (target_type, target_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_booking ON payment_sessions (booking_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_order ON payment_sessions (order_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_invoice ON payment_sessions (invoice_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_schedule ON payment_sessions (booking_payment_schedule_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_guarantee ON payment_sessions (booking_guarantee_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_status ON payment_sessions (status)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_provider ON payment_sessions (provider)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_provider_session ON payment_sessions (provider_session_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_payment_sessions_expires_at ON payment_sessions (expires_at)`,
+    )
+    await db.execute(
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS uidx_payment_sessions_idempotency ON payment_sessions (idempotency_key)`,
+    )
 
     app = new Hono()
     app.use("*", async (c, next) => {
@@ -265,7 +287,10 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
     return data as { id: string; [k: string]: unknown }
   }
 
-  async function seedBookingPaymentSchedule(bookingId: string, overrides: Record<string, unknown> = {}) {
+  async function seedBookingPaymentSchedule(
+    bookingId: string,
+    overrides: Record<string, unknown> = {},
+  ) {
     const res = await app.request(`/bookings/${bookingId}/payment-schedules`, {
       method: "POST",
       ...json({
@@ -562,7 +587,10 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
       })
       expect(failRes.status).toBe(200)
 
-      const [stored] = await db.select().from(paymentSessions).where(eq(paymentSessions.id, session.id))
+      const [stored] = await db
+        .select()
+        .from(paymentSessions)
+        .where(eq(paymentSessions.id, session.id))
       expect(stored?.status).toBe("failed")
       expect(stored?.failureCode).toBe("DECLINED")
 
@@ -645,13 +673,16 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
       expect(createGuaranteeRes.status).toBe(201)
       const { data: guarantee } = await createGuaranteeRes.json()
 
-      const res = await app.request(`/bookings/${booking.id}/guarantees/${guarantee.id}/payment-session`, {
-        method: "POST",
-        ...json({
-          payerEmail: "traveler@example.com",
-          payerName: "Ana Popescu",
-        }),
-      })
+      const res = await app.request(
+        `/bookings/${booking.id}/guarantees/${guarantee.id}/payment-session`,
+        {
+          method: "POST",
+          ...json({
+            payerEmail: "traveler@example.com",
+            payerName: "Ana Popescu",
+          }),
+        },
+      )
 
       expect(res.status).toBe(201)
       const { data } = await res.json()
@@ -1655,7 +1686,9 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
       expect(data[1].amountCents).toBe(70000)
       expect(data[1].status).toBe("due")
 
-      const guaranteesRes = await app.request(`/bookings/${booking.id}/guarantees`, { method: "GET" })
+      const guaranteesRes = await app.request(`/bookings/${booking.id}/guarantees`, {
+        method: "GET",
+      })
       const guaranteesBody = await guaranteesRes.json()
       expect(guaranteesBody.data).toHaveLength(1)
       expect(guaranteesBody.data[0].bookingPaymentScheduleId).toBe(data[0].id)

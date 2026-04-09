@@ -516,7 +516,9 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
       })
       restrictedApp.route("/", (await import("../../src/routes.js")).transactionsRoutes)
 
-      const denied = await restrictedApp.request(`/offer-participants/${participant.id}/travel-details`)
+      const denied = await restrictedApp.request(
+        `/offer-participants/${participant.id}/travel-details`,
+      )
       expect(denied.status).toBe(403)
 
       const rows = await db

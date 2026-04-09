@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
-import { Hash, Layers, Package, Tag, Tags } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { Hash, Layers, Package, Tag, Tags } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/_workspace/settings")({
@@ -40,9 +40,7 @@ function SettingsLayout() {
     <div className="flex h-[calc(100vh-0px)]">
       <aside className="w-64 shrink-0 border-r p-6 overflow-y-auto">
         <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your workspace configuration
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Manage your workspace configuration</p>
         <nav className="mt-6 flex flex-col gap-6">
           {NAV_GROUPS.map((group) => (
             <div key={group.group}>

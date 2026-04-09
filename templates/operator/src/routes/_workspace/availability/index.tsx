@@ -723,7 +723,10 @@ function AvailabilityPage() {
               <Select
                 value={productFilter}
                 onValueChange={(value) => setProductFilter(value ?? "all")}
-                items={[{ value: "all", label: "All products" }, ...products.map((p) => ({ value: p.id, label: p.name }))]}
+                items={[
+                  { value: "all", label: "All products" },
+                  ...products.map((p) => ({ value: p.id, label: p.name })),
+                ]}
               >
                 <SelectTrigger className="w-full md:w-56">
                   <SelectValue placeholder="All products" />
@@ -1731,7 +1734,13 @@ function AvailabilitySlotDialog({
                   onValueChange={(value) =>
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
                   }
-                  items={[{ value: NONE_VALUE, label: "No rule" }, ...filteredRules.map((r) => ({ value: r.id, label: `${r.timezone} \u00b7 ${r.recurrenceRule}` }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No rule" },
+                    ...filteredRules.map((r) => ({
+                      value: r.id,
+                      label: `${r.timezone} \u00b7 ${r.recurrenceRule}`,
+                    })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Optional rule" />
@@ -1751,7 +1760,13 @@ function AvailabilitySlotDialog({
                 <Select
                   value={form.watch("startTimeId") ?? NONE_VALUE}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
-                  items={[{ value: NONE_VALUE, label: "No start time" }, ...filteredStartTimes.map((st) => ({ value: st.id, label: st.label ?? st.startTimeLocal }))]}
+                  items={[
+                    { value: NONE_VALUE, label: "No start time" },
+                    ...filteredStartTimes.map((st) => ({
+                      value: st.id,
+                      label: st.label ?? st.startTimeLocal,
+                    })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Optional start time" />
@@ -2003,7 +2018,13 @@ function AvailabilityCloseoutDialog({
               <Select
                 value={form.watch("slotId") ?? NONE_VALUE}
                 onValueChange={(value) => form.setValue("slotId", value ?? NONE_VALUE)}
-                items={[{ value: NONE_VALUE, label: "Product-level closeout" }, ...filteredSlots.map((s) => ({ value: s.id, label: `${s.dateLocal} \u00b7 ${formatDateTime(s.startsAt)}` }))]}
+                items={[
+                  { value: NONE_VALUE, label: "Product-level closeout" },
+                  ...filteredSlots.map((s) => ({
+                    value: s.id,
+                    label: `${s.dateLocal} \u00b7 ${formatDateTime(s.startsAt)}`,
+                  })),
+                ]}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Optional slot" />

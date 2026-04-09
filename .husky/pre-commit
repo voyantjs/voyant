@@ -1,0 +1,5 @@
+#!/bin/sh
+
+pnpm lint-staged || exit 1
+pnpm turbo lint --filter='./packages/**' --continue || exit 1
+pnpm typecheck || exit 1

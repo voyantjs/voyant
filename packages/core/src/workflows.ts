@@ -209,7 +209,6 @@ export function createWorkflow(
         try {
           await entry.def.compensateFn(entry.output, ctx)
         } catch (compensationErr) {
-          // biome-ignore lint/suspicious/noConsole: runtime diagnostics
           console.error(
             `[workflow:${name}] compensation for step "${entry.def.name}" threw:`,
             compensationErr,

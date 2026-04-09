@@ -62,7 +62,17 @@ const CATEGORY_TYPES = [
 const categoryFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   code: z.string().max(100).optional().nullable(),
-  categoryType: z.enum(["adult", "child", "infant", "senior", "group", "room", "vehicle", "service", "other"]),
+  categoryType: z.enum([
+    "adult",
+    "child",
+    "infant",
+    "senior",
+    "group",
+    "room",
+    "vehicle",
+    "service",
+    "other",
+  ]),
   seatOccupancy: z.coerce.number().int().min(0),
   isAgeQualified: z.boolean(),
   minAge: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
@@ -147,7 +157,10 @@ function CategorySheet({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Category" : "New Pricing Category"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
@@ -168,7 +181,9 @@ function CategorySheet({
                 <Label>Type</Label>
                 <Select
                   value={form.watch("categoryType")}
-                  onValueChange={(v) => form.setValue("categoryType", v as CategoryFormValues["categoryType"])}
+                  onValueChange={(v) =>
+                    form.setValue("categoryType", v as CategoryFormValues["categoryType"])
+                  }
                   items={CATEGORY_TYPES}
                 >
                   <SelectTrigger className="w-full">
@@ -225,7 +240,9 @@ function CategorySheet({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Category"}
@@ -249,7 +266,8 @@ function PricingCategoriesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/pricing-categories/${id}`),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["pricing-categories-global"] }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["pricing-categories-global"] }),
   })
 
   const categories = data?.data ?? []
@@ -292,9 +310,7 @@ function PricingCategoriesPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{cat.name}</span>
-                    {cat.code && (
-                      <span className="text-xs text-muted-foreground">{cat.code}</span>
-                    )}
+                    {cat.code && <span className="text-xs text-muted-foreground">{cat.code}</span>}
                     <Badge variant="outline" className="text-xs capitalize">
                       {cat.categoryType}
                     </Badge>

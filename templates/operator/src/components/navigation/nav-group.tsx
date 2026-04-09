@@ -127,9 +127,7 @@ export function NavGroup({
                             <a
                               href={subItem.url}
                               target={subItem.target || "_self"}
-                              rel={
-                                subItem.target === "_blank" ? "noopener noreferrer" : undefined
-                              }
+                              rel={subItem.target === "_blank" ? "noopener noreferrer" : undefined}
                               onClick={handleLinkClick}
                             >
                               <span>{subItem.title}</span>

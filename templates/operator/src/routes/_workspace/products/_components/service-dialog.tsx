@@ -5,12 +5,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
   Button,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   Input,
   Label,
   Select,
@@ -18,6 +12,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
   Textarea,
 } from "@/components/ui"
 import { api } from "@/lib/api-client"
@@ -185,7 +185,10 @@ export function ServiceDialog({
         <SheetHeader>
           <SheetTitle>{isEditing ? "Edit Service" : "Add Service"}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
           <SheetBody className="grid gap-4">
             {/* Supplier service picker */}
             {suppliersData && suppliersData.length > 0 && (
@@ -194,7 +197,12 @@ export function ServiceDialog({
                 <Select
                   value={form.watch("supplierServiceId") ?? ""}
                   onValueChange={handleSupplierServiceSelect}
-                  items={suppliersData?.map((opt) => ({ value: opt.id, label: `${opt.supplierName} — ${opt.name} (${opt.serviceType})` })) ?? []}
+                  items={
+                    suppliersData?.map((opt) => ({
+                      value: opt.id,
+                      label: `${opt.supplierName} — ${opt.name} (${opt.serviceType})`,
+                    })) ?? []
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a supplier service..." />
@@ -296,7 +304,9 @@ export function ServiceDialog({
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Add Service"}

@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { c } from "tar"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { newCommand } from "../../src/commands/new.js"
 

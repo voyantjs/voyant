@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, Plus, Search } from "lucide-react"
@@ -31,7 +31,20 @@ type BookingListResponse = {
   offset: number
 }
 
+function getBookingsListQueryOptions(search = "") {
+  return queryOptions({
+    queryKey: ["bookings", search],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const qs = params.toString()
+      return api.get<BookingListResponse>(`/v1/bookings${qs ? `?${qs}` : ""}`)
+    },
+  })
+}
+
 export const Route = createFileRoute("/_workspace/bookings/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getBookingsListQueryOptions()),
   component: BookingsPage,
 })
 
@@ -88,15 +101,7 @@ function BookingsPage() {
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["bookings", search],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      const qs = params.toString()
-      return api.get<BookingListResponse>(`/v1/bookings${qs ? `?${qs}` : ""}`)
-    },
-  })
+  const { data, isPending, refetch } = useQuery(getBookingsListQueryOptions(search))
 
   return (
     <div className="flex flex-col gap-6 p-6">

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   Activity,
@@ -84,7 +84,51 @@ type BookingNote = {
   createdAt: string
 }
 
+function getBookingQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["booking", id],
+    queryFn: () => api.get<{ data: BookingDetail }>(`/v1/bookings/${id}`),
+  })
+}
+
+function getBookingPassengersQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["booking-passengers", id],
+    queryFn: () => api.get<{ data: Passenger[] }>(`/v1/bookings/${id}/passengers`),
+  })
+}
+
+function getBookingSupplierStatusesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["booking-supplier-statuses", id],
+    queryFn: () => api.get<{ data: SupplierStatus[] }>(`/v1/bookings/${id}/supplier-statuses`),
+  })
+}
+
+function getBookingActivityQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["booking-activity", id],
+    queryFn: () => api.get<{ data: ActivityEntry[] }>(`/v1/bookings/${id}/activity`),
+  })
+}
+
+function getBookingNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["booking-notes", id],
+    queryFn: () => api.get<{ data: BookingNote[] }>(`/v1/bookings/${id}/notes`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/bookings/$id")({
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(getBookingQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getBookingPassengersQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getBookingSupplierStatusesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getBookingActivityQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getBookingNotesQueryOptions(params.id)),
+    ])
+  },
   component: BookingDetailPage,
 })
 
@@ -139,30 +183,21 @@ function BookingDetailPage() {
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false)
   const [editingSupplierStatus, setEditingSupplierStatus] = useState<SupplierStatus | undefined>()
 
-  const { data: bookingData, isPending } = useQuery({
-    queryKey: ["booking", id],
-    queryFn: () => api.get<{ data: BookingDetail }>(`/v1/bookings/${id}`),
-  })
+  const { data: bookingData, isPending } = useQuery(getBookingQueryOptions(id))
 
-  const { data: passengersData, refetch: refetchPassengers } = useQuery({
-    queryKey: ["booking-passengers", id],
-    queryFn: () => api.get<{ data: Passenger[] }>(`/v1/bookings/${id}/passengers`),
-  })
+  const { data: passengersData, refetch: refetchPassengers } = useQuery(
+    getBookingPassengersQueryOptions(id),
+  )
 
-  const { data: supplierStatusesData, refetch: refetchSupplierStatuses } = useQuery({
-    queryKey: ["booking-supplier-statuses", id],
-    queryFn: () => api.get<{ data: SupplierStatus[] }>(`/v1/bookings/${id}/supplier-statuses`),
-  })
+  const { data: supplierStatusesData, refetch: refetchSupplierStatuses } = useQuery(
+    getBookingSupplierStatusesQueryOptions(id),
+  )
 
-  const { data: activityData, refetch: refetchActivity } = useQuery({
-    queryKey: ["booking-activity", id],
-    queryFn: () => api.get<{ data: ActivityEntry[] }>(`/v1/bookings/${id}/activity`),
-  })
+  const { data: activityData, refetch: refetchActivity } = useQuery(
+    getBookingActivityQueryOptions(id),
+  )
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["booking-notes", id],
-    queryFn: () => api.get<{ data: BookingNote[] }>(`/v1/bookings/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getBookingNotesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/bookings/${id}`),

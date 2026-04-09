@@ -14,12 +14,10 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from "@/components/ui"
-
+import { BookingDialog } from "@/components/voyant/bookings/booking-dialog"
+import { PassengerDialog } from "@/components/voyant/bookings/passenger-dialog"
+import { StatusChangeDialog } from "@/components/voyant/bookings/status-change-dialog"
 import { api } from "@/lib/api-client"
-
-import { BookingDialog } from "./_components/booking-dialog"
-import { PassengerDialog } from "./_components/passenger-dialog"
-import { StatusChangeDialog } from "./_components/status-change-dialog"
 import { SupplierStatusDialog } from "./_components/supplier-status-dialog"
 
 type BookingDetail = {

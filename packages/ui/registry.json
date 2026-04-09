@@ -299,6 +299,72 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-dialog",
+      "type": "registry:component",
+      "title": "Booking Dialog",
+      "description": "Modal wrapper around the core booking create/edit form.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-list",
+      "type": "registry:component",
+      "title": "Booking List",
+      "description": "Searchable booking table with create/edit dialog wiring.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "table",
+        "voyant-bookings-booking-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-passenger-dialog",
+      "type": "registry:component",
+      "title": "Passenger Dialog",
+      "description": "Create/edit passenger dialog wired to bookings-react passenger mutations.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/passenger-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/passenger-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-status-change-dialog",
+      "type": "registry:component",
+      "title": "Status Change Dialog",
+      "description": "Booking status update dialog wired to bookings-react status mutations.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["dialog", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/status-change-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/status-change-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-pricing-pricing-category-form",
       "type": "registry:component",
       "title": "Pricing Category Form",

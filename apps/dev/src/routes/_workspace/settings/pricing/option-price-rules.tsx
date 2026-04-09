@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type SettingsOptionPriceRuleData,
   SettingsOptionPriceRuleDialog,
 } from "../_components/settings-option-price-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-price-rules")({
   loader: ({ context }) =>
@@ -170,28 +170,28 @@ function OptionPriceRulesPage() {
 }
 
 function getOptionPriceRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<SettingsOptionPriceRuleData>(
+  return getApiListQueryOptions<SettingsOptionPriceRuleData>(
     ["pricing", "option-price-rules"],
     "/v1/pricing/option-price-rules?limit=200",
   )
 }
 
 function getOptionPriceRuleProductsQueryOptions() {
-  return getPricingSettingsListQueryOptions<ProductLite>(
+  return getApiListQueryOptions<ProductLite>(
     ["pricing", "opr-list", "products"],
     "/v1/products/products?limit=200",
   )
 }
 
 function getOptionPriceRuleOptionsQueryOptions() {
-  return getPricingSettingsListQueryOptions<OptionLite>(
+  return getApiListQueryOptions<OptionLite>(
     ["pricing", "opr-list", "options"],
     "/v1/products/product-options?limit=200",
   )
 }
 
 function getOptionPriceRuleCatalogsQueryOptions() {
-  return getPricingSettingsListQueryOptions<CatalogLite>(
+  return getApiListQueryOptions<CatalogLite>(
     ["pricing", "opr-list", "catalogs"],
     "/v1/pricing/price-catalogs?limit=200",
   )

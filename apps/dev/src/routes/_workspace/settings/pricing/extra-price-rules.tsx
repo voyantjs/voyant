@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type ExtraPriceRuleData,
   ExtraPriceRuleDialog,
 } from "../_components/extra-price-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/extra-price-rules")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getExtraPriceRulesQueryOptions()),
@@ -151,7 +151,7 @@ function ExtraPriceRulesPage() {
 }
 
 function getExtraPriceRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<ExtraPriceRuleData>(
+  return getApiListQueryOptions<ExtraPriceRuleData>(
     ["pricing", "extra-price-rules"],
     "/v1/pricing/extra-price-rules?limit=200",
   )

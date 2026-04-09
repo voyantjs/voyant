@@ -9,9 +9,16 @@ export type ListResponse<T> = {
   offset: number
 }
 
-export function getPricingSettingsListQueryOptions<T>(queryKey: readonly unknown[], path: string) {
+export function getApiListQueryOptions<T>(queryKey: readonly unknown[], path: string) {
   return queryOptions({
     queryKey,
     queryFn: () => api.get<ListResponse<T>>(path),
+  })
+}
+
+export function getApiDetailQueryOptions<T>(queryKey: readonly unknown[], path: string) {
+  return queryOptions({
+    queryKey,
+    queryFn: () => api.get<T>(path),
   })
 }

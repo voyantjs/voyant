@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type PickupPriceRuleData,
   PickupPriceRuleDialog,
 } from "../_components/pickup-price-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/pickup-price-rules")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getPickupPriceRulesQueryOptions()),
@@ -145,7 +145,7 @@ function PickupPriceRulesPage() {
 }
 
 function getPickupPriceRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<PickupPriceRuleData>(
+  return getApiListQueryOptions<PickupPriceRuleData>(
     ["pricing", "pickup-price-rules"],
     "/v1/pricing/pickup-price-rules?limit=200",
   )

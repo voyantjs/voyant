@@ -5,25 +5,22 @@ import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { MarketCurrenciesTab } from "./_components/market-currencies-tab"
 import { type MarketData, MarketDialog } from "./_components/market-dialog"
 import { MarketLocalesTab } from "./_components/market-locales-tab"
 
 export const Route = createFileRoute("/_workspace/markets/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getMarketsQueryOptions()),
   component: MarketsPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function MarketsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<MarketData | undefined>()
   const [selectedMarketId, setSelectedMarketId] = useState<string>("")
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["markets"],
-    queryFn: () => api.get<ListResponse<MarketData>>("/v1/markets/markets?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getMarketsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/markets/markets/${id}`),
@@ -189,4 +186,8 @@ function MarketsPage() {
       />
     </div>
   )
+}
+
+function getMarketsQueryOptions() {
+  return getApiListQueryOptions<MarketData>(["markets"], "/v1/markets/markets?limit=200")
 }

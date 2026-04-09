@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type OptionStartTimeRuleData,
   OptionStartTimeRuleDialog,
 } from "../_components/option-start-time-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-start-time-rules")({
   loader: ({ context }) =>
@@ -160,7 +160,7 @@ function OptionStartTimeRulesPage() {
 }
 
 function getOptionStartTimeRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<OptionStartTimeRuleData>(
+  return getApiListQueryOptions<OptionStartTimeRuleData>(
     ["pricing", "option-start-time-rules"],
     "/v1/pricing/option-start-time-rules?limit=200",
   )

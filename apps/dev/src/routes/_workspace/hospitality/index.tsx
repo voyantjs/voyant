@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { HousekeepingTasksTab } from "./_components/housekeeping-tasks-tab"
 import { MaintenanceBlocksTab } from "./_components/maintenance-blocks-tab"
 import { MealPlansTab } from "./_components/meal-plans-tab"
@@ -29,10 +29,13 @@ import { StayOperationsTab } from "./_components/stay-operations-tab"
 import { StayRulesTab } from "./_components/stay-rules-tab"
 
 export const Route = createFileRoute("/_workspace/hospitality/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getHospitalityPropertiesQueryOptions()),
+      context.queryClient.ensureQueryData(getHospitalityFacilitiesQueryOptions()),
+    ]),
   component: HospitalityPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 type PropertyLite = {
   id: string
   facilityId: string
@@ -44,14 +47,8 @@ type FacilityLite = { id: string; name: string }
 function HospitalityPage() {
   const [propertyId, setPropertyId] = useState<string>("")
 
-  const propertiesQuery = useQuery({
-    queryKey: ["hospitality", "properties"],
-    queryFn: () => api.get<ListResponse<PropertyLite>>("/v1/facilities/properties?limit=200"),
-  })
-  const facilitiesQuery = useQuery({
-    queryKey: ["hospitality", "facilities"],
-    queryFn: () => api.get<ListResponse<FacilityLite>>("/v1/facilities/facilities?limit=200"),
-  })
+  const propertiesQuery = useQuery(getHospitalityPropertiesQueryOptions())
+  const facilitiesQuery = useQuery(getHospitalityFacilitiesQueryOptions())
 
   const properties = propertiesQuery.data?.data ?? []
   const facilities = facilitiesQuery.data?.data ?? []
@@ -192,5 +189,19 @@ function HospitalityPage() {
         </Tabs>
       )}
     </div>
+  )
+}
+
+function getHospitalityPropertiesQueryOptions() {
+  return getApiListQueryOptions<PropertyLite>(
+    ["hospitality", "properties"],
+    "/v1/facilities/properties?limit=200",
+  )
+}
+
+function getHospitalityFacilitiesQueryOptions() {
+  return getApiListQueryOptions<FacilityLite>(
+    ["hospitality", "facilities"],
+    "/v1/facilities/facilities?limit=200",
   )
 }

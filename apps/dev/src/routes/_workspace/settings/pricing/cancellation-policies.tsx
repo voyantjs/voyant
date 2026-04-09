@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type CancellationPolicyData,
   CancellationPolicyDialog,
@@ -12,7 +13,6 @@ import {
   type CancellationPolicyRuleData,
   CancellationPolicyRuleDialog,
 } from "../_components/cancellation-policy-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/cancellation-policies")({
   loader: ({ context }) =>
@@ -156,7 +156,7 @@ function CancellationPoliciesPage() {
 }
 
 function getCancellationPoliciesQueryOptions() {
-  return getPricingSettingsListQueryOptions<CancellationPolicyData>(
+  return getApiListQueryOptions<CancellationPolicyData>(
     ["cancellation-policies"],
     "/v1/pricing/cancellation-policies?limit=200",
   )

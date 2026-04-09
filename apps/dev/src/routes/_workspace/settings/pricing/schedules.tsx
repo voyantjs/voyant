@@ -4,8 +4,8 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import { type PriceScheduleData, PriceScheduleDialog } from "../_components/price-schedule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/schedules")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getPriceSchedulesQueryOptions()),
@@ -136,7 +136,7 @@ function PriceSchedulesPage() {
 }
 
 function getPriceSchedulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<PriceScheduleData>(
+  return getApiListQueryOptions<PriceScheduleData>(
     ["price-schedules"],
     "/v1/pricing/price-schedules?limit=200",
   )

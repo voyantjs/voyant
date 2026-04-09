@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type DropoffPriceRuleData,
   DropoffPriceRuleDialog,
 } from "../_components/dropoff-price-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/dropoff-price-rules")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getDropoffPriceRulesQueryOptions()),
@@ -149,7 +149,7 @@ function DropoffPriceRulesPage() {
 }
 
 function getDropoffPriceRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<DropoffPriceRuleData>(
+  return getApiListQueryOptions<DropoffPriceRuleData>(
     ["pricing", "dropoff-price-rules"],
     "/v1/pricing/dropoff-price-rules?limit=200",
   )

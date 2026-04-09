@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type OptionUnitTierData,
   OptionUnitTierDialog,
 } from "../_components/option-unit-tier-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-unit-tiers")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getOptionUnitTiersQueryOptions()),
@@ -143,7 +143,7 @@ function OptionUnitTiersPage() {
 }
 
 function getOptionUnitTiersQueryOptions() {
-  return getPricingSettingsListQueryOptions<OptionUnitTierData>(
+  return getApiListQueryOptions<OptionUnitTierData>(
     ["pricing", "option-unit-tiers"],
     "/v1/pricing/option-unit-tiers?limit=200",
   )

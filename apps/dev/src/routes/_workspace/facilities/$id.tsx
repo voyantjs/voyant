@@ -4,7 +4,7 @@ import { ArrowLeft, Hotel, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui"
 import { buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { api } from "@/lib/api-client"
+import { getApiDetailQueryOptions } from "../_lib/api-query-options"
 import { AddressesTab } from "./_components/addresses-tab"
 import { ContactPointsTab } from "./_components/contact-points-tab"
 import type { FacilityData } from "./_components/facility-dialog"
@@ -14,16 +14,15 @@ import { OperationSchedulesTab } from "./_components/operation-schedules-tab"
 import { PropertyTab } from "./_components/property-tab"
 
 export const Route = createFileRoute("/_workspace/facilities/$id")({
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(getFacilityQueryOptions(params.id)),
   component: FacilityDetailPage,
 })
 
 function FacilityDetailPage() {
   const { id } = Route.useParams()
 
-  const { data: facility, isPending } = useQuery({
-    queryKey: ["facilities", "facility", id],
-    queryFn: () => api.get<FacilityData>(`/v1/facilities/facilities/${id}`),
-  })
+  const { data: facility, isPending } = useQuery(getFacilityQueryOptions(id))
 
   if (isPending) {
     return (
@@ -119,5 +118,12 @@ function FacilityDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function getFacilityQueryOptions(id: string) {
+  return getApiDetailQueryOptions<FacilityData>(
+    ["facilities", "facility", id],
+    `/v1/facilities/facilities/${id}`,
   )
 }

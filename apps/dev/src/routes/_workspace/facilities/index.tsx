@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { type FacilityData, FacilityDialog } from "./_components/facility-dialog"
 
 export const Route = createFileRoute("/_workspace/facilities/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getFacilitiesQueryOptions()),
   component: FacilitiesPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 const KINDS = [
   "property",
@@ -51,10 +51,7 @@ function FacilitiesPage() {
   if (kind) params.set("kind", kind)
   if (status) params.set("status", status)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["facilities", search, kind, status],
-    queryFn: () => api.get<ListResponse<FacilityData>>(`/v1/facilities/facilities?${params}`),
-  })
+  const { data, isPending, refetch } = useQuery(getFacilitiesQueryOptions(search, kind, status))
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/facilities/facilities/${id}`),
@@ -225,5 +222,17 @@ function FacilitiesPage() {
         }}
       />
     </div>
+  )
+}
+
+function getFacilitiesQueryOptions(search = "", kind = "", status = "") {
+  const params = new URLSearchParams({ limit: "200" })
+  if (search.trim()) params.set("search", search.trim())
+  if (kind) params.set("kind", kind)
+  if (status) params.set("status", status)
+
+  return getApiListQueryOptions<FacilityData>(
+    ["facilities", search, kind, status],
+    `/v1/facilities/facilities?${params}`,
   )
 }

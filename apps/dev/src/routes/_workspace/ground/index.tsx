@@ -5,15 +5,20 @@ import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../_lib/api-query-options"
 import { type DriverData, DriverDialog } from "./_components/driver-dialog"
 import { type OperatorData, OperatorDialog } from "./_components/operator-dialog"
 import { type VehicleData, VehicleDialog } from "./_components/vehicle-dialog"
 
 export const Route = createFileRoute("/_workspace/ground/")({
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getGroundOperatorsQueryOptions()),
+      context.queryClient.ensureQueryData(getGroundVehiclesQueryOptions()),
+      context.queryClient.ensureQueryData(getGroundDriversQueryOptions()),
+    ]),
   component: GroundPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 
 function GroundPage() {
   return (
@@ -47,10 +52,7 @@ function OperatorsTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<OperatorData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["ground-operators"],
-    queryFn: () => api.get<ListResponse<OperatorData>>("/v1/ground/operators?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getGroundOperatorsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/ground/operators/${id}`),
@@ -170,10 +172,7 @@ function VehiclesTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<VehicleData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["ground-vehicles"],
-    queryFn: () => api.get<ListResponse<VehicleData>>("/v1/ground/vehicles?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getGroundVehiclesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/ground/vehicles/${id}`),
@@ -303,10 +302,7 @@ function DriversTab() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<DriverData | undefined>()
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["ground-drivers"],
-    queryFn: () => api.get<ListResponse<DriverData>>("/v1/ground/drivers?limit=200"),
-  })
+  const { data, isPending, refetch } = useQuery(getGroundDriversQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/ground/drivers/${id}`),
@@ -426,4 +422,19 @@ function DriversTab() {
       />
     </div>
   )
+}
+
+function getGroundOperatorsQueryOptions() {
+  return getApiListQueryOptions<OperatorData>(
+    ["ground-operators"],
+    "/v1/ground/operators?limit=200",
+  )
+}
+
+function getGroundVehiclesQueryOptions() {
+  return getApiListQueryOptions<VehicleData>(["ground-vehicles"], "/v1/ground/vehicles?limit=200")
+}
+
+function getGroundDriversQueryOptions() {
+  return getApiListQueryOptions<DriverData>(["ground-drivers"], "/v1/ground/drivers?limit=200")
 }

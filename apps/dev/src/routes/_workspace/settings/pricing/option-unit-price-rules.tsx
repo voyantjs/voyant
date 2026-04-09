@@ -4,11 +4,11 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import {
   type OptionUnitPriceRuleData,
   OptionUnitPriceRuleDialog,
 } from "../_components/option-unit-price-rule-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/option-unit-price-rules")({
   loader: ({ context }) =>
@@ -150,7 +150,7 @@ function OptionUnitPriceRulesPage() {
 }
 
 function getOptionUnitPriceRulesQueryOptions() {
-  return getPricingSettingsListQueryOptions<OptionUnitPriceRuleData>(
+  return getApiListQueryOptions<OptionUnitPriceRuleData>(
     ["pricing", "option-unit-price-rules"],
     "/v1/pricing/option-unit-price-rules?limit=200",
   )

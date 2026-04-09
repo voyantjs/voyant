@@ -4,8 +4,8 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button } from "@/components/ui"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions } from "../../_lib/api-query-options"
 import { type PriceCatalogData, PriceCatalogDialog } from "../_components/price-catalog-dialog"
-import { getPricingSettingsListQueryOptions } from "../_lib/pricing-query-options"
 
 export const Route = createFileRoute("/_workspace/settings/pricing/catalogs")({
   loader: ({ context }) => context.queryClient.ensureQueryData(getPriceCatalogsQueryOptions()),
@@ -140,7 +140,7 @@ function PriceCatalogsPage() {
 }
 
 function getPriceCatalogsQueryOptions() {
-  return getPricingSettingsListQueryOptions<PriceCatalogData>(
+  return getApiListQueryOptions<PriceCatalogData>(
     ["price-catalogs"],
     "/v1/pricing/price-catalogs?limit=200",
   )

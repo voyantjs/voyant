@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
+import { getApiListQueryOptions, type ListResponse } from "../_lib/api-query-options"
 import {
   type BookingQuestionData,
   BookingQuestionDialog,
@@ -34,10 +35,10 @@ import {
 } from "./_components/question-option-dialog"
 
 export const Route = createFileRoute("/_workspace/booking-requirements/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getBookingRequirementProductsQueryOptions()),
   component: BookingRequirementsPage,
 })
-
-type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
 type ProductLite = { id: string; name: string; code: string | null; status: string }
 
 const SELECT_TYPES = new Set(["single_select", "multi_select"])
@@ -45,10 +46,7 @@ const SELECT_TYPES = new Set(["single_select", "multi_select"])
 function BookingRequirementsPage() {
   const [productId, setProductId] = useState<string>("")
 
-  const productsQuery = useQuery({
-    queryKey: ["booking-requirements", "products"],
-    queryFn: () => api.get<ListResponse<ProductLite>>("/v1/products?limit=200"),
-  })
+  const productsQuery = useQuery(getBookingRequirementProductsQueryOptions())
   const products = productsQuery.data?.data ?? []
 
   return (
@@ -106,6 +104,13 @@ function BookingRequirementsPage() {
         </Tabs>
       )}
     </div>
+  )
+}
+
+function getBookingRequirementProductsQueryOptions() {
+  return getApiListQueryOptions<ProductLite>(
+    ["booking-requirements", "products"],
+    "/v1/products?limit=200",
   )
 }
 

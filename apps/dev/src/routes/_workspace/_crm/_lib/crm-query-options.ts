@@ -10,6 +10,7 @@ import type {
   PersonRecord,
   PipelineRecord,
   PipelinesListFilters,
+  QuoteLineRecord,
   QuoteRecord,
   QuotesListFilters,
   StageRecord,
@@ -78,6 +79,16 @@ export function getPeopleQueryOptions(filters: PeopleListFilters = {}) {
   })
 }
 
+export function getPersonQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.person(id),
+    queryFn: async () => {
+      const response = await api.get<{ data: PersonRecord }>(`/v1/crm/people/${id}`)
+      return response.data
+    },
+  })
+}
+
 export function getQuotesQueryOptions(filters: QuotesListFilters = {}) {
   const params = new URLSearchParams()
   if (filters.opportunityId) params.set("opportunityId", filters.opportunityId)
@@ -92,6 +103,36 @@ export function getQuotesQueryOptions(filters: QuotesListFilters = {}) {
   })
 }
 
+export function getQuoteQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.quote(id),
+    queryFn: async () => {
+      const response = await api.get<{ data: QuoteRecord }>(`/v1/crm/quotes/${id}`)
+      return response.data
+    },
+  })
+}
+
+export function getQuoteLinesQueryOptions(quoteId: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.quoteLines(quoteId),
+    queryFn: async () => {
+      const response = await api.get<{ data: QuoteLineRecord[] }>(`/v1/crm/quotes/${quoteId}/lines`)
+      return response.data
+    },
+  })
+}
+
+export function getOrganizationQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.organization(id),
+    queryFn: async () => {
+      const response = await api.get<{ data: OrganizationRecord }>(`/v1/crm/organizations/${id}`)
+      return response.data
+    },
+  })
+}
+
 export function getPipelinesQueryOptions(filters: PipelinesListFilters = {}) {
   const params = new URLSearchParams()
   if (filters.entityType) params.set("entityType", filters.entityType)
@@ -103,6 +144,16 @@ export function getPipelinesQueryOptions(filters: PipelinesListFilters = {}) {
     queryKey: crmQueryKeys.pipelinesList(filters),
     queryFn: () =>
       api.get<PaginatedResponse<PipelineRecord>>(`/v1/crm/pipelines${qs ? `?${qs}` : ""}`),
+  })
+}
+
+export function getPipelineQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.pipeline(id),
+    queryFn: async () => {
+      const response = await api.get<{ data: PipelineRecord }>(`/v1/crm/pipelines/${id}`)
+      return response.data
+    },
   })
 }
 
@@ -136,5 +187,15 @@ export function getOpportunitiesQueryOptions(filters: OpportunitiesListFilters =
     queryKey: crmQueryKeys.opportunitiesList(filters),
     queryFn: () =>
       api.get<PaginatedResponse<OpportunityRecord>>(`/v1/crm/opportunities${qs ? `?${qs}` : ""}`),
+  })
+}
+
+export function getOpportunityQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: crmQueryKeys.opportunity(id),
+    queryFn: async () => {
+      const response = await api.get<{ data: OpportunityRecord }>(`/v1/crm/opportunities/${id}`)
+      return response.data
+    },
   })
 }

@@ -28,8 +28,23 @@ import {
 import { InlineCurrencyField } from "../_crm/_components/inline-currency-field"
 import { InlineField } from "../_crm/_components/inline-field"
 import { InlineSelectField } from "../_crm/_components/inline-select-field"
+import {
+  getOpportunityQueryOptions,
+  getQuoteLinesQueryOptions,
+  getQuoteQueryOptions,
+} from "../_crm/_lib/crm-query-options"
 
 export const Route = createFileRoute("/_workspace/quotes/$id")({
+  loader: async ({ context, params }) => {
+    const quote = await context.queryClient.ensureQueryData(getQuoteQueryOptions(params.id))
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(getQuoteLinesQueryOptions(params.id)),
+      quote.opportunityId
+        ? context.queryClient.ensureQueryData(getOpportunityQueryOptions(quote.opportunityId))
+        : Promise.resolve(),
+    ])
+  },
   component: QuoteDetailPage,
 })
 

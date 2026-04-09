@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { VoyantProvider } from "@voyantjs/crm-react"
+import { VoyantPricingProvider } from "@voyantjs/pricing-react"
 import { VoyantProductsProvider } from "@voyantjs/products-react"
 import type * as React from "react"
 
@@ -25,13 +26,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <VoyantProvider baseUrl={getApiUrl()}>
-        <VoyantProductsProvider baseUrl={getApiUrl()}>
-          <UserProvider>
-            <ThemeProvider>
-              <TooltipProvider>{children}</TooltipProvider>
-            </ThemeProvider>
-          </UserProvider>
-        </VoyantProductsProvider>
+        <VoyantPricingProvider baseUrl={getApiUrl()}>
+          <VoyantProductsProvider baseUrl={getApiUrl()}>
+            <UserProvider>
+              <ThemeProvider>
+                <TooltipProvider>{children}</TooltipProvider>
+              </ThemeProvider>
+            </UserProvider>
+          </VoyantProductsProvider>
+        </VoyantPricingProvider>
       </VoyantProvider>
     </QueryClientProvider>
   )

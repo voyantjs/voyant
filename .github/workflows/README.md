@@ -26,6 +26,7 @@ Notes:
 
 - the push flow publishes packages, ensures a repo tag like `v0.1.1` exists, then creates the GitHub Release and uploads starter tarballs
 - the manual dispatch path is for release asset recovery or refresh when npm packages already exist but the GitHub Release/tag/assets need to be created or repaired
+- package publishing may still create package tags, but GitHub Releases are intended to exist only for repo-level tags like `v0.1.1`
 
 ## Required GitHub Secrets
 

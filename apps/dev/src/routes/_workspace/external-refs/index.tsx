@@ -1,16 +1,47 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { queryOptions } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Link2 } from "lucide-react"
-import { useState } from "react"
+import { z } from "zod"
 import { Input, Label } from "@/components/ui"
+import { api } from "@/lib/api-client"
 import { ExternalRefsTab } from "./_components/external-refs-tab"
 
+type ExternalRefData = {
+  id: string
+}
+
+type ListResponse<T> = { data: T[]; total: number; limit: number; offset: number }
+
+function getExternalRefsQueryOptions(entityType: string, entityId: string) {
+  return queryOptions({
+    queryKey: ["external-refs", entityType, entityId],
+    queryFn: () =>
+      api.get<ListResponse<ExternalRefData>>(
+        `/v1/external-refs/entities/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}/refs?limit=200`,
+      ),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/external-refs/")({
+  validateSearch: z.object({
+    entityType: z.string().optional().catch(undefined),
+    entityId: z.string().optional().catch(undefined),
+  }),
+  loader: ({ context, location }) => {
+    const url = new URL(location.href)
+    const entityType = url.searchParams.get("entityType")
+    const entityId = url.searchParams.get("entityId")
+
+    if (!entityType || !entityId) return
+
+    return context.queryClient.ensureQueryData(getExternalRefsQueryOptions(entityType, entityId))
+  },
   component: ExternalRefsPage,
 })
 
 function ExternalRefsPage() {
-  const [entityType, setEntityType] = useState("")
-  const [entityId, setEntityId] = useState("")
+  const navigate = useNavigate()
+  const { entityId = "", entityType = "" } = Route.useSearch()
 
   const scopeReady = entityType.trim().length > 0 && entityId.trim().length > 0
 
@@ -31,7 +62,17 @@ function ExternalRefsPage() {
           <Label>Entity type</Label>
           <Input
             value={entityType}
-            onChange={(e) => setEntityType(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              void navigate({
+                to: ".",
+                replace: true,
+                search: (prev) => ({
+                  ...prev,
+                  entityType: value || undefined,
+                }),
+              })
+            }}
             placeholder="person, booking, product…"
           />
         </div>
@@ -39,7 +80,17 @@ function ExternalRefsPage() {
           <Label>Entity ID</Label>
           <Input
             value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              void navigate({
+                to: ".",
+                replace: true,
+                search: (prev) => ({
+                  ...prev,
+                  entityId: value || undefined,
+                }),
+              })
+            }}
             placeholder="prsn_… / book_… / prod_…"
             className="font-mono text-xs"
           />

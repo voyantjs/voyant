@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Loader2, Plus, Search } from "lucide-react"
@@ -29,7 +29,20 @@ type SupplierListResponse = {
   offset: number
 }
 
+function getSuppliersQueryOptions(search = "") {
+  return queryOptions({
+    queryKey: ["suppliers", search],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const qs = params.toString()
+      return api.get<SupplierListResponse>(`/v1/suppliers${qs ? `?${qs}` : ""}`)
+    },
+  })
+}
+
 export const Route = createFileRoute("/_workspace/suppliers/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getSuppliersQueryOptions()),
   component: SuppliersPage,
 })
 
@@ -84,15 +97,7 @@ function SuppliersPage() {
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isPending, refetch } = useQuery({
-    queryKey: ["suppliers", search],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (search) params.set("search", search)
-      const qs = params.toString()
-      return api.get<SupplierListResponse>(`/v1/suppliers${qs ? `?${qs}` : ""}`)
-    },
-  })
+  const { data, isPending, refetch } = useQuery(getSuppliersQueryOptions(search))
 
   return (
     <div className="flex flex-col gap-6 p-6">

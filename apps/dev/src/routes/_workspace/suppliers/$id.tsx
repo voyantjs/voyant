@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -68,7 +68,34 @@ type SupplierNote = {
   createdAt: string
 }
 
+function getSupplierQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["supplier", id],
+    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${id}`),
+  })
+}
+
+function getSupplierServicesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["supplier-services", id],
+    queryFn: () => api.get<{ data: SupplierService[] }>(`/v1/suppliers/${id}/services`),
+  })
+}
+
+function getSupplierNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["supplier-notes", id],
+    queryFn: () => api.get<{ data: SupplierNote[] }>(`/v1/suppliers/${id}/notes`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/suppliers/$id")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(getSupplierQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getSupplierServicesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getSupplierNotesQueryOptions(params.id)),
+    ]),
   component: SupplierDetailPage,
 })
 
@@ -100,20 +127,13 @@ function SupplierDetailPage() {
   const [rateDialogServiceId, setRateDialogServiceId] = useState<string>("")
   const [editingRate, setEditingRate] = useState<SupplierRate | undefined>()
 
-  const { data: supplierData, isPending } = useQuery({
-    queryKey: ["supplier", id],
-    queryFn: () => api.get<{ data: Supplier }>(`/v1/suppliers/${id}`),
-  })
+  const { data: supplierData, isPending } = useQuery(getSupplierQueryOptions(id))
 
-  const { data: servicesData, refetch: refetchServices } = useQuery({
-    queryKey: ["supplier-services", id],
-    queryFn: () => api.get<{ data: SupplierService[] }>(`/v1/suppliers/${id}/services`),
-  })
+  const { data: servicesData, refetch: refetchServices } = useQuery(
+    getSupplierServicesQueryOptions(id),
+  )
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["supplier-notes", id],
-    queryFn: () => api.get<{ data: SupplierNote[] }>(`/v1/suppliers/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getSupplierNotesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/suppliers/${id}`),

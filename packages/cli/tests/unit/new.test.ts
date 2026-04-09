@@ -6,6 +6,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { newCommand } from "../../src/commands/new.js"
 
+const cliPackage = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as {
+  version: string
+}
+const expectedVoyantVersionRange = `^${cliPackage.version}`
+
 function makeCtx(argv: string[], cwd: string) {
   const stdout: string[] = []
   const stderr: string[] = []
@@ -151,10 +158,12 @@ describe("newCommand", () => {
     expect(pkg.name).toBe("my-app")
     expect(pkg.version).toBe("0.0.1")
     expect(pkg.private).toBe(true)
-    expect(pkg.dependencies["@voyantjs/core"]).toBe("^0.1.1")
-    expect(pkg.dependencies["@voyantjs/crm"]).toBe("^0.1.1")
-    expect(pkg.dependencies["@voyantjs/legal"]).toBe("^0.1.1")
-    expect(pkg.devDependencies["@voyantjs/voyant-typescript-config"]).toBe("^0.1.1")
+    expect(pkg.dependencies["@voyantjs/core"]).toBe(expectedVoyantVersionRange)
+    expect(pkg.dependencies["@voyantjs/crm"]).toBe(expectedVoyantVersionRange)
+    expect(pkg.dependencies["@voyantjs/legal"]).toBe(expectedVoyantVersionRange)
+    expect(pkg.devDependencies["@voyantjs/voyant-typescript-config"]).toBe(
+      expectedVoyantVersionRange,
+    )
   })
 
   it("skips node_modules, dist, .turbo, and secret env files when copying", async () => {

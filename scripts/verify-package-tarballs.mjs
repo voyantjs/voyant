@@ -20,6 +20,20 @@ function findPackageDirs(dir) {
   return dirs
 }
 
+function listPackageFiles(dir, baseDir = dir) {
+  const files = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === "dist") continue
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...listPackageFiles(fullPath, baseDir))
+      continue
+    }
+    files.push(path.relative(baseDir, fullPath))
+  }
+  return files
+}
+
 function stripDotSlash(value) {
   return value.replace(/^\.\//, "")
 }
@@ -35,6 +49,18 @@ function matchesTarget(target, tarballFiles) {
     if (pattern.test(file)) return true
   }
   return false
+}
+
+function sourcePatternForTarget(target) {
+  return target
+    .replace(/^dist\//, "src/")
+    .replace(/\.d\.ts$/, ".ts")
+    .replace(/\.js$/, ".ts")
+}
+
+function shouldIgnoreMissingWildcardTarget(target, sourceFiles) {
+  if (!target.includes("*")) return false
+  return !matchesTarget(sourcePatternForTarget(target), sourceFiles)
 }
 
 function collectExportTargets(value, targets) {
@@ -92,6 +118,7 @@ for (const packageDir of packageDirs) {
 
   const expectedTargets = getPublishedTargets(pkg)
   if (expectedTargets.length === 0) continue
+  const sourceFiles = new Set(listPackageFiles(packageDir))
 
   let stdout
   try {
@@ -122,7 +149,11 @@ for (const packageDir of packageDirs) {
   }
 
   const tarballFiles = new Set(packInfo.files.map((file) => file.path))
-  const missingTargets = expectedTargets.filter((target) => !matchesTarget(target, tarballFiles))
+  const missingTargets = expectedTargets.filter(
+    (target) =>
+      !matchesTarget(target, tarballFiles) &&
+      !shouldIgnoreMissingWildcardTarget(target, sourceFiles),
+  )
   const suspiciousFiles = packInfo.files
     .map((file) => file.path)
     .filter((filePath) => filePath.startsWith("dist/src/") || filePath.startsWith("dist/tests/"))

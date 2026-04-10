@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeft,
@@ -112,13 +112,27 @@ function getProductNotesQueryOptions(id: string) {
   }
 }
 
+function getProductDayServicesQueryOptions(productId: string, dayId: string) {
+  return queryOptions({
+    queryKey: ["product-day-services", productId, dayId],
+    queryFn: () =>
+      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${dayId}/services`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/products/$id")({
   loader: async ({ context, params }) => {
+    const daysData = await context.queryClient.ensureQueryData(
+      getProductDaysQueryOptions(params.id),
+    )
+
     await Promise.all([
       context.queryClient.ensureQueryData(getProductQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getProductDaysQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductVersionsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductNotesQueryOptions(params.id)),
+      ...daysData.data.map((day) =>
+        context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
+      ),
     ])
   },
   component: ProductDetailPage,
@@ -557,9 +571,7 @@ function DayRow({
   onDeleteService: (serviceId: string) => void
 }) {
   const { data: servicesData } = useQuery({
-    queryKey: ["product-day-services", productId, day.id],
-    queryFn: () =>
-      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${day.id}/services`),
+    ...getProductDayServicesQueryOptions(productId, day.id),
     enabled: expanded,
   })
 

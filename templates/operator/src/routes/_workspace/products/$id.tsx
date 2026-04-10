@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { describeRRule } from "@voyantjs/availability/rrule"
 import {
@@ -99,11 +99,55 @@ type ProductMediaItem = {
   updatedAt: string
 }
 
+function getProductDaysQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-days", id],
+    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
+  })
+}
+
+function getProductSlotsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-slots", id],
+    queryFn: () =>
+      api.get<{ data: DepartureSlot[] }>(`/v1/availability/slots?productId=${id}&limit=200`),
+  })
+}
+
+function getProductRulesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-rules", id],
+    queryFn: () =>
+      api.get<{ data: AvailabilityRule[] }>(`/v1/availability/rules?productId=${id}&limit=50`),
+  })
+}
+
+function getProductDayServicesQueryOptions(productId: string, dayId: string) {
+  return queryOptions({
+    queryKey: ["product-day-services", productId, dayId],
+    queryFn: () =>
+      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${dayId}/services`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/products/$id")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(
+  loader: async ({ context, params }) => {
+    await context.queryClient.ensureQueryData(
       getProductQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
-    ),
+    )
+
+    const daysData = await context.queryClient.ensureQueryData(
+      getProductDaysQueryOptions(params.id),
+    )
+
+    await Promise.all([
+      context.queryClient.ensureQueryData(getProductSlotsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductRulesQueryOptions(params.id)),
+      ...daysData.data.map((day) =>
+        context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
+      ),
+    ])
+  },
   component: ProductDetailPage,
 })
 
@@ -247,22 +291,11 @@ function ProductDetailPage() {
 
   const { data: product, isPending } = useProduct(id)
 
-  const { data: daysData, refetch: refetchDays } = useQuery({
-    queryKey: ["product-days", id],
-    queryFn: () => api.get<{ data: ProductDay[] }>(`/v1/products/${id}/days`),
-  })
+  const { data: daysData, refetch: refetchDays } = useQuery(getProductDaysQueryOptions(id))
 
-  const { data: slotsData, refetch: refetchSlots } = useQuery({
-    queryKey: ["product-slots", id],
-    queryFn: () =>
-      api.get<{ data: DepartureSlot[] }>(`/v1/availability/slots?productId=${id}&limit=200`),
-  })
+  const { data: slotsData, refetch: refetchSlots } = useQuery(getProductSlotsQueryOptions(id))
 
-  const { data: rulesData, refetch: refetchRules } = useQuery({
-    queryKey: ["product-rules", id],
-    queryFn: () =>
-      api.get<{ data: AvailabilityRule[] }>(`/v1/availability/rules?productId=${id}&limit=50`),
-  })
+  const { data: rulesData, refetch: refetchRules } = useQuery(getProductRulesQueryOptions(id))
 
   const { data: allChannelsData } = useQuery({
     queryKey: ["channels"],
@@ -997,9 +1030,7 @@ function DayRow({
   const dayMediaInputRef = useRef<HTMLInputElement>(null)
 
   const { data: servicesData } = useQuery({
-    queryKey: ["product-day-services", productId, day.id],
-    queryFn: () =>
-      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${day.id}/services`),
+    ...getProductDayServicesQueryOptions(productId, day.id),
     enabled: expanded,
   })
 

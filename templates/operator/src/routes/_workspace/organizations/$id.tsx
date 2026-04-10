@@ -50,8 +50,32 @@ import { InlineLanguageField } from "../_crm/_components/inline-language-field"
 import { InlineNumberField } from "../_crm/_components/inline-number-field"
 import { InlineSelectField } from "../_crm/_components/inline-select-field"
 import { TagsEditor } from "../_crm/_components/tags-editor"
+import {
+  getActivitiesQueryOptions,
+  getOpportunitiesQueryOptions,
+  getOrganizationQueryOptions,
+  getPeopleQueryOptions,
+} from "../_crm/_lib/crm-query-options"
 
 export const Route = createFileRoute("/_workspace/organizations/$id")({
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(getOrganizationQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(
+        getPeopleQueryOptions({ organizationId: params.id, limit: 50 }),
+      ),
+      context.queryClient.ensureQueryData(
+        getOpportunitiesQueryOptions({ organizationId: params.id, limit: 50 }),
+      ),
+      context.queryClient.ensureQueryData(
+        getActivitiesQueryOptions({
+          entityType: "organization",
+          entityId: params.id,
+          limit: 50,
+        }),
+      ),
+    ])
+  },
   component: OrganizationDetailPage,
 })
 

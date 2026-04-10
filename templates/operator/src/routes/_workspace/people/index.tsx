@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
 import { PersonList } from "@/components/voyant/crm/person-list"
+import { getPeopleQueryOptions } from "../_crm/_lib/crm-query-options"
 
 export const Route = createFileRoute("/_workspace/people/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getPeopleQueryOptions({ limit: 25, offset: 0 })),
   component: PeoplePage,
 })
 

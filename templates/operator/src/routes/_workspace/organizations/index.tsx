@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
 import { OrganizationList } from "@/components/voyant/crm/organization-list"
+import { getOrganizationsQueryOptions } from "../_crm/_lib/crm-query-options"
 
 export const Route = createFileRoute("/_workspace/organizations/")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(getOrganizationsQueryOptions({ limit: 25, offset: 0 })),
   component: OrganizationsPage,
 })
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -30,6 +30,7 @@ import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
 export const Route = createFileRoute("/_workspace/settings/channels")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getChannelsQueryOptions()),
   component: ChannelsPage,
 })
 
@@ -59,6 +60,13 @@ const channelFormSchema = z.object({
 
 type ChannelFormValues = z.input<typeof channelFormSchema>
 type ChannelFormOutput = z.output<typeof channelFormSchema>
+
+function getChannelsQueryOptions() {
+  return queryOptions({
+    queryKey: ["channels"],
+    queryFn: () => api.get<{ data: Channel[] }>("/v1/distribution/channels?limit=200"),
+  })
+}
 
 function ChannelSheet({
   open,
@@ -201,10 +209,7 @@ function ChannelsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Channel | undefined>()
 
-  const { data, isPending } = useQuery({
-    queryKey: ["channels"],
-    queryFn: () => api.get<{ data: Channel[] }>("/v1/distribution/channels?limit=200"),
-  })
+  const { data, isPending } = useQuery(getChannelsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/distribution/channels/${id}`),

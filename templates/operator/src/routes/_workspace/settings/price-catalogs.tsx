@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
@@ -45,6 +45,7 @@ const CURRENCY_OPTIONS = Object.values(currencies).map((c) => ({
 }))
 
 export const Route = createFileRoute("/_workspace/settings/price-catalogs")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getPriceCatalogsQueryOptions()),
   component: PriceCatalogsPage,
 })
 
@@ -79,6 +80,13 @@ const catalogFormSchema = z.object({
 
 type CatalogFormValues = z.input<typeof catalogFormSchema>
 type CatalogFormOutput = z.output<typeof catalogFormSchema>
+
+function getPriceCatalogsQueryOptions() {
+  return queryOptions({
+    queryKey: ["price-catalogs"],
+    queryFn: () => api.get<{ data: PriceCatalog[] }>("/v1/pricing/price-catalogs?limit=200"),
+  })
+}
 
 function CatalogSheet({
   open,
@@ -229,10 +237,7 @@ function PriceCatalogsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<PriceCatalog | undefined>()
 
-  const { data, isPending } = useQuery({
-    queryKey: ["price-catalogs"],
-    queryFn: () => api.get<{ data: PriceCatalog[] }>("/v1/pricing/price-catalogs?limit=200"),
-  })
+  const { data, isPending } = useQuery(getPriceCatalogsQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/price-catalogs/${id}`),

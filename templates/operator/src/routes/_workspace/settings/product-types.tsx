@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -27,6 +27,7 @@ import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
 export const Route = createFileRoute("/_workspace/settings/product-types")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(getProductTypesQueryOptions()),
   component: ProductTypesPage,
 })
 
@@ -49,6 +50,13 @@ const formSchema = z.object({
 
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
+
+function getProductTypesQueryOptions() {
+  return queryOptions({
+    queryKey: ["product-types"],
+    queryFn: () => api.get<{ data: ProductType[] }>("/v1/products/product-types?limit=200"),
+  })
+}
 
 function ProductTypeSheet({
   open,
@@ -165,10 +173,7 @@ function ProductTypesPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<ProductType | undefined>()
 
-  const { data, isPending } = useQuery({
-    queryKey: ["product-types"],
-    queryFn: () => api.get<{ data: ProductType[] }>("/v1/products/product-types?limit=200"),
-  })
+  const { data, isPending } = useQuery(getProductTypesQueryOptions())
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/products/product-types/${id}`),

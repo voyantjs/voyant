@@ -103,6 +103,7 @@ export {
   type QuotesListFilters,
   type StagesListFilters,
 } from "./query-keys.js"
+export { getPeopleQueryOptions } from "./query-options.js"
 export {
   type ActivityLinkRecord,
   type ActivityRecord,

@@ -30,6 +30,40 @@ export function getProductOptionsQueryOptions(productId: string) {
   })
 }
 
+export function getOptionUnitsQueryOptions(optionId: string) {
+  return queryOptions({
+    queryKey: ["option-units", optionId],
+    queryFn: () => api.get<UnitListResponse>(`/v1/products/units?optionId=${optionId}&limit=100`),
+  })
+}
+
+export function getOptionPriceRulesQueryOptions(optionId: string) {
+  return queryOptions({
+    queryKey: ["option-price-rules", optionId],
+    queryFn: () =>
+      api.get<PriceRuleListResponse>(
+        `/v1/pricing/option-price-rules?optionId=${optionId}&limit=100`,
+      ),
+  })
+}
+
+export function getPricingCategoriesQueryOptions() {
+  return queryOptions({
+    queryKey: ["pricing-categories-global"],
+    queryFn: () => api.get<CategoryListResponse>("/v1/pricing/pricing-categories?limit=200"),
+  })
+}
+
+export function getOptionUnitPriceRulesQueryOptions(optionPriceRuleId: string) {
+  return queryOptions({
+    queryKey: ["option-unit-price-rules", optionPriceRuleId],
+    queryFn: () =>
+      api.get<UnitPriceRuleListResponse>(
+        `/v1/pricing/option-unit-price-rules?optionPriceRuleId=${optionPriceRuleId}&limit=200`,
+      ),
+  })
+}
+
 export function OptionsSection({ productId }: { productId: string }) {
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null)
   const [optionDialogOpen, setOptionDialogOpen] = useState(false)
@@ -168,10 +202,7 @@ function UnitsPanel({ optionId }: { optionId: string }) {
   const [unitDialogOpen, setUnitDialogOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState<OptionUnitData | undefined>()
 
-  const { data, refetch } = useQuery({
-    queryKey: ["option-units", optionId],
-    queryFn: () => api.get<UnitListResponse>(`/v1/products/units?optionId=${optionId}&limit=100`),
-  })
+  const { data, refetch } = useQuery(getOptionUnitsQueryOptions(optionId))
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/products/units/${id}`),
@@ -296,13 +327,7 @@ function PricingPanel({ productId, optionId }: { productId: string; optionId: st
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<OptionPriceRuleData | undefined>()
 
-  const { data, refetch } = useQuery({
-    queryKey: ["option-price-rules", optionId],
-    queryFn: () =>
-      api.get<PriceRuleListResponse>(
-        `/v1/pricing/option-price-rules?optionId=${optionId}&limit=100`,
-      ),
-  })
+  const { data, refetch } = useQuery(getOptionPriceRulesQueryOptions(optionId))
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/option-price-rules/${id}`),
@@ -441,23 +466,13 @@ function UnitPriceMatrix({
   const [preselectedUnitId, setPreselectedUnitId] = useState<string | undefined>()
   const [preselectedCategoryId, setPreselectedCategoryId] = useState<string | null | undefined>()
 
-  const { data: unitsData } = useQuery({
-    queryKey: ["option-units", optionId],
-    queryFn: () => api.get<UnitListResponse>(`/v1/products/units?optionId=${optionId}&limit=100`),
-  })
+  const { data: unitsData } = useQuery(getOptionUnitsQueryOptions(optionId))
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ["pricing-categories-global"],
-    queryFn: () => api.get<CategoryListResponse>("/v1/pricing/pricing-categories?limit=200"),
-  })
+  const { data: categoriesData } = useQuery(getPricingCategoriesQueryOptions())
 
-  const { data: cellsData, refetch: refetchCells } = useQuery({
-    queryKey: ["option-unit-price-rules", optionPriceRuleId],
-    queryFn: () =>
-      api.get<UnitPriceRuleListResponse>(
-        `/v1/pricing/option-unit-price-rules?optionPriceRuleId=${optionPriceRuleId}&limit=200`,
-      ),
-  })
+  const { data: cellsData, refetch: refetchCells } = useQuery(
+    getOptionUnitPriceRulesQueryOptions(optionPriceRuleId),
+  )
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/v1/pricing/option-unit-price-rules/${id}`),

@@ -37,7 +37,14 @@ import { getApiUrl } from "@/lib/env"
 
 import { DayDialog } from "./_components/day-dialog"
 import { DepartureDialog, type DepartureSlot } from "./_components/departure-dialog"
-import { getProductOptionsQueryOptions, OptionsSection } from "./_components/options-section"
+import {
+  getOptionPriceRulesQueryOptions,
+  getOptionUnitPriceRulesQueryOptions,
+  getOptionUnitsQueryOptions,
+  getPricingCategoriesQueryOptions,
+  getProductOptionsQueryOptions,
+  OptionsSection,
+} from "./_components/options-section"
 import { ProductDialog } from "./_components/product-dialog"
 import { type AvailabilityRule, ScheduleDialog } from "./_components/schedule-dialog"
 import { ServiceDialog } from "./_components/service-dialog"
@@ -130,6 +137,31 @@ function getProductDayServicesQueryOptions(productId: string, dayId: string) {
   })
 }
 
+function getChannelsQueryOptions() {
+  return queryOptions({
+    queryKey: ["channels"],
+    queryFn: () => api.get<{ data: ChannelInfo[] }>("/v1/distribution/channels?limit=200"),
+  })
+}
+
+function getProductChannelMappingsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-channel-mappings", id],
+    queryFn: () =>
+      api.get<{ data: ChannelProductMapping[] }>(
+        `/v1/distribution/product-mappings?productId=${id}&limit=200`,
+      ),
+  })
+}
+
+function getProductMediaQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["product-media", id],
+    queryFn: () =>
+      api.get<{ data: ProductMediaItem[]; total: number }>(`/v1/products/${id}/media?limit=50`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/products/$id")({
   loader: async ({ context, params }) => {
     await context.queryClient.ensureQueryData(
@@ -140,14 +172,39 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       getProductDaysQueryOptions(params.id),
     )
 
+    const productOptionsData = await context.queryClient.ensureQueryData(
+      getProductOptionsQueryOptions(params.id),
+    )
+
     await Promise.all([
       context.queryClient.ensureQueryData(getProductSlotsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductRulesQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getProductOptionsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getChannelsQueryOptions()),
+      context.queryClient.ensureQueryData(getProductChannelMappingsQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductMediaQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getPricingCategoriesQueryOptions()),
       ...daysData.data.map((day) =>
         context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
       ),
+      ...productOptionsData.data.flatMap((option) => [
+        context.queryClient.ensureQueryData(getOptionUnitsQueryOptions(option.id)),
+        context.queryClient.ensureQueryData(getOptionPriceRulesQueryOptions(option.id)),
+      ]),
     ])
+
+    const optionPriceRules = await Promise.all(
+      productOptionsData.data.map((option) =>
+        context.queryClient.ensureQueryData(getOptionPriceRulesQueryOptions(option.id)),
+      ),
+    )
+
+    await Promise.all(
+      optionPriceRules.flatMap((priceRulesData) =>
+        priceRulesData.data.map((rule) =>
+          context.queryClient.ensureQueryData(getOptionUnitPriceRulesQueryOptions(rule.id)),
+        ),
+      ),
+    )
   },
   component: ProductDetailPage,
 })
@@ -298,24 +355,13 @@ function ProductDetailPage() {
 
   const { data: rulesData, refetch: refetchRules } = useQuery(getProductRulesQueryOptions(id))
 
-  const { data: allChannelsData } = useQuery({
-    queryKey: ["channels"],
-    queryFn: () => api.get<{ data: ChannelInfo[] }>("/v1/distribution/channels?limit=200"),
-  })
+  const { data: allChannelsData } = useQuery(getChannelsQueryOptions())
 
-  const { data: productMappingsData, refetch: refetchMappings } = useQuery({
-    queryKey: ["product-channel-mappings", id],
-    queryFn: () =>
-      api.get<{ data: ChannelProductMapping[] }>(
-        `/v1/distribution/product-mappings?productId=${id}&limit=200`,
-      ),
-  })
+  const { data: productMappingsData, refetch: refetchMappings } = useQuery(
+    getProductChannelMappingsQueryOptions(id),
+  )
 
-  const { data: mediaData, refetch: refetchMedia } = useQuery({
-    queryKey: ["product-media", id],
-    queryFn: () =>
-      api.get<{ data: ProductMediaItem[]; total: number }>(`/v1/products/${id}/media?limit=50`),
-  })
+  const { data: mediaData, refetch: refetchMedia } = useQuery(getProductMediaQueryOptions(id))
 
   const addChannelMappingMutation = useMutation({
     mutationFn: (channelId: string) =>

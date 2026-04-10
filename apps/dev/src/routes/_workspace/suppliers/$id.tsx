@@ -89,13 +89,30 @@ function getSupplierNotesQueryOptions(id: string) {
   })
 }
 
+function getSupplierServiceRatesQueryOptions(supplierId: string, serviceId: string) {
+  return queryOptions({
+    queryKey: ["supplier-service-rates", supplierId, serviceId],
+    queryFn: () =>
+      api.get<{ data: SupplierRate[] }>(`/v1/suppliers/${supplierId}/services/${serviceId}/rates`),
+  })
+}
+
 export const Route = createFileRoute("/_workspace/suppliers/$id")({
-  loader: ({ context, params }) =>
-    Promise.all([
+  loader: async ({ context, params }) => {
+    const servicesData = await context.queryClient.ensureQueryData(
+      getSupplierServicesQueryOptions(params.id),
+    )
+
+    await Promise.all([
       context.queryClient.ensureQueryData(getSupplierQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getSupplierServicesQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getSupplierNotesQueryOptions(params.id)),
-    ]),
+      ...servicesData.data.map((service) =>
+        context.queryClient.ensureQueryData(
+          getSupplierServiceRatesQueryOptions(params.id, service.id),
+        ),
+      ),
+    ])
+  },
   component: SupplierDetailPage,
 })
 
@@ -480,9 +497,7 @@ function ServiceRow({
   onDeleteRate: (rateId: string) => void
 }) {
   const { data: ratesData } = useQuery({
-    queryKey: ["supplier-service-rates", supplierId, service.id],
-    queryFn: () =>
-      api.get<{ data: SupplierRate[] }>(`/v1/suppliers/${supplierId}/services/${service.id}/rates`),
+    ...getSupplierServiceRatesQueryOptions(supplierId, service.id),
     enabled: expanded,
   })
 

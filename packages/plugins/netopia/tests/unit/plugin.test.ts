@@ -3,6 +3,7 @@ import { notificationsService } from "@voyantjs/notifications"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { NetopiaClientApi } from "../../src/client.js"
 import { deriveNetopiaOrderId, mapNetopiaPaymentStatus, netopiaService } from "../../src/service.js"
+import * as startService from "../../src/service-start.js"
 
 const baseSession = {
   id: "pmss_123",
@@ -183,7 +184,7 @@ describe("netopiaService.collect flows", () => {
       providerResponse: { payment: { paymentURL: "https://pay.example", ntpID: "ntp_123" } },
       orderId: "order_123",
     }
-    vi.spyOn(netopiaService, "startPaymentSession").mockResolvedValue(started)
+    vi.spyOn(startService, "startPaymentSession").mockResolvedValue(started)
     const notifySpy = vi
       .spyOn(notificationsService, "sendPaymentSessionNotification")
       .mockResolvedValue({ id: "ntdl_123" } as never)
@@ -238,17 +239,34 @@ describe("netopiaService.collect flows", () => {
         ...createdSession,
         status: "requires_redirect" as const,
         redirectUrl: "https://pay.example",
+        externalReference: "INV-123",
+        providerSessionId: "ntp_123",
+        providerPaymentId: "ntp_123",
       },
       providerResponse: { payment: { paymentURL: "https://pay.example", ntpID: "ntp_123" } },
       orderId: "INV-123",
     }
-    vi.spyOn(netopiaService, "startPaymentSession").mockResolvedValue(started)
+    vi.spyOn(financeService, "getPaymentSessionById").mockResolvedValue(createdSession)
+    vi.spyOn(financeService, "markPaymentSessionRequiresRedirect").mockResolvedValue(
+      started.session,
+    )
     const paymentNotifySpy = vi
       .spyOn(notificationsService, "sendPaymentSessionNotification")
       .mockResolvedValue({ id: "ntdl_pay_123" } as never)
     const invoiceNotifySpy = vi
       .spyOn(notificationsService, "sendInvoiceNotification")
       .mockResolvedValue({ id: "ntdl_inv_123" } as never)
+    const client: NetopiaClientApi = {
+      startCardPayment: vi.fn(async () => ({
+        payment: {
+          paymentURL: "https://pay.example",
+          ntpID: "ntp_123",
+          status: 1,
+          amount: 125,
+          currency: "RON",
+        },
+      })),
+    }
 
     const result = await netopiaService.collectInvoice(
       {} as never,
@@ -268,7 +286,7 @@ describe("netopiaService.collect flows", () => {
         },
       },
       runtimeOptions,
-      undefined,
+      client,
       {} as never,
     )
 

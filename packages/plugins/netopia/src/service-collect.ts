@@ -9,7 +9,7 @@ import {
   type NetopiaCollectPaymentResult,
   resolveNotificationDispatcher,
 } from "./service-shared.js"
-import { startPaymentSession } from "./service-start.js"
+import * as startService from "./service-start.js"
 import type { NetopiaRuntimeOptions } from "./types.js"
 
 export async function collectBookingSchedule(
@@ -30,7 +30,7 @@ export async function collectBookingSchedule(
     throw new Error("Payment schedule not found")
   }
 
-  const started = await startPaymentSession(
+  const started = await startService.startPaymentSession(
     db,
     session.id,
     input.netopia,
@@ -78,7 +78,7 @@ export async function collectBookingGuarantee(
     throw new Error("Booking guarantee not found")
   }
 
-  const started = await startPaymentSession(
+  const started = await startService.startPaymentSession(
     db,
     session.id,
     input.netopia,
@@ -126,7 +126,7 @@ export async function collectInvoice(
     throw new Error("Invoice not found")
   }
 
-  const started = await startPaymentSession(
+  const started = await startService.startPaymentSession(
     db,
     session.id,
     input.netopia,

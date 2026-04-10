@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -37,8 +37,28 @@ type ContactNote = {
 }
 
 export const Route = createFileRoute("/_workspace/contacts/$id")({
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(getContactQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getContactNotesQueryOptions(params.id)),
+    ])
+  },
   component: ContactDetailPage,
 })
+
+function getContactQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["contact", id],
+    queryFn: () => api.get<{ data: Contact }>(`/v1/contacts/${id}`),
+  })
+}
+
+function getContactNotesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["contact-notes", id],
+    queryFn: () => api.get<{ data: ContactNote[] }>(`/v1/contacts/${id}/notes`),
+  })
+}
 
 function ContactDetailPage() {
   const { id } = Route.useParams()
@@ -47,15 +67,9 @@ function ContactDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
 
-  const { data: contactData, isPending } = useQuery({
-    queryKey: ["contact", id],
-    queryFn: () => api.get<{ data: Contact }>(`/v1/contacts/${id}`),
-  })
+  const { data: contactData, isPending } = useQuery(getContactQueryOptions(id))
 
-  const { data: notesData, refetch: refetchNotes } = useQuery({
-    queryKey: ["contact-notes", id],
-    queryFn: () => api.get<{ data: ContactNote[] }>(`/v1/contacts/${id}/notes`),
-  })
+  const { data: notesData, refetch: refetchNotes } = useQuery(getContactNotesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/contacts/${id}`),

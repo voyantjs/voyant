@@ -1,0 +1,143 @@
+import { describe, expect, it } from "vitest"
+
+import {
+  cancelBookingSchema,
+  confirmBookingSchema,
+  expireBookingSchema,
+  expireStaleBookingsSchema,
+  extendBookingHoldSchema,
+  insertBookingAllocationSchema,
+  insertBookingFulfillmentSchema,
+  recordBookingRedemptionSchema,
+  reserveBookingFromTransactionSchema,
+  reserveBookingSchema,
+  updateBookingAllocationSchema,
+  updateBookingFulfillmentSchema,
+} from "../../src/validation.js"
+
+describe("Reservation schemas", () => {
+  it("parses reserve booking input with defaults", () => {
+    const result = reserveBookingSchema.parse({
+      bookingNumber: "BK-RES-001",
+      sellCurrency: "USD",
+      items: [
+        {
+          title: "Adult ticket",
+          availabilitySlotId: "avs_123",
+          sourceSnapshotId: "sels_123",
+          sourceOfferId: "offr_123",
+        },
+      ],
+    })
+
+    expect(result.holdMinutes).toBe(30)
+    expect(result.sourceType).toBe("manual")
+    expect(result.items[0]?.itemType).toBe("unit")
+    expect(result.items[0]?.allocationType).toBe("unit")
+    expect(result.items[0]?.sourceSnapshotId).toBe("sels_123")
+    expect(result.items[0]?.sourceOfferId).toBe("offr_123")
+  })
+
+  it("requires at least one reservation item", () => {
+    expect(() =>
+      reserveBookingSchema.parse({
+        bookingNumber: "BK-RES-001",
+        sellCurrency: "USD",
+        items: [],
+      }),
+    ).toThrow()
+  })
+
+  it("requires a hold extension value", () => {
+    expect(() => extendBookingHoldSchema.parse({})).toThrow()
+    expect(extendBookingHoldSchema.parse({ holdMinutes: 15 }).holdMinutes).toBe(15)
+  })
+
+  it("accepts confirm, cancel, and expire payloads", () => {
+    expect(confirmBookingSchema.parse({ note: "ok" }).note).toBe("ok")
+    expect(cancelBookingSchema.parse({ note: "cancel" }).note).toBe("cancel")
+    expect(expireBookingSchema.parse({ note: "expire" }).note).toBe("expire")
+  })
+
+  it("parses expire stale bookings payload", () => {
+    const result = expireStaleBookingsSchema.parse({
+      before: "2026-06-01T10:00:00.000Z",
+      note: "sweep",
+    })
+    expect(result.before).toBe("2026-06-01T10:00:00.000Z")
+    expect(result.note).toBe("sweep")
+  })
+
+  it("parses booking allocation input", () => {
+    const result = insertBookingAllocationSchema.parse({
+      bookingItemId: "bki_123",
+      availabilitySlotId: "avs_123",
+    })
+
+    expect(result.quantity).toBe(1)
+    expect(result.status).toBe("held")
+  })
+
+  it("accepts partial booking allocation updates", () => {
+    const result = updateBookingAllocationSchema.parse({ status: "confirmed" })
+    expect(result.status).toBe("confirmed")
+  })
+
+  it("parses reserve-from-transaction payload with defaults", () => {
+    const result = reserveBookingFromTransactionSchema.parse({
+      bookingNumber: "BK-TXN-001",
+    })
+
+    expect(result.bookingNumber).toBe("BK-TXN-001")
+    expect(result.holdMinutes).toBe(30)
+    expect(result.sourceType).toBe("internal")
+    expect(result.includeParticipants).toBe(true)
+  })
+})
+
+describe("Booking fulfillment schema", () => {
+  it("accepts valid fulfillment input", () => {
+    const result = insertBookingFulfillmentSchema.parse({
+      fulfillmentType: "voucher",
+      deliveryChannel: "download",
+      artifactUrl: "https://example.com/voucher.pdf",
+    })
+
+    expect(result.fulfillmentType).toBe("voucher")
+    expect(result.deliveryChannel).toBe("download")
+    expect(result.status).toBe("issued")
+  })
+
+  it("rejects invalid artifact url", () => {
+    expect(() =>
+      insertBookingFulfillmentSchema.parse({
+        fulfillmentType: "ticket",
+        deliveryChannel: "email",
+        artifactUrl: "not-a-url",
+      }),
+    ).toThrow()
+  })
+
+  it("accepts partial fulfillment update", () => {
+    const result = updateBookingFulfillmentSchema.parse({ status: "revoked" })
+    expect(result.status).toBe("revoked")
+  })
+})
+
+describe("Booking redemption schema", () => {
+  it("accepts valid redemption input", () => {
+    const result = recordBookingRedemptionSchema.parse({
+      method: "scan",
+      redeemedAt: "2026-06-01T10:00:00.000Z",
+      metadata: { gate: "north" },
+    })
+
+    expect(result.method).toBe("scan")
+    expect(result.redeemedAt).toBe("2026-06-01T10:00:00.000Z")
+  })
+
+  it("defaults redemption method to manual", () => {
+    const result = recordBookingRedemptionSchema.parse({})
+    expect(result.method).toBe("manual")
+  })
+})

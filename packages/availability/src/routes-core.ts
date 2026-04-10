@@ -1,0 +1,251 @@
+import { Hono } from "hono"
+import {
+  batchIdsSchema,
+  createBatchUpdateSchema,
+  type Env,
+  handleBatchDelete,
+  handleBatchUpdate,
+  notFound,
+} from "./routes-shared.js"
+import { availabilityService } from "./service.js"
+import {
+  availabilityCloseoutListQuerySchema,
+  availabilityRuleListQuerySchema,
+  availabilitySlotListQuerySchema,
+  availabilityStartTimeListQuerySchema,
+  insertAvailabilityCloseoutSchema,
+  insertAvailabilityRuleSchema,
+  insertAvailabilitySlotSchema,
+  insertAvailabilityStartTimeSchema,
+  updateAvailabilityCloseoutSchema,
+  updateAvailabilityRuleSchema,
+  updateAvailabilitySlotSchema,
+  updateAvailabilityStartTimeSchema,
+} from "./validation.js"
+
+const batchUpdateAvailabilityRuleSchema = createBatchUpdateSchema(updateAvailabilityRuleSchema)
+const batchUpdateAvailabilityStartTimeSchema = createBatchUpdateSchema(
+  updateAvailabilityStartTimeSchema,
+)
+const batchUpdateAvailabilitySlotSchema = createBatchUpdateSchema(updateAvailabilitySlotSchema)
+const batchUpdateAvailabilityCloseoutSchema = createBatchUpdateSchema(
+  updateAvailabilityCloseoutSchema,
+)
+
+export const availabilityCoreRoutes = new Hono<Env>()
+  .get("/rules", async (c) => {
+    const query = availabilityRuleListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await availabilityService.listRules(c.get("db"), query))
+  })
+  .post("/rules", async (c) =>
+    c.json(
+      {
+        data: await availabilityService.createRule(
+          c.get("db"),
+          insertAvailabilityRuleSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    ),
+  )
+  .post("/rules/batch-update", async (c) => {
+    const body = batchUpdateAvailabilityRuleSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchUpdate({
+        db: c.get("db"),
+        ids: body.ids,
+        patch: body.patch,
+        update: availabilityService.updateRule,
+      }),
+    )
+  })
+  .post("/rules/batch-delete", async (c) => {
+    const body = batchIdsSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchDelete({
+        db: c.get("db"),
+        ids: body.ids,
+        remove: availabilityService.deleteRule,
+      }),
+    )
+  })
+  .get("/rules/:id", async (c) => {
+    const row = await availabilityService.getRuleById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Availability rule not found")
+  })
+  .patch("/rules/:id", async (c) => {
+    const row = await availabilityService.updateRule(
+      c.get("db"),
+      c.req.param("id"),
+      updateAvailabilityRuleSchema.parse(await c.req.json()),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Availability rule not found")
+  })
+  .delete("/rules/:id", async (c) => {
+    const row = await availabilityService.deleteRule(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Availability rule not found")
+  })
+  .get("/start-times", async (c) => {
+    const query = availabilityStartTimeListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await availabilityService.listStartTimes(c.get("db"), query))
+  })
+  .post("/start-times", async (c) =>
+    c.json(
+      {
+        data: await availabilityService.createStartTime(
+          c.get("db"),
+          insertAvailabilityStartTimeSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    ),
+  )
+  .post("/start-times/batch-update", async (c) => {
+    const body = batchUpdateAvailabilityStartTimeSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchUpdate({
+        db: c.get("db"),
+        ids: body.ids,
+        patch: body.patch,
+        update: availabilityService.updateStartTime,
+      }),
+    )
+  })
+  .post("/start-times/batch-delete", async (c) => {
+    const body = batchIdsSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchDelete({
+        db: c.get("db"),
+        ids: body.ids,
+        remove: availabilityService.deleteStartTime,
+      }),
+    )
+  })
+  .get("/start-times/:id", async (c) => {
+    const row = await availabilityService.getStartTimeById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Availability start time not found")
+  })
+  .patch("/start-times/:id", async (c) => {
+    const row = await availabilityService.updateStartTime(
+      c.get("db"),
+      c.req.param("id"),
+      updateAvailabilityStartTimeSchema.parse(await c.req.json()),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Availability start time not found")
+  })
+  .delete("/start-times/:id", async (c) => {
+    const row = await availabilityService.deleteStartTime(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Availability start time not found")
+  })
+  .get("/slots", async (c) => {
+    const query = availabilitySlotListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await availabilityService.listSlots(c.get("db"), query))
+  })
+  .post("/slots", async (c) =>
+    c.json(
+      {
+        data: await availabilityService.createSlot(
+          c.get("db"),
+          insertAvailabilitySlotSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    ),
+  )
+  .post("/slots/batch-update", async (c) => {
+    const body = batchUpdateAvailabilitySlotSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchUpdate({
+        db: c.get("db"),
+        ids: body.ids,
+        patch: body.patch,
+        update: availabilityService.updateSlot,
+      }),
+    )
+  })
+  .post("/slots/batch-delete", async (c) => {
+    const body = batchIdsSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchDelete({
+        db: c.get("db"),
+        ids: body.ids,
+        remove: availabilityService.deleteSlot,
+      }),
+    )
+  })
+  .get("/slots/:id", async (c) => {
+    const row = await availabilityService.getSlotById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Availability slot not found")
+  })
+  .patch("/slots/:id", async (c) => {
+    const row = await availabilityService.updateSlot(
+      c.get("db"),
+      c.req.param("id"),
+      updateAvailabilitySlotSchema.parse(await c.req.json()),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Availability slot not found")
+  })
+  .delete("/slots/:id", async (c) => {
+    const row = await availabilityService.deleteSlot(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Availability slot not found")
+  })
+  .get("/closeouts", async (c) => {
+    const query = availabilityCloseoutListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await availabilityService.listCloseouts(c.get("db"), query))
+  })
+  .post("/closeouts", async (c) =>
+    c.json(
+      {
+        data: await availabilityService.createCloseout(
+          c.get("db"),
+          insertAvailabilityCloseoutSchema.parse(await c.req.json()),
+        ),
+      },
+      201,
+    ),
+  )
+  .post("/closeouts/batch-update", async (c) => {
+    const body = batchUpdateAvailabilityCloseoutSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchUpdate({
+        db: c.get("db"),
+        ids: body.ids,
+        patch: body.patch,
+        update: availabilityService.updateCloseout,
+      }),
+    )
+  })
+  .post("/closeouts/batch-delete", async (c) => {
+    const body = batchIdsSchema.parse(await c.req.json())
+    return c.json(
+      await handleBatchDelete({
+        db: c.get("db"),
+        ids: body.ids,
+        remove: availabilityService.deleteCloseout,
+      }),
+    )
+  })
+  .get("/closeouts/:id", async (c) => {
+    const row = await availabilityService.getCloseoutById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Availability closeout not found")
+  })
+  .patch("/closeouts/:id", async (c) => {
+    const row = await availabilityService.updateCloseout(
+      c.get("db"),
+      c.req.param("id"),
+      updateAvailabilityCloseoutSchema.parse(await c.req.json()),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Availability closeout not found")
+  })
+  .delete("/closeouts/:id", async (c) => {
+    const row = await availabilityService.deleteCloseout(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Availability closeout not found")
+  })

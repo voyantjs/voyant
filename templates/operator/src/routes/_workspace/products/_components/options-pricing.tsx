@@ -1,0 +1,305 @@
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui"
+import { api } from "@/lib/api-client"
+import { type OptionPriceRuleData, OptionPriceRuleDialog } from "./option-price-rule-dialog"
+import {
+  getOptionPriceRulesQueryOptions,
+  getOptionUnitPriceRulesQueryOptions,
+  getOptionUnitsQueryOptions,
+  getPricingCategoriesQueryOptions,
+} from "./options-shared"
+import { type OptionUnitPriceRuleData, UnitPriceRuleDialog } from "./unit-price-rule-dialog"
+
+function ActionMenu({ children }: { children: React.ReactNode }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+export function PricingPanel({ productId, optionId }: { productId: string; optionId: string }) {
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<OptionPriceRuleData | undefined>()
+  const { data, refetch } = useQuery(getOptionPriceRulesQueryOptions(optionId))
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/v1/pricing/option-price-rules/${id}`),
+    onSuccess: () => void refetch(),
+  })
+  const rules = data?.data ?? []
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pricing</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setEditingRule(undefined)
+            setRuleDialogOpen(true)
+          }}
+        >
+          <Plus className="mr-1 h-3 w-3" />
+          Add Price Rule
+        </Button>
+      </div>
+
+      {rules.length === 0 ? (
+        <p className="py-2 text-center text-xs text-muted-foreground">
+          No price rules yet. Link a catalog to start pricing.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {rules.map((rule) => (
+            <PriceRuleCard
+              key={rule.id}
+              rule={rule}
+              optionId={optionId}
+              onEdit={() => {
+                setEditingRule(rule)
+                setRuleDialogOpen(true)
+              }}
+              onDelete={() => {
+                if (confirm(`Delete price rule "${rule.name}"?`)) {
+                  deleteMutation.mutate(rule.id)
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <OptionPriceRuleDialog
+        open={ruleDialogOpen}
+        onOpenChange={setRuleDialogOpen}
+        productId={productId}
+        optionId={optionId}
+        rule={editingRule}
+        onSuccess={() => {
+          setRuleDialogOpen(false)
+          setEditingRule(undefined)
+          void refetch()
+        }}
+      />
+    </div>
+  )
+}
+
+function PriceRuleCard({
+  rule,
+  optionId,
+  onEdit,
+  onDelete,
+}: {
+  rule: OptionPriceRuleData
+  optionId: string
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="rounded-lg border bg-background p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{rule.name}</span>
+            <Badge variant="outline" className="text-xs capitalize">
+              {rule.pricingMode.replace("_", " ")}
+            </Badge>
+            {rule.isDefault && <Badge variant="secondary">Default</Badge>}
+            <Badge variant={rule.active ? "default" : "outline"}>
+              {rule.active ? "Active" : "Inactive"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span>
+              Base sell:{" "}
+              <span className="font-mono text-foreground">
+                {(rule.baseSellAmountCents / 100).toFixed(2)}
+              </span>
+            </span>
+            <span>
+              Base cost:{" "}
+              <span className="font-mono text-foreground">
+                {(rule.baseCostAmountCents / 100).toFixed(2)}
+              </span>
+            </span>
+            {rule.allPricingCategories && <span>All categories</span>}
+          </div>
+        </div>
+        <ActionMenu>
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </ActionMenu>
+      </div>
+
+      <div className="mt-3">
+        <UnitPriceMatrix optionPriceRuleId={rule.id} optionId={optionId} />
+      </div>
+    </div>
+  )
+}
+
+function UnitPriceMatrix({
+  optionPriceRuleId,
+  optionId,
+}: {
+  optionPriceRuleId: string
+  optionId: string
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingCell, setEditingCell] = useState<OptionUnitPriceRuleData | undefined>()
+  const [preselectedUnitId, setPreselectedUnitId] = useState<string | undefined>()
+  const [preselectedCategoryId, setPreselectedCategoryId] = useState<string | null | undefined>()
+
+  const { data: unitsData } = useQuery(getOptionUnitsQueryOptions(optionId))
+  const { data: categoriesData } = useQuery(getPricingCategoriesQueryOptions())
+  const { data: cellsData, refetch: refetchCells } = useQuery(
+    getOptionUnitPriceRulesQueryOptions(optionPriceRuleId),
+  )
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/v1/pricing/option-unit-price-rules/${id}`),
+    onSuccess: () => void refetchCells(),
+  })
+
+  const units = (unitsData?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder)
+  const categories = categoriesData?.data ?? []
+  const cells = cellsData?.data ?? []
+  const findCell = (unitId: string, categoryId: string | null) =>
+    cells.find(
+      (cell) => cell.unitId === unitId && (cell.pricingCategoryId ?? null) === categoryId,
+    ) ?? null
+
+  if (units.length === 0) {
+    return <p className="text-xs italic text-muted-foreground">Add units to configure pricing.</p>
+  }
+  if (categories.length === 0) {
+    return (
+      <p className="text-xs italic text-muted-foreground">
+        Create global pricing categories in Settings first.
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Unit x Category Pricing
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded border">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b bg-muted/50 text-muted-foreground">
+              <th className="p-2 text-left font-medium">Unit</th>
+              {categories.map((category) => (
+                <th key={category.id} className="p-2 text-left font-medium">
+                  {category.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {units.map((unit) => (
+              <tr key={unit.id} className="border-b last:border-b-0">
+                <td className="p-2 font-medium">
+                  {unit.name}
+                  <span className="ml-1 text-[10px] text-muted-foreground">({unit.unitType})</span>
+                </td>
+                {categories.map((category) => {
+                  const cell = findCell(unit.id, category.id)
+                  return (
+                    <td key={category.id} className="p-2">
+                      {cell ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCell(cell)
+                              setPreselectedUnitId(undefined)
+                              setPreselectedCategoryId(undefined)
+                              setDialogOpen(true)
+                            }}
+                            className="font-mono text-foreground hover:underline"
+                          >
+                            {(cell.sellAmountCents / 100).toFixed(2)}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this price cell?")) {
+                                deleteMutation.mutate(cell.id)
+                              }
+                            }}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCell(undefined)
+                            setPreselectedUnitId(unit.id)
+                            setPreselectedCategoryId(category.id)
+                            setDialogOpen(true)
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <UnitPriceRuleDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        optionPriceRuleId={optionPriceRuleId}
+        optionId={optionId}
+        units={units}
+        preselectedUnitId={preselectedUnitId}
+        preselectedCategoryId={preselectedCategoryId}
+        cell={editingCell}
+        onSuccess={() => {
+          setDialogOpen(false)
+          setEditingCell(undefined)
+          setPreselectedUnitId(undefined)
+          setPreselectedCategoryId(undefined)
+          void refetchCells()
+        }}
+      />
+    </div>
+  )
+}

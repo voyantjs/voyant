@@ -1,0 +1,180 @@
+import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
+import { boolean, date, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+
+import { availabilitySlotsRef } from "./availability-ref.js"
+import { bookingParticipants, bookings } from "./schema-core"
+import {
+  bookingAllocationStatusEnum,
+  bookingAllocationTypeEnum,
+  bookingFulfillmentDeliveryChannelEnum,
+  bookingFulfillmentStatusEnum,
+  bookingFulfillmentTypeEnum,
+  bookingItemParticipantRoleEnum,
+  bookingItemStatusEnum,
+  bookingItemTypeEnum,
+  bookingRedemptionMethodEnum,
+} from "./schema-shared"
+
+export const bookingItems = pgTable(
+  "booking_items",
+  {
+    id: typeId("booking_items"),
+    bookingId: typeIdRef("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    itemType: bookingItemTypeEnum("item_type").notNull().default("unit"),
+    status: bookingItemStatusEnum("status").notNull().default("draft"),
+    serviceDate: date("service_date"),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    quantity: integer("quantity").notNull().default(1),
+    sellCurrency: text("sell_currency").notNull(),
+    unitSellAmountCents: integer("unit_sell_amount_cents"),
+    totalSellAmountCents: integer("total_sell_amount_cents"),
+    costCurrency: text("cost_currency"),
+    unitCostAmountCents: integer("unit_cost_amount_cents"),
+    totalCostAmountCents: integer("total_cost_amount_cents"),
+    notes: text("notes"),
+    productId: text("product_id"),
+    optionId: text("option_id"),
+    optionUnitId: text("option_unit_id"),
+    pricingCategoryId: text("pricing_category_id"),
+    sourceSnapshotId: text("source_snapshot_id"),
+    sourceOfferId: text("source_offer_id"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_items_booking").on(table.bookingId),
+    index("idx_booking_items_status").on(table.status),
+  ],
+)
+
+export const bookingAllocations = pgTable(
+  "booking_allocations",
+  {
+    id: typeId("booking_allocations"),
+    bookingId: typeIdRef("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    bookingItemId: typeIdRef("booking_item_id")
+      .notNull()
+      .references(() => bookingItems.id, { onDelete: "cascade" }),
+    productId: text("product_id"),
+    optionId: text("option_id"),
+    optionUnitId: text("option_unit_id"),
+    pricingCategoryId: text("pricing_category_id"),
+    availabilitySlotId: typeIdRef("availability_slot_id").references(
+      () => availabilitySlotsRef.id,
+      { onDelete: "set null" },
+    ),
+    quantity: integer("quantity").notNull().default(1),
+    allocationType: bookingAllocationTypeEnum("allocation_type").notNull().default("unit"),
+    status: bookingAllocationStatusEnum("status").notNull().default("held"),
+    holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_allocations_booking").on(table.bookingId),
+    index("idx_booking_allocations_item").on(table.bookingItemId),
+    index("idx_booking_allocations_slot").on(table.availabilitySlotId),
+    index("idx_booking_allocations_status").on(table.status),
+  ],
+)
+
+export const bookingFulfillments = pgTable(
+  "booking_fulfillments",
+  {
+    id: typeId("booking_fulfillments"),
+    bookingId: typeIdRef("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    bookingItemId: typeIdRef("booking_item_id").references(() => bookingItems.id, {
+      onDelete: "set null",
+    }),
+    participantId: typeIdRef("participant_id").references(() => bookingParticipants.id, {
+      onDelete: "set null",
+    }),
+    fulfillmentType: bookingFulfillmentTypeEnum("fulfillment_type").notNull(),
+    deliveryChannel: bookingFulfillmentDeliveryChannelEnum("delivery_channel").notNull(),
+    status: bookingFulfillmentStatusEnum("status").notNull().default("pending"),
+    artifactUrl: text("artifact_url"),
+    payload: jsonb("payload").$type<Record<string, unknown>>(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_fulfillments_booking").on(table.bookingId),
+    index("idx_booking_fulfillments_item").on(table.bookingItemId),
+    index("idx_booking_fulfillments_participant").on(table.participantId),
+    index("idx_booking_fulfillments_status").on(table.status),
+  ],
+)
+
+export const bookingRedemptionEvents = pgTable(
+  "booking_redemption_events",
+  {
+    id: typeId("booking_redemption_events"),
+    bookingId: typeIdRef("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    bookingItemId: typeIdRef("booking_item_id").references(() => bookingItems.id, {
+      onDelete: "set null",
+    }),
+    participantId: typeIdRef("participant_id").references(() => bookingParticipants.id, {
+      onDelete: "set null",
+    }),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+    redeemedBy: text("redeemed_by"),
+    location: text("location"),
+    method: bookingRedemptionMethodEnum("method").notNull().default("manual"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_redemption_events_booking").on(table.bookingId),
+    index("idx_booking_redemption_events_item").on(table.bookingItemId),
+    index("idx_booking_redemption_events_participant").on(table.participantId),
+    index("idx_booking_redemption_events_redeemed_at").on(table.redeemedAt),
+  ],
+)
+
+export const bookingItemParticipants = pgTable(
+  "booking_item_participants",
+  {
+    id: typeId("booking_item_participants"),
+    bookingItemId: typeIdRef("booking_item_id")
+      .notNull()
+      .references(() => bookingItems.id, { onDelete: "cascade" }),
+    participantId: typeIdRef("participant_id")
+      .notNull()
+      .references(() => bookingParticipants.id, { onDelete: "cascade" }),
+    role: bookingItemParticipantRoleEnum("role").notNull().default("traveler"),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_booking_item_participants_item").on(table.bookingItemId),
+    index("idx_booking_item_participants_participant").on(table.participantId),
+  ],
+)
+
+export type BookingItem = typeof bookingItems.$inferSelect
+export type NewBookingItem = typeof bookingItems.$inferInsert
+export type BookingAllocation = typeof bookingAllocations.$inferSelect
+export type NewBookingAllocation = typeof bookingAllocations.$inferInsert
+export type BookingFulfillment = typeof bookingFulfillments.$inferSelect
+export type NewBookingFulfillment = typeof bookingFulfillments.$inferInsert
+export type BookingRedemptionEvent = typeof bookingRedemptionEvents.$inferSelect
+export type NewBookingRedemptionEvent = typeof bookingRedemptionEvents.$inferInsert
+export type BookingItemParticipant = typeof bookingItemParticipants.$inferSelect
+export type NewBookingItemParticipant = typeof bookingItemParticipants.$inferInsert

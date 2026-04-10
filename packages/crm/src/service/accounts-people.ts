@@ -1,0 +1,425 @@
+import { identityService } from "@voyantjs/identity/service"
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
+import {
+  communicationLog,
+  organizationNotes,
+  organizations,
+  people,
+  personNotes,
+  segments,
+} from "../schema.js"
+import {
+  type CommunicationListQuery,
+  type CreateAddressInput,
+  type CreateCommunicationLogInput,
+  type CreateContactPointInput,
+  type CreateOrganizationNoteInput,
+  type CreatePersonInput,
+  type CreatePersonNoteInput,
+  type CreateSegmentInput,
+  deletePersonIdentity,
+  hydratePeople,
+  organizationEntityType,
+  type PersonListQuery,
+  personBaseFields,
+  personEntityType,
+  syncPersonIdentity,
+  type UpdateAddressInput,
+  type UpdateContactPointInput,
+  type UpdatePersonInput,
+} from "./accounts-shared.js"
+import { paginate } from "./helpers.js"
+
+export const peopleAccountsService = {
+  async listPeople(db: PostgresJsDatabase, query: PersonListQuery) {
+    const conditions = []
+
+    if (query.organizationId) conditions.push(eq(people.organizationId, query.organizationId))
+    if (query.ownerId) conditions.push(eq(people.ownerId, query.ownerId))
+    if (query.relation) conditions.push(eq(people.relation, query.relation))
+    if (query.status) conditions.push(eq(people.status, query.status))
+    if (query.search) {
+      const term = `%${query.search}%`
+      conditions.push(
+        or(
+          ilike(people.firstName, term),
+          ilike(people.lastName, term),
+          ilike(people.jobTitle, term),
+        ),
+      )
+    }
+
+    const where = conditions.length ? and(...conditions) : undefined
+    const result = await paginate(
+      db
+        .select()
+        .from(people)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(desc(people.updatedAt)),
+      db.select({ count: sql<number>`count(*)::int` }).from(people).where(where),
+      query.limit,
+      query.offset,
+    )
+
+    return {
+      ...result,
+      data: await hydratePeople(db, result.data),
+    }
+  },
+
+  async getPersonById(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.select().from(people).where(eq(people.id, id)).limit(1)
+    if (!row) return null
+    const [hydrated] = await hydratePeople(db, [row])
+    return hydrated ?? null
+  },
+
+  async createPerson(db: PostgresJsDatabase, data: CreatePersonInput) {
+    const [row] = await db
+      .insert(people)
+      .values({
+        ...personBaseFields(data),
+        firstName: data.firstName,
+        lastName: data.lastName,
+      })
+      .returning()
+    if (!row) {
+      throw new Error("Failed to create person")
+    }
+    await syncPersonIdentity(db, row.id, data)
+    return this.getPersonById(db, row.id)
+  },
+
+  async updatePerson(db: PostgresJsDatabase, id: string, data: UpdatePersonInput) {
+    const existing = await this.getPersonById(db, id)
+    if (!existing) return null
+
+    await db
+      .update(people)
+      .set({ ...personBaseFields(data), updatedAt: new Date() })
+      .where(eq(people.id, id))
+
+    await syncPersonIdentity(db, id, {
+      email: data.email === undefined ? existing.email : data.email,
+      phone: data.phone === undefined ? existing.phone : data.phone,
+      website: data.website === undefined ? existing.website : data.website,
+      address: data.address === undefined ? existing.address : data.address,
+      city: data.city === undefined ? existing.city : data.city,
+      country: data.country === undefined ? existing.country : data.country,
+    })
+
+    return this.getPersonById(db, id)
+  },
+
+  async deletePerson(db: PostgresJsDatabase, id: string) {
+    await deletePersonIdentity(db, id)
+    const [row] = await db.delete(people).where(eq(people.id, id)).returning({ id: people.id })
+    return row ?? null
+  },
+
+  listContactMethods(
+    db: PostgresJsDatabase,
+    entityType: "organization" | "person",
+    entityId: string,
+  ) {
+    return identityService.listContactPointsForEntity(
+      db,
+      entityType === "organization" ? organizationEntityType : personEntityType,
+      entityId,
+    )
+  },
+
+  async createContactMethod(
+    db: PostgresJsDatabase,
+    entityType: "organization" | "person",
+    entityId: string,
+    data: CreateContactPointInput,
+  ) {
+    return identityService.createContactPoint(db, {
+      ...data,
+      entityType: entityType === "organization" ? organizationEntityType : personEntityType,
+      entityId,
+    })
+  },
+
+  async updateContactMethod(db: PostgresJsDatabase, id: string, data: UpdateContactPointInput) {
+    return identityService.updateContactPoint(db, id, data)
+  },
+
+  async deleteContactMethod(db: PostgresJsDatabase, id: string) {
+    return identityService.deleteContactPoint(db, id)
+  },
+
+  listAddresses(db: PostgresJsDatabase, entityType: "organization" | "person", entityId: string) {
+    return identityService.listAddressesForEntity(
+      db,
+      entityType === "organization" ? organizationEntityType : personEntityType,
+      entityId,
+    )
+  },
+
+  async createAddress(
+    db: PostgresJsDatabase,
+    entityType: "organization" | "person",
+    entityId: string,
+    data: CreateAddressInput,
+  ) {
+    return identityService.createAddress(db, {
+      ...data,
+      entityType: entityType === "organization" ? organizationEntityType : personEntityType,
+      entityId,
+    })
+  },
+
+  async updateAddress(db: PostgresJsDatabase, id: string, data: UpdateAddressInput) {
+    return identityService.updateAddress(db, id, data)
+  },
+
+  async deleteAddress(db: PostgresJsDatabase, id: string) {
+    return identityService.deleteAddress(db, id)
+  },
+
+  listPersonNotes(db: PostgresJsDatabase, personId: string) {
+    return db
+      .select()
+      .from(personNotes)
+      .where(eq(personNotes.personId, personId))
+      .orderBy(personNotes.createdAt)
+  },
+
+  async createPersonNote(
+    db: PostgresJsDatabase,
+    personId: string,
+    userId: string,
+    data: CreatePersonNoteInput,
+  ) {
+    const [existing] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.id, personId))
+      .limit(1)
+    if (!existing) return null
+
+    const [row] = await db
+      .insert(personNotes)
+      .values({ personId, authorId: userId, content: data.content })
+      .returning()
+    return row
+  },
+
+  listOrganizationNotes(db: PostgresJsDatabase, organizationId: string) {
+    return db
+      .select()
+      .from(organizationNotes)
+      .where(eq(organizationNotes.organizationId, organizationId))
+      .orderBy(organizationNotes.createdAt)
+  },
+
+  async createOrganizationNote(
+    db: PostgresJsDatabase,
+    organizationId: string,
+    userId: string,
+    data: CreateOrganizationNoteInput,
+  ) {
+    const [existing] = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1)
+    if (!existing) return null
+
+    const [row] = await db
+      .insert(organizationNotes)
+      .values({ organizationId, authorId: userId, content: data.content })
+      .returning()
+    return row
+  },
+
+  async updatePersonNote(db: PostgresJsDatabase, id: string, content: string) {
+    const [row] = await db
+      .update(personNotes)
+      .set({ content })
+      .where(eq(personNotes.id, id))
+      .returning()
+    return row ?? null
+  },
+
+  async deletePersonNote(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.delete(personNotes).where(eq(personNotes.id, id)).returning()
+    return row ?? null
+  },
+
+  async updateOrganizationNote(db: PostgresJsDatabase, id: string, content: string) {
+    const [row] = await db
+      .update(organizationNotes)
+      .set({ content })
+      .where(eq(organizationNotes.id, id))
+      .returning()
+    return row ?? null
+  },
+
+  async deleteOrganizationNote(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.delete(organizationNotes).where(eq(organizationNotes.id, id)).returning()
+    return row ?? null
+  },
+
+  async listCommunications(
+    db: PostgresJsDatabase,
+    personId: string,
+    query: CommunicationListQuery,
+  ) {
+    const conditions = [eq(communicationLog.personId, personId)]
+
+    if (query.channel) conditions.push(eq(communicationLog.channel, query.channel))
+    if (query.direction) conditions.push(eq(communicationLog.direction, query.direction))
+    if (query.dateFrom) conditions.push(gte(communicationLog.createdAt, new Date(query.dateFrom)))
+    if (query.dateTo) conditions.push(lte(communicationLog.createdAt, new Date(query.dateTo)))
+
+    return db
+      .select()
+      .from(communicationLog)
+      .where(and(...conditions))
+      .limit(query.limit)
+      .offset(query.offset)
+      .orderBy(desc(communicationLog.createdAt))
+  },
+
+  async createCommunication(
+    db: PostgresJsDatabase,
+    personId: string,
+    data: CreateCommunicationLogInput,
+  ) {
+    const [existing] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.id, personId))
+      .limit(1)
+    if (!existing) return null
+
+    const [row] = await db
+      .insert(communicationLog)
+      .values({
+        personId,
+        organizationId: data.organizationId ?? null,
+        channel: data.channel,
+        direction: data.direction,
+        subject: data.subject ?? null,
+        content: data.content ?? null,
+        sentAt: data.sentAt ? new Date(data.sentAt) : null,
+      })
+      .returning()
+    return row
+  },
+
+  listSegments(db: PostgresJsDatabase) {
+    return db.select().from(segments).orderBy(segments.createdAt)
+  },
+
+  async createSegment(db: PostgresJsDatabase, data: CreateSegmentInput) {
+    const [row] = await db.insert(segments).values(data).returning()
+    return row
+  },
+
+  async deleteSegment(db: PostgresJsDatabase, segmentId: string) {
+    const [row] = await db
+      .delete(segments)
+      .where(eq(segments.id, segmentId))
+      .returning({ id: segments.id })
+    return row ?? null
+  },
+
+  async exportPeopleCsv(db: PostgresJsDatabase) {
+    const rows = await hydratePeople(db, await db.select().from(people).orderBy(people.createdAt))
+
+    const headers = [
+      "id",
+      "firstName",
+      "lastName",
+      "jobTitle",
+      "relation",
+      "preferredLanguage",
+      "preferredCurrency",
+      "email",
+      "phone",
+      "website",
+      "address",
+      "city",
+      "country",
+      "organizationId",
+    ]
+
+    const csvLines = [headers.join(",")]
+    for (const row of rows) {
+      const values = headers.map((header) => {
+        const value = row[header as keyof typeof row]
+        if (value === null || value === undefined) return ""
+        const stringValue = String(value)
+        return stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")
+          ? `"${stringValue.replace(/"/g, '""')}"`
+          : stringValue
+      })
+      csvLines.push(values.join(","))
+    }
+
+    return csvLines.join("\n")
+  },
+
+  async importPeopleCsv(db: PostgresJsDatabase, csvText: string) {
+    const lines = csvText.split("\n").filter((line) => line.trim())
+    if (lines.length < 2) {
+      return { error: "CSV must have a header row and at least one data row" as const }
+    }
+
+    const headers = lines[0]!.split(",").map((header) => header.trim())
+    const rows: Record<string, string>[] = []
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i]!.split(",").map((value) => value.trim())
+      const row: Record<string, string> = {}
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j]
+        const value = values[j]
+        if (header && value) {
+          row[header] = value
+        }
+      }
+      rows.push(row)
+    }
+
+    const imported: unknown[] = []
+    const errors: { row: number; error: string }[] = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!
+      const result = (await import("../validation.js")).insertPersonSchema.safeParse({
+        firstName: row.firstName || "",
+        lastName: row.lastName || "",
+        jobTitle: row.jobTitle || null,
+        relation: row.relation || null,
+        preferredLanguage: row.preferredLanguage || null,
+        preferredCurrency: row.preferredCurrency || null,
+        email: row.email || null,
+        phone: row.phone || null,
+        website: row.website || null,
+        address: row.address || null,
+        city: row.city || null,
+        country: row.country || null,
+        organizationId: row.organizationId || null,
+        tags: [],
+      })
+
+      if (!result.success) {
+        errors.push({ row: i + 2, error: result.error.message })
+        continue
+      }
+
+      imported.push(await this.createPerson(db, result.data))
+    }
+
+    return { imported: imported.length, errors }
+  },
+}

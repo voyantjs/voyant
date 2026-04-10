@@ -1,0 +1,384 @@
+import { bookings } from "@voyantjs/bookings/schema"
+import { invoices, paymentSessions } from "@voyantjs/finance"
+import { desc, eq, sql } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
+import { notificationDeliveries } from "./schema.js"
+import type {
+  NotificationDeliveryListQuery,
+  NotificationService,
+  SendInvoiceNotificationInput,
+  SendNotificationInput,
+  SendPaymentSessionNotificationInput,
+} from "./service-shared.js"
+import {
+  buildWhereClause,
+  listBookingNotificationParticipants,
+  NotificationError,
+  paginate,
+  renderNotificationTemplate,
+  resolveReminderRecipient,
+  toTimestamp,
+} from "./service-shared.js"
+import { getTemplateById, getTemplateBySlug } from "./service-templates.js"
+
+export async function listDeliveries(db: PostgresJsDatabase, query: NotificationDeliveryListQuery) {
+  const conditions = []
+  if (query.channel) conditions.push(eq(notificationDeliveries.channel, query.channel))
+  if (query.provider) conditions.push(eq(notificationDeliveries.provider, query.provider))
+  if (query.status) conditions.push(eq(notificationDeliveries.status, query.status))
+  if (query.templateSlug)
+    conditions.push(eq(notificationDeliveries.templateSlug, query.templateSlug))
+  if (query.targetType) conditions.push(eq(notificationDeliveries.targetType, query.targetType))
+  if (query.targetId) conditions.push(eq(notificationDeliveries.targetId, query.targetId))
+  if (query.bookingId) conditions.push(eq(notificationDeliveries.bookingId, query.bookingId))
+  if (query.invoiceId) conditions.push(eq(notificationDeliveries.invoiceId, query.invoiceId))
+  if (query.paymentSessionId) {
+    conditions.push(eq(notificationDeliveries.paymentSessionId, query.paymentSessionId))
+  }
+  if (query.personId) conditions.push(eq(notificationDeliveries.personId, query.personId))
+  if (query.organizationId) {
+    conditions.push(eq(notificationDeliveries.organizationId, query.organizationId))
+  }
+
+  const where = buildWhereClause(conditions)
+  return paginate(
+    db
+      .select()
+      .from(notificationDeliveries)
+      .where(where)
+      .limit(query.limit)
+      .offset(query.offset)
+      .orderBy(desc(notificationDeliveries.createdAt)),
+    db.select({ total: sql<number>`count(*)::int` }).from(notificationDeliveries).where(where),
+    query.limit,
+    query.offset,
+  )
+}
+
+export async function getDeliveryById(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .select()
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.id, id))
+    .limit(1)
+  return row ?? null
+}
+
+export async function sendNotification(
+  db: PostgresJsDatabase,
+  dispatcher: NotificationService,
+  input: SendNotificationInput,
+) {
+  let template = null
+  if (input.templateId) {
+    template = await getTemplateById(db, input.templateId)
+  } else if (input.templateSlug) {
+    template = await getTemplateBySlug(db, input.templateSlug)
+  }
+
+  if ((input.templateId || input.templateSlug) && !template) {
+    throw new NotificationError("Notification template not found")
+  }
+
+  const data = input.data ?? {}
+  const channel = input.channel ?? template?.channel
+  if (!channel) {
+    throw new NotificationError("Notification channel is required")
+  }
+
+  const provider = input.provider ?? template?.provider ?? dispatcher.getProvider(channel)?.name
+  if (!provider) {
+    throw new NotificationError(`No notification provider available for channel "${channel}"`)
+  }
+
+  const subject = input.subject ?? renderNotificationTemplate(template?.subjectTemplate, data)
+  const html = input.html ?? renderNotificationTemplate(template?.htmlTemplate, data)
+  const text = input.text ?? renderNotificationTemplate(template?.textTemplate, data)
+
+  const [pending] = await db
+    .insert(notificationDeliveries)
+    .values({
+      templateId: template?.id ?? null,
+      templateSlug: template?.slug ?? input.templateSlug ?? null,
+      targetType: input.targetType,
+      targetId: input.targetId ?? null,
+      personId: input.personId ?? null,
+      organizationId: input.organizationId ?? null,
+      bookingId: input.bookingId ?? null,
+      invoiceId: input.invoiceId ?? null,
+      paymentSessionId: input.paymentSessionId ?? null,
+      channel,
+      provider,
+      providerMessageId: null,
+      status: "pending",
+      toAddress: input.to,
+      fromAddress: input.from ?? template?.fromAddress ?? null,
+      subject: subject ?? null,
+      htmlBody: html ?? null,
+      textBody: text ?? null,
+      payloadData: data,
+      metadata: input.metadata ?? null,
+      errorMessage: null,
+      scheduledFor: toTimestamp(input.scheduledFor),
+      sentAt: null,
+      failedAt: null,
+    })
+    .returning()
+
+  if (!pending) {
+    throw new NotificationError("Failed to create notification delivery")
+  }
+
+  try {
+    const result =
+      provider === dispatcher.getProvider(channel)?.name
+        ? await dispatcher.send({
+            to: input.to,
+            channel,
+            provider,
+            template: template?.slug ?? input.templateSlug ?? "direct",
+            data,
+            from: input.from ?? template?.fromAddress ?? undefined,
+            subject: subject ?? undefined,
+            html: html ?? undefined,
+            text: text ?? undefined,
+          })
+        : await dispatcher.sendWith(provider, {
+            to: input.to,
+            channel,
+            provider,
+            template: template?.slug ?? input.templateSlug ?? "direct",
+            data,
+            from: input.from ?? template?.fromAddress ?? undefined,
+            subject: subject ?? undefined,
+            html: html ?? undefined,
+            text: text ?? undefined,
+          })
+
+    const [sent] = await db
+      .update(notificationDeliveries)
+      .set({
+        status: "sent",
+        providerMessageId: result.id ?? null,
+        sentAt: new Date(),
+        errorMessage: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(notificationDeliveries.id, pending.id))
+      .returning()
+
+    return sent ?? null
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Notification send failed"
+    const [failed] = await db
+      .update(notificationDeliveries)
+      .set({
+        status: "failed",
+        failedAt: new Date(),
+        errorMessage: message,
+        updatedAt: new Date(),
+      })
+      .where(eq(notificationDeliveries.id, pending.id))
+      .returning()
+    throw new NotificationError(failed?.errorMessage ?? message)
+  }
+}
+
+export async function sendPaymentSessionNotification(
+  db: PostgresJsDatabase,
+  dispatcher: NotificationService,
+  sessionId: string,
+  input: SendPaymentSessionNotificationInput,
+) {
+  const [session] = await db
+    .select()
+    .from(paymentSessions)
+    .where(eq(paymentSessions.id, sessionId))
+    .limit(1)
+  if (!session) {
+    return null
+  }
+
+  const booking = session.bookingId
+    ? ((await db.select().from(bookings).where(eq(bookings.id, session.bookingId)).limit(1))[0] ??
+      null)
+    : null
+  const invoice = session.invoiceId
+    ? ((await db.select().from(invoices).where(eq(invoices.id, session.invoiceId)).limit(1))[0] ??
+      null)
+    : null
+
+  const participants = booking ? await listBookingNotificationParticipants(db, booking.id) : []
+  const recipient = resolveReminderRecipient(participants)
+  const to = input.to ?? session.payerEmail ?? recipient?.email ?? null
+
+  if (!to) {
+    throw new NotificationError("No recipient available for payment session notification")
+  }
+
+  return sendNotification(db, dispatcher, {
+    templateId: input.templateId ?? null,
+    templateSlug: input.templateSlug ?? null,
+    channel: input.channel,
+    provider: input.provider ?? null,
+    to,
+    from: input.from ?? null,
+    subject: input.subject ?? null,
+    html: input.html ?? null,
+    text: input.text ?? null,
+    data: {
+      paymentSession: {
+        id: session.id,
+        status: session.status,
+        provider: session.provider,
+        currency: session.currency,
+        amountCents: session.amountCents,
+        redirectUrl: session.redirectUrl,
+        returnUrl: session.returnUrl,
+        cancelUrl: session.cancelUrl,
+        expiresAt: session.expiresAt,
+        paymentMethod: session.paymentMethod,
+        externalReference: session.externalReference,
+      },
+      booking: booking
+        ? {
+            id: booking.id,
+            bookingNumber: booking.bookingNumber,
+            startDate: booking.startDate,
+            endDate: booking.endDate,
+            sellCurrency: booking.sellCurrency,
+            sellAmountCents: booking.sellAmountCents,
+          }
+        : null,
+      invoice: invoice
+        ? {
+            id: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceType: invoice.invoiceType,
+            status: invoice.status,
+            currency: invoice.currency,
+            totalCents: invoice.totalCents,
+            balanceDueCents: invoice.balanceDueCents,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+          }
+        : null,
+      participant: recipient
+        ? {
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+            email: recipient.email,
+          }
+        : null,
+      ...(input.data ?? {}),
+    },
+    targetType: "payment_session",
+    targetId: session.id,
+    bookingId: session.bookingId ?? null,
+    invoiceId: session.invoiceId ?? null,
+    paymentSessionId: session.id,
+    personId: session.payerPersonId ?? booking?.personId ?? null,
+    organizationId: session.payerOrganizationId ?? booking?.organizationId ?? null,
+    metadata: input.metadata ?? null,
+    scheduledFor: input.scheduledFor ?? null,
+  })
+}
+
+export async function sendInvoiceNotification(
+  db: PostgresJsDatabase,
+  dispatcher: NotificationService,
+  invoiceId: string,
+  input: SendInvoiceNotificationInput,
+) {
+  const [invoice] = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1)
+  if (!invoice) {
+    return null
+  }
+
+  const [booking] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, invoice.bookingId))
+    .limit(1)
+  const participants = booking ? await listBookingNotificationParticipants(db, booking.id) : []
+  const recipient = resolveReminderRecipient(participants)
+
+  const [latestSession] = await db
+    .select()
+    .from(paymentSessions)
+    .where(eq(paymentSessions.invoiceId, invoice.id))
+    .orderBy(desc(paymentSessions.createdAt))
+    .limit(1)
+
+  const to = input.to ?? latestSession?.payerEmail ?? recipient?.email ?? null
+  if (!to) {
+    throw new NotificationError("No recipient available for invoice notification")
+  }
+
+  return sendNotification(db, dispatcher, {
+    templateId: input.templateId ?? null,
+    templateSlug: input.templateSlug ?? null,
+    channel: input.channel,
+    provider: input.provider ?? null,
+    to,
+    from: input.from ?? null,
+    subject: input.subject ?? null,
+    html: input.html ?? null,
+    text: input.text ?? null,
+    data: {
+      invoice: {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: invoice.invoiceType,
+        status: invoice.status,
+        currency: invoice.currency,
+        subtotalCents: invoice.subtotalCents,
+        taxCents: invoice.taxCents,
+        totalCents: invoice.totalCents,
+        paidCents: invoice.paidCents,
+        balanceDueCents: invoice.balanceDueCents,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+      },
+      booking: booking
+        ? {
+            id: booking.id,
+            bookingNumber: booking.bookingNumber,
+            startDate: booking.startDate,
+            endDate: booking.endDate,
+            sellCurrency: booking.sellCurrency,
+            sellAmountCents: booking.sellAmountCents,
+          }
+        : null,
+      paymentSession: latestSession
+        ? {
+            id: latestSession.id,
+            status: latestSession.status,
+            provider: latestSession.provider,
+            redirectUrl: latestSession.redirectUrl,
+            expiresAt: latestSession.expiresAt,
+            amountCents: latestSession.amountCents,
+            currency: latestSession.currency,
+          }
+        : null,
+      participant: recipient
+        ? {
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+            email: recipient.email,
+          }
+        : null,
+      ...(input.data ?? {}),
+    },
+    targetType: "invoice",
+    targetId: invoice.id,
+    bookingId: invoice.bookingId,
+    invoiceId: invoice.id,
+    paymentSessionId: latestSession?.id ?? null,
+    personId: invoice.personId ?? booking?.personId ?? null,
+    organizationId: invoice.organizationId ?? booking?.organizationId ?? null,
+    metadata: input.metadata ?? null,
+    scheduledFor: input.scheduledFor ?? null,
+  })
+}

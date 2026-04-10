@@ -45,7 +45,7 @@ const config = defineConfig({
     tanstackStart({
       router: {
         routeFileIgnorePattern:
-          "^(_components|_hooks|_stores|_sections|_contexts|_lib|_tabs|utils|types\\.ts)$",
+          "^(_components|_hooks|_stores|_sections|_contexts|_lib|_tabs|utils|types\\.ts|.*(?:^|[-])(shared|page(?:-[a-z0-9-]+)?|dialogs?(?:-[a-z0-9-]+)?|sections|service-row|day-row|version-row|contact-tab|questions-row|questions-tab|section-header|kanban|queries)\\.(?:ts|tsx))$",
       },
     }),
     viteReact(),

@@ -1,0 +1,444 @@
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
+import {
+  policies,
+  policyAcceptances,
+  policyAssignments,
+  policyRules,
+  policyVersions,
+} from "./schema.js"
+import {
+  type CancellationRule,
+  type CreatePolicyAcceptanceInput,
+  type CreatePolicyAssignmentInput,
+  type CreatePolicyInput,
+  type CreatePolicyRuleInput,
+  type CreatePolicyVersionInput,
+  type EvaluateCancellationInput,
+  evaluateCancellationPolicy,
+  type PolicyAcceptanceListQuery,
+  type PolicyAssignmentListQuery,
+  type PolicyListQuery,
+  paginate,
+  type ResolvePolicyInput,
+  toDateString,
+  type UpdatePolicyAssignmentInput,
+  type UpdatePolicyInput,
+  type UpdatePolicyRuleInput,
+  type UpdatePolicyVersionInput,
+} from "./service-shared.js"
+
+export const policiesCoreService = {
+  async listPolicies(db: PostgresJsDatabase, query: PolicyListQuery) {
+    const conditions = []
+    if (query.kind) conditions.push(eq(policies.kind, query.kind))
+    if (query.language) conditions.push(eq(policies.language, query.language))
+    if (query.search) {
+      const term = `%${query.search}%`
+      conditions.push(
+        or(
+          ilike(policies.name, term),
+          ilike(policies.slug, term),
+          ilike(policies.description, term),
+        ),
+      )
+    }
+    const where = conditions.length ? and(...conditions) : undefined
+    return paginate(
+      db
+        .select()
+        .from(policies)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(desc(policies.updatedAt)),
+      db.select({ total: sql<number>`count(*)::int` }).from(policies).where(where),
+      query.limit,
+      query.offset,
+    )
+  },
+  async getPolicyById(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.select().from(policies).where(eq(policies.id, id)).limit(1)
+    return row ?? null
+  },
+  async getPolicyBySlug(db: PostgresJsDatabase, slug: string) {
+    const [row] = await db.select().from(policies).where(eq(policies.slug, slug)).limit(1)
+    return row ?? null
+  },
+  async createPolicy(db: PostgresJsDatabase, data: CreatePolicyInput) {
+    const [row] = await db.insert(policies).values(data).returning()
+    return row ?? null
+  },
+  async updatePolicy(db: PostgresJsDatabase, id: string, data: UpdatePolicyInput) {
+    const [row] = await db
+      .update(policies)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(policies.id, id))
+      .returning()
+    return row ?? null
+  },
+  async deletePolicy(db: PostgresJsDatabase, id: string) {
+    const [row] = await db
+      .delete(policies)
+      .where(eq(policies.id, id))
+      .returning({ id: policies.id })
+    return row ?? null
+  },
+  listPolicyVersions(db: PostgresJsDatabase, policyId: string) {
+    return db
+      .select()
+      .from(policyVersions)
+      .where(eq(policyVersions.policyId, policyId))
+      .orderBy(desc(policyVersions.version))
+  },
+  async getPolicyVersionById(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.select().from(policyVersions).where(eq(policyVersions.id, id)).limit(1)
+    return row ?? null
+  },
+  async createPolicyVersion(
+    db: PostgresJsDatabase,
+    policyId: string,
+    data: CreatePolicyVersionInput,
+  ) {
+    return db.transaction(async (tx) => {
+      const [policy] = await tx
+        .select({ id: policies.id })
+        .from(policies)
+        .where(eq(policies.id, policyId))
+        .limit(1)
+      if (!policy) return null
+      const [maxRow] = await tx
+        .select({ max: sql<number>`coalesce(max(${policyVersions.version}), 0)::int` })
+        .from(policyVersions)
+        .where(eq(policyVersions.policyId, policyId))
+      const nextVersion = (maxRow?.max ?? 0) + 1
+      const [row] = await tx
+        .insert(policyVersions)
+        .values({
+          policyId,
+          version: nextVersion,
+          status: "draft",
+          title: data.title,
+          bodyFormat: data.bodyFormat,
+          body: data.body ?? null,
+          publishedBy: data.publishedBy ?? null,
+          metadata: data.metadata ?? null,
+        })
+        .returning()
+      return row ?? null
+    })
+  },
+  async updatePolicyVersion(
+    db: PostgresJsDatabase,
+    versionId: string,
+    data: UpdatePolicyVersionInput,
+  ) {
+    const [row] = await db
+      .update(policyVersions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(policyVersions.id, versionId), eq(policyVersions.status, "draft")))
+      .returning()
+    return row ?? null
+  },
+  async publishPolicyVersion(db: PostgresJsDatabase, versionId: string) {
+    return db.transaction(async (tx) => {
+      const [version] = await tx
+        .select()
+        .from(policyVersions)
+        .where(eq(policyVersions.id, versionId))
+        .limit(1)
+      if (!version) return { status: "not_found" as const }
+      if (version.status !== "draft") return { status: "not_draft" as const }
+      const now = new Date()
+      await tx
+        .update(policyVersions)
+        .set({ status: "retired", retiredAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(policyVersions.policyId, version.policyId),
+            eq(policyVersions.status, "published"),
+          ),
+        )
+      const [published] = await tx
+        .update(policyVersions)
+        .set({ status: "published", publishedAt: now, updatedAt: now })
+        .where(eq(policyVersions.id, versionId))
+        .returning()
+      await tx
+        .update(policies)
+        .set({ currentVersionId: versionId, updatedAt: now })
+        .where(eq(policies.id, version.policyId))
+      return { status: "published" as const, version: published ?? null }
+    })
+  },
+  async retirePolicyVersion(db: PostgresJsDatabase, versionId: string) {
+    const [row] = await db
+      .update(policyVersions)
+      .set({ status: "retired", retiredAt: new Date(), updatedAt: new Date() })
+      .where(eq(policyVersions.id, versionId))
+      .returning()
+    return row ?? null
+  },
+  listPolicyRules(db: PostgresJsDatabase, versionId: string) {
+    return db
+      .select()
+      .from(policyRules)
+      .where(eq(policyRules.policyVersionId, versionId))
+      .orderBy(policyRules.sortOrder, policyRules.createdAt)
+  },
+  async createPolicyRule(db: PostgresJsDatabase, versionId: string, data: CreatePolicyRuleInput) {
+    const [version] = await db
+      .select({ id: policyVersions.id })
+      .from(policyVersions)
+      .where(eq(policyVersions.id, versionId))
+      .limit(1)
+    if (!version) return null
+    const [row] = await db
+      .insert(policyRules)
+      .values({
+        policyVersionId: versionId,
+        ruleType: data.ruleType,
+        label: data.label ?? null,
+        daysBeforeDeparture: data.daysBeforeDeparture ?? null,
+        refundPercent: data.refundPercent ?? null,
+        refundType: data.refundType ?? null,
+        flatAmountCents: data.flatAmountCents ?? null,
+        currency: data.currency ?? null,
+        validFrom: toDateString(data.validFrom),
+        validTo: toDateString(data.validTo),
+        conditions: data.conditions ?? null,
+        sortOrder: data.sortOrder,
+      })
+      .returning()
+    return row ?? null
+  },
+  async updatePolicyRule(db: PostgresJsDatabase, ruleId: string, data: UpdatePolicyRuleInput) {
+    const [row] = await db
+      .update(policyRules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(policyRules.id, ruleId))
+      .returning()
+    return row ?? null
+  },
+  async deletePolicyRule(db: PostgresJsDatabase, ruleId: string) {
+    const [row] = await db
+      .delete(policyRules)
+      .where(eq(policyRules.id, ruleId))
+      .returning({ id: policyRules.id })
+    return row ?? null
+  },
+  async listPolicyAssignments(db: PostgresJsDatabase, query: PolicyAssignmentListQuery) {
+    const conditions = []
+    if (query.policyId) conditions.push(eq(policyAssignments.policyId, query.policyId))
+    if (query.scope) conditions.push(eq(policyAssignments.scope, query.scope))
+    if (query.productId) conditions.push(eq(policyAssignments.productId, query.productId))
+    if (query.channelId) conditions.push(eq(policyAssignments.channelId, query.channelId))
+    if (query.supplierId) conditions.push(eq(policyAssignments.supplierId, query.supplierId))
+    if (query.marketId) conditions.push(eq(policyAssignments.marketId, query.marketId))
+    if (query.organizationId)
+      conditions.push(eq(policyAssignments.organizationId, query.organizationId))
+    const where = conditions.length ? and(...conditions) : undefined
+    return paginate(
+      db
+        .select()
+        .from(policyAssignments)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(desc(policyAssignments.priority), desc(policyAssignments.createdAt)),
+      db.select({ total: sql<number>`count(*)::int` }).from(policyAssignments).where(where),
+      query.limit,
+      query.offset,
+    )
+  },
+  async createPolicyAssignment(db: PostgresJsDatabase, data: CreatePolicyAssignmentInput) {
+    const [row] = await db
+      .insert(policyAssignments)
+      .values({
+        policyId: data.policyId,
+        scope: data.scope,
+        productId: data.productId ?? null,
+        channelId: data.channelId ?? null,
+        supplierId: data.supplierId ?? null,
+        marketId: data.marketId ?? null,
+        organizationId: data.organizationId ?? null,
+        validFrom: toDateString(data.validFrom),
+        validTo: toDateString(data.validTo),
+        priority: data.priority,
+        metadata: data.metadata ?? null,
+      })
+      .returning()
+    return row ?? null
+  },
+  async updatePolicyAssignment(
+    db: PostgresJsDatabase,
+    id: string,
+    data: UpdatePolicyAssignmentInput,
+  ) {
+    const [row] = await db
+      .update(policyAssignments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(policyAssignments.id, id))
+      .returning()
+    return row ?? null
+  },
+  async deletePolicyAssignment(db: PostgresJsDatabase, id: string) {
+    const [row] = await db
+      .delete(policyAssignments)
+      .where(eq(policyAssignments.id, id))
+      .returning({ id: policyAssignments.id })
+    return row ?? null
+  },
+  async resolvePolicy(db: PostgresJsDatabase, input: ResolvePolicyInput) {
+    const conditions: ReturnType<typeof eq>[] = []
+    const atDate = input.at ?? new Date().toISOString().slice(0, 10)
+    const scopeConditions: ReturnType<typeof or>[] = []
+    if (input.productId)
+      scopeConditions.push(
+        or(
+          eq(policyAssignments.productId, input.productId),
+          sql`${policyAssignments.productId} IS NULL`,
+        ),
+      )
+    if (input.channelId)
+      scopeConditions.push(
+        or(
+          eq(policyAssignments.channelId, input.channelId),
+          sql`${policyAssignments.channelId} IS NULL`,
+        ),
+      )
+    if (input.supplierId)
+      scopeConditions.push(
+        or(
+          eq(policyAssignments.supplierId, input.supplierId),
+          sql`${policyAssignments.supplierId} IS NULL`,
+        ),
+      )
+    if (input.marketId)
+      scopeConditions.push(
+        or(
+          eq(policyAssignments.marketId, input.marketId),
+          sql`${policyAssignments.marketId} IS NULL`,
+        ),
+      )
+    if (input.organizationId)
+      scopeConditions.push(
+        or(
+          eq(policyAssignments.organizationId, input.organizationId),
+          sql`${policyAssignments.organizationId} IS NULL`,
+        ),
+      )
+    const validity = and(
+      or(sql`${policyAssignments.validFrom} IS NULL`, lte(policyAssignments.validFrom, atDate)),
+      or(sql`${policyAssignments.validTo} IS NULL`, gte(policyAssignments.validTo, atDate)),
+    )
+    const candidates = await db
+      .select({ assignment: policyAssignments, policy: policies })
+      .from(policyAssignments)
+      .innerJoin(policies, eq(policyAssignments.policyId, policies.id))
+      .where(
+        and(
+          eq(policies.kind, input.kind),
+          validity,
+          ...conditions,
+          ...(scopeConditions.length ? [and(...scopeConditions)] : []),
+        ),
+      )
+      .orderBy(desc(policyAssignments.priority), desc(policyAssignments.createdAt))
+    if (candidates.length === 0) return null
+    const scored = candidates.map((c) => {
+      const a = c.assignment
+      const specificity =
+        (a.productId ? 1 : 0) +
+        (a.channelId ? 1 : 0) +
+        (a.supplierId ? 1 : 0) +
+        (a.marketId ? 1 : 0) +
+        (a.organizationId ? 1 : 0)
+      return { ...c, specificity }
+    })
+    scored.sort((a, b) => {
+      if (b.assignment.priority !== a.assignment.priority)
+        return b.assignment.priority - a.assignment.priority
+      if (b.specificity !== a.specificity) return b.specificity - a.specificity
+      return b.assignment.createdAt.getTime() - a.assignment.createdAt.getTime()
+    })
+    const winner = scored[0]
+    if (!winner) return null
+    if (!winner.policy.currentVersionId)
+      return { policy: winner.policy, assignment: winner.assignment, version: null, rules: [] }
+    const [version] = await db
+      .select()
+      .from(policyVersions)
+      .where(eq(policyVersions.id, winner.policy.currentVersionId))
+      .limit(1)
+    const rules = version
+      ? await db
+          .select()
+          .from(policyRules)
+          .where(eq(policyRules.policyVersionId, version.id))
+          .orderBy(policyRules.sortOrder)
+      : []
+    return { policy: winner.policy, assignment: winner.assignment, version: version ?? null, rules }
+  },
+  async evaluateCancellation(
+    db: PostgresJsDatabase,
+    policyId: string,
+    input: EvaluateCancellationInput,
+  ) {
+    const [policy] = await db.select().from(policies).where(eq(policies.id, policyId)).limit(1)
+    if (!policy?.currentVersionId) return null
+    const rules = await db
+      .select()
+      .from(policyRules)
+      .where(eq(policyRules.policyVersionId, policy.currentVersionId))
+    const mapped: CancellationRule[] = rules.map((r) => ({
+      id: r.id,
+      daysBeforeDeparture: r.daysBeforeDeparture,
+      refundPercent: r.refundPercent,
+      refundType: r.refundType,
+      flatAmountCents: r.flatAmountCents,
+      label: r.label,
+    }))
+    return evaluateCancellationPolicy(mapped, input)
+  },
+  async listPolicyAcceptances(db: PostgresJsDatabase, query: PolicyAcceptanceListQuery) {
+    const conditions = []
+    if (query.policyVersionId)
+      conditions.push(eq(policyAcceptances.policyVersionId, query.policyVersionId))
+    if (query.personId) conditions.push(eq(policyAcceptances.personId, query.personId))
+    if (query.bookingId) conditions.push(eq(policyAcceptances.bookingId, query.bookingId))
+    if (query.orderId) conditions.push(eq(policyAcceptances.orderId, query.orderId))
+    const where = conditions.length ? and(...conditions) : undefined
+    return paginate(
+      db
+        .select()
+        .from(policyAcceptances)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(desc(policyAcceptances.acceptedAt)),
+      db.select({ total: sql<number>`count(*)::int` }).from(policyAcceptances).where(where),
+      query.limit,
+      query.offset,
+    )
+  },
+  async recordPolicyAcceptance(db: PostgresJsDatabase, data: CreatePolicyAcceptanceInput) {
+    const [row] = await db
+      .insert(policyAcceptances)
+      .values({
+        policyVersionId: data.policyVersionId,
+        personId: data.personId ?? null,
+        bookingId: data.bookingId ?? null,
+        orderId: data.orderId ?? null,
+        offerId: data.offerId ?? null,
+        acceptedBy: data.acceptedBy ?? null,
+        method: data.method,
+        ipAddress: data.ipAddress ?? null,
+        userAgent: data.userAgent ?? null,
+        metadata: data.metadata ?? null,
+      })
+      .returning()
+    return row ?? null
+  },
+}

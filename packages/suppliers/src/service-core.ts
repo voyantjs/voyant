@@ -1,0 +1,213 @@
+import {
+  identityAddresses,
+  identityContactPoints,
+  identityNamedContacts,
+} from "@voyantjs/identity/schema"
+import { and, eq, sql } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
+import { suppliers } from "./schema.js"
+import type {
+  CreateSupplierInput,
+  SupplierListQuery,
+  UpdateSupplierInput,
+} from "./service-shared.js"
+import { hydrateSuppliers, supplierEntityType, syncSupplierIdentity } from "./service-shared.js"
+
+export async function listSuppliers(db: PostgresJsDatabase, query: SupplierListQuery) {
+  const conditions = []
+
+  if (query.type) {
+    conditions.push(eq(suppliers.type, query.type))
+  }
+
+  if (query.status) {
+    conditions.push(eq(suppliers.status, query.status))
+  }
+
+  if (query.primaryFacilityId) {
+    conditions.push(eq(suppliers.primaryFacilityId, query.primaryFacilityId))
+  }
+
+  if (query.search) {
+    const term = `%${query.search}%`
+    conditions.push(
+      sql`(
+        ${suppliers.name} ilike ${term}
+        or
+        exists (
+          select 1
+          from ${identityContactPoints}
+          where ${identityContactPoints.entityType} = ${supplierEntityType}
+            and ${identityContactPoints.entityId} = ${suppliers.id}
+            and (
+              ${identityContactPoints.value} ilike ${term}
+              or ${identityContactPoints.normalizedValue} ilike ${term}
+            )
+        )
+        or exists (
+          select 1
+          from ${identityNamedContacts}
+          where ${identityNamedContacts.entityType} = ${supplierEntityType}
+            and ${identityNamedContacts.entityId} = ${suppliers.id}
+            and (
+              ${identityNamedContacts.name} ilike ${term}
+              or ${identityNamedContacts.email} ilike ${term}
+              or ${identityNamedContacts.phone} ilike ${term}
+            )
+        )
+        or exists (
+          select 1
+          from ${identityAddresses}
+          where ${identityAddresses.entityType} = ${supplierEntityType}
+            and ${identityAddresses.entityId} = ${suppliers.id}
+            and (
+              ${identityAddresses.fullText} ilike ${term}
+              or ${identityAddresses.city} ilike ${term}
+              or ${identityAddresses.country} ilike ${term}
+            )
+        )
+      )`,
+    )
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
+  const [rows, countResult] = await Promise.all([
+    db
+      .select()
+      .from(suppliers)
+      .where(where)
+      .limit(query.limit)
+      .offset(query.offset)
+      .orderBy(suppliers.createdAt),
+    db.select({ count: sql<number>`count(*)::int` }).from(suppliers).where(where),
+  ])
+
+  return {
+    data: await hydrateSuppliers(db, rows),
+    total: countResult[0]?.count ?? 0,
+    limit: query.limit,
+    offset: query.offset,
+  }
+}
+
+export async function getSupplierById(db: PostgresJsDatabase, id: string) {
+  const [row] = await db.select().from(suppliers).where(eq(suppliers.id, id)).limit(1)
+  if (!row) {
+    return null
+  }
+
+  const [hydrated] = await hydrateSuppliers(db, [row])
+  return hydrated ?? null
+}
+
+export async function createSupplier(db: PostgresJsDatabase, data: CreateSupplierInput) {
+  const {
+    email,
+    phone,
+    website,
+    address,
+    city,
+    country,
+    contactName,
+    contactEmail,
+    contactPhone,
+    ...supplierValues
+  } = data
+
+  const [row] = await db.insert(suppliers).values(supplierValues).returning()
+  if (!row) {
+    throw new Error("Failed to create supplier")
+  }
+
+  await syncSupplierIdentity(db, row.id, {
+    email,
+    phone,
+    website,
+    address,
+    city,
+    country,
+    contactName,
+    contactEmail,
+    contactPhone,
+  })
+
+  return {
+    ...row,
+    email: email ?? null,
+    phone: phone ?? null,
+    website: website ?? null,
+    address: address ?? null,
+    city: city ?? null,
+    country: country ?? null,
+    contactName: contactName ?? null,
+    contactEmail: contactEmail ?? null,
+    contactPhone: contactPhone ?? null,
+  }
+}
+
+export async function updateSupplier(
+  db: PostgresJsDatabase,
+  id: string,
+  data: UpdateSupplierInput,
+) {
+  const existing = await getSupplierById(db, id)
+  if (!existing) {
+    return null
+  }
+
+  const {
+    email,
+    phone,
+    website,
+    address,
+    city,
+    country,
+    contactName,
+    contactEmail,
+    contactPhone,
+    ...supplierValues
+  } = data
+
+  const [row] = await db
+    .update(suppliers)
+    .set({ ...supplierValues, updatedAt: new Date() })
+    .where(eq(suppliers.id, id))
+    .returning()
+  if (!row) {
+    return null
+  }
+
+  await syncSupplierIdentity(db, id, {
+    email: email ?? existing.email,
+    phone: phone ?? existing.phone,
+    website: website ?? existing.website,
+    address: address ?? existing.address,
+    city: city ?? existing.city,
+    country: country ?? existing.country,
+    contactName: contactName ?? existing.contactName,
+    contactEmail: contactEmail ?? existing.contactEmail,
+    contactPhone: contactPhone ?? existing.contactPhone,
+  })
+
+  return {
+    ...row,
+    email: email ?? existing.email,
+    phone: phone ?? existing.phone,
+    website: website ?? existing.website,
+    address: address ?? existing.address,
+    city: city ?? existing.city,
+    country: country ?? existing.country,
+    contactName: contactName ?? existing.contactName,
+    contactEmail: contactEmail ?? existing.contactEmail,
+    contactPhone: contactPhone ?? existing.contactPhone,
+  }
+}
+
+export async function deleteSupplier(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .delete(suppliers)
+    .where(eq(suppliers.id, id))
+    .returning({ id: suppliers.id })
+  return row ?? null
+}

@@ -1,0 +1,140 @@
+import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
+import {
+  boolean,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
+
+import { people } from "./schema-accounts"
+import {
+  activityLinkRoleEnum,
+  activityStatusEnum,
+  activityTypeEnum,
+  customFieldTypeEnum,
+  entityTypeEnum,
+} from "./schema-shared"
+
+export const activities = pgTable(
+  "activities",
+  {
+    id: typeId("activities"),
+    subject: text("subject").notNull(),
+    type: activityTypeEnum("type").notNull(),
+    ownerId: text("owner_id"),
+    status: activityStatusEnum("status").notNull().default("planned"),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    location: text("location"),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_activities_owner").on(table.ownerId),
+    index("idx_activities_status").on(table.status),
+    index("idx_activities_type").on(table.type),
+  ],
+)
+
+export const activityLinks = pgTable(
+  "activity_links",
+  {
+    id: typeId("activity_links"),
+    activityId: typeIdRef("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    entityType: entityTypeEnum("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    role: activityLinkRoleEnum("role").notNull().default("related"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_activity_links_activity").on(table.activityId),
+    index("idx_activity_links_entity").on(table.entityType, table.entityId),
+  ],
+)
+
+export const activityParticipants = pgTable(
+  "activity_participants",
+  {
+    id: typeId("activity_participants"),
+    activityId: typeIdRef("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    personId: typeIdRef("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_activity_participants_activity").on(table.activityId),
+    uniqueIndex("uidx_activity_participants_unique").on(table.activityId, table.personId),
+  ],
+)
+
+export const customFieldDefinitions = pgTable(
+  "custom_field_definitions",
+  {
+    id: typeId("custom_field_definitions"),
+    entityType: entityTypeEnum("entity_type").notNull(),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    fieldType: customFieldTypeEnum("field_type").notNull(),
+    isRequired: boolean("is_required").notNull().default(false),
+    isSearchable: boolean("is_searchable").notNull().default(false),
+    options: jsonb("options").$type<Array<{ label: string; value: string }>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_custom_field_definitions_entity").on(table.entityType),
+    uniqueIndex("uidx_custom_field_definitions_key").on(table.entityType, table.key),
+  ],
+)
+
+export const customFieldValues = pgTable(
+  "custom_field_values",
+  {
+    id: typeId("custom_field_values"),
+    definitionId: typeIdRef("definition_id")
+      .notNull()
+      .references(() => customFieldDefinitions.id, { onDelete: "cascade" }),
+    entityType: entityTypeEnum("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    textValue: text("text_value"),
+    numberValue: integer("number_value"),
+    dateValue: date("date_value"),
+    booleanValue: boolean("boolean_value"),
+    monetaryValueCents: integer("monetary_value_cents"),
+    currencyCode: text("currency_code"),
+    jsonValue: jsonb("json_value").$type<Record<string, unknown> | string[] | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_custom_field_values_entity").on(table.entityType, table.entityId),
+    uniqueIndex("uidx_custom_field_values_unique").on(
+      table.definitionId,
+      table.entityType,
+      table.entityId,
+    ),
+  ],
+)
+
+export type Activity = typeof activities.$inferSelect
+export type NewActivity = typeof activities.$inferInsert
+export type ActivityLink = typeof activityLinks.$inferSelect
+export type NewActivityLink = typeof activityLinks.$inferInsert
+export type ActivityParticipant = typeof activityParticipants.$inferSelect
+export type NewActivityParticipant = typeof activityParticipants.$inferInsert
+export type CustomFieldDefinition = typeof customFieldDefinitions.$inferSelect
+export type NewCustomFieldDefinition = typeof customFieldDefinitions.$inferInsert
+export type CustomFieldValue = typeof customFieldValues.$inferSelect
+export type NewCustomFieldValue = typeof customFieldValues.$inferInsert

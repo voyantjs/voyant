@@ -1,0 +1,119 @@
+import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
+import {
+  boolean,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
+
+import {
+  optionUnitTypeEnum,
+  productBookingModeEnum,
+  productCapacityModeEnum,
+  productOptionStatusEnum,
+  productStatusEnum,
+  productVisibilityEnum,
+} from "./schema-shared"
+
+export const products = pgTable(
+  "products",
+  {
+    id: typeId("products"),
+    name: text("name").notNull(),
+    status: productStatusEnum("status").notNull().default("draft"),
+    description: text("description"),
+    bookingMode: productBookingModeEnum("booking_mode").notNull().default("date"),
+    capacityMode: productCapacityModeEnum("capacity_mode").notNull().default("limited"),
+    timezone: text("timezone"),
+    visibility: productVisibilityEnum("visibility").notNull().default("private"),
+    activated: boolean("activated").notNull().default(false),
+    reservationTimeoutMinutes: integer("reservation_timeout_minutes"),
+    sellCurrency: text("sell_currency").notNull(),
+    sellAmountCents: integer("sell_amount_cents"),
+    costAmountCents: integer("cost_amount_cents"),
+    marginPercent: integer("margin_percent"),
+    facilityId: text("facility_id"),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    pax: integer("pax"),
+    productTypeId: text("product_type_id"),
+    tags: jsonb("tags").$type<string[]>().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_products_status").on(table.status),
+    index("idx_products_facility").on(table.facilityId),
+    index("idx_products_product_type").on(table.productTypeId),
+  ],
+)
+
+export type Product = typeof products.$inferSelect
+export type NewProduct = typeof products.$inferInsert
+
+export const productOptions = pgTable(
+  "product_options",
+  {
+    id: typeId("product_options"),
+    productId: typeIdRef("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    code: text("code"),
+    description: text("description"),
+    status: productOptionStatusEnum("status").notNull().default("draft"),
+    isDefault: boolean("is_default").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    availableFrom: date("available_from"),
+    availableTo: date("available_to"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_product_options_product").on(table.productId),
+    index("idx_product_options_status").on(table.status),
+    index("idx_product_options_default").on(table.isDefault),
+    uniqueIndex("uidx_product_options_product_code").on(table.productId, table.code),
+  ],
+)
+
+export type ProductOption = typeof productOptions.$inferSelect
+export type NewProductOption = typeof productOptions.$inferInsert
+
+export const optionUnits = pgTable(
+  "option_units",
+  {
+    id: typeId("option_units"),
+    optionId: typeIdRef("option_id")
+      .notNull()
+      .references(() => productOptions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    code: text("code"),
+    description: text("description"),
+    unitType: optionUnitTypeEnum("unit_type").notNull().default("person"),
+    minQuantity: integer("min_quantity"),
+    maxQuantity: integer("max_quantity"),
+    minAge: integer("min_age"),
+    maxAge: integer("max_age"),
+    occupancyMin: integer("occupancy_min"),
+    occupancyMax: integer("occupancy_max"),
+    isRequired: boolean("is_required").notNull().default(false),
+    isHidden: boolean("is_hidden").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_option_units_option").on(table.optionId),
+    index("idx_option_units_type").on(table.unitType),
+    uniqueIndex("uidx_option_units_option_code").on(table.optionId, table.code),
+  ],
+)
+
+export type OptionUnit = typeof optionUnits.$inferSelect
+export type NewOptionUnit = typeof optionUnits.$inferInsert

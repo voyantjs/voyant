@@ -91,6 +91,14 @@ function getProductVersionsQueryOptions(id: string) {
   })
 }
 
+function getProductDayServicesQueryOptions(productId: string, dayId: string) {
+  return queryOptions({
+    queryKey: ["product-day-services", productId, dayId],
+    queryFn: () =>
+      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${dayId}/services`),
+  })
+}
+
 function getProductNotesQueryOptions(id: string) {
   return queryOptions({
     queryKey: ["product-notes", id],
@@ -120,12 +128,18 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       getProductQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
     )
 
+    const daysData = await context.queryClient.ensureQueryData(
+      getProductDaysQueryOptions(params.id),
+    )
+
     await Promise.all([
-      context.queryClient.ensureQueryData(getProductDaysQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductVersionsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductNotesQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductSlotsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductRulesQueryOptions(params.id)),
+      ...daysData.data.map((day) =>
+        context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
+      ),
     ])
   },
   component: ProductDetailPage,
@@ -812,9 +826,7 @@ function DayRow({
   onDeleteService: (serviceId: string) => void
 }) {
   const { data: servicesData } = useQuery({
-    queryKey: ["product-day-services", productId, day.id],
-    queryFn: () =>
-      api.get<{ data: DayService[] }>(`/v1/products/${productId}/days/${day.id}/services`),
+    ...getProductDayServicesQueryOptions(productId, day.id),
     enabled: expanded,
   })
 

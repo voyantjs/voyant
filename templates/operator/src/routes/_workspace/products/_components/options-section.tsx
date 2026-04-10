@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query"
 import { ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -31,6 +31,14 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
   archived: "secondary",
 }
 
+export function getProductOptionsQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ["product-options", productId],
+    queryFn: () =>
+      api.get<OptionListResponse>(`/v1/products/options?productId=${productId}&limit=100`),
+  })
+}
+
 function ActionMenu({ children }: { children: React.ReactNode }) {
   return (
     <DropdownMenu>
@@ -49,11 +57,9 @@ export function OptionsSection({ productId }: { productId: string }) {
   const [optionDialogOpen, setOptionDialogOpen] = useState(false)
   const [editingOption, setEditingOption] = useState<ProductOptionData | undefined>()
 
-  const { data: optionsData, refetch: refetchOptions } = useQuery({
-    queryKey: ["product-options", productId],
-    queryFn: () =>
-      api.get<OptionListResponse>(`/v1/products/options?productId=${productId}&limit=100`),
-  })
+  const { data: optionsData, refetch: refetchOptions } = useQuery(
+    getProductOptionsQueryOptions(productId),
+  )
 
   const deleteOptionMutation = useMutation({
     mutationFn: (optionId: string) => api.delete(`/v1/products/options/${optionId}`),

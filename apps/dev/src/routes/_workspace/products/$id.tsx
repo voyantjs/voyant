@@ -28,7 +28,7 @@ import { getApiUrl } from "@/lib/env"
 
 import { DayDialog } from "./_components/day-dialog"
 import { DepartureDialog, type DepartureSlot } from "./_components/departure-dialog"
-import { OptionsSection } from "./_components/options-section"
+import { getProductOptionsQueryOptions, OptionsSection } from "./_components/options-section"
 import { ProductDialog } from "./_components/product-dialog"
 import { type AvailabilityRule, ScheduleDialog } from "./_components/schedule-dialog"
 import { ServiceDialog } from "./_components/service-dialog"
@@ -137,6 +137,7 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       context.queryClient.ensureQueryData(getProductNotesQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductSlotsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductRulesQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getProductOptionsQueryOptions(params.id)),
       ...daysData.data.map((day) =>
         context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
       ),

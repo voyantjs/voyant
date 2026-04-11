@@ -1,0 +1,7 @@
+# @voyantjs/react
+
+## 0.3.0
+
+### Minor Changes
+
+- e57725d: Flatten frontend provider wiring around a shared `@voyantjs/react` config provider so module react packages can share one app-level Voyant context.

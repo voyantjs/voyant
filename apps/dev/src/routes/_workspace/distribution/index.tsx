@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { DistributionPage } from "./page"
+import { DistributionPage } from "@/components/voyant/distribution/distribution-page"
 import {
   getDistributionBookingLinksQueryOptions,
   getDistributionBookingsQueryOptions,
@@ -10,7 +10,7 @@ import {
   getDistributionProductsQueryOptions,
   getDistributionSuppliersQueryOptions,
   getDistributionWebhookEventsQueryOptions,
-} from "./queries"
+} from "@/components/voyant/distribution/distribution-query-options"
 
 export const Route = createFileRoute("/_workspace/distribution/")({
   loader: ({ context }) =>

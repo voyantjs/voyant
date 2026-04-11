@@ -1,31 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
+import { defaultFetcher, getPeopleQueryOptions } from "@voyantjs/crm-react"
 
-import { PersonList } from "@/components/voyant/crm/person-list"
-import { getPeopleQueryOptions } from "../_crm/_lib/crm-query-options"
+import { PeoplePage } from "@/components/voyant/crm/people-page"
+import { getApiUrl } from "@/lib/env"
+
+const routeClient = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
 
 export const Route = createFileRoute("/_workspace/people/")({
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData(getPeopleQueryOptions({ limit: 25, offset: 0 })),
+    context.queryClient.ensureQueryData(
+      getPeopleQueryOptions(routeClient, { limit: 25, offset: 0 }),
+    ),
   component: PeoplePage,
 })
-
-function PeoplePage() {
-  const navigate = useNavigate()
-
-  return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">People</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your clients, partners, and suppliers.
-        </p>
-      </div>
-
-      <PersonList
-        onSelectPerson={(person) => {
-          void navigate({ to: "/people/$id", params: { id: person.id } })
-        }}
-      />
-    </div>
-  )
-}

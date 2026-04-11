@@ -6,6 +6,7 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  type PaginationState,
   type RowSelectionState,
   getSortedRowModel,
   type Row,
@@ -20,6 +21,13 @@ import { Checkbox } from "./checkbox"
 import { DataTablePagination } from "./data-table-pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table"
 
+type DataTableManualPagination = {
+  pageIndex: number
+  pageSize: number
+  total: number
+  onPageIndexChange: (pageIndex: number) => void
+}
+
 type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
@@ -32,6 +40,7 @@ type DataTableProps<TData, TValue> = {
   rowSelection?: RowSelectionState
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string
+  pagination?: DataTableManualPagination
   renderSelectionActions?: (context: {
     selectedRows: Row<TData>[]
     clearSelection: () => void
@@ -50,11 +59,22 @@ export function DataTable<TData, TValue>({
   rowSelection,
   onRowSelectionChange,
   getRowId,
+  pagination,
   renderSelectionActions,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({})
   const resolvedRowSelection = rowSelection ?? internalRowSelection
+  const isManualPagination = pagination !== undefined
+  const resolvedPageSize = pagination?.pageSize ?? pageSize
+  const totalRows = pagination?.total ?? data.length
+  const paginationState = React.useMemo<PaginationState>(
+    () => ({
+      pageIndex: pagination?.pageIndex ?? 0,
+      pageSize: resolvedPageSize,
+    }),
+    [pagination?.pageIndex, resolvedPageSize],
+  )
 
   const handleRowSelectionChange: OnChangeFn<RowSelectionState> = React.useCallback(
     (updater) => {
@@ -107,17 +127,20 @@ export function DataTable<TData, TValue>({
     columns: resolvedColumns,
     initialState: {
       pagination: {
-        pageSize,
+        pageSize: resolvedPageSize,
       },
     },
+    manualPagination: isManualPagination,
+    pageCount: isManualPagination ? Math.max(1, Math.ceil(totalRows / resolvedPageSize)) : undefined,
     enableRowSelection,
     onSortingChange: setSorting,
     onRowSelectionChange: handleRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: isManualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
     state: {
+      pagination: paginationState,
       rowSelection: resolvedRowSelection,
       sorting,
     },
@@ -171,8 +194,13 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
-        {showPagination && table.getPrePaginationRowModel().rows.length > pageSize ? (
-          <DataTablePagination table={table} />
+        {showPagination &&
+        (isManualPagination ? totalRows > resolvedPageSize : table.getPrePaginationRowModel().rows.length > resolvedPageSize) ? (
+          <DataTablePagination
+            table={table}
+            totalRows={totalRows}
+            onPageIndexChange={pagination?.onPageIndexChange}
+          />
         ) : null}
       </div>
     </div>

@@ -72,6 +72,10 @@ export async function listPriceSchedules(db: PostgresJsDatabase, query: PriceSch
   const conditions = []
   if (query.priceCatalogId) conditions.push(eq(priceSchedules.priceCatalogId, query.priceCatalogId))
   if (query.active !== undefined) conditions.push(eq(priceSchedules.active, query.active))
+  if (query.search) {
+    const term = `%${query.search}%`
+    conditions.push(or(ilike(priceSchedules.name, term), ilike(priceSchedules.code, term)))
+  }
   const where = conditions.length ? and(...conditions) : undefined
 
   return paginate(

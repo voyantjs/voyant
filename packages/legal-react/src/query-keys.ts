@@ -1,0 +1,79 @@
+export interface LegalContractsListFilters {
+  search?: string | undefined
+  scope?: string | undefined
+  status?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface LegalContractTemplatesListFilters {
+  search?: string | undefined
+  scope?: string | undefined
+  language?: string | undefined
+  active?: boolean | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface LegalPoliciesListFilters {
+  search?: string | undefined
+  kind?: string | undefined
+  language?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface LegalContractNumberSeriesListFilters {
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface LegalPolicyAssignmentsListFilters {
+  policyId?: string | undefined
+  scope?: string | undefined
+  productId?: string | undefined
+  channelId?: string | undefined
+  supplierId?: string | undefined
+  marketId?: string | undefined
+  organizationId?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface LegalPolicyAcceptancesListFilters {
+  policyVersionId?: string | undefined
+  personId?: string | undefined
+  bookingId?: string | undefined
+  orderId?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export const legalQueryKeys = {
+  all: ["legal"] as const,
+  contracts: () => [...legalQueryKeys.all, "contracts"] as const,
+  contractsList: (filters: LegalContractsListFilters) =>
+    [...legalQueryKeys.contracts(), filters] as const,
+  contract: (id: string) => [...legalQueryKeys.contracts(), id] as const,
+  contractSignatures: (id: string) => [...legalQueryKeys.contract(id), "signatures"] as const,
+  contractAttachments: (id: string) => [...legalQueryKeys.contract(id), "attachments"] as const,
+  templates: () => [...legalQueryKeys.all, "templates"] as const,
+  templatesList: (filters: LegalContractTemplatesListFilters) =>
+    [...legalQueryKeys.templates(), filters] as const,
+  template: (id: string) => [...legalQueryKeys.templates(), id] as const,
+  templateVersions: (id: string) => [...legalQueryKeys.template(id), "versions"] as const,
+  numberSeries: () => [...legalQueryKeys.all, "number-series"] as const,
+  numberSeriesList: (filters: LegalContractNumberSeriesListFilters = {}) =>
+    [...legalQueryKeys.numberSeries(), filters] as const,
+  numberSeriesDetail: (id: string) => [...legalQueryKeys.numberSeries(), id] as const,
+  policies: () => [...legalQueryKeys.all, "policies"] as const,
+  policiesList: (filters: LegalPoliciesListFilters) =>
+    [...legalQueryKeys.policies(), filters] as const,
+  policy: (id: string) => [...legalQueryKeys.policies(), id] as const,
+  policyVersions: (id: string) => [...legalQueryKeys.policy(id), "versions"] as const,
+  policyRules: (versionId: string) => [...legalQueryKeys.policies(), "rules", versionId] as const,
+  policyAssignments: (filters: LegalPolicyAssignmentsListFilters) =>
+    [...legalQueryKeys.policies(), "assignments", filters] as const,
+  policyAcceptances: (filters: LegalPolicyAcceptancesListFilters) =>
+    [...legalQueryKeys.policies(), "acceptances", filters] as const,
+}

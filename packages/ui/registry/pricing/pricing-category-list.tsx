@@ -32,36 +32,24 @@ export interface PricingCategoryListProps {
   pageSize?: number
 }
 
-export function PricingCategoryList({ pageSize = 200 }: PricingCategoryListProps = {}) {
+export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps = {}) {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<PricingCategoryRecord | undefined>(undefined)
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
 
   const { data, isPending, isError } = usePricingCategories({
-    limit: 200,
+    limit: pageSize,
+    offset,
+    search: search || undefined,
     active: undefined,
   })
   const { remove } = usePricingCategoryMutation()
 
-  const categories = React.useMemo(
-    () =>
-      (data?.data ?? []).filter((category) => {
-        if (category.productId || category.optionId || category.unitId) return false
-        if (!search.trim()) return true
-        const term = search.trim().toLowerCase()
-        return (
-          category.name.toLowerCase().includes(term) ||
-          (category.code ?? "").toLowerCase().includes(term)
-        )
-      }),
-    [data, search],
-  )
-
-  const total = categories.length
+  const categories = data?.data ?? []
+  const total = data?.total ?? 0
   const page = Math.floor(offset / pageSize) + 1
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const pageItems = categories.slice(offset, offset + pageSize)
 
   return (
     <div data-slot="pricing-category-list" className="flex flex-col gap-4">
@@ -116,14 +104,14 @@ export function PricingCategoryList({ pageSize = 200 }: PricingCategoryListProps
                   Failed to load pricing categories.
                 </TableCell>
               </TableRow>
-            ) : pageItems.length === 0 ? (
+            ) : categories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-sm text-muted-foreground">
                   No pricing categories found.
                 </TableCell>
               </TableRow>
             ) : (
-              pageItems.map((category) => (
+              categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
@@ -185,7 +173,7 @@ export function PricingCategoryList({ pageSize = 200 }: PricingCategoryListProps
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {pageItems.length} of {total}
+          Showing {categories.length} of {total}
         </span>
         <div className="flex items-center gap-2">
           <Button

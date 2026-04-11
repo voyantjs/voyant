@@ -1,10 +1,12 @@
 "use client"
 
+import { useQueries } from "@tanstack/react-query"
 import {
+  getPricingCategoryQueryOptions,
   type PricingCategoryDependencyRecord,
-  usePricingCategories,
   usePricingCategoryDependencies,
   usePricingCategoryDependencyMutation,
+  useVoyantPricingContext,
 } from "@voyantjs/pricing-react"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
@@ -33,20 +35,46 @@ export interface PricingCategoryDependencyListProps {
 }
 
 export function PricingCategoryDependencyList({
-  pageSize = 200,
+  pageSize = 25,
 }: PricingCategoryDependencyListProps = {}) {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<PricingCategoryDependencyRecord | undefined>(
     undefined,
   )
-  const { data, isPending, isError } = usePricingCategoryDependencies({ limit: pageSize })
-  const { data: categoriesData } = usePricingCategories({ limit: 200 })
+  const [offset, setOffset] = React.useState(0)
+  const { data, isPending, isError } = usePricingCategoryDependencies({
+    limit: pageSize,
+    offset,
+  })
   const { remove } = usePricingCategoryDependencyMutation()
+  const { baseUrl, fetcher } = useVoyantPricingContext()
 
   const dependencies = data?.data ?? []
-  const categoryById = new Map(
-    (categoriesData?.data ?? []).map((category) => [category.id, category]),
+  const total = data?.total ?? 0
+  const page = Math.floor(offset / pageSize) + 1
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const categoryIds = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          dependencies.flatMap((dependency) => [
+            dependency.masterPricingCategoryId,
+            dependency.pricingCategoryId,
+          ]),
+        ),
+      ),
+    [dependencies],
   )
+  const categoryQueries = useQueries({
+    queries: categoryIds.map((id) => getPricingCategoryQueryOptions({ baseUrl, fetcher }, id)),
+  })
+  const categoryById = React.useMemo(() => {
+    const map = new Map<string, { name: string }>()
+    categoryQueries.forEach((query, index) => {
+      if (query.data) map.set(categoryIds[index], query.data)
+    })
+    return map
+  }, [categoryIds, categoryQueries])
 
   return (
     <div data-slot="pricing-category-dependency-list" className="flex flex-col gap-4">
@@ -167,6 +195,33 @@ export function PricingCategoryDependencyList({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Showing {dependencies.length} of {total}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={offset === 0}
+            onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {page} / {pageCount}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={offset + pageSize >= total}
+            onClick={() => setOffset((prev) => prev + pageSize)}
+          >
+            Next
+          </Button>
+        </div>
       </div>
 
       <PricingCategoryDependencyDialog

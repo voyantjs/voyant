@@ -17,38 +17,74 @@ type EntityComboboxProps<T extends { id: string }> = {
   value: string | null | undefined
   onChange: (id: string | null) => void
   endpoint: string
+  detailEndpoint?: string | ((id: string) => string)
   queryKey: readonly unknown[]
   getLabel: (item: T) => string
   getSecondary?: (item: T) => string | undefined
   placeholder?: string
   emptyText?: string
   disabled?: boolean
+  searchParam?: string
+  limit?: number
 }
 
-/**
- * A searchable dropdown that fetches entities from a REST endpoint and lets
- * the user pick one by a human-readable label instead of pasting a raw ID.
- *
- * The endpoint is expected to return a ListResponse<T>. Items are fetched
- * once (up to limit=200) and filtered client-side.
- */
 export function EntityCombobox<T extends { id: string }>({
   value,
   onChange,
   endpoint,
+  detailEndpoint,
   queryKey,
   getLabel,
   getSecondary,
   placeholder = "Search…",
   emptyText = "No results.",
   disabled,
+  searchParam = "search",
+  limit = 25,
 }: EntityComboboxProps<T>) {
+  const [search, setSearch] = React.useState("")
+
+  const buildListEndpoint = React.useCallback(
+    (searchValue: string) => {
+      const url = new URL(endpoint, "http://local")
+      if (searchValue) url.searchParams.set(searchParam, searchValue)
+      if (!url.searchParams.has("limit")) url.searchParams.set("limit", String(limit))
+      return `${url.pathname}${url.search}`
+    },
+    [endpoint, limit, searchParam],
+  )
+
+  const buildDetailEndpoint = React.useCallback(
+    (id: string) => {
+      if (typeof detailEndpoint === "function") return detailEndpoint(id)
+      if (typeof detailEndpoint === "string") return detailEndpoint.replace(":id", id)
+      return null
+    },
+    [detailEndpoint],
+  )
+
   const { data, isPending } = useQuery({
-    queryKey,
-    queryFn: () => api.get<ListResponse<T>>(endpoint),
+    queryKey: [...queryKey, "list", search, limit],
+    queryFn: () => api.get<ListResponse<T>>(buildListEndpoint(search)),
   })
 
-  const items = React.useMemo(() => data?.data ?? [], [data])
+  const selectedQuery = useQuery({
+    queryKey: [...queryKey, "detail", value],
+    queryFn: async () => {
+      const detail = buildDetailEndpoint(value!)
+      if (!detail) throw new Error("EntityCombobox requires detailEndpoint for selected value hydration")
+      const response = await api.get<{ data: T }>(detail)
+      return response.data
+    },
+    enabled: !!value && !!buildDetailEndpoint(value),
+  })
+
+  const items = React.useMemo(() => {
+    const map = new Map<string, T>()
+    for (const item of data?.data ?? []) map.set(item.id, item)
+    if (selectedQuery.data) map.set(selectedQuery.data.id, selectedQuery.data)
+    return Array.from(map.values())
+  }, [data?.data, selectedQuery.data])
   const itemIds = React.useMemo(() => items.map((item) => item.id), [items])
   const itemMap = React.useMemo(() => {
     const map = new Map<string, T>()
@@ -81,6 +117,7 @@ export function EntityCombobox<T extends { id: string }>({
       }}
       onInputValueChange={(next) => {
         setInputValue(next)
+        setSearch(next)
         if (!next) onChange(null)
       }}
       onValueChange={(next) => {
@@ -96,7 +133,9 @@ export function EntityCombobox<T extends { id: string }>({
     >
       <ComboboxInput placeholder={placeholder} showClear={!!value} />
       <ComboboxContent>
-        <ComboboxEmpty>{isPending ? "Loading…" : emptyText}</ComboboxEmpty>
+        <ComboboxEmpty>
+          {isPending || selectedQuery.isPending ? "Loading…" : emptyText}
+        </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>
             {(id) => {

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { AvailabilityPage } from "./page"
+import { AvailabilityPage } from "@/components/voyant/availability/availability-page"
 import {
   getAvailabilityCloseoutsQueryOptions,
   getAvailabilityPickupPointsQueryOptions,
@@ -7,7 +7,7 @@ import {
   getAvailabilityRulesQueryOptions,
   getAvailabilitySlotsQueryOptions,
   getAvailabilityStartTimesQueryOptions,
-} from "./shared"
+} from "@/components/voyant/availability/availability-shared"
 
 export const Route = createFileRoute("/_workspace/availability/")({
   loader: ({ context }) =>

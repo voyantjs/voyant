@@ -33,7 +33,7 @@ export interface ProductCategoryListProps {
   pageSize?: number
 }
 
-export function ProductCategoryList({ pageSize = 200 }: ProductCategoryListProps = {}) {
+export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps = {}) {
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)

@@ -4,7 +4,6 @@ import {
   type CreateProductInput,
   type ProductRecord,
   useProductMutation,
-  useProductTypes,
 } from "@voyantjs/products-react"
 import { currencies } from "@voyantjs/utils/currencies"
 import { Loader2, X } from "lucide-react"
@@ -22,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { ProductTypeCombobox } from "./product-type-combobox"
 
 type Mode = { kind: "create" } | { kind: "edit"; product: ProductRecord }
 
@@ -120,7 +120,6 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
   const [tagInput, setTagInput] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductMutation()
-  const { data: types } = useProductTypes({ active: true, limit: 200 })
 
   const isSubmitting = create.isPending || update.isPending
 
@@ -253,22 +252,11 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label>Product Type</Label>
-            <Select
-              value={state.productTypeId}
-              onValueChange={(value) => value && field("productTypeId")(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {(types?.data ?? []).map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ProductTypeCombobox
+              value={state.productTypeId === "__none__" ? null : state.productTypeId}
+              onChange={(value) => field("productTypeId")(value ?? "__none__")}
+              placeholder="Search product types…"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

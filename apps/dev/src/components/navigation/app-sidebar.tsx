@@ -186,7 +186,7 @@ const baseData = {
         { title: "Price Catalogs", url: "/settings/pricing/catalogs" },
         { title: "Pricing Categories", url: "/settings/pricing/categories" },
         { title: "Category Dependencies", url: "/settings/pricing/category-dependencies" },
-        { title: "Cancellation Policies", url: "/settings/pricing/cancellation-policies" },
+        { title: "Cancellation Fee Policies", url: "/settings/pricing/cancellation-policies" },
         { title: "Price Schedules", url: "/settings/pricing/schedules" },
         { title: "Option Price Rules", url: "/settings/pricing/option-price-rules" },
         { title: "Unit Price Rules", url: "/settings/pricing/option-unit-price-rules" },

@@ -3,7 +3,6 @@
 import {
   type CreateProductCategoryInput,
   type ProductCategoryRecord,
-  useProductCategories,
   useProductCategoryMutation,
 } from "@voyantjs/products-react"
 import { Loader2 } from "lucide-react"
@@ -12,15 +11,9 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { ProductCategoryCombobox } from "./product-category-combobox"
 
 type Mode = { kind: "create" } | { kind: "edit"; category: ProductCategoryRecord }
 
@@ -77,7 +70,6 @@ export function ProductCategoryForm({ mode, onSuccess, onCancel }: ProductCatego
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductCategoryMutation()
-  const { data: categoriesData } = useProductCategories({ limit: 200 })
 
   React.useEffect(() => {
     setState(initialState(mode))
@@ -85,9 +77,6 @@ export function ProductCategoryForm({ mode, onSuccess, onCancel }: ProductCatego
   }, [mode])
 
   const isSubmitting = create.isPending || update.isPending
-  const parentOptions = (categoriesData?.data ?? []).filter((category) =>
-    mode.kind === "edit" ? category.id !== mode.category.id : true,
-  )
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -143,24 +132,12 @@ export function ProductCategoryForm({ mode, onSuccess, onCancel }: ProductCatego
 
       <div className="flex flex-col gap-1.5">
         <Label>Parent category</Label>
-        <Select
-          value={state.parentId}
-          onValueChange={(value) =>
-            setState((prev) => ({ ...prev, parentId: value ?? "__none__" }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">None</SelectItem>
-            {parentOptions.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ProductCategoryCombobox
+          value={state.parentId === "__none__" ? null : state.parentId}
+          onChange={(value) => setState((prev) => ({ ...prev, parentId: value ?? "__none__" }))}
+          excludeId={mode.kind === "edit" ? mode.category.id : null}
+          placeholder="Search parent category…"
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">

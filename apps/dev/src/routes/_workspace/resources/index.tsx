@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ResourcesPage } from "./page"
+import { ResourcesPage } from "@/components/voyant/resources/resources-page"
 import {
   getResourceAllocationsQueryOptions,
   getResourceAssignmentsQueryOptions,
@@ -12,7 +12,7 @@ import {
   getResourceSlotsQueryOptions,
   getResourceStartTimesQueryOptions,
   getResourceSuppliersQueryOptions,
-} from "./shared"
+} from "@/components/voyant/resources/resources-shared"
 
 export const Route = createFileRoute("/_workspace/resources/")({
   loader: ({ context }) =>

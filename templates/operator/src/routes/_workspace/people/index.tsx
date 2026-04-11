@@ -1,31 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-
-import { PersonList } from "@/components/voyant/crm/person-list"
-import { getPeopleQueryOptions } from "../_crm/_lib/crm-query-options"
+import { createFileRoute } from "@tanstack/react-router"
+import { getPeopleQueryOptions } from "@/components/voyant/crm/crm-query-options"
+import { PeoplePage } from "@/components/voyant/crm/people-page"
 
 export const Route = createFileRoute("/_workspace/people/")({
   loader: ({ context }) =>
     context.queryClient.ensureQueryData(getPeopleQueryOptions({ limit: 25, offset: 0 })),
   component: PeoplePage,
 })
-
-function PeoplePage() {
-  const navigate = useNavigate()
-
-  return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">People</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your clients, partners, and suppliers.
-        </p>
-      </div>
-
-      <PersonList
-        onSelectPerson={(person) => {
-          void navigate({ to: "/people/$id", params: { id: person.id } })
-        }}
-      />
-    </div>
-  )
-}

@@ -182,6 +182,18 @@ export type ActivityLinkRecord = z.infer<typeof activityLinkRecordSchema>
 export const activityLinkListResponse = listEnvelope(activityLinkRecordSchema)
 export const activityLinkSingleResponse = singleEnvelope(activityLinkRecordSchema)
 
+export const personNoteRecordSchema = z.object({
+  id: z.string(),
+  personId: z.string(),
+  authorId: z.string(),
+  content: z.string(),
+  createdAt: z.string(),
+})
+
+export type PersonNoteRecord = z.infer<typeof personNoteRecordSchema>
+
+export const personNoteListResponse = paginatedEnvelope(personNoteRecordSchema)
+
 export const quoteRecordSchema = z.object({
   id: z.string(),
   opportunityId: z.string(),

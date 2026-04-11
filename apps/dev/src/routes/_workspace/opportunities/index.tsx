@@ -1,15 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router"
 import {
+  defaultFetcher,
   getOpportunitiesQueryOptions,
   getPipelinesQueryOptions,
   getStagesQueryOptions,
-} from "../_crm/_lib/crm-query-options"
-import { OpportunitiesKanbanPage } from "./page"
+} from "@voyantjs/crm-react"
+import { OpportunitiesKanbanPage } from "@/components/voyant/crm/opportunities-page"
+import { getApiUrl } from "@/lib/env"
+
+const routeClient = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
 
 export const Route = createFileRoute("/_workspace/opportunities/")({
   loader: async ({ context }) => {
     const pipelinesResponse = await context.queryClient.ensureQueryData(
-      getPipelinesQueryOptions({ entityType: "opportunity", limit: 50 }),
+      getPipelinesQueryOptions(routeClient, { entityType: "opportunity", limit: 50 }),
     )
     const pipelines = pipelinesResponse.data ?? []
     const defaultPipeline = pipelines.find((pipeline) => pipeline.isDefault) ?? pipelines[0]
@@ -17,10 +21,10 @@ export const Route = createFileRoute("/_workspace/opportunities/")({
     if (defaultPipeline) {
       await Promise.all([
         context.queryClient.ensureQueryData(
-          getStagesQueryOptions({ pipelineId: defaultPipeline.id, limit: 100 }),
+          getStagesQueryOptions(routeClient, { pipelineId: defaultPipeline.id, limit: 100 }),
         ),
         context.queryClient.ensureQueryData(
-          getOpportunitiesQueryOptions({
+          getOpportunitiesQueryOptions(routeClient, {
             pipelineId: defaultPipeline.id,
             status: "open",
             limit: 500,

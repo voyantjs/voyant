@@ -30,6 +30,20 @@ export interface ProductTagsListFilters {
   offset?: number | undefined
 }
 
+export interface ProductOptionsListFilters {
+  productId?: string | undefined
+  status?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
+export interface OptionUnitsListFilters {
+  optionId?: string | undefined
+  unitType?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
 export const productsQueryKeys = {
   all: ["voyant", "products"] as const,
 
@@ -53,4 +67,14 @@ export const productsQueryKeys = {
   productTagsList: (filters: ProductTagsListFilters) =>
     [...productsQueryKeys.productTags(), "list", filters] as const,
   productTag: (id: string) => [...productsQueryKeys.productTags(), "detail", id] as const,
+
+  productOptions: () => [...productsQueryKeys.all, "product-options"] as const,
+  productOptionsList: (filters: ProductOptionsListFilters) =>
+    [...productsQueryKeys.productOptions(), "list", filters] as const,
+  productOption: (id: string) => [...productsQueryKeys.productOptions(), "detail", id] as const,
+
+  optionUnits: () => [...productsQueryKeys.all, "option-units"] as const,
+  optionUnitsList: (filters: OptionUnitsListFilters) =>
+    [...productsQueryKeys.optionUnits(), "list", filters] as const,
+  optionUnit: (id: string) => [...productsQueryKeys.optionUnits(), "detail", id] as const,
 } as const

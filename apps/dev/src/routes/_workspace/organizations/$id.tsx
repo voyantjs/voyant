@@ -1,24 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router"
 import {
+  defaultFetcher,
   getActivitiesQueryOptions,
   getOpportunitiesQueryOptions,
   getOrganizationQueryOptions,
   getPeopleQueryOptions,
-} from "../_crm/_lib/crm-query-options"
-import { OrganizationDetailPage } from "./$id-page"
+} from "@voyantjs/crm-react"
+import { OrganizationDetailPage } from "@/components/voyant/crm/organization-detail-page"
+import { getApiUrl } from "@/lib/env"
+
+const routeClient = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
 
 export const Route = createFileRoute("/_workspace/organizations/$id")({
   loader: async ({ context, params }) => {
     await Promise.all([
-      context.queryClient.ensureQueryData(getOrganizationQueryOptions(params.id)),
+      context.queryClient.ensureQueryData(getOrganizationQueryOptions(routeClient, params.id)),
       context.queryClient.ensureQueryData(
-        getPeopleQueryOptions({ organizationId: params.id, limit: 50 }),
+        getPeopleQueryOptions(routeClient, { organizationId: params.id, limit: 50 }),
       ),
       context.queryClient.ensureQueryData(
-        getOpportunitiesQueryOptions({ organizationId: params.id, limit: 50 }),
+        getOpportunitiesQueryOptions(routeClient, { organizationId: params.id, limit: 50 }),
       ),
       context.queryClient.ensureQueryData(
-        getActivitiesQueryOptions({
+        getActivitiesQueryOptions(routeClient, {
           entityType: "organization",
           entityId: params.id,
           limit: 50,

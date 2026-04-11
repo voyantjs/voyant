@@ -13,9 +13,15 @@ export {
 } from "./provider.js"
 export { productsQueryKeys } from "./query-keys.js"
 export {
+  getOptionUnitQueryOptions,
+  getOptionUnitsQueryOptions,
   getProductCategoriesQueryOptions,
+  getProductOptionQueryOptions,
+  getProductOptionsQueryOptions,
   getProductQueryOptions,
   getProductsQueryOptions,
   getProductTagsQueryOptions,
+  getProductTypeQueryOptions,
+  getProductTypesQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

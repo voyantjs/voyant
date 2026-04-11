@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, ilike, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import { pricingCategories, pricingCategoryDependencies } from "./schema.js"
@@ -22,6 +22,10 @@ export async function listPricingCategories(
   if (query.unitId) conditions.push(eq(pricingCategories.unitId, query.unitId))
   if (query.categoryType) conditions.push(eq(pricingCategories.categoryType, query.categoryType))
   if (query.active !== undefined) conditions.push(eq(pricingCategories.active, query.active))
+  if (query.search) {
+    const term = `%${query.search}%`
+    conditions.push(or(ilike(pricingCategories.name, term), ilike(pricingCategories.code, term)))
+  }
   const where = conditions.length ? and(...conditions) : undefined
 
   return paginate(

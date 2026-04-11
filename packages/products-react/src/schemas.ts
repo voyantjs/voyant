@@ -77,6 +77,43 @@ export const productTagRecordSchema = z.object({
 
 export type ProductTagRecord = z.infer<typeof productTagRecordSchema>
 
+export const productOptionRecordSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  name: z.string(),
+  code: z.string().nullable(),
+  description: z.string().nullable(),
+  status: z.enum(["draft", "active", "archived"]),
+  isDefault: z.boolean(),
+  sortOrder: z.number().int(),
+  availableFrom: z.string().nullable(),
+  availableTo: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductOptionRecord = z.infer<typeof productOptionRecordSchema>
+
+export const optionUnitRecordSchema = z.object({
+  id: z.string(),
+  optionId: z.string(),
+  name: z.string(),
+  code: z.string().nullable(),
+  description: z.string().nullable(),
+  unitType: z.enum(["person", "group", "room", "vehicle", "service", "other"]),
+  minQuantity: z.number().int().nullable(),
+  maxQuantity: z.number().int().nullable(),
+  minAge: z.number().int().nullable(),
+  maxAge: z.number().int().nullable(),
+  occupancyMin: z.number().int().nullable(),
+  occupancyMax: z.number().int().nullable(),
+  isRequired: z.boolean(),
+  isHidden: z.boolean(),
+  sortOrder: z.number().int(),
+})
+
+export type OptionUnitRecord = z.infer<typeof optionUnitRecordSchema>
+
 export const productListResponse = paginatedEnvelope(productRecordSchema)
 export const productSingleResponse = singleEnvelope(productRecordSchema)
 export const productTypeListResponse = paginatedEnvelope(productTypeRecordSchema)
@@ -85,3 +122,7 @@ export const productCategoryListResponse = paginatedEnvelope(productCategoryReco
 export const productCategorySingleResponse = singleEnvelope(productCategoryRecordSchema)
 export const productTagListResponse = paginatedEnvelope(productTagRecordSchema)
 export const productTagSingleResponse = singleEnvelope(productTagRecordSchema)
+export const productOptionListResponse = paginatedEnvelope(productOptionRecordSchema)
+export const productOptionSingleResponse = singleEnvelope(productOptionRecordSchema)
+export const optionUnitListResponse = paginatedEnvelope(optionUnitRecordSchema)
+export const optionUnitSingleResponse = singleEnvelope(optionUnitRecordSchema)

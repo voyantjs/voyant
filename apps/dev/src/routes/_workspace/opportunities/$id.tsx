@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useOpportunity } from "@voyantjs/crm-react"
 import {
+  defaultFetcher,
   getActivitiesQueryOptions,
   getOpportunityQueryOptions,
   getOrganizationQueryOptions,
@@ -8,41 +8,49 @@ import {
   getPipelineQueryOptions,
   getQuotesQueryOptions,
   getStagesQueryOptions,
-} from "../_crm/_lib/crm-query-options"
-import { OpportunityDetailPage } from "./$id-page"
+  useOpportunity,
+} from "@voyantjs/crm-react"
+import { OpportunityDetailPage } from "@/components/voyant/crm/opportunity-detail-page"
+import { getApiUrl } from "@/lib/env"
+
+const routeClient = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
 
 export const Route = createFileRoute("/_workspace/opportunities/$id")({
   loader: async ({ context, params }) => {
     const opportunity = await context.queryClient.ensureQueryData(
-      getOpportunityQueryOptions(params.id),
+      getOpportunityQueryOptions(routeClient, params.id),
     )
 
     await Promise.all([
       opportunity.personId
-        ? context.queryClient.ensureQueryData(getPersonQueryOptions(opportunity.personId))
+        ? context.queryClient.ensureQueryData(
+            getPersonQueryOptions(routeClient, opportunity.personId),
+          )
         : Promise.resolve(),
       opportunity.organizationId
         ? context.queryClient.ensureQueryData(
-            getOrganizationQueryOptions(opportunity.organizationId),
+            getOrganizationQueryOptions(routeClient, opportunity.organizationId),
           )
-        : Promise.resolve(),
-      opportunity.pipelineId
-        ? context.queryClient.ensureQueryData(getPipelineQueryOptions(opportunity.pipelineId))
         : Promise.resolve(),
       opportunity.pipelineId
         ? context.queryClient.ensureQueryData(
-            getStagesQueryOptions({ pipelineId: opportunity.pipelineId, limit: 100 }),
+            getPipelineQueryOptions(routeClient, opportunity.pipelineId),
+          )
+        : Promise.resolve(),
+      opportunity.pipelineId
+        ? context.queryClient.ensureQueryData(
+            getStagesQueryOptions(routeClient, { pipelineId: opportunity.pipelineId, limit: 100 }),
           )
         : Promise.resolve(),
       context.queryClient.ensureQueryData(
-        getActivitiesQueryOptions({
+        getActivitiesQueryOptions(routeClient, {
           entityType: "opportunity",
           entityId: params.id,
           limit: 50,
         }),
       ),
       context.queryClient.ensureQueryData(
-        getQuotesQueryOptions({ opportunityId: params.id, limit: 50 }),
+        getQuotesQueryOptions(routeClient, { opportunityId: params.id, limit: 50 }),
       ),
     ])
   },

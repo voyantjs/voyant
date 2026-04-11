@@ -1,14 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { defaultFetcher, getProductQueryOptions } from "@voyantjs/products-react"
-import { getApiUrl } from "@/lib/env"
-import {
-  getOptionPriceRulesQueryOptions,
-  getOptionUnitPriceRulesQueryOptions,
-  getOptionUnitsQueryOptions,
-  getPricingCategoriesQueryOptions,
-  getProductOptionsQueryOptions,
-} from "./_components/options-shared"
-import { ProductDetailPage } from "./$id-page"
+import { ProductDetailPage } from "@/components/voyant/products/product-detail-page"
 import {
   getProductDayServicesQueryOptions,
   getProductDaysQueryOptions,
@@ -16,7 +8,15 @@ import {
   getProductRulesQueryOptions,
   getProductSlotsQueryOptions,
   getProductVersionsQueryOptions,
-} from "./$id-shared"
+} from "@/components/voyant/products/product-detail-shared"
+import {
+  getOptionPriceRulesQueryOptions,
+  getOptionUnitPriceRulesQueryOptions,
+  getOptionUnitsQueryOptions,
+  getPricingCategoriesQueryOptions,
+  getProductOptionsQueryOptions,
+} from "@/components/voyant/products/product-options-shared"
+import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/products/$id")({
   loader: async ({ context, params }) => {

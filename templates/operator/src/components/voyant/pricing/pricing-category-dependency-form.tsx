@@ -3,7 +3,6 @@
 import {
   type CreatePricingCategoryDependencyInput,
   type PricingCategoryDependencyRecord,
-  usePricingCategories,
   usePricingCategoryDependencyMutation,
 } from "@voyantjs/pricing-react"
 import { Loader2 } from "lucide-react"
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { PricingCategoryCombobox } from "./pricing-category-combobox"
 
 type Mode = { kind: "create" } | { kind: "edit"; dependency: PricingCategoryDependencyRecord }
 
@@ -98,7 +98,6 @@ export function PricingCategoryDependencyForm({
 }: PricingCategoryDependencyFormProps) {
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
-  const { data: categoriesData } = usePricingCategories({ limit: 200 })
   const { create, update } = usePricingCategoryDependencyMutation()
 
   React.useEffect(() => {
@@ -107,7 +106,6 @@ export function PricingCategoryDependencyForm({
   }, [mode])
 
   const isSubmitting = create.isPending || update.isPending
-  const categories = categoriesData?.data ?? []
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -138,46 +136,22 @@ export function PricingCategoryDependencyForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>Master category</Label>
-          <Select
+          <PricingCategoryCombobox
             value={state.masterPricingCategoryId}
-            onValueChange={(value) =>
+            onChange={(value) =>
               setState((prev) => ({ ...prev, masterPricingCategoryId: value ?? "" }))
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                  {category.code ? ` (${category.code})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="Search category"
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label>Dependent category</Label>
-          <Select
+          <PricingCategoryCombobox
             value={state.pricingCategoryId}
-            onValueChange={(value) =>
-              setState((prev) => ({ ...prev, pricingCategoryId: value ?? "" }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                  {category.code ? ` (${category.code})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) => setState((prev) => ({ ...prev, pricingCategoryId: value ?? "" }))}
+            placeholder="Search category"
+          />
         </div>
       </div>
 

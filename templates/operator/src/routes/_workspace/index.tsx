@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { DashboardPage } from "./index-page"
+import { DashboardPage } from "@/components/voyant/dashboard/dashboard-page"
 import {
   getDashboardBookingsQueryOptions,
   getDashboardInvoicesQueryOptions,
   getDashboardProductsQueryOptions,
   getDashboardSuppliersQueryOptions,
-} from "./index-shared"
+} from "@/components/voyant/dashboard/dashboard-shared"
 
 export const Route = createFileRoute("/_workspace/")({
   loader: ({ context }) =>

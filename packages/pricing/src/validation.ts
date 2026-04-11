@@ -105,6 +105,7 @@ export const pricingCategoryListQuerySchema = paginationSchema.extend({
   unitId: z.string().optional(),
   categoryType: pricingCategoryTypeSchema.optional(),
   active: booleanQueryParam.optional(),
+  search: z.string().optional(),
 })
 
 export const pricingCategoryDependencyCoreSchema = z.object({
@@ -207,6 +208,7 @@ export const updatePriceScheduleSchema = priceScheduleCoreSchema.partial()
 export const priceScheduleListQuerySchema = paginationSchema.extend({
   priceCatalogId: z.string().optional(),
   active: booleanQueryParam.optional(),
+  search: z.string().optional(),
 })
 
 export const optionPriceRuleCoreSchema = z.object({

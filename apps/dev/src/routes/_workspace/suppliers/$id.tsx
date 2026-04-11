@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { SupplierDetailPage } from "./$id-page"
 import {
   getSupplierNotesQueryOptions,
   getSupplierQueryOptions,
   getSupplierServiceRatesQueryOptions,
   getSupplierServicesQueryOptions,
-} from "./$id-shared"
+} from "@/components/voyant/suppliers/shared"
+import { SupplierDetailPage } from "@/components/voyant/suppliers/supplier-detail-page"
 
 export const Route = createFileRoute("/_workspace/suppliers/$id")({
   loader: async ({ context, params }) => {

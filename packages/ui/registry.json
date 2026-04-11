@@ -440,6 +440,330 @@
       ]
     },
     {
+      "name": "voyant-resources-overview",
+      "type": "registry:component",
+      "title": "Resources Overview",
+      "description": "Overview metrics and filters for resource operations, assignment gaps, and ownership gaps.",
+      "dependencies": ["lucide-react", "@voyantjs/resources-react"],
+      "registryDependencies": ["button", "card", "input", "select"],
+      "files": [
+        {
+          "path": "registry/resources/resources-overview.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/resources/resources-overview.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-resources-section-header",
+      "type": "registry:component",
+      "title": "Resources Section Header",
+      "description": "Reusable section header with title, description, and create action for resource management screens.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["button"],
+      "files": [
+        {
+          "path": "registry/resources/resources-section-header.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/resources/resources-section-header.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-resources-tabs-primary",
+      "type": "registry:component",
+      "title": "Resources Primary Tabs",
+      "description": "Tab panels for resources, pools, and allocations with bulk actions and data tables.",
+      "dependencies": ["@voyantjs/resources-react"],
+      "registryDependencies": [
+        "tabs",
+        "table",
+        "button",
+        "alert-dialog",
+        "voyant-resources-section-header"
+      ],
+      "files": [
+        {
+          "path": "registry/resources/resources-tabs-primary.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/resources/resources-tabs-primary.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-resources-tabs-secondary",
+      "type": "registry:component",
+      "title": "Resources Secondary Tabs",
+      "description": "Tab panels for slot assignments and closeouts with bulk actions and data tables.",
+      "dependencies": ["@voyantjs/resources-react"],
+      "registryDependencies": [
+        "tabs",
+        "table",
+        "button",
+        "alert-dialog",
+        "voyant-resources-section-header"
+      ],
+      "files": [
+        {
+          "path": "registry/resources/resources-tabs-secondary.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/resources/resources-tabs-secondary.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-contact-requirement-dialog",
+      "type": "registry:component",
+      "title": "Contact Requirement Dialog",
+      "description": "Create/edit dialog for product booking contact requirements.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/booking-requirements/contact-requirement-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/contact-requirement-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-booking-question-dialog",
+      "type": "registry:component",
+      "title": "Booking Question Dialog",
+      "description": "Create/edit dialog for custom booking questions on a product.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/booking-requirements/booking-question-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/booking-question-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-question-option-dialog",
+      "type": "registry:component",
+      "title": "Question Option Dialog",
+      "description": "Create/edit dialog for choice options on select-style booking questions.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": ["button", "dialog", "input", "label"],
+      "files": [
+        {
+          "path": "registry/booking-requirements/question-option-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/question-option-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-contact-tab",
+      "type": "registry:component",
+      "title": "Booking Requirements Contact Tab",
+      "description": "Contact requirement table and actions for booking-requirements management screens.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": ["badge", "button"],
+      "files": [
+        {
+          "path": "registry/booking-requirements/booking-requirements-contact-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/booking-requirements-contact-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-questions-tab",
+      "type": "registry:component",
+      "title": "Booking Requirements Questions Tab",
+      "description": "Expandable custom question list with choice option tables for booking-requirements screens.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": ["badge", "button"],
+      "files": [
+        {
+          "path": "registry/booking-requirements/booking-requirements-questions-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/booking-requirements-questions-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-booking-requirements-page",
+      "type": "registry:component",
+      "title": "Booking Requirements Page",
+      "description": "Page shell for product selection and contact requirement or custom question tabs.",
+      "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+      "registryDependencies": [
+        "label",
+        "select",
+        "tabs",
+        "voyant-booking-requirements-contact-tab",
+        "voyant-booking-requirements-questions-tab"
+      ],
+      "files": [
+        {
+          "path": "registry/booking-requirements/booking-requirements-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/booking-requirements/booking-requirements-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-suppliers-page",
+      "type": "registry:component",
+      "title": "Suppliers Page",
+      "description": "Searchable suppliers management page shell with data table and create action.",
+      "dependencies": ["lucide-react", "@voyantjs/suppliers-react"],
+      "registryDependencies": ["badge", "button", "input", "table"],
+      "files": [
+        {
+          "path": "registry/suppliers/suppliers-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/suppliers/suppliers-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-opportunities-board",
+      "type": "registry:component",
+      "title": "Opportunities Board",
+      "description": "Kanban board layout for opportunity stages and cards.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["card", "scroll-area"],
+      "files": [
+        {
+          "path": "registry/crm/opportunities-board.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/opportunities-board.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-create-opportunity-dialog",
+      "type": "registry:component",
+      "title": "Create Opportunity Dialog",
+      "description": "Dialog for creating an opportunity within a selected pipeline and stage.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/crm/create-opportunity-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/create-opportunity-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-opportunity-summary-card",
+      "type": "registry:component",
+      "title": "Opportunity Summary Card",
+      "description": "Summary card for an opportunity detail view with value, stage, and status.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["badge", "card"],
+      "files": [
+        {
+          "path": "registry/crm/opportunity-summary-card.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/opportunity-summary-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-quotes-page",
+      "type": "registry:component",
+      "title": "Quotes Page",
+      "description": "Quotes list page shell with status filtering and create action.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react", "@voyantjs/utils"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "select",
+        "table",
+        "voyant-crm-create-quote-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/crm/quotes-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/quotes-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-create-quote-dialog",
+      "type": "registry:component",
+      "title": "Create Quote Dialog",
+      "description": "Dialog for creating a quote from an existing CRM opportunity.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react", "@voyantjs/utils"],
+      "registryDependencies": ["button", "combobox", "date-picker", "dialog", "label"],
+      "files": [
+        {
+          "path": "registry/crm/create-quote-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/create-quote-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-quote-line-items-card",
+      "type": "registry:component",
+      "title": "Quote Line Items Card",
+      "description": "Editable quote line items card with inline quantity and price updates.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["button", "card", "input"],
+      "files": [
+        {
+          "path": "registry/crm/quote-detail-sections.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/quote-detail-sections.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-organization-detail-sections",
+      "type": "registry:component",
+      "title": "Organization Detail Sections",
+      "description": "Reusable organization detail layout sections for CRM organization pages.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["avatar", "badge", "button", "card", "separator", "tabs"],
+      "files": [
+        {
+          "path": "registry/crm/organization-detail-sections.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-detail-sections.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-organization-detail-page",
+      "type": "registry:component",
+      "title": "Organization Detail Page",
+      "description": "CRM organization detail page container with related people, opportunities, and activities.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["button", "voyant-crm-organization-detail-sections"],
+      "files": [
+        {
+          "path": "registry/crm/organization-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/organization-detail-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-supplier-service-row",
+      "type": "registry:component",
+      "title": "Supplier Service Row",
+      "description": "Expandable supplier service row with nested rates table and row actions.",
+      "dependencies": ["lucide-react", "@voyantjs/suppliers-react"],
+      "registryDependencies": ["badge", "button"],
+      "files": [
+        {
+          "path": "registry/suppliers/supplier-service-row.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/suppliers/supplier-service-row.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-pricing-pricing-category-form",
       "type": "registry:component",
       "title": "Pricing Category Form",
@@ -539,6 +863,2045 @@
           "path": "registry/pricing/pricing-category-dependency-list.tsx",
           "type": "registry:component",
           "target": "components/voyant/pricing/pricing-category-dependency-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-price-catalog-dialog",
+      "type": "registry:component",
+      "title": "Price Catalog Dialog",
+      "description": "Create/edit dialog for price catalogs, wired to pricing-react mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/utils"],
+      "registryDependencies": [
+        "button",
+        "combobox",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/price-catalog-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/price-catalog-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-price-catalogs-page",
+      "type": "registry:component",
+      "title": "Price Catalogs Page",
+      "description": "Server-paginated CRUD table for price catalogs with search and dialog actions.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/utils"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "table",
+        "voyant-pricing-price-catalog-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/price-catalogs-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/price-catalogs-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-price-schedule-dialog",
+      "type": "registry:component",
+      "title": "Price Schedule Dialog",
+      "description": "Create/edit dialog for RRULE-based price schedules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": ["button", "date-picker", "dialog", "input", "label", "textarea"],
+      "files": [
+        {
+          "path": "registry/pricing/price-schedule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/price-schedule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-price-schedules-page",
+      "type": "registry:component",
+      "title": "Price Schedules Page",
+      "description": "Server-paginated CRUD table for price schedules with catalog hydration and search.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "table",
+        "voyant-pricing-price-schedule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/price-schedules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/price-schedules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-price-rule-dialog",
+      "type": "registry:component",
+      "title": "Option Price Rule Dialog",
+      "description": "Create/edit dialog for option price rules with pricing and product lookups.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-price-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-price-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-price-rules-page",
+      "type": "registry:component",
+      "title": "Option Price Rules Page",
+      "description": "Server-paginated CRUD table for option price rules with hydrated product and pricing labels.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-option-price-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-price-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-price-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-unit-price-rule-dialog",
+      "type": "registry:component",
+      "title": "Option Unit Price Rule Dialog",
+      "description": "Create/edit dialog for per-unit option pricing rules with linked option rule and pricing category lookups.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-unit-price-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-unit-price-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-unit-price-rules-page",
+      "type": "registry:component",
+      "title": "Option Unit Price Rules Page",
+      "description": "Server-paginated CRUD table for per-unit option pricing rules with hydrated option rule and pricing category labels.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-option-unit-price-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-unit-price-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-unit-price-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-unit-tier-dialog",
+      "type": "registry:component",
+      "title": "Option Unit Tier Dialog",
+      "description": "Create/edit dialog for quantity tier breaks attached to an option unit price rule.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch"],
+      "files": [
+        {
+          "path": "registry/pricing/option-unit-tier-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-unit-tier-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-unit-tiers-page",
+      "type": "registry:component",
+      "title": "Option Unit Tiers Page",
+      "description": "Server-paginated CRUD table for quantity-based tier pricing attached to option unit price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-option-unit-tier-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-unit-tiers-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-unit-tiers-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-cancellation-policy-dialog",
+      "type": "registry:component",
+      "title": "Cancellation Fee Policy Dialog",
+      "description": "Create/edit dialog for pricing-side cancellation fee policies.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/cancellation-policy-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/cancellation-policy-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-pickup-price-rule-dialog",
+      "type": "registry:component",
+      "title": "Pickup Price Rule Dialog",
+      "description": "Create/edit dialog for pickup-point pricing attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/pickup-price-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/pickup-price-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-pickup-price-rules-page",
+      "type": "registry:component",
+      "title": "Pickup Price Rules Page",
+      "description": "Server-paginated CRUD table for pickup-point pricing rules attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-pickup-price-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/pickup-price-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/pickup-price-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-dropoff-price-rule-dialog",
+      "type": "registry:component",
+      "title": "Dropoff Price Rule Dialog",
+      "description": "Create/edit dialog for dropoff-point pricing attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/dropoff-price-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/dropoff-price-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-dropoff-price-rules-page",
+      "type": "registry:component",
+      "title": "Dropoff Price Rules Page",
+      "description": "Server-paginated CRUD table for dropoff-point pricing rules attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-dropoff-price-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/dropoff-price-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/dropoff-price-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-extra-price-rule-dialog",
+      "type": "registry:component",
+      "title": "Extra Price Rule Dialog",
+      "description": "Create/edit dialog for extra pricing rules attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/extra-price-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/extra-price-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-extra-price-rules-page",
+      "type": "registry:component",
+      "title": "Extra Price Rules Page",
+      "description": "Server-paginated CRUD table for extra pricing rules attached to option price rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-extra-price-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/extra-price-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/extra-price-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-start-time-rule-dialog",
+      "type": "registry:component",
+      "title": "Option Start Time Rule Dialog",
+      "description": "Create/edit dialog for option start time pricing adjustments and overrides.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-start-time-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-start-time-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-option-start-time-rules-page",
+      "type": "registry:component",
+      "title": "Option Start Time Rules Page",
+      "description": "Server-paginated CRUD table for option start time pricing adjustments and overrides.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-pricing-option-start-time-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/option-start-time-rules-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/option-start-time-rules-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-cancellation-policy-rule-dialog",
+      "type": "registry:component",
+      "title": "Cancellation Fee Rule Dialog",
+      "description": "Create/edit dialog for ordered cancellation fee rules.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/cancellation-policy-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/cancellation-policy-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-pricing-cancellation-policies-page",
+      "type": "registry:component",
+      "title": "Cancellation Fee Policies Page",
+      "description": "Server-paginated cancellation fee policy manager with nested rule CRUD.",
+      "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "voyant-pricing-cancellation-policy-dialog",
+        "voyant-pricing-cancellation-policy-rule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/pricing/cancellation-policies-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/pricing/cancellation-policies-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-finance-invoice-dialog",
+      "type": "registry:component",
+      "title": "Invoice Dialog",
+      "description": "Create/edit dialog for finance invoices, wired to finance-react mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/finance-react"],
+      "registryDependencies": [
+        "button",
+        "date-picker",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/finance/invoice-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/finance/invoice-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-finance-supplier-payment-dialog",
+      "type": "registry:component",
+      "title": "Supplier Payment Dialog",
+      "description": "Create dialog for supplier payments, wired to finance-react mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/finance-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/finance/supplier-payment-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/finance/supplier-payment-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-market-dialog",
+      "type": "registry:component",
+      "title": "Market Dialog",
+      "description": "Create/edit dialog for market records wired to markets-react mutations.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/markets/market-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/market-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-market-locale-dialog",
+      "type": "registry:component",
+      "title": "Market Locale Dialog",
+      "description": "Create/edit dialog for market locale records.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "switch"],
+      "files": [
+        {
+          "path": "registry/markets/market-locale-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/market-locale-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-market-locales-tab",
+      "type": "registry:component",
+      "title": "Market Locales Tab",
+      "description": "Server-paginated CRUD table for market locales.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "table", "voyant-markets-market-locale-dialog"],
+      "files": [
+        {
+          "path": "registry/markets/market-locales-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/market-locales-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-market-currency-dialog",
+      "type": "registry:component",
+      "title": "Market Currency Dialog",
+      "description": "Create/edit dialog for market currency records.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "switch"],
+      "files": [
+        {
+          "path": "registry/markets/market-currency-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/market-currency-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-market-currencies-tab",
+      "type": "registry:component",
+      "title": "Market Currencies Tab",
+      "description": "Server-paginated CRUD table for market currencies.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "table", "voyant-markets-market-currency-dialog"],
+      "files": [
+        {
+          "path": "registry/markets/market-currencies-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/market-currencies-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-markets-page",
+      "type": "registry:component",
+      "title": "Markets Page",
+      "description": "Markets management page shell with server-paginated list and embedded locale/currency configuration tabs.",
+      "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "table",
+        "voyant-markets-market-dialog",
+        "voyant-markets-market-locales-tab",
+        "voyant-markets-market-currencies-tab"
+      ],
+      "files": [
+        {
+          "path": "registry/markets/markets-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/markets/markets-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-transactions-offer-dialog",
+      "type": "registry:component",
+      "title": "Offer Dialog",
+      "description": "Create/edit dialog for commercial offers backed by transactions-react mutations.",
+      "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/transactions/offer-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/transactions/offer-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-transactions-offers-tab",
+      "type": "registry:component",
+      "title": "Offers Tab",
+      "description": "Server-paginated offers table with create, edit, and delete actions.",
+      "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "table", "voyant-transactions-offer-dialog"],
+      "files": [
+        {
+          "path": "registry/transactions/offers-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/transactions/offers-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-transactions-order-dialog",
+      "type": "registry:component",
+      "title": "Order Dialog",
+      "description": "Create/edit dialog for commercial orders backed by transactions-react mutations.",
+      "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/transactions/order-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/transactions/order-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-transactions-orders-tab",
+      "type": "registry:component",
+      "title": "Orders Tab",
+      "description": "Server-paginated orders table with create, edit, and delete actions.",
+      "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "table", "voyant-transactions-order-dialog"],
+      "files": [
+        {
+          "path": "registry/transactions/orders-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/transactions/orders-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-transactions-page",
+      "type": "registry:component",
+      "title": "Transactions Page",
+      "description": "Transactions management page shell with offers and orders tabs.",
+      "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+      "registryDependencies": [
+        "tabs",
+        "voyant-transactions-offers-tab",
+        "voyant-transactions-orders-tab"
+      ],
+      "files": [
+        {
+          "path": "registry/transactions/transactions-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/transactions/transactions-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-type-dialog",
+      "type": "registry:component",
+      "title": "Room Type Dialog",
+      "description": "Modal form for creating and editing hospitality room types.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/hospitality/room-type-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-type-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-types-tab",
+      "type": "registry:component",
+      "title": "Room Types Tab",
+      "description": "CRUD table for hospitality room types with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-room-type-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-types-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-types-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-meal-plan-dialog",
+      "type": "registry:component",
+      "title": "Meal Plan Dialog",
+      "description": "Modal form for creating and editing hospitality meal plans.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/meal-plan-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/meal-plan-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-meal-plans-tab",
+      "type": "registry:component",
+      "title": "Meal Plans Tab",
+      "description": "CRUD table for hospitality meal plans with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-meal-plan-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/meal-plans-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/meal-plans-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-rate-plan-dialog",
+      "type": "registry:component",
+      "title": "Rate Plan Dialog",
+      "description": "Modal form for creating and editing hospitality rate plans with shared pricing lookups.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react", "@voyantjs/pricing-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/hospitality/rate-plan-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/rate-plan-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-rate-plans-tab",
+      "type": "registry:component",
+      "title": "Rate Plans Tab",
+      "description": "CRUD table for hospitality rate plans with pricing and cancellation lookups.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react", "@voyantjs/pricing-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-rate-plan-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/rate-plans-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/rate-plans-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-stay-rule-dialog",
+      "type": "registry:component",
+      "title": "Stay Rule Dialog",
+      "description": "Modal form for creating and editing hospitality stay rules.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/stay-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/stay-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-stay-rules-tab",
+      "type": "registry:component",
+      "title": "Stay Rules Tab",
+      "description": "CRUD table for hospitality stay rules with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-stay-rule-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/stay-rules-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/stay-rules-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-unit-dialog",
+      "type": "registry:component",
+      "title": "Room Unit Dialog",
+      "description": "Modal form for creating and editing hospitality room units.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-unit-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-unit-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-units-tab",
+      "type": "registry:component",
+      "title": "Room Units Tab",
+      "description": "CRUD table for hospitality room units with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-room-unit-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-units-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-units-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-maintenance-block-dialog",
+      "type": "registry:component",
+      "title": "Maintenance Block Dialog",
+      "description": "Modal form for creating and editing hospitality maintenance blocks.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/maintenance-block-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/maintenance-block-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-maintenance-blocks-tab",
+      "type": "registry:component",
+      "title": "Maintenance Blocks Tab",
+      "description": "CRUD table for hospitality maintenance blocks with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-maintenance-block-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/maintenance-blocks-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/maintenance-blocks-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-block-dialog",
+      "type": "registry:component",
+      "title": "Room Block Dialog",
+      "description": "Modal form for creating and editing hospitality room blocks.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-block-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-block-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-blocks-tab",
+      "type": "registry:component",
+      "title": "Room Blocks Tab",
+      "description": "CRUD table for hospitality room blocks with built-in dialog integration.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["badge", "button", "voyant-hospitality-room-block-dialog"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-blocks-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-blocks-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-inventory-dialog",
+      "type": "registry:component",
+      "title": "Room Inventory Dialog",
+      "description": "Modal form for creating and editing hospitality room inventory rows.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/hospitality/room-inventory-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-inventory-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-hospitality-room-inventory-tab",
+      "type": "registry:component",
+      "title": "Room Inventory Tab",
+      "description": "Filterable inventory table for daily hospitality room availability.",
+      "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "label",
+        "voyant-hospitality-room-inventory-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/hospitality/room-inventory-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/hospitality/room-inventory-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-operator-dialog",
+      "type": "registry:component",
+      "title": "Ground Operator Dialog",
+      "description": "Modal form for creating and editing ground operators.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/ground/operator-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/operator-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-operators-tab",
+      "type": "registry:component",
+      "title": "Ground Operators Tab",
+      "description": "Server-paginated CRUD table for ground transport operators.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": ["badge", "button", "data-table", "voyant-ground-operator-dialog"],
+      "files": [
+        {
+          "path": "registry/ground/operators-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/operators-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-vehicle-dialog",
+      "type": "registry:component",
+      "title": "Ground Vehicle Dialog",
+      "description": "Modal form for creating and editing ground vehicles.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/ground/vehicle-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/vehicle-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-vehicles-tab",
+      "type": "registry:component",
+      "title": "Ground Vehicles Tab",
+      "description": "Server-paginated CRUD table for ground vehicles.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": ["badge", "button", "data-table", "voyant-ground-vehicle-dialog"],
+      "files": [
+        {
+          "path": "registry/ground/vehicles-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/vehicles-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-driver-dialog",
+      "type": "registry:component",
+      "title": "Ground Driver Dialog",
+      "description": "Modal form for creating and editing ground drivers.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+      "files": [
+        {
+          "path": "registry/ground/driver-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/driver-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-drivers-tab",
+      "type": "registry:component",
+      "title": "Ground Drivers Tab",
+      "description": "Server-paginated CRUD table for ground drivers.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": ["badge", "button", "data-table", "voyant-ground-driver-dialog"],
+      "files": [
+        {
+          "path": "registry/ground/drivers-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/drivers-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-ground-page",
+      "type": "registry:component",
+      "title": "Ground Page",
+      "description": "Ground operations shell with operators, vehicles and drivers tabs.",
+      "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+      "registryDependencies": [
+        "tabs",
+        "voyant-ground-operators-tab",
+        "voyant-ground-vehicles-tab",
+        "voyant-ground-drivers-tab"
+      ],
+      "files": [
+        {
+          "path": "registry/ground/ground-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/ground/ground-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-contact-point-dialog",
+      "type": "registry:component",
+      "title": "Identity Contact Point Dialog",
+      "description": "Modal form for creating and editing identity contact points.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/contact-point-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/contact-point-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-address-dialog",
+      "type": "registry:component",
+      "title": "Identity Address Dialog",
+      "description": "Modal form for creating and editing identity addresses.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "button",
+        "country-combobox",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/address-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/address-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-named-contact-dialog",
+      "type": "registry:component",
+      "title": "Identity Named Contact Dialog",
+      "description": "Modal form for creating and editing identity named contacts.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/named-contact-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/named-contact-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-contact-points-tab",
+      "type": "registry:component",
+      "title": "Identity Contact Points Tab",
+      "description": "Server-paginated CRUD table for entity contact points.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "voyant-identity-contact-point-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/contact-points-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/contact-points-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-addresses-tab",
+      "type": "registry:component",
+      "title": "Identity Addresses Tab",
+      "description": "Server-paginated CRUD table for entity addresses.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": ["badge", "button", "data-table", "voyant-identity-address-dialog"],
+      "files": [
+        {
+          "path": "registry/identity/addresses-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/addresses-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-named-contacts-tab",
+      "type": "registry:component",
+      "title": "Identity Named Contacts Tab",
+      "description": "Server-paginated CRUD table for entity named contacts.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "voyant-identity-named-contact-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/named-contacts-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/named-contacts-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-identity-page",
+      "type": "registry:component",
+      "title": "Identity Page",
+      "description": "Identity management shell with contact points, addresses and named contacts tabs.",
+      "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+      "registryDependencies": [
+        "input",
+        "label",
+        "tabs",
+        "voyant-identity-contact-points-tab",
+        "voyant-identity-addresses-tab",
+        "voyant-identity-named-contacts-tab"
+      ],
+      "files": [
+        {
+          "path": "registry/identity/identity-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/identity/identity-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-external-refs-external-ref-dialog",
+      "type": "registry:component",
+      "title": "External Ref Dialog",
+      "description": "Modal form for creating and editing external reference mappings.",
+      "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/external-refs/external-ref-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/external-refs/external-ref-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-external-refs-tab",
+      "type": "registry:component",
+      "title": "External Refs Tab",
+      "description": "Server-paginated CRUD table for external references scoped to an entity.",
+      "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "voyant-external-refs-external-ref-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/external-refs/external-refs-tab.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/external-refs/external-refs-tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-external-refs-page",
+      "type": "registry:component",
+      "title": "External Refs Page",
+      "description": "External reference management shell for arbitrary entities.",
+      "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
+      "registryDependencies": ["input", "label", "voyant-external-refs-tab"],
+      "files": [
+        {
+          "path": "registry/external-refs/external-refs-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/external-refs/external-refs-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-extras-product-combobox",
+      "type": "registry:component",
+      "title": "Product Combobox",
+      "description": "Remote-search product picker backed by products-react.",
+      "dependencies": ["@voyantjs/products-react"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/extras/product-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/extras/product-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-extras-product-extra-dialog",
+      "type": "registry:component",
+      "title": "Product Extra Dialog",
+      "description": "Create/edit dialog for optional product extras wired to extras-react mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/extras-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/extras/product-extra-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/extras/product-extra-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-extras-page",
+      "type": "registry:component",
+      "title": "Extras Page",
+      "description": "Server-paginated manager for product extras with product selection, search, and CRUD actions.",
+      "dependencies": ["lucide-react", "@voyantjs/extras-react", "@voyantjs/products-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "table",
+        "voyant-extras-product-combobox",
+        "voyant-extras-product-extra-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/extras/extras-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/extras/extras-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-product-combobox",
+      "type": "registry:component",
+      "title": "Sellability Product Combobox",
+      "description": "Remote-search product picker for sellability scoping.",
+      "dependencies": ["@voyantjs/products-react"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/sellability/product-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/product-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-product-option-combobox",
+      "type": "registry:component",
+      "title": "Sellability Product Option Combobox",
+      "description": "Scoped product option picker for option-level sellability policies.",
+      "dependencies": ["@voyantjs/products-react"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/sellability/product-option-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/product-option-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-market-combobox",
+      "type": "registry:component",
+      "title": "Sellability Market Combobox",
+      "description": "Remote-search market picker for market-scoped sellability policies.",
+      "dependencies": ["@voyantjs/markets-react"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/sellability/market-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/market-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-channel-combobox",
+      "type": "registry:component",
+      "title": "Sellability Channel Combobox",
+      "description": "Channel picker for channel-scoped sellability policies with by-id hydration.",
+      "dependencies": ["@voyantjs/distribution-react"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/sellability/channel-combobox.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/channel-combobox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-policy-dialog",
+      "type": "registry:component",
+      "title": "Sellability Policy Dialog",
+      "description": "Create/edit dialog for scoped sellability policies wired to sellability-react mutations.",
+      "dependencies": [
+        "lucide-react",
+        "@voyantjs/distribution-react",
+        "@voyantjs/markets-react",
+        "@voyantjs/products-react",
+        "@voyantjs/sellability-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea",
+        "voyant-sellability-channel-combobox",
+        "voyant-sellability-market-combobox",
+        "voyant-sellability-product-combobox",
+        "voyant-sellability-product-option-combobox"
+      ],
+      "files": [
+        {
+          "path": "registry/sellability/policy-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/policy-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-sellability-page",
+      "type": "registry:component",
+      "title": "Sellability Page",
+      "description": "Server-paginated sellability policy manager with scope and status filters.",
+      "dependencies": ["lucide-react", "@voyantjs/sellability-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "select",
+        "voyant-sellability-policy-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/sellability/sellability-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/sellability/sellability-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-page",
+      "type": "registry:component",
+      "title": "Distribution Page",
+      "description": "Unified distribution operations page for channels, contracts, commissions, mappings, booking links, and webhook events.",
+      "dependencies": [
+        "lucide-react",
+        "sonner",
+        "react-hook-form",
+        "zod",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@tanstack/react-table",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "data-table",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "tabs",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/distribution/distribution-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-overview.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-overview.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-tabs-primary.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-tabs-primary.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-tabs-secondary.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-tabs-secondary.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialogs.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialogs.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialogs-commercial.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialogs-commercial.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialogs-commission.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialogs-commission.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialogs-sync.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialogs-sync.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialogs-webhook.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialogs-webhook.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-dialog-barrel.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-dialog-barrel.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-section-header.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-section-header.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-shared.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-shared.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-channel-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Channel Detail Page",
+      "description": "Detail page for a distribution channel with related contracts, mappings, booking links, and webhook events.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/channel-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/channel-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-contract-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Contract Detail Page",
+      "description": "Detail page for a channel contract with supplier context and commission rules.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/contract-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/contract-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-commission-rule-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Commission Rule Detail Page",
+      "description": "Detail page for distribution commission rules with contract and product context.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/commission-rule-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/commission-rule-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-mapping-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Mapping Detail Page",
+      "description": "Detail page for a distribution product mapping with channel and product context.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/mapping-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/mapping-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-booking-link-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Booking Link Detail Page",
+      "description": "Detail page for external booking links with channel and booking context.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/booking-link-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/booking-link-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-distribution-webhook-event-detail-page",
+      "type": "registry:component",
+      "title": "Distribution Webhook Event Detail Page",
+      "description": "Detail page for distribution webhook events with payload inspection and channel context.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/distribution-react"
+      ],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/distribution/webhook-event-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/webhook-event-detail-page.tsx"
+        },
+        {
+          "path": "registry/distribution/distribution-detail-query-options.ts",
+          "type": "registry:component",
+          "target": "components/voyant/distribution/distribution-detail-query-options.ts"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-create-activity-dialog",
+      "type": "registry:component",
+      "title": "Create Activity Dialog",
+      "description": "Create dialog for CRM activities with optional entity linking.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": ["button", "dialog", "input", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/crm/create-activity-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/create-activity-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-crm-activities-page",
+      "type": "registry:component",
+      "title": "Activities Page",
+      "description": "CRM activities timeline page with status and type filters.",
+      "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "select",
+        "voyant-crm-create-activity-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/crm/activities-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/crm/activities-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-contract-dialog",
+      "type": "registry:component",
+      "title": "Contract Dialog",
+      "description": "Create and edit dialog for legal contracts backed by legal-react mutations.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/legal/contract-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/contract-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-attachment-dialog",
+      "type": "registry:component",
+      "title": "Contract Attachment Dialog",
+      "description": "Create and edit dialog for legal contract attachments.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label"],
+      "files": [
+        {
+          "path": "registry/legal/attachment-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/attachment-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-signature-dialog",
+      "type": "registry:component",
+      "title": "Contract Signature Dialog",
+      "description": "Record signature dialog for legal contracts.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/legal/signature-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/signature-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-contracts-page",
+      "type": "registry:component",
+      "title": "Contracts Page",
+      "description": "Server-paginated legal contracts page with filters and create flow.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-router",
+        "@tanstack/react-table",
+        "@voyantjs/legal-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "input",
+        "select",
+        "voyant-legal-contract-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/contracts-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/contracts-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-contract-detail-page",
+      "type": "registry:component",
+      "title": "Contract Detail Page",
+      "description": "Detail page for legal contracts with lifecycle actions, signatures, and attachments.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/legal-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-legal-contract-dialog",
+        "voyant-legal-attachment-dialog",
+        "voyant-legal-signature-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/contract-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/contract-detail-page.tsx"
+        },
+        {
+          "path": "registry/legal/contract-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/contract-dialog.tsx"
+        },
+        {
+          "path": "registry/legal/attachment-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/attachment-dialog.tsx"
+        },
+        {
+          "path": "registry/legal/signature-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/signature-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-template-dialog",
+      "type": "registry:component",
+      "title": "Contract Template Dialog",
+      "description": "Create and edit dialog for legal contract templates.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "switch",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/template-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/template-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-template-version-dialog",
+      "type": "registry:component",
+      "title": "Contract Template Version Dialog",
+      "description": "Create dialog for legal contract template versions.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/legal/template-version-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/template-version-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-templates-page",
+      "type": "registry:component",
+      "title": "Contract Templates Page",
+      "description": "Contract templates management page with expandable version history.",
+      "dependencies": ["lucide-react", "@tanstack/react-query", "@voyantjs/legal-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "select",
+        "voyant-legal-template-dialog",
+        "voyant-legal-template-version-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/templates-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/templates-page.tsx"
+        },
+        {
+          "path": "registry/legal/template-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/template-dialog.tsx"
+        },
+        {
+          "path": "registry/legal/template-version-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/template-version-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policy-dialog",
+      "type": "registry:component",
+      "title": "Policy Dialog",
+      "description": "Create and edit dialog for legal policies.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/legal/policy-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policy-version-dialog",
+      "type": "registry:component",
+      "title": "Policy Version Dialog",
+      "description": "Create and edit dialog for legal policy versions.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/legal/policy-version-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-version-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policy-rule-dialog",
+      "type": "registry:component",
+      "title": "Policy Rule Dialog",
+      "description": "Create and edit dialog for legal policy version rules.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/legal/policy-rule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-rule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policy-assignment-dialog",
+      "type": "registry:component",
+      "title": "Policy Assignment Dialog",
+      "description": "Create and edit dialog for legal policy assignments.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/legal/policy-assignment-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-assignment-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policies-page",
+      "type": "registry:component",
+      "title": "Policies Page",
+      "description": "Server-paginated legal policies page with kind filters and create flow.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-router",
+        "@tanstack/react-table",
+        "@voyantjs/legal-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "data-table",
+        "input",
+        "select",
+        "voyant-legal-policy-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/policies-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policies-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-policy-detail-page",
+      "type": "registry:component",
+      "title": "Policy Detail Page",
+      "description": "Detail page for legal policies with versions, rules, assignments, and acceptances.",
+      "dependencies": [
+        "lucide-react",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@voyantjs/legal-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-legal-policy-dialog",
+        "voyant-legal-policy-version-dialog",
+        "voyant-legal-policy-rule-dialog",
+        "voyant-legal-policy-assignment-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/legal/policy-detail-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-detail-page.tsx"
+        },
+        {
+          "path": "registry/legal/policy-detail-shared.ts",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-detail-shared.ts"
+        },
+        {
+          "path": "registry/legal/policy-version-row.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/policy-version-row.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-number-series-dialog",
+      "type": "registry:component",
+      "title": "Number Series Dialog",
+      "description": "Create and edit dialog for contract number series.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "switch"],
+      "files": [
+        {
+          "path": "registry/legal/number-series-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/number-series-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-legal-number-series-page",
+      "type": "registry:component",
+      "title": "Number Series Page",
+      "description": "Management page for legal contract number series.",
+      "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+      "registryDependencies": ["badge", "button", "voyant-legal-number-series-dialog"],
+      "files": [
+        {
+          "path": "registry/legal/number-series-page.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/number-series-page.tsx"
+        },
+        {
+          "path": "registry/legal/number-series-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/legal/number-series-dialog.tsx"
         }
       ]
     }

@@ -21,7 +21,16 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@voyantjs/external-refs-react": ["../../packages/external-refs-react/src/index.ts"],
+      "@voyantjs/extras-react": ["../../packages/extras-react/src/index.ts"],
+      "@voyantjs/facilities-react": ["../../packages/facilities-react/src/index.ts"],
+      "@voyantjs/ground-react": ["../../packages/ground-react/src/index.ts"],
+      "@voyantjs/identity-react": ["../../packages/identity-react/src/index.ts"],
+      "@voyantjs/legal-react": ["../../packages/legal-react/src/index.ts"],
+      "@voyantjs/markets-react": ["../../packages/markets-react/src/index.ts"],
+      "@voyantjs/sellability-react": ["../../packages/sellability-react/src/index.ts"],
+      "@voyantjs/transactions-react": ["../../packages/transactions-react/src/index.ts"]
     }
   }
 }

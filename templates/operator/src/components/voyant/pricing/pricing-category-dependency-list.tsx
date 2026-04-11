@@ -1,10 +1,12 @@
 "use client"
 
+import { useQueries } from "@tanstack/react-query"
 import {
+  getPricingCategoryQueryOptions,
   type PricingCategoryDependencyRecord,
-  usePricingCategories,
   usePricingCategoryDependencies,
   usePricingCategoryDependencyMutation,
+  useVoyantPricingContext,
 } from "@voyantjs/pricing-react"
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
@@ -40,13 +42,32 @@ export function PricingCategoryDependencyList({
     undefined,
   )
   const { data, isPending, isError } = usePricingCategoryDependencies({ limit: pageSize })
-  const { data: categoriesData } = usePricingCategories({ limit: 200 })
   const { remove } = usePricingCategoryDependencyMutation()
+  const { baseUrl, fetcher } = useVoyantPricingContext()
 
   const dependencies = data?.data ?? []
-  const categoryById = new Map(
-    (categoriesData?.data ?? []).map((category) => [category.id, category]),
+  const categoryIds = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          dependencies.flatMap((dependency) => [
+            dependency.masterPricingCategoryId,
+            dependency.pricingCategoryId,
+          ]),
+        ),
+      ),
+    [dependencies],
   )
+  const categoryQueries = useQueries({
+    queries: categoryIds.map((id) => getPricingCategoryQueryOptions({ baseUrl, fetcher }, id)),
+  })
+  const categoryById = React.useMemo(() => {
+    const map = new Map<string, { name: string }>()
+    categoryQueries.forEach((query, index) => {
+      if (query.data) map.set(categoryIds[index], query.data)
+    })
+    return map
+  }, [categoryIds, categoryQueries])
 
   return (
     <div data-slot="pricing-category-dependency-list" className="flex flex-col gap-4">

@@ -1,20 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { PolicyDetailPage } from "./$id-page"
 import {
-  getLegalPolicyAcceptancesQueryOptions,
-  getLegalPolicyAssignmentsQueryOptions,
-  getLegalPolicyQueryOptions,
-  getLegalPolicyVersionsQueryOptions,
-} from "./$id-shared"
+  loadPolicyDetailPage,
+  PolicyDetailPage,
+} from "@/components/voyant/legal/policy-detail-page"
 
 export const Route = createFileRoute("/_workspace/legal/policies/$id")({
   loader: ({ context, params }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(getLegalPolicyQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getLegalPolicyVersionsQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getLegalPolicyAssignmentsQueryOptions(params.id)),
-      context.queryClient.ensureQueryData(getLegalPolicyAcceptancesQueryOptions()),
-    ]),
+    loadPolicyDetailPage(params.id, context.queryClient.ensureQueryData),
   component: PolicyDetailRoute,
 })
 

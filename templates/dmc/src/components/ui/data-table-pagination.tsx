@@ -7,11 +7,19 @@ import { Button } from "@/components/ui/button"
 
 type DataTablePaginationProps<TData> = {
   table: Table<TData>
+  totalRows: number
+  onPageIndexChange?: (pageIndex: number) => void
 }
 
-export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
-  const totalRows = table.getPrePaginationRowModel().rows.length
+export function DataTablePagination<TData>({
+  table,
+  totalRows,
+  onPageIndexChange,
+}: DataTablePaginationProps<TData>) {
   const { pageIndex, pageSize } = table.getState().pagination
+  const pageCount = Math.max(1, Math.ceil(totalRows / pageSize))
+  const canPreviousPage = pageIndex > 0
+  const canNextPage = pageIndex + 1 < pageCount
   const start = totalRows === 0 ? 0 : pageIndex * pageSize + 1
   const end = totalRows === 0 ? 0 : Math.min((pageIndex + 1) * pageSize, totalRows)
 
@@ -22,13 +30,15 @@ export function DataTablePagination<TData>({ table }: DataTablePaginationProps<T
       </p>
       <div className="flex items-center gap-2">
         <p className="text-sm text-muted-foreground">
-          Page {totalRows === 0 ? 0 : pageIndex + 1} of {table.getPageCount()}
+          Page {totalRows === 0 ? 0 : pageIndex + 1} of {pageCount}
         </p>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() =>
+            onPageIndexChange ? onPageIndexChange(pageIndex - 1) : table.previousPage()
+          }
+          disabled={!canPreviousPage}
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
@@ -36,8 +46,8 @@ export function DataTablePagination<TData>({ table }: DataTablePaginationProps<T
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
+          onClick={() => (onPageIndexChange ? onPageIndexChange(pageIndex + 1) : table.nextPage())}
+          disabled={!canNextPage}
         >
           Next
           <ChevronRight className="h-4 w-4" />

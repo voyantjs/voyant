@@ -103,7 +103,25 @@ export {
   type QuotesListFilters,
   type StagesListFilters,
 } from "./query-keys.js"
-export { getPeopleQueryOptions } from "./query-options.js"
+export {
+  getActivitiesQueryOptions,
+  getOpportunitiesQueryOptions,
+  getOpportunityQueryOptions,
+  getOrganizationQueryOptions,
+  getOrganizationsQueryOptions,
+  getPeopleQueryOptions,
+  getPersonActivitiesQueryOptions,
+  getPersonNotesQueryOptions,
+  getPersonOpportunitiesQueryOptions,
+  getPersonQueryOptions,
+  getPipelineQueryOptions,
+  getPipelinesQueryOptions,
+  getQuoteLinesQueryOptions,
+  getQuoteQueryOptions,
+  getQuotesQueryOptions,
+  getStageQueryOptions,
+  getStagesQueryOptions,
+} from "./query-options.js"
 export {
   type ActivityLinkRecord,
   type ActivityRecord,
@@ -113,8 +131,10 @@ export {
   type OrganizationRecord,
   opportunityRecordSchema,
   organizationRecordSchema,
+  type PersonNoteRecord,
   type PersonRecord,
   type PipelineRecord,
+  personNoteRecordSchema,
   personRecordSchema,
   pipelineRecordSchema,
   type QuoteLineRecord,

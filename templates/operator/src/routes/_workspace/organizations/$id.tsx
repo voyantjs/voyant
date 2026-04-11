@@ -4,8 +4,8 @@ import {
   getOpportunitiesQueryOptions,
   getOrganizationQueryOptions,
   getPeopleQueryOptions,
-} from "../_crm/_lib/crm-query-options"
-import { OrganizationDetailPage } from "./$id-page"
+} from "@/components/voyant/crm/crm-query-options"
+import { OrganizationDetailPage } from "@/components/voyant/crm/organization-detail-page"
 
 export const Route = createFileRoute("/_workspace/organizations/$id")({
   loader: async ({ context, params }) => {

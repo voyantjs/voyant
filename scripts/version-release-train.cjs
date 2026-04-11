@@ -3,19 +3,7 @@ const applyReleasePlan = require("@changesets/apply-release-plan").default
 const { read } = require("@changesets/config")
 const { getPackages } = require("@manypkg/get-packages")
 const semver = require("semver")
-
-function getPublishablePackages(packages, config) {
-  return packages.packages.filter((pkg) => {
-    const { name, private: isPrivate } = pkg.packageJson
-
-    return (
-      typeof name === "string" &&
-      name.startsWith("@voyantjs/") &&
-      !isPrivate &&
-      !config.ignore.includes(name)
-    )
-  })
-}
+const { getPublishablePackages, getSharedTrainVersion } = require("./release-train-utils.cjs")
 
 function getHighestReleaseType(releases) {
   if (releases.some((release) => release.type === "major")) {
@@ -53,15 +41,7 @@ async function main() {
   }
 
   const publishablePackages = getPublishablePackages(packages, noFixedConfig)
-  const currentVersions = new Set(publishablePackages.map((pkg) => pkg.packageJson.version))
-
-  if (currentVersions.size !== 1) {
-    throw new Error(
-      `Expected one shared release train version, found: ${Array.from(currentVersions).join(", ")}`,
-    )
-  }
-
-  const currentVersion = Array.from(currentVersions)[0]
+  const currentVersion = getSharedTrainVersion(publishablePackages)
   const highestReleaseType = getHighestReleaseType(directReleases)
   const trainVersion = getTrainVersion(currentVersion, highestReleaseType)
 

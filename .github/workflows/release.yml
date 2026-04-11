@@ -94,6 +94,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Verify release train
+        run: pnpm verify:release-train
+
       - name: Create Release PR or Publish
         id: changesets
         uses: changesets/action@v1

@@ -29,6 +29,9 @@ jobs:
       - name: Build packages
         run: pnpm turbo build --filter='./packages/**' --continue
 
+      - name: Verify release train
+        run: pnpm verify:release-train
+
       - name: Verify publish tarballs
         run: pnpm verify:publish-tarballs
 

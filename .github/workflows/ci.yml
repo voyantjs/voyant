@@ -29,6 +29,9 @@ jobs:
       - name: Build packages
         run: pnpm turbo build --filter='./packages/**' --continue
 
+      - name: Build registry artifacts
+        run: pnpm registry:build
+
       - name: Verify release train
         run: pnpm verify:release-train
 

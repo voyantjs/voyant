@@ -3,6 +3,7 @@ import { bookingRequirementsHonoModule } from "@voyantjs/booking-requirements"
 import { bookingsHonoModule, bookingsSupplierExtension } from "@voyantjs/bookings"
 import { createCheckoutRoutes } from "@voyantjs/checkout"
 import { crmBookingExtension, crmHonoModule } from "@voyantjs/crm"
+import { customerPortalHonoModule } from "@voyantjs/customer-portal"
 import { distributionBookingExtension, distributionHonoModule } from "@voyantjs/distribution"
 import { externalRefsHonoModule } from "@voyantjs/external-refs"
 import { extrasHonoModule } from "@voyantjs/extras"
@@ -37,6 +38,7 @@ const notificationsHonoModule = createNotificationsHonoModule({
 
 export const app = createApp<CloudflareBindings>({
   db: (env) => getDbFromHyperdrive(env),
+  publicPaths: ["/v1/customer-portal/contact-exists"],
   modules: [
     crmHonoModule,
     availabilityHonoModule,
@@ -59,6 +61,7 @@ export const app = createApp<CloudflareBindings>({
     bookingsHonoModule,
     financeHonoModule,
     legalHonoModule,
+    customerPortalHonoModule,
   ],
   extensions: [
     bookingsSupplierExtension,

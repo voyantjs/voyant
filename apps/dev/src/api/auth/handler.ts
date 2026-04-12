@@ -9,15 +9,13 @@
 
 import { createBetterAuth } from "@voyantjs/auth/server"
 import {
-  authMember,
-  authOrganization,
-  authSession,
-  authUser,
-  userProfilesTable,
-} from "@voyantjs/db/schema/iam"
+  ensureCurrentUserProfile,
+  getCurrentUser,
+  getCurrentWorkspace,
+  setActiveWorkspaceOrganization,
+} from "@voyantjs/auth/workspace"
 import type { VoyantPermission, VoyantRequestAuthContext } from "@voyantjs/hono"
-import { asc, eq } from "drizzle-orm"
-import { Hono } from "hono"
+import { type Context, Hono } from "hono"
 import { Resend } from "resend"
 
 import { getDbFromHyperdrive } from "../lib/db"
@@ -121,29 +119,15 @@ function getBetterAuth(env: CloudflareBindings) {
   })
 }
 
-async function listWorkspaceOrganizations(
-  env: CloudflareBindings,
-  userId: string,
-  activeOrganizationId: string | null,
-) {
-  const db = getDbFromHyperdrive(env)
+async function getSessionOrUnauthorized(c: Context<{ Bindings: CloudflareBindings }>) {
+  const betterAuth = getBetterAuth(c.env)
+  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
 
-  const organizations = await db
-    .select({
-      id: authOrganization.id,
-      name: authOrganization.name,
-      slug: authOrganization.slug,
-      logo: authOrganization.logo,
-    })
-    .from(authMember)
-    .innerJoin(authOrganization, eq(authOrganization.id, authMember.organizationId))
-    .where(eq(authMember.userId, userId))
-    .orderBy(asc(authOrganization.createdAt))
+  if (!session) {
+    return { session: null, response: c.json({ error: "Unauthorized" }, 401) }
+  }
 
-  const activeOrganization =
-    organizations.find((organization) => organization.id === activeOrganizationId) ?? null
-
-  return { activeOrganization, organizations }
+  return { session, response: null }
 }
 
 export async function resolveAuthRequest(
@@ -186,76 +170,68 @@ export async function hasAuthPermission(
  * Validates the session cookie directly (no Bearer token needed).
  */
 auth.get("/auth/me", async (c) => {
-  const betterAuth = getBetterAuth(c.env)
-  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
+  const { session, response } = await getSessionOrUnauthorized(c)
   if (!session) {
-    return c.json({ error: "Unauthorized" }, 401)
+    return response
   }
 
   const db = getDbFromHyperdrive(c.env)
+  const user = await getCurrentUser(db, {
+    userId: session.user.id,
+    activeOrganizationId: session.session.activeOrganizationId ?? null,
+  })
 
-  const [row] = await db
-    .select({
-      id: authUser.id,
-      email: authUser.email,
-      createdAt: authUser.createdAt,
-      firstName: userProfilesTable.firstName,
-      lastName: userProfilesTable.lastName,
-      avatarUrl: userProfilesTable.avatarUrl,
-      isSuperAdmin: userProfilesTable.isSuperAdmin,
-      isSupportUser: userProfilesTable.isSupportUser,
-    })
-    .from(authUser)
-    .leftJoin(userProfilesTable, eq(userProfilesTable.id, authUser.id))
-    .where(eq(authUser.id, session.user.id))
-    .limit(1)
-
-  if (!row) {
+  if (!user) {
     return c.json({ error: "User not found" }, 404)
   }
 
-  return c.json({
-    id: row.id,
-    email: row.email,
-    firstName: row.firstName ?? null,
-    lastName: row.lastName ?? null,
-    isSuperAdmin: row.isSuperAdmin ?? false,
-    isSupportUser: row.isSupportUser ?? false,
-    createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
-    profilePictureUrl: row.avatarUrl ?? null,
-    activeOrganizationId: session.session.activeOrganizationId ?? null,
-  })
+  return c.json(user)
 })
 
 auth.get("/auth/workspace", async (c) => {
-  const betterAuth = getBetterAuth(c.env)
-  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
-
+  const { session, response } = await getSessionOrUnauthorized(c)
   if (!session) {
-    return c.json({ error: "Unauthorized" }, 401)
+    return response
   }
 
   const db = getDbFromHyperdrive(c.env)
-  let activeOrganizationId = session.session.activeOrganizationId ?? null
-
-  const existingWorkspace = await listWorkspaceOrganizations(
-    c.env,
-    session.user.id,
-    activeOrganizationId,
+  return c.json(
+    await getCurrentWorkspace(db, {
+      sessionId: session.session.id,
+      userId: session.user.id,
+      activeOrganizationId: session.session.activeOrganizationId ?? null,
+    }),
   )
+})
 
-  if (!activeOrganizationId && existingWorkspace.organizations.length > 0) {
-    activeOrganizationId = existingWorkspace.organizations[0]?.id ?? null
-
-    if (activeOrganizationId) {
-      await db
-        .update(authSession)
-        .set({ activeOrganizationId, updatedAt: new Date() })
-        .where(eq(authSession.id, session.session.id))
-    }
+auth.post("/auth/workspace/active-organization", async (c) => {
+  const { session, response } = await getSessionOrUnauthorized(c)
+  if (!session) {
+    return response
   }
 
-  return c.json(await listWorkspaceOrganizations(c.env, session.user.id, activeOrganizationId))
+  const body = (await c.req.json().catch(() => null)) as { organizationId?: unknown } | null
+  const organizationId =
+    typeof body?.organizationId === "string" && body.organizationId.trim().length > 0
+      ? body.organizationId.trim()
+      : null
+
+  if (!organizationId) {
+    return c.json({ error: "organizationId is required" }, 400)
+  }
+
+  const db = getDbFromHyperdrive(c.env)
+  const workspace = await setActiveWorkspaceOrganization(db, {
+    sessionId: session.session.id,
+    userId: session.user.id,
+    organizationId,
+  })
+
+  if (!workspace) {
+    return c.json({ error: "Organization not found in current workspace" }, 404)
+  }
+
+  return c.json(workspace)
 })
 
 /**
@@ -265,58 +241,25 @@ auth.get("/auth/workspace", async (c) => {
  * but this route serves as an idempotent fallback.
  */
 auth.get("/auth/status", async (c) => {
-  const betterAuth = getBetterAuth(c.env)
-  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
+  const { session } = await getSessionOrUnauthorized(c)
   if (!session) {
     return c.json({ userExists: false, authenticated: false })
   }
 
   const userId = session.user.id
   const db = getDbFromHyperdrive(c.env)
+  const status = await ensureCurrentUserProfile(db, userId)
 
-  try {
-    const [existingProfile] = await db
-      .select({ id: userProfilesTable.id })
-      .from(userProfilesTable)
-      .where(eq(userProfilesTable.id, userId))
-      .limit(1)
-
-    if (existingProfile) {
-      return c.json({ userExists: true, authenticated: true })
-    }
-
-    // Profile doesn't exist yet — create from BA user data
-    const [baUser] = await db
-      .select({ name: authUser.name, email: authUser.email, image: authUser.image })
-      .from(authUser)
-      .where(eq(authUser.id, userId))
-      .limit(1)
-
-    if (!baUser?.email) {
-      return c.json(
-        { userExists: false, authenticated: true, reason: `No email found for user ${userId}.` },
-        400,
-      )
-    }
-
-    const nameParts = baUser.name?.split(" ") ?? []
-    const firstName = nameParts[0] ?? null
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null
-
-    await db
-      .insert(userProfilesTable)
-      .values({ id: userId, firstName, lastName, avatarUrl: baUser.image ?? null })
-      .onConflictDoNothing()
-
-    return c.json({ userExists: true, authenticated: true })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error("[auth/status] Error:", message)
-    return c.json(
-      { userExists: false, authenticated: true, reason: `Provisioning error: ${message}` },
-      500,
-    )
+  if (status.reason?.startsWith("No email found")) {
+    return c.json(status, 400)
   }
+
+  if (status.reason?.startsWith("Provisioning error:")) {
+    console.error("[auth/status] Error:", status.reason)
+    return c.json(status, 500)
+  }
+
+  return c.json(status)
 })
 
 /**

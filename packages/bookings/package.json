@@ -10,6 +10,8 @@
     "./tasks": "./src/tasks/index.ts",
     "./validation": "./src/validation.ts",
     "./routes": "./src/routes.ts",
+    "./public-routes": "./src/routes-public.ts",
+    "./public-validation": "./src/validation-public.ts",
     "./schema/travel-details": "./src/schema/travel-details.ts",
     "./extensions/suppliers": "./src/extensions/suppliers.ts"
   },
@@ -63,6 +65,14 @@
       "./routes": {
         "types": "./dist/routes.d.ts",
         "import": "./dist/routes.js"
+      },
+      "./public-routes": {
+        "types": "./dist/routes-public.d.ts",
+        "import": "./dist/routes-public.js"
+      },
+      "./public-validation": {
+        "types": "./dist/validation-public.d.ts",
+        "import": "./dist/validation-public.js"
       },
       "./schema/travel-details": {
         "types": "./dist/schema/travel-details.d.ts",

@@ -12,9 +12,15 @@
     "lint": "biome check app lib"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.96.2",
+    "@voyantjs/customer-portal": "workspace:*",
+    "@voyantjs/customer-portal-react": "workspace:*",
+    "@voyantjs/finance": "workspace:*",
+    "@voyantjs/finance-react": "workspace:*",
     "next": "^15.5.7",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

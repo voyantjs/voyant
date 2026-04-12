@@ -63,12 +63,11 @@ async function handleBatchUpdate<TPatch, TRow>({
   patch: TPatch
   update: (db: PostgresJsDatabase, id: string, patch: TPatch) => Promise<TRow | null>
 }) {
-  const results = await Promise.all(
-    ids.map(async (id) => {
-      const row = await update(db, id, patch)
-      return row ? { id, row } : { id, row: null }
-    }),
-  )
+  const results: Array<{ id: string; row: TRow | null }> = []
+  for (const id of ids) {
+    const row = await update(db, id, patch)
+    results.push({ id, row })
+  }
 
   const data = results.flatMap((result) => (result.row ? [result.row] : []))
   const failed = results
@@ -92,12 +91,11 @@ async function handleBatchDelete({
   ids: string[]
   remove: (db: PostgresJsDatabase, id: string) => Promise<{ id: string } | null>
 }) {
-  const results = await Promise.all(
-    ids.map(async (id) => {
-      const row = await remove(db, id)
-      return row ? { id } : { id, error: "Not found" }
-    }),
-  )
+  const results: Array<{ id: string } | { id: string; error: string }> = []
+  for (const id of ids) {
+    const row = await remove(db, id)
+    results.push(row ? { id } : { id, error: "Not found" })
+  }
 
   const deletedIds = results.flatMap((result) => ("error" in result ? [] : [result.id]))
   const failed = results

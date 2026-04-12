@@ -9,7 +9,10 @@ import type { UseInvoiceLineItemsOptions } from "./hooks/use-invoice-line-items.
 import type { UseInvoiceNotesOptions } from "./hooks/use-invoice-notes.js"
 import type { UseInvoicePaymentsOptions } from "./hooks/use-invoice-payments.js"
 import type { UseInvoicesOptions } from "./hooks/use-invoices.js"
+import type { UsePublicBookingPaymentOptionsOptions } from "./hooks/use-public-booking-payment-options.js"
+import type { UsePublicPaymentSessionOptions } from "./hooks/use-public-payment-session.js"
 import type { UseSupplierPaymentsOptions } from "./hooks/use-supplier-payments.js"
+import { getPublicBookingPaymentOptions, getPublicPaymentSession } from "./operations.js"
 import { financeQueryKeys } from "./query-keys.js"
 import {
   invoiceCreditNotesResponse,
@@ -160,6 +163,44 @@ export function getInvoiceNotesQueryOptions(
         invoiceNotesResponse,
         client,
       )
+    },
+  })
+}
+
+export function getPublicBookingPaymentOptionsQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UsePublicBookingPaymentOptionsOptions = {},
+) {
+  const { enabled: _enabled = true, ...filters } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.publicBookingPaymentOptions(bookingId ?? "", filters),
+    queryFn: async () => {
+      if (!bookingId) {
+        throw new Error("getPublicBookingPaymentOptionsQueryOptions requires a bookingId")
+      }
+
+      return getPublicBookingPaymentOptions(client, bookingId, filters)
+    },
+  })
+}
+
+export function getPublicPaymentSessionQueryOptions(
+  client: FetchWithValidationOptions,
+  sessionId: string | null | undefined,
+  options: UsePublicPaymentSessionOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.publicPaymentSession(sessionId ?? ""),
+    queryFn: async () => {
+      if (!sessionId) {
+        throw new Error("getPublicPaymentSessionQueryOptions requires a sessionId")
+      }
+
+      return getPublicPaymentSession(client, sessionId)
     },
   })
 }

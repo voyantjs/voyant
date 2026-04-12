@@ -1,36 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { productsQueryKeys, useProduct } from "@voyantjs/products-react"
-import { ArrowLeft, History, Loader2, Pencil, Trash2 } from "lucide-react"
+import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 import { api } from "@/lib/api-client"
-import { DayDialog } from "./product-day-dialog"
-import { DepartureDialog, type DepartureSlot } from "./product-departure-dialog"
+import { ProductAvailabilitySection } from "./product-availability-section"
 import { ProductDialog } from "./product-detail-dialog"
+import { ProductNotesCard } from "./product-detail-sections"
 import {
-  ProductDeparturesCard,
-  ProductItineraryCard,
-  ProductNotesCard,
-  ProductSchedulesCard,
-  ProductVersionsCard,
-} from "./product-detail-sections"
-import {
-  type DayService,
   formatAmount,
   formatMargin,
-  getProductDaysQueryOptions,
   getProductNotesQueryOptions,
-  getProductRulesQueryOptions,
-  getProductSlotsQueryOptions,
-  getProductVersionsQueryOptions,
-  type ProductDay,
   statusVariant,
 } from "./product-detail-shared"
+import { ProductItinerarySection } from "./product-itinerary-section"
+import { ProductMediaSection } from "./product-media-section"
 import { OptionsSection } from "./product-options-section"
-import { type AvailabilityRule, ScheduleDialog } from "./product-schedule-dialog"
-import { ServiceDialog } from "./product-service-dialog"
-import { VersionDialog } from "./product-version-dialog"
+import { ProductVersionsSection } from "./product-versions-section"
 
 export function ProductDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
@@ -38,26 +25,9 @@ export function ProductDetailPage({ id }: { id: string }) {
 
   const [editOpen, setEditOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
-  const [dayDialogOpen, setDayDialogOpen] = useState(false)
-  const [editingDay, setEditingDay] = useState<ProductDay | undefined>()
-  const [expandedDayId, setExpandedDayId] = useState<string | null>(null)
-  const [serviceDialogOpen, setServiceDialogOpen] = useState(false)
-  const [serviceDialogDayId, setServiceDialogDayId] = useState("")
-  const [editingService, setEditingService] = useState<DayService | undefined>()
-  const [versionDialogOpen, setVersionDialogOpen] = useState(false)
-  const [departureDialogOpen, setDepartureDialogOpen] = useState(false)
-  const [editingDeparture, setEditingDeparture] = useState<DepartureSlot | undefined>()
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
-  const [editingSchedule, setEditingSchedule] = useState<AvailabilityRule | undefined>()
 
   const { data: product, isPending } = useProduct(id)
-  const { data: daysData, refetch: refetchDays } = useQuery(getProductDaysQueryOptions(id))
-  const { data: versionsData, refetch: refetchVersions } = useQuery(
-    getProductVersionsQueryOptions(id),
-  )
   const { data: notesData, refetch: refetchNotes } = useQuery(getProductNotesQueryOptions(id))
-  const { data: slotsData, refetch: refetchSlots } = useQuery(getProductSlotsQueryOptions(id))
-  const { data: rulesData, refetch: refetchRules } = useQuery(getProductRulesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/products/${id}`),
@@ -72,32 +42,6 @@ export function ProductDetailPage({ id }: { id: string }) {
     onSuccess: () => {
       setNoteContent("")
       void refetchNotes()
-    },
-  })
-
-  const deleteDayMutation = useMutation({
-    mutationFn: (dayId: string) => api.delete(`/v1/products/${id}/days/${dayId}`),
-    onSuccess: () => {
-      void refetchDays()
-    },
-  })
-
-  const deleteServiceMutation = useMutation({
-    mutationFn: ({ dayId, serviceId }: { dayId: string; serviceId: string }) =>
-      api.delete(`/v1/products/${id}/days/${dayId}/services/${serviceId}`),
-  })
-
-  const deleteSlotMutation = useMutation({
-    mutationFn: (slotId: string) => api.delete(`/v1/availability/slots/${slotId}`),
-    onSuccess: () => {
-      void refetchSlots()
-    },
-  })
-
-  const deleteRuleMutation = useMutation({
-    mutationFn: (ruleId: string) => api.delete(`/v1/availability/rules/${ruleId}`),
-    onSuccess: () => {
-      void refetchRules()
     },
   })
 
@@ -120,8 +64,6 @@ export function ProductDetailPage({ id }: { id: string }) {
     )
   }
 
-  const nextDayNumber = (daysData?.data.length ?? 0) + 1
-
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center gap-4">
@@ -137,10 +79,6 @@ export function ProductDetailPage({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setVersionDialogOpen(true)}>
-            <History className="mr-2 h-4 w-4" />
-            Create Version
-          </Button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
@@ -222,86 +160,11 @@ export function ProductDetailPage({ id }: { id: string }) {
         </Card>
       </div>
 
-      <ProductDeparturesCard
-        slots={slotsData?.data ?? []}
-        onCreate={() => {
-          setEditingDeparture(undefined)
-          setDepartureDialogOpen(true)
-        }}
-        onEdit={(slot) => {
-          setEditingDeparture(slot)
-          setDepartureDialogOpen(true)
-        }}
-        onDelete={(slotId) => {
-          if (confirm("Delete this departure?")) {
-            deleteSlotMutation.mutate(slotId)
-          }
-        }}
-      />
-
-      <ProductSchedulesCard
-        rules={rulesData?.data ?? []}
-        onCreate={() => {
-          setEditingSchedule(undefined)
-          setScheduleDialogOpen(true)
-        }}
-        onEdit={(rule) => {
-          setEditingSchedule(rule)
-          setScheduleDialogOpen(true)
-        }}
-        onDelete={(ruleId) => {
-          if (confirm("Delete this schedule?")) {
-            deleteRuleMutation.mutate(ruleId)
-          }
-        }}
-      />
-
-      <ProductItineraryCard
-        productId={id}
-        days={daysData?.data ?? []}
-        expandedDayId={expandedDayId}
-        onToggleDay={(dayId) => setExpandedDayId(expandedDayId === dayId ? null : dayId)}
-        onCreateDay={() => {
-          setEditingDay(undefined)
-          setDayDialogOpen(true)
-        }}
-        onEditDay={(day) => {
-          setEditingDay(day)
-          setDayDialogOpen(true)
-        }}
-        onDeleteDay={(dayId) => {
-          if (confirm("Delete this day and all its services?")) {
-            deleteDayMutation.mutate(dayId)
-          }
-        }}
-        onAddService={(dayId) => {
-          setServiceDialogDayId(dayId)
-          setEditingService(undefined)
-          setServiceDialogOpen(true)
-        }}
-        onEditService={(dayId, service) => {
-          setServiceDialogDayId(dayId)
-          setEditingService(service)
-          setServiceDialogOpen(true)
-        }}
-        onDeleteService={(dayId, serviceId) => {
-          if (confirm("Delete this service?")) {
-            deleteServiceMutation.mutate(
-              { dayId, serviceId },
-              {
-                onSuccess: () => {
-                  void queryClient.invalidateQueries({
-                    queryKey: ["product-day-services", id, dayId],
-                  })
-                },
-              },
-            )
-          }
-        }}
-      />
-
+      <ProductAvailabilitySection productId={id} />
+      <ProductItinerarySection productId={id} />
       <OptionsSection productId={id} />
-      <ProductVersionsCard versions={versionsData?.data ?? []} />
+      <ProductMediaSection productId={id} />
+      <ProductVersionsSection productId={id} />
       <ProductNotesCard
         noteContent={noteContent}
         setNoteContent={setNoteContent}
@@ -318,63 +181,6 @@ export function ProductDetailPage({ id }: { id: string }) {
           setEditOpen(false)
           void queryClient.invalidateQueries({ queryKey: productsQueryKeys.product(id) })
           void queryClient.invalidateQueries({ queryKey: productsQueryKeys.products() })
-        }}
-      />
-      <DayDialog
-        open={dayDialogOpen}
-        onOpenChange={setDayDialogOpen}
-        productId={id}
-        day={editingDay}
-        nextDayNumber={nextDayNumber}
-        onSuccess={() => {
-          setDayDialogOpen(false)
-          setEditingDay(undefined)
-          void refetchDays()
-        }}
-      />
-      <ServiceDialog
-        open={serviceDialogOpen}
-        onOpenChange={setServiceDialogOpen}
-        productId={id}
-        dayId={serviceDialogDayId}
-        service={editingService}
-        onSuccess={() => {
-          setServiceDialogOpen(false)
-          setEditingService(undefined)
-          void queryClient.invalidateQueries({
-            queryKey: ["product-day-services", id, serviceDialogDayId],
-          })
-        }}
-      />
-      <VersionDialog
-        open={versionDialogOpen}
-        onOpenChange={setVersionDialogOpen}
-        productId={id}
-        onSuccess={() => {
-          setVersionDialogOpen(false)
-          void refetchVersions()
-        }}
-      />
-      <DepartureDialog
-        open={departureDialogOpen}
-        onOpenChange={setDepartureDialogOpen}
-        productId={id}
-        slot={editingDeparture}
-        onSuccess={() => {
-          setDepartureDialogOpen(false)
-          setEditingDeparture(undefined)
-          void refetchSlots()
-        }}
-      />
-      <ScheduleDialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
-        productId={id}
-        rule={editingSchedule}
-        onSuccess={() => {
-          setScheduleDialogOpen(false)
-          setEditingSchedule(undefined)
-          void refetchRules()
         }}
       />
     </div>

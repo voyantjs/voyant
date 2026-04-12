@@ -7,23 +7,31 @@ import type { UseOptionUnitOptions } from "./hooks/use-option-unit.js"
 import type { UseOptionUnitsOptions } from "./hooks/use-option-units.js"
 import type { UseProductOptions } from "./hooks/use-product.js"
 import type { UseProductCategoriesOptions } from "./hooks/use-product-categories.js"
+import type { UseProductDayServicesOptions } from "./hooks/use-product-day-services.js"
+import type { UseProductDaysOptions } from "./hooks/use-product-days.js"
+import type { UseProductMediaOptions } from "./hooks/use-product-media.js"
 import type { UseProductOptionOptions } from "./hooks/use-product-option.js"
 import type { UseProductOptionsListOptions } from "./hooks/use-product-options.js"
 import type { UseProductTagsOptions } from "./hooks/use-product-tags.js"
 import type { UseProductTypesOptions } from "./hooks/use-product-types.js"
+import type { UseProductVersionsOptions } from "./hooks/use-product-versions.js"
 import type { UseProductsOptions } from "./hooks/use-products.js"
 import { productsQueryKeys } from "./query-keys.js"
 import {
   optionUnitListResponse,
   optionUnitSingleResponse,
   productCategoryListResponse,
+  productDayServicesResponse,
+  productDaysResponse,
   productListResponse,
+  productMediaListResponse,
   productOptionListResponse,
   productOptionSingleResponse,
   productSingleResponse,
   productTagListResponse,
   productTypeListResponse,
   productTypeSingleResponse,
+  productVersionsResponse,
 } from "./schemas.js"
 
 export function getProductsQueryOptions(
@@ -257,6 +265,103 @@ export function getOptionUnitQueryOptions(
         client,
       )
       return data
+    },
+  })
+}
+
+export function getProductDaysQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  options: UseProductDaysOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productDays(productId ?? ""),
+    queryFn: async () => {
+      if (!productId) throw new Error("getProductDaysQueryOptions requires a productId")
+
+      return fetchWithValidation(`/v1/products/${productId}/days`, productDaysResponse, client)
+    },
+  })
+}
+
+export function getProductDayServicesQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  dayId: string | null | undefined,
+  options: UseProductDayServicesOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productDayServices(productId ?? "", dayId ?? ""),
+    queryFn: async () => {
+      if (!productId || !dayId) {
+        throw new Error("getProductDayServicesQueryOptions requires productId and dayId")
+      }
+
+      return fetchWithValidation(
+        `/v1/products/${productId}/days/${dayId}/services`,
+        productDayServicesResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getProductVersionsQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  options: UseProductVersionsOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productVersions(productId ?? ""),
+    queryFn: async () => {
+      if (!productId) throw new Error("getProductVersionsQueryOptions requires a productId")
+
+      return fetchWithValidation(
+        `/v1/products/${productId}/versions`,
+        productVersionsResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getProductMediaQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  options: UseProductMediaOptions = {},
+) {
+  const { enabled: _enabled = true, dayId, mediaType, limit, offset } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productMediaList(productId ?? "", {
+      dayId,
+      mediaType,
+      limit,
+      offset,
+    }),
+    queryFn: async () => {
+      if (!productId) throw new Error("getProductMediaQueryOptions requires a productId")
+
+      const params = new URLSearchParams()
+      if (mediaType) params.set("mediaType", mediaType)
+      if (limit !== undefined) params.set("limit", String(limit))
+      if (offset !== undefined) params.set("offset", String(offset))
+      const qs = params.toString()
+      const basePath = dayId
+        ? `/v1/products/${productId}/days/${dayId}/media`
+        : `/v1/products/${productId}/media`
+
+      return fetchWithValidation(
+        `${basePath}${qs ? `?${qs}` : ""}`,
+        productMediaListResponse,
+        client,
+      )
     },
   })
 }

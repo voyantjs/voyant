@@ -53,32 +53,47 @@ async function cleanupFinanceTestData(
   // biome-ignore lint/suspicious/noExplicitAny: test db typing
   db: any,
 ) {
-  await db.execute(sql`
-    TRUNCATE
-      payment_sessions,
-      supplier_payments,
-      payments,
-      payment_captures,
-      payment_authorizations,
-      payment_instruments,
-      booking_guarantees,
-      booking_payment_schedules,
-      booking_item_commissions,
-      booking_item_tax_lines,
-      finance_notes,
-      invoice_external_refs,
-      invoice_renditions,
-      invoice_templates,
-      invoice_number_series,
-      credit_note_line_items,
-      credit_notes,
-      invoice_line_items,
-      invoices,
-      tax_regimes,
-      booking_items,
-      bookings
-    CASCADE
-  `)
+  const tableNames = [
+    "payment_sessions",
+    "supplier_payments",
+    "payments",
+    "payment_captures",
+    "payment_authorizations",
+    "payment_instruments",
+    "booking_guarantees",
+    "booking_payment_schedules",
+    "booking_item_commissions",
+    "booking_item_tax_lines",
+    "finance_notes",
+    "invoice_external_refs",
+    "invoice_renditions",
+    "invoice_templates",
+    "invoice_number_series",
+    "credit_note_line_items",
+    "credit_notes",
+    "invoice_line_items",
+    "invoices",
+    "tax_regimes",
+    "booking_items",
+    "bookings",
+  ]
+
+  const existingTables = (await db.execute<{ tablename: string }>(sql`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (${sql.join(
+        tableNames.map((name) => sql`${name}`),
+        sql`, `,
+      )})
+  `)) as Array<{ tablename: string }>
+
+  if (existingTables.length === 0) {
+    return
+  }
+
+  const names = existingTables.map((row) => `"${row.tablename}"`).join(", ")
+  await db.execute(sql.raw(`TRUNCATE ${names} CASCADE`))
 }
 
 describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {

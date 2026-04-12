@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react"
 import { createContext, useCallback, useContext, useMemo, useState } from "react"
-import { authClient } from "@/lib/auth"
 import type { CurrentWorkspace, WorkspaceOrganization } from "@/lib/current-workspace"
 
 type WorkspaceContextValue = {
@@ -27,17 +26,21 @@ export function WorkspaceProvider({ initialWorkspace, children }: WorkspaceProvi
     setIsSwitchingOrganization(true)
 
     try {
-      const result = await authClient.organization.setActive({ organizationId })
+      const response = await fetch("/api/auth/workspace/active-organization", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId }),
+      })
 
-      if (result.error) {
-        throw new Error(result.error.message ?? "Failed to switch organization")
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(body?.error ?? "Failed to switch organization")
       }
 
-      setWorkspace((current) => ({
-        ...current,
-        activeOrganization:
-          current.organizations.find((organization) => organization.id === organizationId) ?? null,
-      }))
+      setWorkspace((await response.json()) as CurrentWorkspace)
     } finally {
       setIsSwitchingOrganization(false)
     }

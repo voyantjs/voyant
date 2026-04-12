@@ -1,3 +1,13 @@
+import {
+  insertDaySchema,
+  insertDayServiceSchema,
+  insertProductMediaSchema,
+  insertVersionSchema,
+  reorderProductMediaSchema,
+  updateDaySchema,
+  updateDayServiceSchema,
+  updateProductMediaSchema,
+} from "@voyantjs/products"
 import { z } from "zod"
 
 export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
@@ -9,6 +19,7 @@ export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
   })
 
 export const singleEnvelope = <T extends z.ZodTypeAny>(item: T) => z.object({ data: item })
+export const arrayEnvelope = <T extends z.ZodTypeAny>(item: T) => z.object({ data: z.array(item) })
 
 export const successEnvelope = z.object({ success: z.boolean() })
 
@@ -114,6 +125,67 @@ export const optionUnitRecordSchema = z.object({
 
 export type OptionUnitRecord = z.infer<typeof optionUnitRecordSchema>
 
+export const productDayRecordSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  dayNumber: z.number().int(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  location: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductDayRecord = z.infer<typeof productDayRecordSchema>
+
+export const productDayServiceRecordSchema = z.object({
+  id: z.string(),
+  dayId: z.string(),
+  supplierServiceId: z.string().nullable(),
+  serviceType: z.enum(["accommodation", "transfer", "experience", "guide", "meal", "other"]),
+  name: z.string(),
+  description: z.string().nullable(),
+  costCurrency: z.string(),
+  costAmountCents: z.number().int(),
+  quantity: z.number().int(),
+  sortOrder: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export type ProductDayServiceRecord = z.infer<typeof productDayServiceRecordSchema>
+
+export const productVersionRecordSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  versionNumber: z.number().int(),
+  snapshot: z.unknown(),
+  authorId: z.string(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export type ProductVersionRecord = z.infer<typeof productVersionRecordSchema>
+
+export const productMediaRecordSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  dayId: z.string().nullable(),
+  mediaType: z.enum(["image", "video", "document"]),
+  name: z.string(),
+  url: z.string(),
+  storageKey: z.string().nullable(),
+  mimeType: z.string().nullable(),
+  fileSize: z.number().int().nullable(),
+  altText: z.string().nullable(),
+  sortOrder: z.number().int(),
+  isCover: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductMediaRecord = z.infer<typeof productMediaRecordSchema>
+
 export const productListResponse = paginatedEnvelope(productRecordSchema)
 export const productSingleResponse = singleEnvelope(productRecordSchema)
 export const productTypeListResponse = paginatedEnvelope(productTypeRecordSchema)
@@ -126,3 +198,31 @@ export const productOptionListResponse = paginatedEnvelope(productOptionRecordSc
 export const productOptionSingleResponse = singleEnvelope(productOptionRecordSchema)
 export const optionUnitListResponse = paginatedEnvelope(optionUnitRecordSchema)
 export const optionUnitSingleResponse = singleEnvelope(optionUnitRecordSchema)
+export const productDaysResponse = arrayEnvelope(productDayRecordSchema)
+export const productDayResponse = singleEnvelope(productDayRecordSchema)
+export const productDayServicesResponse = arrayEnvelope(productDayServiceRecordSchema)
+export const productDayServiceResponse = singleEnvelope(productDayServiceRecordSchema)
+export const productVersionsResponse = arrayEnvelope(productVersionRecordSchema)
+export const productVersionResponse = singleEnvelope(productVersionRecordSchema)
+export const productMediaListResponse = paginatedEnvelope(productMediaRecordSchema)
+export const productMediaResponse = singleEnvelope(productMediaRecordSchema)
+
+export {
+  insertDaySchema,
+  insertDayServiceSchema,
+  insertProductMediaSchema,
+  insertVersionSchema,
+  reorderProductMediaSchema,
+  updateDaySchema,
+  updateDayServiceSchema,
+  updateProductMediaSchema,
+}
+
+export type CreateProductDayInput = z.input<typeof insertDaySchema>
+export type UpdateProductDayInput = z.input<typeof updateDaySchema>
+export type CreateProductDayServiceInput = z.input<typeof insertDayServiceSchema>
+export type UpdateProductDayServiceInput = z.input<typeof updateDayServiceSchema>
+export type CreateProductVersionInput = z.input<typeof insertVersionSchema>
+export type CreateProductMediaInput = z.input<typeof insertProductMediaSchema>
+export type UpdateProductMediaInput = z.input<typeof updateProductMediaSchema>
+export type ReorderProductMediaInput = z.input<typeof reorderProductMediaSchema>

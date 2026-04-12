@@ -2,10 +2,14 @@ import type { LinkableDefinition, Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
 import { productRoutes } from "./routes.js"
+import { publicProductRoutes } from "./routes-public.js"
 
 export { productsBookingExtension } from "./booking-extension.js"
 export type { ProductRoutes } from "./routes.js"
+export type { PublicProductRoutes } from "./routes-public.js"
+export { publicProductRoutes } from "./routes-public.js"
 export { productsService } from "./service.js"
+export { publicProductsService } from "./service-public.js"
 
 export const productLinkable: LinkableDefinition = {
   module: "products",
@@ -23,6 +27,8 @@ export const productsModule: Module = {
 
 export const productsHonoModule: HonoModule = {
   module: productsModule,
+  adminRoutes: productRoutes,
+  publicRoutes: publicProductRoutes,
   routes: productRoutes,
 }
 

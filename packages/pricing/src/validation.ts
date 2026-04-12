@@ -1,6 +1,19 @@
 import { booleanQueryParam } from "@voyantjs/db/helpers"
 import { z } from "zod"
 
+import {
+  addonPricingModeSchema,
+  cancellationChargeTypeSchema,
+  cancellationPolicyTypeSchema,
+  optionPricingModeSchema,
+  optionStartTimeRuleModeSchema,
+  optionUnitPricingModeSchema,
+  priceAdjustmentTypeSchema,
+  priceCatalogTypeSchema,
+  pricingCategoryTypeSchema,
+  pricingDependencyTypeSchema,
+} from "./validation-shared.js"
+
 const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
@@ -12,72 +25,6 @@ const currencyCodeSchema = z
   .regex(/^[A-Z]{3}$/)
 const nullableDateSchema = z.string().date().nullable().optional()
 const moneySchema = z.number().int().min(0).nullable().optional()
-
-export const pricingCategoryTypeSchema = z.enum([
-  "adult",
-  "child",
-  "infant",
-  "senior",
-  "group",
-  "room",
-  "vehicle",
-  "service",
-  "other",
-])
-
-export const pricingDependencyTypeSchema = z.enum([
-  "requires",
-  "limits_per_master",
-  "limits_sum",
-  "excludes",
-])
-
-export const cancellationPolicyTypeSchema = z.enum([
-  "simple",
-  "advanced",
-  "non_refundable",
-  "custom",
-])
-
-export const cancellationChargeTypeSchema = z.enum(["none", "amount", "percentage"])
-export const priceCatalogTypeSchema = z.enum([
-  "public",
-  "contract",
-  "net",
-  "gross",
-  "promo",
-  "internal",
-  "other",
-])
-export const optionPricingModeSchema = z.enum([
-  "per_person",
-  "per_booking",
-  "starting_from",
-  "free",
-  "on_request",
-])
-export const optionUnitPricingModeSchema = z.enum([
-  "per_unit",
-  "per_person",
-  "per_booking",
-  "included",
-  "free",
-  "on_request",
-])
-export const optionStartTimeRuleModeSchema = z.enum([
-  "included",
-  "excluded",
-  "override",
-  "adjustment",
-])
-export const priceAdjustmentTypeSchema = z.enum(["fixed", "percentage"])
-export const addonPricingModeSchema = z.enum([
-  "included",
-  "per_person",
-  "per_booking",
-  "on_request",
-  "unavailable",
-])
 
 export const pricingCategoryCoreSchema = z.object({
   productId: z.string().nullable().optional(),
@@ -376,3 +323,6 @@ export const extraPriceRuleListQuerySchema = paginationSchema.extend({
   optionExtraConfigId: z.string().optional(),
   active: booleanQueryParam.optional(),
 })
+
+export * from "./validation-public.js"
+export * from "./validation-shared.js"

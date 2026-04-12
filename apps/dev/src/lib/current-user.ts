@@ -1,16 +1,7 @@
 import { createMiddleware, createServerFn } from "@tanstack/react-start"
+import type { CurrentUser } from "@voyantjs/auth/workspace"
 
-export type CurrentUser = {
-  id: string
-  email: string
-  firstName: string | null
-  lastName: string | null
-  isSuperAdmin: boolean
-  isSupportUser: boolean
-  createdAt: string
-  profilePictureUrl?: string | null
-  activeOrganizationId?: string | null
-}
+export type { CurrentUser } from "@voyantjs/auth/workspace"
 
 const withRequest = createMiddleware({ type: "request" }).server(({ next, request }) => {
   return next({ context: { request } })

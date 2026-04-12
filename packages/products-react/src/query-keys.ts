@@ -44,6 +44,13 @@ export interface OptionUnitsListFilters {
   offset?: number | undefined
 }
 
+export interface ProductMediaListFilters {
+  dayId?: string | undefined
+  mediaType?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
 export const productsQueryKeys = {
   all: ["voyant", "products"] as const,
 
@@ -77,4 +84,15 @@ export const productsQueryKeys = {
   optionUnitsList: (filters: OptionUnitsListFilters) =>
     [...productsQueryKeys.optionUnits(), "list", filters] as const,
   optionUnit: (id: string) => [...productsQueryKeys.optionUnits(), "detail", id] as const,
+
+  productDays: (productId: string) => [...productsQueryKeys.product(productId), "days"] as const,
+  productDayServices: (productId: string, dayId: string) =>
+    [...productsQueryKeys.productDays(productId), dayId, "services"] as const,
+  productVersions: (productId: string) =>
+    [...productsQueryKeys.product(productId), "versions"] as const,
+  productMedia: (productId: string) => [...productsQueryKeys.product(productId), "media"] as const,
+  productMediaList: (productId: string, filters: ProductMediaListFilters) =>
+    [...productsQueryKeys.productMedia(productId), "list", filters] as const,
+  productMediaItem: (mediaId: string) =>
+    [...productsQueryKeys.all, "product-media", mediaId] as const,
 } as const

@@ -4,6 +4,50 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ThemeProvider, useTheme } from "../../src/providers/theme.js"
 
+const fallbackStorageState = new Map<string, string>()
+
+function getTestStorage(): Storage {
+  const storage = globalThis.localStorage as Partial<Storage> | undefined
+  if (
+    storage &&
+    typeof storage.clear === "function" &&
+    typeof storage.getItem === "function" &&
+    typeof storage.key === "function" &&
+    typeof storage.removeItem === "function" &&
+    typeof storage.setItem === "function"
+  ) {
+    return storage as Storage
+  }
+
+  const fallbackStorage: Storage = {
+    get length() {
+      return fallbackStorageState.size
+    },
+    clear() {
+      fallbackStorageState.clear()
+    },
+    getItem(key) {
+      return fallbackStorageState.get(key) ?? null
+    },
+    key(index) {
+      return [...fallbackStorageState.keys()][index] ?? null
+    },
+    removeItem(key) {
+      fallbackStorageState.delete(key)
+    },
+    setItem(key, value) {
+      fallbackStorageState.set(key, value)
+    },
+  }
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: fallbackStorage,
+  })
+
+  return fallbackStorage
+}
+
 function wrap(
   props: {
     children?: ReactNode
@@ -23,7 +67,7 @@ function wrap(
 
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    localStorage.clear()
+    getTestStorage().clear()
     document.documentElement.classList.remove("light", "dark")
     // Mock matchMedia so getSystemTheme has a predictable answer.
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -39,7 +83,7 @@ describe("ThemeProvider", () => {
   })
 
   afterEach(() => {
-    localStorage.clear()
+    getTestStorage().clear()
   })
 
   it("defaults to 'system' when no persisted value and no defaultTheme given", () => {
@@ -55,7 +99,7 @@ describe("ThemeProvider", () => {
   })
 
   it("reads from localStorage when a persisted value exists", () => {
-    localStorage.setItem("theme-test", "light")
+    getTestStorage().setItem("theme-test", "light")
     const { result } = renderHook(() => useTheme(), { wrapper: wrap() })
     expect(result.current.theme).toBe("light")
   })
@@ -63,7 +107,7 @@ describe("ThemeProvider", () => {
   it("persists setTheme to localStorage", () => {
     const { result } = renderHook(() => useTheme(), { wrapper: wrap() })
     act(() => result.current.setTheme("dark"))
-    expect(localStorage.getItem("theme-test")).toBe("dark")
+    expect(getTestStorage().getItem("theme-test")).toBe("dark")
     expect(result.current.theme).toBe("dark")
   })
 
@@ -72,8 +116,8 @@ describe("ThemeProvider", () => {
       wrapper: wrap({ storageKey: null }),
     })
     act(() => result.current.setTheme("dark"))
-    expect(localStorage.getItem("theme")).toBeNull()
-    expect(localStorage.getItem("theme-test")).toBeNull()
+    expect(getTestStorage().getItem("theme")).toBeNull()
+    expect(getTestStorage().getItem("theme-test")).toBeNull()
     expect(result.current.theme).toBe("dark")
   })
 

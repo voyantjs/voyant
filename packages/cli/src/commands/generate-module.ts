@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
 import { parseArgs } from "../lib/args.js"
@@ -48,9 +49,10 @@ export async function generateModuleCommand(ctx: CommandContext): Promise<Comman
   const baseDir = typeof dirFlag === "string" ? dirFlag : join(ctx.cwd, "packages")
   const moduleDir = join(baseDir, kebab)
   const force = flags.force === true
+  const version = resolveVoyantVersion()
 
   const files: Array<[string, string]> = [
-    ["package.json", packageJson(names)],
+    ["package.json", packageJson(names, version)],
     ["tsconfig.json", tsconfigJson()],
     ["src/schema.ts", schemaTs(names)],
     ["src/validation.ts", validationTs(names)],
@@ -81,4 +83,14 @@ export async function generateModuleCommand(ctx: CommandContext): Promise<Comman
       `  3. Implement schema.ts, then pnpm db:generate\n`,
   )
   return 0
+}
+
+function resolveVoyantVersion(): string {
+  try {
+    const raw = readFileSync(join(import.meta.dirname, "..", "..", "package.json"), "utf8")
+    const pkg = JSON.parse(raw) as { version?: string }
+    return pkg.version || "0.1.0"
+  } catch {
+    return "0.1.0"
+  }
 }

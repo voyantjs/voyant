@@ -1,3 +1,11 @@
+import {
+  insertAvailabilityRuleSchema,
+  insertAvailabilitySlotSchema,
+  insertAvailabilityStartTimeSchema,
+  updateAvailabilityRuleSchema,
+  updateAvailabilitySlotSchema,
+  updateAvailabilityStartTimeSchema,
+} from "@voyantjs/availability"
 import { z } from "zod"
 
 export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
@@ -7,6 +15,9 @@ export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
     limit: z.number().int(),
     offset: z.number().int(),
   })
+
+export const singleEnvelope = <T extends z.ZodTypeAny>(item: T) => z.object({ data: item })
+export const successEnvelope = z.object({ success: z.boolean() })
 
 export const productOptionSchema = z.object({
   id: z.string(),
@@ -18,19 +29,26 @@ export type ProductOption = z.infer<typeof productOptionSchema>
 export const availabilityRuleRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  optionId: z.string().nullable(),
+  facilityId: z.string().nullable(),
   timezone: z.string(),
   recurrenceRule: z.string(),
   maxCapacity: z.number().int(),
   maxPickupCapacity: z.number().int().nullable(),
+  minTotalPax: z.number().int().nullable(),
   cutoffMinutes: z.number().int().nullable(),
+  earlyBookingLimitMinutes: z.number().int().nullable(),
   active: z.boolean(),
 })
 
-export type AvailabilityRuleRow = z.infer<typeof availabilityRuleRecordSchema>
+export type AvailabilityRuleRecord = z.infer<typeof availabilityRuleRecordSchema>
+export type AvailabilityRuleRow = AvailabilityRuleRecord
 
 export const availabilityStartTimeRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  optionId: z.string().nullable(),
+  facilityId: z.string().nullable(),
   label: z.string().nullable(),
   startTimeLocal: z.string(),
   durationMinutes: z.number().int().nullable(),
@@ -38,11 +56,14 @@ export const availabilityStartTimeRecordSchema = z.object({
   active: z.boolean(),
 })
 
-export type AvailabilityStartTimeRow = z.infer<typeof availabilityStartTimeRecordSchema>
+export type AvailabilityStartTimeRecord = z.infer<typeof availabilityStartTimeRecordSchema>
+export type AvailabilityStartTimeRow = AvailabilityStartTimeRecord
 
 export const availabilitySlotRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  optionId: z.string().nullable(),
+  facilityId: z.string().nullable(),
   availabilityRuleId: z.string().nullable(),
   startTimeId: z.string().nullable(),
   dateLocal: z.string(),
@@ -53,10 +74,13 @@ export const availabilitySlotRecordSchema = z.object({
   unlimited: z.boolean(),
   initialPax: z.number().int().nullable(),
   remainingPax: z.number().int().nullable(),
+  nights: z.number().int().nullable(),
+  days: z.number().int().nullable(),
   notes: z.string().nullable(),
 })
 
-export type AvailabilitySlotRow = z.infer<typeof availabilitySlotRecordSchema>
+export type AvailabilitySlotRecord = z.infer<typeof availabilitySlotRecordSchema>
+export type AvailabilitySlotRow = AvailabilitySlotRecord
 
 export const availabilitySlotDetailSchema = availabilitySlotRecordSchema.extend({
   initialPickups: z.number().int().nullable(),
@@ -133,16 +157,16 @@ export const productSingleResponse = z.object({
   data: productOptionSchema,
 })
 
-export const availabilitySlotSingleResponse = z.object({
-  data: availabilitySlotDetailSchema,
-})
-
 export const productListResponse = paginatedEnvelope(productOptionSchema)
 export const availabilityRuleListResponse = paginatedEnvelope(availabilityRuleRecordSchema)
+export const availabilityRuleSingleResponse = singleEnvelope(availabilityRuleRecordSchema)
 export const availabilityStartTimeListResponse = paginatedEnvelope(
   availabilityStartTimeRecordSchema,
 )
+export const availabilityStartTimeSingleResponse = singleEnvelope(availabilityStartTimeRecordSchema)
 export const availabilitySlotListResponse = paginatedEnvelope(availabilitySlotRecordSchema)
+export const availabilitySlotRecordResponse = singleEnvelope(availabilitySlotRecordSchema)
+export const availabilitySlotSingleResponse = singleEnvelope(availabilitySlotDetailSchema)
 export const availabilityCloseoutListResponse = paginatedEnvelope(availabilityCloseoutRecordSchema)
 export const availabilityPickupPointListResponse = paginatedEnvelope(
   availabilityPickupPointRecordSchema,
@@ -155,3 +179,19 @@ export const availabilitySlotAssignmentListResponse = paginatedEnvelope(
 )
 export const bookingSummaryListResponse = paginatedEnvelope(bookingSummarySchema)
 export const resourceSummaryListResponse = paginatedEnvelope(resourceSummarySchema)
+
+export {
+  insertAvailabilityRuleSchema,
+  insertAvailabilitySlotSchema,
+  insertAvailabilityStartTimeSchema,
+  updateAvailabilityRuleSchema,
+  updateAvailabilitySlotSchema,
+  updateAvailabilityStartTimeSchema,
+}
+
+export type CreateAvailabilityRuleInput = z.input<typeof insertAvailabilityRuleSchema>
+export type UpdateAvailabilityRuleInput = z.input<typeof updateAvailabilityRuleSchema>
+export type CreateAvailabilityStartTimeInput = z.input<typeof insertAvailabilityStartTimeSchema>
+export type UpdateAvailabilityStartTimeInput = z.input<typeof updateAvailabilityStartTimeSchema>
+export type CreateAvailabilitySlotInput = z.input<typeof insertAvailabilitySlotSchema>
+export type UpdateAvailabilitySlotInput = z.input<typeof updateAvailabilitySlotSchema>

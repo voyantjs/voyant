@@ -16,6 +16,9 @@ export {
   getOptionUnitQueryOptions,
   getOptionUnitsQueryOptions,
   getProductCategoriesQueryOptions,
+  getProductDayServicesQueryOptions,
+  getProductDaysQueryOptions,
+  getProductMediaQueryOptions,
   getProductOptionQueryOptions,
   getProductOptionsQueryOptions,
   getProductQueryOptions,
@@ -23,5 +26,6 @@ export {
   getProductTagsQueryOptions,
   getProductTypeQueryOptions,
   getProductTypesQueryOptions,
+  getProductVersionsQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

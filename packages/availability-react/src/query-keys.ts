@@ -44,10 +44,12 @@ export const availabilityQueryKeys = {
   rules: () => [...availabilityQueryKeys.all, "rules"] as const,
   rulesList: (filters: AvailabilityRulesListFilters) =>
     [...availabilityQueryKeys.rules(), "list", filters] as const,
+  ruleDetail: (id: string) => [...availabilityQueryKeys.rules(), "detail", id] as const,
 
   startTimes: () => [...availabilityQueryKeys.all, "start-times"] as const,
   startTimesList: (filters: AvailabilityStartTimesListFilters) =>
     [...availabilityQueryKeys.startTimes(), "list", filters] as const,
+  startTimeDetail: (id: string) => [...availabilityQueryKeys.startTimes(), "detail", id] as const,
 
   slots: () => [...availabilityQueryKeys.all, "slots"] as const,
   slotsList: (filters: AvailabilitySlotsListFilters) =>

@@ -95,6 +95,7 @@ export async function listMarketProductRules(
   if (query.marketId) conditions.push(eq(marketProductRules.marketId, query.marketId))
   if (query.productId) conditions.push(eq(marketProductRules.productId, query.productId))
   if (query.optionId) conditions.push(eq(marketProductRules.optionId, query.optionId))
+  if (query.sellability) conditions.push(eq(marketProductRules.sellability, query.sellability))
   if (query.active !== undefined) conditions.push(eq(marketProductRules.active, query.active))
   const where = conditions.length > 0 ? and(...conditions) : undefined
   return paginate(

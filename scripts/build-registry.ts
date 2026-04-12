@@ -18,6 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, "..")
 const packagesDir = join(repoRoot, "packages")
 const registryHostPublic = join(repoRoot, "apps/registry/public/r")
+const shadcnVersion = "4.1.2"
 
 function findRegistryPackages(): string[] {
   const entries = readdirSync(packagesDir)
@@ -38,7 +39,7 @@ function buildPackage(packageDir: string): string {
   console.log(`[registry] building ${manifest.name} in ${packageDir}`)
 
   // shadcn build reads ./registry.json and writes to ./public/r/
-  execSync("pnpm dlx shadcn@latest build", {
+  execSync(`pnpm dlx shadcn@${shadcnVersion} build`, {
     cwd: packageDir,
     stdio: "inherit",
   })

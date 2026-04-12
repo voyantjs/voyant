@@ -5,5 +5,7 @@ export default defineConfig({
     environment: "node",
     passWithNoTests: true,
     hookTimeout: 60000,
+    fileParallelism: false,
+    maxWorkers: 1,
   },
 })

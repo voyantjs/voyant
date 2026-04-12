@@ -9,6 +9,14 @@ export interface FinanceSupplierPaymentListFilters {
   offset?: number | undefined
 }
 
+export interface PublicBookingPaymentOptionsFilters {
+  personId?: string | undefined
+  organizationId?: string | undefined
+  provider?: string | undefined
+  instrumentType?: string | undefined
+  includeInactive?: boolean | undefined
+}
+
 export const financeQueryKeys = {
   all: ["voyant", "finance"] as const,
 
@@ -25,4 +33,12 @@ export const financeQueryKeys = {
   supplierPayments: () => [...financeQueryKeys.all, "supplier-payments"] as const,
   supplierPaymentsList: (filters: FinanceSupplierPaymentListFilters) =>
     [...financeQueryKeys.supplierPayments(), "list", filters] as const,
+
+  publicCheckout: () => [...financeQueryKeys.all, "public-checkout"] as const,
+  publicBookingPaymentOptions: (bookingId: string, filters: PublicBookingPaymentOptionsFilters) =>
+    [...financeQueryKeys.publicCheckout(), "booking-payment-options", bookingId, filters] as const,
+  publicPaymentSession: (sessionId: string) =>
+    [...financeQueryKeys.publicCheckout(), "payment-session", sessionId] as const,
+  publicVoucherValidation: () =>
+    [...financeQueryKeys.publicCheckout(), "voucher-validation"] as const,
 } as const

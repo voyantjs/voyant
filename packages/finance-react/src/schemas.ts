@@ -1,3 +1,11 @@
+import {
+  publicBookingPaymentOptionsSchema,
+  publicPaymentOptionsQuerySchema,
+  publicPaymentSessionSchema,
+  publicStartPaymentSessionSchema,
+  publicValidateVoucherSchema,
+  publicVoucherValidationSchema,
+} from "@voyantjs/finance"
 import { z } from "zod"
 
 export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
@@ -122,3 +130,22 @@ export const invoiceLineItemsResponse = arrayEnvelope(lineItemRecordSchema)
 export const invoicePaymentsResponse = arrayEnvelope(paymentRecordSchema)
 export const invoiceCreditNotesResponse = arrayEnvelope(creditNoteRecordSchema)
 export const invoiceNotesResponse = arrayEnvelope(financeNoteRecordSchema)
+
+export {
+  publicBookingPaymentOptionsSchema,
+  publicPaymentOptionsQuerySchema,
+  publicPaymentSessionSchema,
+  publicStartPaymentSessionSchema,
+  publicValidateVoucherSchema,
+  publicVoucherValidationSchema,
+}
+
+export const publicBookingPaymentOptionsResponse = singleEnvelope(publicBookingPaymentOptionsSchema)
+export const publicPaymentSessionResponse = singleEnvelope(publicPaymentSessionSchema)
+export const publicVoucherValidationResponse = singleEnvelope(publicVoucherValidationSchema)
+
+export type PublicBookingPaymentOptionsRecord = z.infer<typeof publicBookingPaymentOptionsSchema>
+export type PublicPaymentSessionRecord = z.infer<typeof publicPaymentSessionSchema>
+export type PublicStartPaymentSessionInput = z.input<typeof publicStartPaymentSessionSchema>
+export type PublicValidateVoucherInput = z.input<typeof publicValidateVoucherSchema>
+export type PublicVoucherValidationRecord = z.infer<typeof publicVoucherValidationSchema>

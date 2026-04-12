@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "lint": "biome check registry/",
-    "registry:build": "shadcn build"
+    "registry:build": "pnpm -C ../.. registry:build"
   },
   "repository": {
     "type": "git",

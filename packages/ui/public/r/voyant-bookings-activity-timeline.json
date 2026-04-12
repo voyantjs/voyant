@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "voyant-bookings-activity-timeline",
+  "title": "Booking Activity Timeline",
+  "description": "Activity feed for booking lifecycle events and operator actions.",
+  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+  "registryDependencies": ["card"],
+  "files": [
+    {
+      "path": "registry/bookings/booking-activity-timeline.tsx",
+      "content": "\"use client\"\n\nimport { type BookingActivityRecord, useBookingActivity } from \"@voyantjs/bookings-react\"\nimport { Activity, Clock, Pencil, Plus, RefreshCw, UserPlus } from \"lucide-react\"\n\nimport { Card, CardContent, CardHeader, CardTitle } from \"@/components/ui\"\n\nexport interface BookingActivityTimelineProps {\n  bookingId: string\n}\n\nconst activityIcons: Record<string, typeof Activity> = {\n  booking_created: Plus,\n  booking_converted: RefreshCw,\n  status_change: Clock,\n  supplier_update: RefreshCw,\n  passenger_update: UserPlus,\n  note_added: Pencil,\n}\n\nexport function BookingActivityTimeline({ bookingId }: BookingActivityTimelineProps) {\n  const { data } = useBookingActivity(bookingId)\n  const entries = data?.data ?? []\n\n  return (\n    <Card data-slot=\"booking-activity-timeline\">\n      <CardHeader>\n        <CardTitle className=\"flex items-center gap-2\">\n          <Activity className=\"h-4 w-4\" />\n          Activity Timeline\n        </CardTitle>\n      </CardHeader>\n      <CardContent>\n        {entries.length === 0 ? (\n          <p className=\"py-4 text-center text-sm text-muted-foreground\">No activity yet.</p>\n        ) : (\n          <div className=\"flex flex-col gap-3\">\n            {entries.map((entry) => {\n              const Icon = activityIcons[entry.activityType] ?? Activity\n              return <ActivityTimelineItem key={entry.id} entry={entry} Icon={Icon} />\n            })}\n          </div>\n        )}\n      </CardContent>\n    </Card>\n  )\n}\n\nfunction ActivityTimelineItem({\n  entry,\n  Icon,\n}: {\n  entry: BookingActivityRecord\n  Icon: typeof Activity\n}) {\n  return (\n    <div className=\"flex items-start gap-3 rounded-md border p-3\">\n      <Icon className=\"mt-0.5 h-4 w-4 shrink-0 text-muted-foreground\" />\n      <div className=\"min-w-0 flex-1\">\n        <p className=\"text-sm\">{entry.description}</p>\n        <p className=\"mt-0.5 text-xs text-muted-foreground\">\n          {entry.actorId && entry.actorId !== \"system\" ? `By ${entry.actorId} - ` : \"\"}\n          {new Date(entry.createdAt).toLocaleString()}\n        </p>\n      </div>\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "components/voyant/bookings/booking-activity-timeline.tsx"
+    }
+  ],
+  "type": "registry:component"
+}

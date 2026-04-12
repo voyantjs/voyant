@@ -1,3 +1,4 @@
+import { bookingItems, bookings } from "@voyantjs/bookings/schema"
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
@@ -935,6 +936,16 @@ export const financeService = {
     bookingId: string,
     data: CreateBookingPaymentScheduleInput,
   ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
     const [row] = await db
       .insert(bookingPaymentSchedules)
       .values({ ...data, bookingId })
@@ -948,8 +959,6 @@ export const financeService = {
     bookingId: string,
     data: ApplyDefaultBookingPaymentPlanInput,
   ) {
-    const bookingsModule = await import("@voyantjs/bookings/schema")
-    const { bookings } = bookingsModule
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1)
 
     if (!booking) {
@@ -1205,6 +1214,16 @@ export const financeService = {
     bookingId: string,
     data: CreateBookingGuaranteeInput,
   ) {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
     const [row] = await db
       .insert(bookingGuarantees)
       .values({
@@ -1333,6 +1352,16 @@ export const financeService = {
     bookingItemId: string,
     data: CreateBookingItemTaxLineInput,
   ) {
+    const [bookingItem] = await db
+      .select({ id: bookingItems.id })
+      .from(bookingItems)
+      .where(eq(bookingItems.id, bookingItemId))
+      .limit(1)
+
+    if (!bookingItem) {
+      return null
+    }
+
     const [row] = await db
       .insert(bookingItemTaxLines)
       .values({ ...data, bookingItemId })
@@ -1377,6 +1406,16 @@ export const financeService = {
     bookingItemId: string,
     data: CreateBookingItemCommissionInput,
   ) {
+    const [bookingItem] = await db
+      .select({ id: bookingItems.id })
+      .from(bookingItems)
+      .where(eq(bookingItems.id, bookingItemId))
+      .limit(1)
+
+    if (!bookingItem) {
+      return null
+    }
+
     const [row] = await db
       .insert(bookingItemCommissions)
       .values({ ...data, bookingItemId })
@@ -1448,14 +1487,28 @@ export const financeService = {
       .groupBy(sql`1`)
   },
 
-  /**
-   * @deprecated Use a template-level query that joins bookings + finance data.
-   * This stub is retained for backward compatibility — it returns an empty array.
-   * The profitability report requires cross-module data (bookings + finance) and
-   * should be implemented at the template level where both modules are available.
-   */
-  async getProfitabilityReport(_db: PostgresJsDatabase, _query: ProfitabilityQuery) {
-    return [] as Array<{
+  async getProfitabilityReport(db: PostgresJsDatabase, query: ProfitabilityQuery) {
+    const conditions = []
+
+    if (query.from) {
+      conditions.push(gte(bookings.startDate, query.from))
+    }
+
+    if (query.to) {
+      conditions.push(lte(bookings.startDate, query.to))
+    }
+
+    return (await db
+      .select({
+        bookingId: bookings.id,
+        bookingNumber: bookings.bookingNumber,
+        sellAmountCents: bookings.sellAmountCents,
+        costAmountCents: bookings.costAmountCents,
+        marginPercent: bookings.marginPercent,
+      })
+      .from(bookings)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(bookings.startDate), asc(bookings.createdAt))) as Array<{
       bookingId: string
       bookingNumber: string
       sellAmountCents: number | null

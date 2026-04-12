@@ -313,7 +313,9 @@ export function createNotificationsTestContext() {
   })
 
   return {
-    db,
+    get db() {
+      return db
+    },
     request: (path: string, init?: RequestInit) => app.request(path, init),
     sink,
   }

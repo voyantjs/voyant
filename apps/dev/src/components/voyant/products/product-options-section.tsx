@@ -1,59 +1,91 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { useOptionUnitMutation, useProductOptionMutation } from "@voyantjs/products-react"
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
-import { OptionDialog, type ProductOptionData } from "./product-option-dialog"
-import { PricingPanel } from "./product-options-pricing"
 import {
-  getOptionUnitsQueryOptions,
-  getProductOptionsQueryOptions,
-  optionStatusVariant,
-} from "./product-options-shared"
-import { type OptionUnitData, UnitDialog } from "./product-unit-dialog"
+  useOptionUnitMutation,
+  useOptionUnits,
+  useProductOptionMutation,
+  useProductOptions,
+} from "@voyantjs/products-react"
+import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { OptionDialog } from "./product-option-dialog"
+import { PricingPanel } from "./product-options-pricing"
+import { UnitDialog } from "./product-unit-dialog"
+
+const optionStatusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  draft: "outline",
+  active: "default",
+  archived: "secondary",
+}
+
+function formatRange(min: number | null, max: number | null) {
+  if (min == null && max == null) {
+    return "—"
+  }
+
+  return `${min ?? 0}–${max ?? "∞"}`
+}
 
 export function OptionsSection({ productId }: { productId: string }) {
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null)
   const [optionDialogOpen, setOptionDialogOpen] = useState(false)
-  const [editingOption, setEditingOption] = useState<ProductOptionData | undefined>()
-
-  const { data: optionsData, refetch: refetchOptions } = useQuery(
-    getProductOptionsQueryOptions(productId),
-  )
-  const { remove: removeOption } = useProductOptionMutation()
-
-  const deleteOptionMutation = useMutation({
-    mutationFn: (optionId: string) => removeOption.mutateAsync(optionId),
-    onSuccess: () => {
-      void refetchOptions()
-    },
+  const [editingOptionId, setEditingOptionId] = useState<string | null>(null)
+  const {
+    data: optionsData,
+    isPending,
+    isError,
+  } = useProductOptions({
+    productId,
+    limit: 100,
   })
-
-  const options = (optionsData?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder)
+  const { remove: removeOption } = useProductOptionMutation()
+  const options = useMemo(
+    () => (optionsData?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
+    [optionsData?.data],
+  )
   const nextSortOrder = options.length > 0 ? Math.max(...options.map((o) => o.sortOrder)) + 1 : 0
+  const editingOption = useMemo(
+    () => options.find((option) => option.id === editingOptionId),
+    [editingOptionId, options],
+  )
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Options</CardTitle>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Options and Units</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Manage option variants, selectable units, and option-level pricing.
+          </p>
+        </div>
         <Button
-          size="sm"
           onClick={() => {
-            setEditingOption(undefined)
+            setEditingOptionId(null)
             setOptionDialogOpen(true)
           }}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Option
+          <Plus className="mr-2 size-4" aria-hidden="true" />
+          Add option
         </Button>
       </CardHeader>
-      <CardContent>
-        {options.length === 0 && (
-          <p className="py-4 text-center text-sm text-muted-foreground">No options yet.</p>
-        )}
-
-        <div className="flex flex-col gap-2">
-          {options.map((option) => (
+      <CardContent className="flex flex-col gap-3">
+        {isPending ? (
+          <div className="flex min-h-24 items-center justify-center">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : isError ? (
+          <p className="text-sm text-destructive">Failed to load product options.</p>
+        ) : options.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No options configured for this product.</p>
+        ) : (
+          options.map((option) => (
             <OptionRow
               key={option.id}
               option={option}
@@ -63,17 +95,17 @@ export function OptionsSection({ productId }: { productId: string }) {
                 setExpandedOptionId(expandedOptionId === option.id ? null : option.id)
               }
               onEdit={() => {
-                setEditingOption(option)
+                setEditingOptionId(option.id)
                 setOptionDialogOpen(true)
               }}
               onDelete={() => {
-                if (confirm(`Delete option "${option.name}" and all its units and prices?`)) {
-                  deleteOptionMutation.mutate(option.id)
+                if (confirm(`Delete option "${option.name}" and all its units?`)) {
+                  removeOption.mutate(option.id)
                 }
               }}
             />
-          ))}
-        </div>
+          ))
+        )}
       </CardContent>
 
       <OptionDialog
@@ -84,8 +116,7 @@ export function OptionsSection({ productId }: { productId: string }) {
         nextSortOrder={nextSortOrder}
         onSuccess={() => {
           setOptionDialogOpen(false)
-          setEditingOption(undefined)
-          void refetchOptions()
+          setEditingOptionId(null)
         }}
       />
     </Card>
@@ -100,7 +131,7 @@ function OptionRow({
   onEdit,
   onDelete,
 }: {
-  option: ProductOptionData
+  option: NonNullable<ReturnType<typeof useProductOptions>["data"]>["data"][number]
   productId: string
   expanded: boolean
   onToggle: () => void
@@ -113,11 +144,11 @@ function OptionRow({
         <button
           type="button"
           onClick={onToggle}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </button>
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{option.name}</span>
           {option.code && (
             <span className="font-mono text-xs text-muted-foreground">{option.code}</span>
@@ -128,11 +159,11 @@ function OptionRow({
           {option.isDefault && <Badge variant="secondary">Default</Badge>}
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="icon-sm" onClick={onEdit}>
+            <Pencil className="size-4" aria-hidden="true" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete}>
-            <Trash2 className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="icon-sm" onClick={onDelete}>
+            <Trash2 className="size-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -149,111 +180,119 @@ function OptionRow({
 
 function UnitsPanel({ optionId }: { optionId: string }) {
   const [unitDialogOpen, setUnitDialogOpen] = useState(false)
-  const [editingUnit, setEditingUnit] = useState<OptionUnitData | undefined>()
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null)
 
-  const { data, refetch } = useQuery(getOptionUnitsQueryOptions(optionId))
+  const { data, isPending, isError } = useOptionUnits({ optionId, limit: 100 })
   const { remove } = useOptionUnitMutation()
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => remove.mutateAsync(id),
-    onSuccess: () => {
-      void refetch()
-    },
-  })
-
-  const units = (data?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder)
+  const units = useMemo(
+    () => (data?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
+    [data?.data],
+  )
   const nextSort = units.length > 0 ? Math.max(...units.map((u) => u.sortOrder)) + 1 : 0
+  const editingUnit = useMemo(
+    () => units.find((unit) => unit.id === editingUnitId),
+    [editingUnitId, units],
+  )
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Units</p>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Units</p>
+          <p className="text-xs text-muted-foreground">
+            Configure the selectable units that belong to this option.
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => {
-            setEditingUnit(undefined)
+            setEditingUnitId(null)
             setUnitDialogOpen(true)
           }}
         >
-          <Plus className="mr-1 h-3 w-3" />
-          Add Unit
+          <Plus className="mr-2 size-3.5" aria-hidden="true" />
+          Add unit
         </Button>
       </div>
 
-      {units.length === 0 && (
-        <p className="py-2 text-center text-xs text-muted-foreground">No units yet.</p>
-      )}
-
-      {units.length > 0 && (
-        <div className="rounded border bg-background">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="p-2 text-left font-medium">Type</th>
-                <th className="p-2 text-left font-medium">Name</th>
-                <th className="p-2 text-left font-medium">Qty</th>
-                <th className="p-2 text-left font-medium">Age</th>
-                <th className="p-2 text-left font-medium">Occupancy</th>
-                <th className="w-16 p-2" />
-              </tr>
-            </thead>
-            <tbody>
+      {isPending ? (
+        <div className="flex min-h-20 items-center justify-center rounded-md border bg-background">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : isError ? (
+        <p className="text-sm text-destructive">Failed to load option units.</p>
+      ) : units.length === 0 ? (
+        <p className="rounded-md border bg-background px-3 py-4 text-sm text-muted-foreground">
+          No units configured for this option.
+        </p>
+      ) : (
+        <div className="rounded-md border bg-background">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Occupancy</TableHead>
+                <TableHead className="w-[88px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {units.map((unit) => (
-                <tr key={unit.id} className="border-b last:border-b-0">
-                  <td className="p-2">
-                    <Badge variant="outline" className="text-xs capitalize">
+                <TableRow key={unit.id}>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
                       {unit.unitType}
                     </Badge>
-                  </td>
-                  <td className="p-2">
+                  </TableCell>
+                  <TableCell>
                     {unit.name}
                     {unit.code && (
-                      <span className="ml-2 font-mono text-muted-foreground">{unit.code}</span>
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">
+                        {unit.code}
+                      </span>
                     )}
-                  </td>
-                  <td className="p-2 font-mono">
-                    {unit.minQuantity ?? 0}–{unit.maxQuantity ?? "∞"}
-                  </td>
-                  <td className="p-2 font-mono">
-                    {unit.minAge != null || unit.maxAge != null
-                      ? `${unit.minAge ?? 0}–${unit.maxAge ?? "∞"}`
-                      : "-"}
-                  </td>
-                  <td className="p-2 font-mono">
-                    {unit.occupancyMin != null || unit.occupancyMax != null
-                      ? `${unit.occupancyMin ?? 0}–${unit.occupancyMax ?? "∞"}`
-                      : "-"}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {formatRange(unit.minQuantity, unit.maxQuantity)}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {formatRange(unit.minAge, unit.maxAge)}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {formatRange(unit.occupancyMin, unit.occupancyMax)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => {
-                          setEditingUnit(unit)
+                          setEditingUnitId(unit.id)
                           setUnitDialogOpen(true)
                         }}
-                        className="text-muted-foreground hover:text-foreground"
                       >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => {
                           if (confirm(`Delete unit "${unit.name}"?`)) {
-                            deleteMutation.mutate(unit.id)
+                            remove.mutate(unit.id)
                           }
                         }}
-                        className="text-muted-foreground hover:text-destructive"
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -265,8 +304,7 @@ function UnitsPanel({ optionId }: { optionId: string }) {
         nextSortOrder={nextSort}
         onSuccess={() => {
           setUnitDialogOpen(false)
-          setEditingUnit(undefined)
-          void refetch()
+          setEditingUnitId(null)
         }}
       />
     </div>

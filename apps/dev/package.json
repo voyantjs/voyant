@@ -38,6 +38,7 @@
     "@voyantjs/checkout": "workspace:*",
     "@voyantjs/crm": "workspace:*",
     "@voyantjs/crm-react": "workspace:*",
+    "@voyantjs/customer-portal": "workspace:*",
     "@voyantjs/db": "workspace:*",
     "@voyantjs/distribution": "workspace:*",
     "@voyantjs/distribution-react": "workspace:*",

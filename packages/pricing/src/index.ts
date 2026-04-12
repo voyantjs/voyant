@@ -1,10 +1,13 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
-
 import { pricingRoutes } from "./routes.js"
+import { publicPricingRoutes } from "./routes-public.js"
 import { pricingService } from "./service.js"
 
 export type { PricingRoutes } from "./routes.js"
+export type { PublicPricingRoutes } from "./routes-public.js"
+export { publicPricingRoutes } from "./routes-public.js"
+export { publicPricingService } from "./service-public.js"
 
 export const pricingModule: Module = {
   name: "pricing",
@@ -12,6 +15,8 @@ export const pricingModule: Module = {
 
 export const pricingHonoModule: HonoModule = {
   module: pricingModule,
+  adminRoutes: pricingRoutes,
+  publicRoutes: publicPricingRoutes,
   routes: pricingRoutes,
 }
 

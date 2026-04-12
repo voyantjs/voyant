@@ -2,7 +2,10 @@
 
 Reference Next.js 15 **booking portal** that consumes Voyant's `/v1/public/*`
 API surface. Demonstrates the customer-facing side of a Voyant deployment:
-browsing tours, reading detail pages, and submitting a booking inquiry.
+browsing tours, reading detail pages, submitting a booking inquiry, and
+bootstrapping a customer account against Voyant's customer portal contract,
+inspecting customer-scoped booking detail, opening booking documents, and
+handing off into public payment/voucher flows.
 
 > In travel tech, the customer-facing website isn't a "storefront" — tour
 > products are inquiry- and availability-driven, not cart-and-checkout SKUs.
@@ -13,6 +16,7 @@ browsing tours, reading detail pages, and submitting a booking inquiry.
 examples/nextjs-booking-portal/
 ├── app/
 │   ├── page.tsx                     Home — product grid
+│   ├── account/page.tsx             Customer account bootstrap/reference flow
 │   ├── products/[id]/page.tsx       Product detail
 │   ├── inquire/[id]/page.tsx        Inquiry form (Server Action)
 │   ├── thanks/page.tsx              Confirmation
@@ -51,6 +55,7 @@ backend.
    ```
    VOYANT_API_URL=http://localhost:8787/api
    VOYANT_API_KEY=sk_live_...
+   NEXT_PUBLIC_VOYANT_CUSTOMER_API_URL=http://localhost:8787/api
    USE_MOCK_DATA=0
    ```
 3. Restart `pnpm -F nextjs-booking-portal dev`.
@@ -64,6 +69,12 @@ you would either:
 - Point the client at a dedicated public projection endpoint that already
   returns the trimmed-down shape.
 
+The `/account` reference page uses `@voyantjs/customer-portal-react` directly
+from the browser. That means the configured
+`NEXT_PUBLIC_VOYANT_CUSTOMER_API_URL` should point at the public Voyant origin
+that owns the Better Auth session cookie for the signed-in traveler. In a
+single-origin deployment, this is often the same value as `VOYANT_API_URL`.
+
 ## API surface used
 
 | Endpoint                        | Actor     | Purpose                                   |
@@ -71,6 +82,16 @@ you would either:
 | `GET  /v1/public/products`      | customer  | List publicly-visible products            |
 | `GET  /v1/public/products/:id`  | customer  | Fetch a single product by id              |
 | `POST /v1/public/inquiries`     | customer  | Submit a booking inquiry (create draft)   |
+| `GET  /v1/customer-portal/contact-exists` | public preflight | Check if an email already maps to auth/CRM |
+| `POST /v1/public/customer-portal/bootstrap` | customer | Link or create a customer record |
+| `GET  /v1/public/customer-portal/me` | customer | Read customer profile and linked CRM record |
+| `GET  /v1/public/customer-portal/bookings` | customer | Read customer-scoped bookings |
+| `GET  /v1/public/customer-portal/bookings/:id` | customer | Read booking detail |
+| `GET  /v1/public/customer-portal/bookings/:id/documents` | customer | Read customer-visible booking documents |
+| `GET  /v1/public/finance/bookings/:id/payment-options` | customer | Read public checkout targets |
+| `POST /v1/public/finance/bookings/:id/payment-schedules/:scheduleId/payment-session` | customer | Start schedule payment session |
+| `POST /v1/public/finance/bookings/:id/guarantees/:guaranteeId/payment-session` | customer | Start guarantee payment session |
+| `POST /v1/public/finance/vouchers/validate` | customer | Validate voucher against public checkout context |
 
 These endpoints are all served by the **`public` route surface** defined by
 modules that opt-in with `publicRoutes` in `@voyantjs/hono`. The

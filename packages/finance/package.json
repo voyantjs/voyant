@@ -7,7 +7,9 @@
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
     "./validation": "./src/validation.ts",
-    "./routes": "./src/routes.ts"
+    "./routes": "./src/routes.ts",
+    "./public-routes": "./src/routes-public.ts",
+    "./public-validation": "./src/validation-public.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -51,6 +53,14 @@
       "./routes": {
         "types": "./dist/routes.d.ts",
         "import": "./dist/routes.js"
+      },
+      "./public-routes": {
+        "types": "./dist/routes-public.d.ts",
+        "import": "./dist/routes-public.js"
+      },
+      "./public-validation": {
+        "types": "./dist/validation-public.d.ts",
+        "import": "./dist/validation-public.js"
       }
     },
     "main": "./dist/index.js",

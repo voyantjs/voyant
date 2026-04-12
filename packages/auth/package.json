@@ -28,6 +28,10 @@
       "types": "./src/backend.ts",
       "default": "./src/backend.ts"
     },
+    "./workspace": {
+      "types": "./src/workspace.ts",
+      "default": "./src/workspace.ts"
+    },
     "./permissions": {
       "types": "./src/permissions.ts",
       "default": "./src/permissions.ts"
@@ -53,6 +57,10 @@
       "./backend": {
         "types": "./dist/backend.d.ts",
         "import": "./dist/backend.js"
+      },
+      "./workspace": {
+        "types": "./dist/workspace.d.ts",
+        "import": "./dist/workspace.js"
       },
       "./permissions": {
         "types": "./dist/permissions.d.ts",

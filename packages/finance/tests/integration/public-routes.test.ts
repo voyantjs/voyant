@@ -1,0 +1,412 @@
+import { bookings } from "@voyantjs/bookings/schema"
+import { eq, sql } from "drizzle-orm"
+import { Hono } from "hono"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+
+import { publicFinanceRoutes } from "../../src/routes-public.js"
+import {
+  bookingGuarantees,
+  bookingPaymentSchedules,
+  invoices,
+  paymentInstruments,
+  paymentSessions,
+} from "../../src/schema.js"
+
+const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
+const ORIGINAL_TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
+
+const json = (body: Record<string, unknown>) => ({
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+})
+
+let seq = 0
+function nextBookingNumber() {
+  seq += 1
+  return `BK-PUBLIC-${String(seq).padStart(5, "0")}`
+}
+
+function nextInvoiceNumber() {
+  seq += 1
+  return `INV-PUBLIC-${String(seq).padStart(5, "0")}`
+}
+
+function getIsolatedFinanceTestDbUrl(url: string | undefined) {
+  if (!url) return url
+
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname === "127.0.0.1" && parsed.pathname === "/voyant_test") {
+      parsed.pathname = "/voyant_finance_test"
+      return parsed.toString()
+    }
+  } catch {
+    return url
+  }
+
+  return url
+}
+
+async function cleanupFinanceTestData(
+  // biome-ignore lint/suspicious/noExplicitAny: test db typing
+  db: any,
+) {
+  const tableNames = [
+    "payment_sessions",
+    "supplier_payments",
+    "payments",
+    "payment_captures",
+    "payment_authorizations",
+    "payment_instruments",
+    "booking_guarantees",
+    "booking_payment_schedules",
+    "booking_item_commissions",
+    "booking_item_tax_lines",
+    "finance_notes",
+    "invoice_external_refs",
+    "invoice_renditions",
+    "invoice_templates",
+    "invoice_number_series",
+    "credit_note_line_items",
+    "credit_notes",
+    "invoice_line_items",
+    "invoices",
+    "tax_regimes",
+    "booking_items",
+    "bookings",
+  ]
+
+  const existingTables = (await db.execute<{ tablename: string }>(sql`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (${sql.join(
+        tableNames.map((name) => sql`${name}`),
+        sql`, `,
+      )})
+  `)) as Array<{ tablename: string }>
+
+  if (existingTables.length === 0) {
+    return
+  }
+
+  const names = existingTables.map((row) => `"${row.tablename}"`).join(", ")
+  await db.execute(sql.raw(`TRUNCATE ${names} CASCADE`))
+}
+
+describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
+  let app: Hono
+  let db: ReturnType<typeof import("@voyantjs/db/test-utils").createTestDb>
+
+  beforeAll(async () => {
+    process.env.TEST_DATABASE_URL = getIsolatedFinanceTestDbUrl(process.env.TEST_DATABASE_URL)
+    const { createTestDb } = await import("@voyantjs/db/test-utils")
+
+    db = createTestDb()
+    await cleanupFinanceTestData(db)
+
+    app = new Hono()
+    app.use("*", async (c, next) => {
+      c.set("db" as never, db)
+      c.set("userId" as never, "public-finance-test-user")
+      await next()
+    })
+    app.route("/", publicFinanceRoutes)
+  })
+
+  beforeEach(async () => {
+    await cleanupFinanceTestData(db)
+  })
+
+  afterAll(async () => {
+    const { closeTestDb } = await import("@voyantjs/db/test-utils")
+    process.env.TEST_DATABASE_URL = ORIGINAL_TEST_DATABASE_URL
+    await closeTestDb()
+  })
+
+  async function seedBooking(overrides: Partial<typeof bookings.$inferInsert> = {}) {
+    const [row] = await db
+      .insert(bookings)
+      .values({
+        bookingNumber: nextBookingNumber(),
+        sellCurrency: "USD",
+        sellAmountCents: 100000,
+        costAmountCents: 60000,
+        marginPercent: 40,
+        startDate: "2025-06-01",
+        ...overrides,
+      })
+      .returning()
+
+    return row
+  }
+
+  async function seedInvoice(bookingId: string, overrides: Record<string, unknown> = {}) {
+    const [invoice] = await db
+      .insert(invoices)
+      .values({
+        invoiceNumber: nextInvoiceNumber(),
+        bookingId,
+        currency: "USD",
+        issueDate: "2025-06-01",
+        dueDate: "2025-07-01",
+        subtotalCents: 100000,
+        taxCents: 10000,
+        totalCents: (overrides.totalCents as number | undefined) ?? 110000,
+        paidCents: (overrides.paidCents as number | undefined) ?? 0,
+        balanceDueCents: (overrides.balanceDueCents as number | undefined) ?? 110000,
+      })
+      .returning({ id: invoices.id })
+
+    return invoice
+  }
+
+  it("lists public payment options for a booking", async () => {
+    const booking = await seedBooking()
+
+    await db.insert(bookingPaymentSchedules).values([
+      {
+        bookingId: booking.id,
+        scheduleType: "deposit",
+        status: "due",
+        dueDate: "2025-05-01",
+        currency: "USD",
+        amountCents: 25000,
+      },
+      {
+        bookingId: booking.id,
+        scheduleType: "balance",
+        status: "pending",
+        dueDate: "2025-05-20",
+        currency: "USD",
+        amountCents: 75000,
+      },
+    ])
+
+    await db.insert(bookingGuarantees).values({
+      bookingId: booking.id,
+      guaranteeType: "deposit",
+      status: "pending",
+      currency: "USD",
+      amountCents: 25000,
+      provider: "netopia",
+      referenceNumber: "G-1",
+    })
+
+    await db.insert(paymentInstruments).values([
+      {
+        ownerType: "client",
+        instrumentType: "credit_card",
+        status: "active",
+        label: "Visa ending 4242",
+        provider: "netopia",
+        brand: "visa",
+        last4: "4242",
+        billingEmail: "traveler@example.com",
+        metadata: { default: true },
+      },
+      {
+        ownerType: "client",
+        instrumentType: "credit_card",
+        status: "inactive",
+        label: "Old card",
+        provider: "netopia",
+        brand: "visa",
+        last4: "1111",
+        billingEmail: "traveler@example.com",
+        metadata: {},
+      },
+    ])
+
+    const res = await app.request(`/bookings/${booking.id}/payment-options`)
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.accounts).toHaveLength(1)
+    expect(body.data.accounts[0]?.isDefault).toBe(true)
+    expect(body.data.schedules).toHaveLength(2)
+    expect(body.data.guarantees).toHaveLength(1)
+    expect(body.data.recommendedTarget).toEqual({
+      targetType: "booking_payment_schedule",
+      targetId: body.data.schedules[0].id,
+    })
+  })
+
+  it("starts and reads a public payment session for a booking schedule", async () => {
+    const booking = await seedBooking()
+    const [schedule] = await db
+      .insert(bookingPaymentSchedules)
+      .values({
+        bookingId: booking.id,
+        scheduleType: "deposit",
+        status: "due",
+        dueDate: "2025-05-01",
+        currency: "EUR",
+        amountCents: 18000,
+      })
+      .returning()
+
+    const createRes = await app.request(
+      `/bookings/${booking.id}/payment-schedules/${schedule.id}/payment-session`,
+      {
+        method: "POST",
+        ...json({
+          provider: "netopia",
+          payerEmail: "traveler@example.com",
+          payerName: "Ana Popescu",
+          clientReference: "public-schedule-1",
+          returnUrl: "https://example.com/return",
+        }),
+      },
+    )
+
+    expect(createRes.status).toBe(201)
+    const created = (await createRes.json()).data
+    expect(created.targetType).toBe("booking_payment_schedule")
+    expect(created.bookingPaymentScheduleId).toBe(schedule.id)
+    expect(created.currency).toBe("EUR")
+    expect(created.amountCents).toBe(18000)
+    expect(created.payerEmail).toBe("traveler@example.com")
+
+    const getRes = await app.request(`/payment-sessions/${created.id}`)
+    expect(getRes.status).toBe(200)
+    const stored = (await getRes.json()).data
+    expect(stored.id).toBe(created.id)
+    expect(stored.clientReference).toBe("public-schedule-1")
+
+    const [sessionRow] = await db
+      .select()
+      .from(paymentSessions)
+      .where(eq(paymentSessions.id, created.id))
+    expect(sessionRow?.bookingId).toBe(booking.id)
+  })
+
+  it("starts a public payment session from an invoice balance", async () => {
+    const booking = await seedBooking()
+    const invoice = await seedInvoice(booking.id, {
+      totalCents: 125000,
+      paidCents: 25000,
+      balanceDueCents: 100000,
+    })
+
+    const res = await app.request(`/invoices/${invoice.id}/payment-session`, {
+      method: "POST",
+      ...json({
+        provider: "netopia",
+        payerEmail: "traveler@example.com",
+        returnUrl: "https://example.com/return",
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.data.targetType).toBe("invoice")
+    expect(body.data.invoiceId).toBe(invoice.id)
+    expect(body.data.amountCents).toBe(100000)
+    expect(body.data.provider).toBe("netopia")
+  })
+
+  it("validates an active voucher instrument for public checkout", async () => {
+    const booking = await seedBooking()
+
+    const [voucher] = await db
+      .insert(paymentInstruments)
+      .values({
+        ownerType: "internal",
+        instrumentType: "voucher",
+        status: "active",
+        label: "Spring voucher",
+        provider: "manual",
+        externalToken: "SPRING-2026",
+        metadata: {
+          code: "SPRING-2026",
+          currency: "EUR",
+          amountCents: 30000,
+          remainingAmountCents: 18000,
+          bookingIds: [booking.id],
+          expiresAt: "2026-12-31T23:59:59.000Z",
+        },
+      })
+      .returning()
+
+    const res = await app.request("/vouchers/validate", {
+      method: "POST",
+      ...json({
+        code: "spring-2026",
+        bookingId: booking.id,
+        currency: "EUR",
+        amountCents: 10000,
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.valid).toBe(true)
+    expect(body.data.reason).toBeNull()
+    expect(body.data.voucher.id).toBe(voucher.id)
+    expect(body.data.voucher.remainingAmountCents).toBe(18000)
+  })
+
+  it("reports insufficient balance for an otherwise valid voucher", async () => {
+    await db.insert(paymentInstruments).values({
+      ownerType: "internal",
+      instrumentType: "voucher",
+      status: "active",
+      label: "Low balance voucher",
+      provider: "manual",
+      externalToken: "LOW-10",
+      metadata: {
+        code: "LOW-10",
+        currency: "EUR",
+        remainingAmountCents: 1000,
+      },
+    })
+
+    const res = await app.request("/vouchers/validate", {
+      method: "POST",
+      ...json({
+        code: "LOW-10",
+        currency: "EUR",
+        amountCents: 2000,
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.valid).toBe(false)
+    expect(body.data.reason).toBe("insufficient_balance")
+  })
+
+  it("rejects a voucher when booking scope does not match", async () => {
+    const booking = await seedBooking()
+    const otherBooking = await seedBooking()
+
+    await db.insert(paymentInstruments).values({
+      ownerType: "internal",
+      instrumentType: "voucher",
+      status: "active",
+      label: "Scoped voucher",
+      provider: "manual",
+      directBillReference: "SCOPED-1",
+      metadata: {
+        code: "SCOPED-1",
+        bookingId: booking.id,
+        currency: "USD",
+        remainingAmountCents: 5000,
+      },
+    })
+
+    const res = await app.request("/vouchers/validate", {
+      method: "POST",
+      ...json({
+        code: "SCOPED-1",
+        bookingId: otherBooking.id,
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.valid).toBe(false)
+    expect(body.data.reason).toBe("booking_mismatch")
+  })
+})

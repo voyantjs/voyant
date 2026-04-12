@@ -3,8 +3,16 @@ export {
   fetchWithValidation,
   VoyantApiError,
   type VoyantFetcher,
+  withQueryParams,
 } from "./client.js"
 export * from "./hooks/index.js"
+export {
+  getPublicBookingPaymentOptions,
+  getPublicPaymentSession,
+  startPublicBookingGuaranteePaymentSession,
+  startPublicBookingSchedulePaymentSession,
+  validatePublicVoucher,
+} from "./operations.js"
 export {
   useVoyantFinanceContext,
   type VoyantFinanceContextValue,
@@ -19,6 +27,8 @@ export {
   getInvoicePaymentsQueryOptions,
   getInvoiceQueryOptions,
   getInvoicesQueryOptions,
+  getPublicBookingPaymentOptionsQueryOptions,
+  getPublicPaymentSessionQueryOptions,
   getSupplierPaymentsQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

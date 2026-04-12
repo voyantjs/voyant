@@ -1,0 +1,248 @@
+import { z } from "zod"
+
+import {
+  bookingAllocationStatusSchema,
+  bookingAllocationTypeSchema,
+  bookingDocumentTypeSchema,
+  bookingFulfillmentDeliveryChannelSchema,
+  bookingFulfillmentStatusSchema,
+  bookingFulfillmentTypeSchema,
+  bookingItemParticipantRoleSchema,
+  bookingItemStatusSchema,
+  bookingItemTypeSchema,
+  bookingParticipantTypeSchema,
+  bookingStatusSchema,
+  bookingTravelerCategorySchema,
+} from "./validation-shared.js"
+
+const isoDateSchema = z.string().date()
+const isoDateTimeSchema = z.string().datetime()
+
+export const publicBookingSessionParticipantInputSchema = z.object({
+  id: z.string().optional(),
+  participantType: bookingParticipantTypeSchema.default("traveler"),
+  travelerCategory: bookingTravelerCategorySchema.nullable().optional(),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  preferredLanguage: z.string().max(35).nullable().optional(),
+  accessibilityNeeds: z.string().nullable().optional(),
+  specialRequests: z.string().nullable().optional(),
+  isPrimary: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
+})
+
+export const publicCreateBookingSessionItemSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().nullable().optional(),
+  itemType: bookingItemTypeSchema.default("unit"),
+  quantity: z.number().int().positive().default(1),
+  sellCurrency: z.string().min(3).max(3).nullable().optional(),
+  unitSellAmountCents: z.number().int().min(0).nullable().optional(),
+  totalSellAmountCents: z.number().int().min(0).nullable().optional(),
+  costCurrency: z.string().min(3).max(3).nullable().optional(),
+  unitCostAmountCents: z.number().int().min(0).nullable().optional(),
+  totalCostAmountCents: z.number().int().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+  productId: z.string().nullable().optional(),
+  optionId: z.string().nullable().optional(),
+  optionUnitId: z.string().nullable().optional(),
+  pricingCategoryId: z.string().nullable().optional(),
+  sourceSnapshotId: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  availabilitySlotId: z.string().min(1),
+  allocationType: bookingAllocationTypeSchema.default("unit"),
+})
+
+export const publicCreateBookingSessionSchema = z.object({
+  externalBookingRef: z.string().nullable().optional(),
+  communicationLanguage: z.string().max(35).nullable().optional(),
+  sellCurrency: z.string().min(3).max(3),
+  baseCurrency: z.string().min(3).max(3).nullable().optional(),
+  sellAmountCents: z.number().int().min(0).nullable().optional(),
+  baseSellAmountCents: z.number().int().min(0).nullable().optional(),
+  costAmountCents: z.number().int().min(0).nullable().optional(),
+  baseCostAmountCents: z.number().int().min(0).nullable().optional(),
+  marginPercent: z.number().int().nullable().optional(),
+  startDate: isoDateSchema.nullable().optional(),
+  endDate: isoDateSchema.nullable().optional(),
+  pax: z.number().int().positive().nullable().optional(),
+  holdMinutes: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 60)
+    .default(30),
+  holdExpiresAt: isoDateTimeSchema.nullable().optional(),
+  items: z.array(publicCreateBookingSessionItemSchema).min(1),
+  participants: z.array(publicBookingSessionParticipantInputSchema).default([]),
+})
+
+export const publicUpdateBookingSessionSchema = z.object({
+  externalBookingRef: z.string().nullable().optional(),
+  communicationLanguage: z.string().max(35).nullable().optional(),
+  pax: z.number().int().positive().nullable().optional(),
+  holdMinutes: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 60)
+    .optional(),
+  holdExpiresAt: isoDateTimeSchema.nullable().optional(),
+  participants: z.array(publicBookingSessionParticipantInputSchema).optional(),
+  removedParticipantIds: z.array(z.string()).default([]),
+})
+
+export const publicBookingSessionMutationSchema = z.object({
+  note: z.string().nullable().optional(),
+})
+
+export const publicBookingOverviewLookupQuerySchema = z.object({
+  bookingNumber: z.string().min(1).max(50),
+  email: z.string().email(),
+})
+
+export const publicBookingSessionParticipantSchema = z.object({
+  id: z.string(),
+  participantType: bookingParticipantTypeSchema,
+  travelerCategory: bookingTravelerCategorySchema.nullable(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  preferredLanguage: z.string().nullable(),
+  accessibilityNeeds: z.string().nullable(),
+  specialRequests: z.string().nullable(),
+  isPrimary: z.boolean(),
+  notes: z.string().nullable(),
+})
+
+export const publicBookingSessionItemParticipantSchema = z.object({
+  id: z.string(),
+  participantId: z.string(),
+  role: bookingItemParticipantRoleSchema,
+  isPrimary: z.boolean(),
+})
+
+export const publicBookingSessionItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  itemType: bookingItemTypeSchema,
+  status: bookingItemStatusSchema,
+  serviceDate: z.string().nullable(),
+  startsAt: z.string().nullable(),
+  endsAt: z.string().nullable(),
+  quantity: z.number().int(),
+  sellCurrency: z.string(),
+  unitSellAmountCents: z.number().int().nullable(),
+  totalSellAmountCents: z.number().int().nullable(),
+  costCurrency: z.string().nullable(),
+  unitCostAmountCents: z.number().int().nullable(),
+  totalCostAmountCents: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  productId: z.string().nullable(),
+  optionId: z.string().nullable(),
+  optionUnitId: z.string().nullable(),
+  pricingCategoryId: z.string().nullable(),
+  participantLinks: z.array(publicBookingSessionItemParticipantSchema),
+})
+
+export const publicBookingSessionAllocationSchema = z.object({
+  id: z.string(),
+  bookingItemId: z.string().nullable(),
+  productId: z.string().nullable(),
+  optionId: z.string().nullable(),
+  optionUnitId: z.string().nullable(),
+  pricingCategoryId: z.string().nullable(),
+  availabilitySlotId: z.string().nullable(),
+  quantity: z.number().int(),
+  allocationType: bookingAllocationTypeSchema,
+  status: bookingAllocationStatusSchema,
+  holdExpiresAt: z.string().nullable(),
+  confirmedAt: z.string().nullable(),
+  releasedAt: z.string().nullable(),
+})
+
+export const publicBookingSessionChecklistSchema = z.object({
+  hasParticipants: z.boolean(),
+  hasTraveler: z.boolean(),
+  hasPrimaryParticipant: z.boolean(),
+  hasItems: z.boolean(),
+  hasAllocations: z.boolean(),
+  readyForConfirmation: z.boolean(),
+})
+
+export const publicBookingSessionSchema = z.object({
+  sessionId: z.string(),
+  bookingNumber: z.string(),
+  status: bookingStatusSchema,
+  externalBookingRef: z.string().nullable(),
+  communicationLanguage: z.string().nullable(),
+  sellCurrency: z.string(),
+  sellAmountCents: z.number().int().nullable(),
+  startDate: z.string().nullable(),
+  endDate: z.string().nullable(),
+  pax: z.number().int().nullable(),
+  holdExpiresAt: z.string().nullable(),
+  confirmedAt: z.string().nullable(),
+  expiredAt: z.string().nullable(),
+  cancelledAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  participants: z.array(publicBookingSessionParticipantSchema),
+  items: z.array(publicBookingSessionItemSchema),
+  allocations: z.array(publicBookingSessionAllocationSchema),
+  checklist: publicBookingSessionChecklistSchema,
+})
+
+export const publicBookingOverviewParticipantSchema = z.object({
+  id: z.string(),
+  participantType: bookingParticipantTypeSchema,
+  firstName: z.string(),
+  lastName: z.string(),
+  isPrimary: z.boolean(),
+})
+
+export const publicBookingOverviewDocumentSchema = z.object({
+  id: z.string(),
+  participantId: z.string().nullable(),
+  type: bookingDocumentTypeSchema,
+  fileName: z.string(),
+  fileUrl: z.string(),
+})
+
+export const publicBookingOverviewFulfillmentSchema = z.object({
+  id: z.string(),
+  bookingItemId: z.string().nullable(),
+  participantId: z.string().nullable(),
+  fulfillmentType: bookingFulfillmentTypeSchema,
+  deliveryChannel: bookingFulfillmentDeliveryChannelSchema,
+  status: bookingFulfillmentStatusSchema,
+  artifactUrl: z.string().nullable(),
+})
+
+export const publicBookingOverviewSchema = z.object({
+  bookingId: z.string(),
+  bookingNumber: z.string(),
+  status: bookingStatusSchema,
+  sellCurrency: z.string(),
+  sellAmountCents: z.number().int().nullable(),
+  startDate: z.string().nullable(),
+  endDate: z.string().nullable(),
+  pax: z.number().int().nullable(),
+  confirmedAt: z.string().nullable(),
+  cancelledAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  participants: z.array(publicBookingOverviewParticipantSchema),
+  items: z.array(publicBookingSessionItemSchema),
+  documents: z.array(publicBookingOverviewDocumentSchema),
+  fulfillments: z.array(publicBookingOverviewFulfillmentSchema),
+})
+
+export type PublicCreateBookingSessionInput = z.infer<typeof publicCreateBookingSessionSchema>
+export type PublicUpdateBookingSessionInput = z.infer<typeof publicUpdateBookingSessionSchema>
+export type PublicBookingSessionMutationInput = z.infer<typeof publicBookingSessionMutationSchema>
+export type PublicBookingOverviewLookupQuery = z.infer<
+  typeof publicBookingOverviewLookupQuerySchema
+>

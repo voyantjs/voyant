@@ -2,8 +2,12 @@ import type { LinkableDefinition, Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
 import { financeRoutes } from "./routes.js"
+import { publicFinanceRoutes } from "./routes-public.js"
 
 export type { FinanceRoutes } from "./routes.js"
+export type { PublicFinanceRoutes } from "./routes-public.js"
+export { publicFinanceRoutes } from "./routes-public.js"
+export { publicFinanceService } from "./service-public.js"
 
 export const invoiceLinkable: LinkableDefinition = {
   module: "finance",
@@ -39,6 +43,8 @@ export const financeModule: Module = {
 
 export const financeHonoModule: HonoModule = {
   module: financeModule,
+  adminRoutes: financeRoutes,
+  publicRoutes: publicFinanceRoutes,
   routes: financeRoutes,
 }
 
@@ -149,6 +155,12 @@ export {
   paymentInstrumentListQuerySchema,
   paymentSessionListQuerySchema,
   profitabilityQuerySchema,
+  publicBookingPaymentOptionsSchema,
+  publicPaymentOptionsQuerySchema,
+  publicPaymentSessionSchema,
+  publicStartPaymentSessionSchema,
+  publicValidateVoucherSchema,
+  publicVoucherValidationSchema,
   renderInvoiceInputSchema,
   revenueReportQuerySchema,
   supplierPaymentListQuerySchema,
@@ -173,3 +185,11 @@ export {
   updateSupplierPaymentSchema,
   updateTaxRegimeSchema,
 } from "./validation.js"
+export type {
+  PublicBookingPaymentOptions,
+  PublicPaymentOptionsQuery,
+  PublicPaymentSession,
+  PublicStartPaymentSessionInput,
+  PublicValidateVoucherInput,
+  PublicVoucherValidationResult,
+} from "./validation-public.js"

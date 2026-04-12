@@ -2,6 +2,7 @@ import type { LinkableDefinition, Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
 import { bookingRoutes } from "./routes.js"
+import { publicBookingRoutes } from "./routes-public.js"
 
 export { bookingsSupplierExtension } from "./extensions/suppliers.js"
 export {
@@ -36,10 +37,14 @@ export const bookingsModule: Module = {
 
 export const bookingsHonoModule: HonoModule = {
   module: bookingsModule,
+  adminRoutes: bookingRoutes,
+  publicRoutes: publicBookingRoutes,
   routes: bookingRoutes,
 }
 
 export type { BookingRoutes } from "./routes.js"
+export type { PublicBookingRoutes } from "./routes-public.js"
+export { publicBookingRoutes } from "./routes-public.js"
 export type {
   BookingParticipantDietary,
   BookingParticipantIdentity,
@@ -99,6 +104,7 @@ export {
   bookingSupplierStatuses,
   bookings,
 } from "./schema.js"
+export { publicBookingsService } from "./service-public.js"
 export {
   bookingListQuerySchema,
   cancelBookingSchema,
@@ -118,6 +124,10 @@ export {
   insertParticipantSchema,
   insertPassengerSchema,
   insertSupplierStatusSchema,
+  publicBookingOverviewLookupQuerySchema,
+  publicBookingSessionMutationSchema,
+  publicCreateBookingSessionSchema,
+  publicUpdateBookingSessionSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,

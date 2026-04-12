@@ -1,94 +1,22 @@
 import { z } from "zod"
 
-const bookingStatusSchema = z.enum([
-  "draft",
-  "on_hold",
-  "confirmed",
-  "in_progress",
-  "completed",
-  "expired",
-  "cancelled",
-])
-const supplierConfirmationStatusSchema = z.enum(["pending", "confirmed", "rejected", "cancelled"])
-const bookingSourceTypeSchema = z.enum([
-  "direct",
-  "manual",
-  "affiliate",
-  "ota",
-  "reseller",
-  "api_partner",
-  "internal",
-])
-const bookingParticipantTypeSchema = z.enum([
-  "traveler",
-  "booker",
-  "contact",
-  "occupant",
-  "staff",
-  "other",
-])
-const bookingTravelerCategorySchema = z.enum(["adult", "child", "infant", "senior", "other"])
-const bookingItemTypeSchema = z.enum([
-  "unit",
-  "extra",
-  "service",
-  "fee",
-  "tax",
-  "discount",
-  "adjustment",
-  "accommodation",
-  "transport",
-  "other",
-])
-const bookingItemStatusSchema = z.enum([
-  "draft",
-  "on_hold",
-  "confirmed",
-  "cancelled",
-  "expired",
-  "fulfilled",
-])
-const bookingItemParticipantRoleSchema = z.enum([
-  "traveler",
-  "occupant",
-  "primary_contact",
-  "service_assignee",
-  "beneficiary",
-  "other",
-])
-const bookingAllocationTypeSchema = z.enum(["unit", "pickup", "resource"])
-const bookingAllocationStatusSchema = z.enum([
-  "held",
-  "confirmed",
-  "released",
-  "expired",
-  "cancelled",
-  "fulfilled",
-])
-const bookingFulfillmentTypeSchema = z.enum([
-  "voucher",
-  "ticket",
-  "pdf",
-  "qr_code",
-  "barcode",
-  "mobile",
-  "other",
-])
-const bookingFulfillmentDeliveryChannelSchema = z.enum([
-  "download",
-  "email",
-  "api",
-  "wallet",
-  "other",
-])
-const bookingFulfillmentStatusSchema = z.enum([
-  "pending",
-  "issued",
-  "reissued",
-  "revoked",
-  "failed",
-])
-const bookingRedemptionMethodSchema = z.enum(["manual", "scan", "api", "other"])
+import {
+  bookingAllocationStatusSchema,
+  bookingAllocationTypeSchema,
+  bookingDocumentTypeSchema,
+  bookingFulfillmentDeliveryChannelSchema,
+  bookingFulfillmentStatusSchema,
+  bookingFulfillmentTypeSchema,
+  bookingItemParticipantRoleSchema,
+  bookingItemStatusSchema,
+  bookingItemTypeSchema,
+  bookingParticipantTypeSchema,
+  bookingRedemptionMethodSchema,
+  bookingSourceTypeSchema,
+  bookingStatusSchema,
+  bookingTravelerCategorySchema,
+  supplierConfirmationStatusSchema,
+} from "./validation-shared.js"
 
 // ---------- bookings ----------
 
@@ -401,8 +329,6 @@ export const insertBookingNoteSchema = z.object({
 
 // ---------- documents ----------
 
-const bookingDocumentTypeSchema = z.enum(["visa", "insurance", "health", "passport_copy", "other"])
-
 export const insertBookingDocumentSchema = z.object({
   participantId: z.string().optional().nullable(),
   passengerId: z.string().optional().nullable(),
@@ -412,3 +338,6 @@ export const insertBookingDocumentSchema = z.object({
   expiresAt: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
+
+export * from "./validation-public.js"
+export * from "./validation-shared.js"

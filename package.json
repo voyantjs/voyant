@@ -17,7 +17,7 @@
     "verify:publish-tarballs": "node scripts/verify-package-tarballs.mjs",
     "prepare": "husky",
     "typecheck": "turbo run typecheck --continue",
-    "test": "turbo run test --continue",
+    "test": "node scripts/run-tests.cjs",
     "deps:outdated": "pnpm -r outdated",
     "deps:unused": "pnpm -r exec npx --yes depcheck --json || true",
     "db:build": "turbo run build --filter=\"@voyantjs/db\"",

@@ -6,8 +6,52 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AdminProvider } from "../../src/providers/admin-provider.js"
 import { useTheme } from "../../src/providers/theme.js"
 
+const fallbackStorageState = new Map<string, string>()
+
+function getTestStorage(): Storage {
+  const storage = globalThis.localStorage as Partial<Storage> | undefined
+  if (
+    storage &&
+    typeof storage.clear === "function" &&
+    typeof storage.getItem === "function" &&
+    typeof storage.key === "function" &&
+    typeof storage.removeItem === "function" &&
+    typeof storage.setItem === "function"
+  ) {
+    return storage as Storage
+  }
+
+  const fallbackStorage: Storage = {
+    get length() {
+      return fallbackStorageState.size
+    },
+    clear() {
+      fallbackStorageState.clear()
+    },
+    getItem(key) {
+      return fallbackStorageState.get(key) ?? null
+    },
+    key(index) {
+      return [...fallbackStorageState.keys()][index] ?? null
+    },
+    removeItem(key) {
+      fallbackStorageState.delete(key)
+    },
+    setItem(key, value) {
+      fallbackStorageState.set(key, value)
+    },
+  }
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: fallbackStorage,
+  })
+
+  return fallbackStorage
+}
+
 beforeEach(() => {
-  localStorage.clear()
+  getTestStorage().clear()
   document.documentElement.classList.remove("light", "dark")
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -22,7 +66,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  localStorage.clear()
+  getTestStorage().clear()
 })
 
 describe("AdminProvider", () => {
@@ -68,6 +112,6 @@ describe("AdminProvider", () => {
       <AdminProvider themeStorageKey={null}>{children}</AdminProvider>
     )
     renderHook(() => useTheme(), { wrapper })
-    expect(localStorage.length).toBe(0)
+    expect(getTestStorage().length).toBe(0)
   })
 })

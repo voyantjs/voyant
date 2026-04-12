@@ -1,0 +1,150 @@
+import { z } from "zod"
+
+import {
+  booleanQueryParam,
+  productBookingModeSchema,
+  productCapabilitySchema,
+  productCapacityModeSchema,
+  productFeatureTypeSchema,
+  productLocationTypeSchema,
+  productMediaTypeSchema,
+  productVisibilitySchema,
+} from "./validation-shared.js"
+
+export const publicCatalogProductListQuerySchema = z.object({
+  search: z.string().optional(),
+  bookingMode: productBookingModeSchema.optional(),
+  capacityMode: productCapacityModeSchema.optional(),
+  productTypeId: z.string().optional(),
+  categoryId: z.string().optional(),
+  tagId: z.string().optional(),
+  featured: booleanQueryParam.optional(),
+  sort: z.enum(["name", "createdAt", "startDate", "price"]).default("name"),
+  direction: z.enum(["asc", "desc"]).default("asc"),
+  limit: z.coerce.number().int().min(1).max(100).default(24),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const publicCatalogCategoryListQuerySchema = z.object({
+  search: z.string().optional(),
+  parentId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const publicCatalogTagListQuerySchema = z.object({
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const publicCatalogProductCategorySchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  sortOrder: z.number().int(),
+})
+
+export const publicCatalogProductTagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+
+export const publicCatalogProductTypeSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+})
+
+export const publicCatalogProductMediaSchema = z.object({
+  id: z.string(),
+  mediaType: productMediaTypeSchema,
+  name: z.string(),
+  url: z.string(),
+  mimeType: z.string().nullable(),
+  altText: z.string().nullable(),
+  sortOrder: z.number().int(),
+  isCover: z.boolean(),
+})
+
+export const publicCatalogProductFeatureSchema = z.object({
+  id: z.string(),
+  featureType: productFeatureTypeSchema,
+  title: z.string(),
+  description: z.string().nullable(),
+  sortOrder: z.number().int(),
+})
+
+export const publicCatalogProductFaqSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  answer: z.string(),
+  sortOrder: z.number().int(),
+})
+
+export const publicCatalogProductLocationSchema = z.object({
+  id: z.string(),
+  locationType: productLocationTypeSchema,
+  title: z.string(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  countryCode: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  sortOrder: z.number().int(),
+})
+
+export const publicCatalogProductSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  bookingMode: productBookingModeSchema,
+  capacityMode: productCapacityModeSchema,
+  visibility: productVisibilitySchema,
+  sellCurrency: z.string(),
+  sellAmountCents: z.number().int().nullable(),
+  startDate: z.string().nullable(),
+  endDate: z.string().nullable(),
+  pax: z.number().int().nullable(),
+  productType: publicCatalogProductTypeSchema.nullable(),
+  categories: z.array(publicCatalogProductCategorySchema),
+  tags: z.array(publicCatalogProductTagSchema),
+  capabilities: z.array(productCapabilitySchema),
+  coverMedia: publicCatalogProductMediaSchema.nullable(),
+  isFeatured: z.boolean(),
+})
+
+export const publicCatalogProductDetailSchema = publicCatalogProductSummarySchema.extend({
+  media: z.array(publicCatalogProductMediaSchema),
+  features: z.array(publicCatalogProductFeatureSchema),
+  faqs: z.array(publicCatalogProductFaqSchema),
+  locations: z.array(publicCatalogProductLocationSchema),
+})
+
+export const publicCatalogProductListResponseSchema = z.object({
+  data: z.array(publicCatalogProductSummarySchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+})
+
+export const publicCatalogCategoryListResponseSchema = z.object({
+  data: z.array(publicCatalogProductCategorySchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+})
+
+export const publicCatalogTagListResponseSchema = z.object({
+  data: z.array(publicCatalogProductTagSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+})
+
+export type PublicCatalogProductListQuery = z.infer<typeof publicCatalogProductListQuerySchema>
+export type PublicCatalogCategoryListQuery = z.infer<typeof publicCatalogCategoryListQuerySchema>
+export type PublicCatalogTagListQuery = z.infer<typeof publicCatalogTagListQuerySchema>

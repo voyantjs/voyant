@@ -1,6 +1,7 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
+import type { publicFinanceRoutes } from "./routes-public.js"
+import type { Env } from "./routes-shared.js"
 import { financeService } from "./service.js"
 import {
   agingReportQuerySchema,
@@ -31,6 +32,7 @@ import {
   insertPaymentSessionSchema,
   insertSupplierPaymentSchema,
   insertTaxRegimeSchema,
+  invoiceFromBookingSchema,
   invoiceListQuerySchema,
   invoiceNumberSeriesListQuerySchema,
   invoiceTemplateListQuerySchema,
@@ -60,13 +62,6 @@ import {
   updateSupplierPaymentSchema,
   updateTaxRegimeSchema,
 } from "./validation.js"
-
-type Env = {
-  Variables: {
-    db: PostgresJsDatabase
-    userId?: string
-  }
-}
 
 // ==========================================================================
 // Finance Routes — method-chained for Hono RPC type inference
@@ -640,6 +635,51 @@ export const financeRoutes = new Hono<Env>()
     )
   })
 
+  // POST /invoices/from-booking — Create draft invoice from booking + booking items
+  .post("/invoices/from-booking", async (c) => {
+    const input = invoiceFromBookingSchema.parse(await c.req.json())
+    const db = c.get("db")
+    const [{ bookingItems, bookings }, { eq }] = await Promise.all([
+      import("@voyantjs/bookings/schema"),
+      import("drizzle-orm"),
+    ])
+
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, input.bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    const items = await db.select().from(bookingItems).where(eq(bookingItems.bookingId, booking.id))
+
+    const row = await financeService.createInvoiceFromBooking(db, input, {
+      booking: {
+        id: booking.id,
+        bookingNumber: booking.bookingNumber,
+        personId: booking.personId,
+        organizationId: booking.organizationId,
+        sellCurrency: booking.sellCurrency,
+        baseCurrency: booking.baseCurrency,
+        fxRateSetId: null,
+        sellAmountCents: booking.sellAmountCents,
+        baseSellAmountCents: booking.baseSellAmountCents,
+      },
+      items: items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        quantity: item.quantity,
+        unitSellAmountCents: item.unitSellAmountCents,
+        totalSellAmountCents: item.totalSellAmountCents,
+      })),
+    })
+
+    return c.json({ data: row }, 201)
+  })
+
   // GET /invoices/:id — Get single invoice
   .get("/invoices/:id", async (c) => {
     const row = await financeService.getInvoiceById(c.get("db"), c.req.param("id"))
@@ -1048,3 +1088,4 @@ export const financeRoutes = new Hono<Env>()
   })
 
 export type FinanceRoutes = typeof financeRoutes
+export type PublicFinanceRoutes = typeof publicFinanceRoutes

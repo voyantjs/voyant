@@ -7,10 +7,10 @@ export interface ModuleNames {
   pascal: string
 }
 
-export function packageJson(names: ModuleNames): string {
+export function packageJson(names: ModuleNames, version: string): string {
   const body = {
     name: `@voyantjs/${names.kebab}`,
-    version: "0.1.0",
+    version,
     type: "module",
     exports: {
       ".": "./src/index.ts",

@@ -24,6 +24,10 @@ export {
   useCustomerPortalMutation,
 } from "./use-customer-portal-mutation.js"
 export {
+  type UseCustomerPortalPhoneContactExistsOptions,
+  useCustomerPortalPhoneContactExists,
+} from "./use-customer-portal-phone-contact-exists.js"
+export {
   type UseCustomerPortalProfileOptions,
   useCustomerPortalProfile,
 } from "./use-customer-portal-profile.js"

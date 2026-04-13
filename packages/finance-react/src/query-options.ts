@@ -9,10 +9,15 @@ import type { UseInvoiceLineItemsOptions } from "./hooks/use-invoice-line-items.
 import type { UseInvoiceNotesOptions } from "./hooks/use-invoice-notes.js"
 import type { UseInvoicePaymentsOptions } from "./hooks/use-invoice-payments.js"
 import type { UseInvoicesOptions } from "./hooks/use-invoices.js"
+import type { UsePublicBookingDocumentsOptions } from "./hooks/use-public-booking-documents.js"
 import type { UsePublicBookingPaymentOptionsOptions } from "./hooks/use-public-booking-payment-options.js"
 import type { UsePublicPaymentSessionOptions } from "./hooks/use-public-payment-session.js"
 import type { UseSupplierPaymentsOptions } from "./hooks/use-supplier-payments.js"
-import { getPublicBookingPaymentOptions, getPublicPaymentSession } from "./operations.js"
+import {
+  getPublicBookingDocuments,
+  getPublicBookingPaymentOptions,
+  getPublicPaymentSession,
+} from "./operations.js"
 import { financeQueryKeys } from "./query-keys.js"
 import {
   invoiceCreditNotesResponse,
@@ -182,6 +187,25 @@ export function getPublicBookingPaymentOptionsQueryOptions(
       }
 
       return getPublicBookingPaymentOptions(client, bookingId, filters)
+    },
+  })
+}
+
+export function getPublicBookingDocumentsQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UsePublicBookingDocumentsOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.publicBookingDocuments(bookingId ?? ""),
+    queryFn: async () => {
+      if (!bookingId) {
+        throw new Error("getPublicBookingDocumentsQueryOptions requires a bookingId")
+      }
+
+      return getPublicBookingDocuments(client, bookingId)
     },
   })
 }

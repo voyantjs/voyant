@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import {
   booleanQueryParam,
+  languageTagSchema,
   productBookingModeSchema,
   productCapabilitySchema,
   productCapacityModeSchema,
@@ -13,6 +14,7 @@ import {
 
 export const publicCatalogProductListQuerySchema = z.object({
   search: z.string().optional(),
+  languageTag: languageTagSchema.optional(),
   bookingMode: productBookingModeSchema.optional(),
   capacityMode: productCapacityModeSchema.optional(),
   productTypeId: z.string().optional(),
@@ -36,6 +38,10 @@ export const publicCatalogTagListQuerySchema = z.object({
   search: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(100),
   offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const publicCatalogProductLookupBySlugQuerySchema = z.object({
+  languageTag: languageTagSchema.optional(),
 })
 
 export const publicCatalogProductCategorySchema = z.object({
@@ -101,6 +107,11 @@ export const publicCatalogProductSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  contentLanguageTag: z.string().nullable(),
+  slug: z.string().nullable(),
+  shortDescription: z.string().nullable(),
+  seoTitle: z.string().nullable(),
+  seoDescription: z.string().nullable(),
   bookingMode: productBookingModeSchema,
   capacityMode: productCapacityModeSchema,
   visibility: productVisibilitySchema,
@@ -148,3 +159,6 @@ export const publicCatalogTagListResponseSchema = z.object({
 export type PublicCatalogProductListQuery = z.infer<typeof publicCatalogProductListQuerySchema>
 export type PublicCatalogCategoryListQuery = z.infer<typeof publicCatalogCategoryListQuerySchema>
 export type PublicCatalogTagListQuery = z.infer<typeof publicCatalogTagListQuerySchema>
+export type PublicCatalogProductLookupBySlugQuery = z.infer<
+  typeof publicCatalogProductLookupBySlugQuerySchema
+>

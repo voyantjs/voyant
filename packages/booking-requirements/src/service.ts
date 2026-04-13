@@ -5,6 +5,7 @@ import {
   listBookingAnswers,
   updateBookingAnswer,
 } from "./service-answers.js"
+import { getPublicTransportRequirements } from "./service-public.js"
 import {
   createBookingQuestionExtraTrigger,
   createBookingQuestionOption,
@@ -44,6 +45,7 @@ import {
 } from "./service-questions.js"
 
 export const bookingRequirementsService = {
+  getPublicTransportRequirements,
   listProductContactRequirements,
   getProductContactRequirementById,
   createProductContactRequirement,

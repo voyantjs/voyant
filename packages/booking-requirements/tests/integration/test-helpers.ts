@@ -6,6 +6,7 @@ import { Hono } from "hono"
 import { beforeAll, beforeEach } from "vitest"
 
 import { bookingRequirementsRoutes } from "../../src/routes.js"
+import { publicBookingRequirementsRoutes } from "../../src/routes-public.js"
 
 export const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 
@@ -18,6 +19,7 @@ export const json = (body: Record<string, unknown>) => ({
 
 export function createBookingRequirementsTestContext() {
   let app!: Hono
+  let publicApp!: Hono
   let productId!: string
   let optionId!: string
   let unitId!: string
@@ -36,6 +38,13 @@ export function createBookingRequirementsTestContext() {
       await next()
     })
     app.route("/", bookingRequirementsRoutes)
+
+    publicApp = new Hono()
+    publicApp.use("*", async (c, next) => {
+      c.set("db" as never, db)
+      await next()
+    })
+    publicApp.route("/", publicBookingRequirementsRoutes)
   })
 
   beforeEach(async () => {
@@ -68,6 +77,7 @@ export function createBookingRequirementsTestContext() {
     optionId: () => optionId,
     productId: () => productId,
     request: (path: string, init?: RequestInit) => app.request(path, init),
+    publicRequest: (path: string, init?: RequestInit) => publicApp.request(path, init),
     unitId: () => unitId,
   }
 }

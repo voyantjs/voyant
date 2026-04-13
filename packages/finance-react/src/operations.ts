@@ -4,10 +4,19 @@ import { type FetchWithValidationOptions, fetchWithValidation, withQueryParams }
 import {
   type PublicStartPaymentSessionInput,
   type PublicValidateVoucherInput,
+  publicBookingFinanceDocumentsResponse,
   publicBookingPaymentOptionsResponse,
   publicPaymentSessionResponse,
   publicVoucherValidationResponse,
 } from "./schemas.js"
+
+export function getPublicBookingDocuments(client: FetchWithValidationOptions, bookingId: string) {
+  return fetchWithValidation(
+    `/v1/public/finance/bookings/${bookingId}/documents`,
+    publicBookingFinanceDocumentsResponse,
+    client,
+  )
+}
 
 export function getPublicBookingPaymentOptions(
   client: FetchWithValidationOptions,

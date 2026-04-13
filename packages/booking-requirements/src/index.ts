@@ -2,9 +2,11 @@ import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
 import { bookingRequirementsRoutes } from "./routes.js"
+import { publicBookingRequirementsRoutes } from "./routes-public.js"
 import { bookingRequirementsService } from "./service.js"
 
 export type { BookingRequirementsRoutes } from "./routes.js"
+export type { PublicBookingRequirementsRoutes } from "./routes-public.js"
 
 export const bookingRequirementsModule: Module = {
   name: "booking-requirements",
@@ -13,8 +15,10 @@ export const bookingRequirementsModule: Module = {
 export const bookingRequirementsHonoModule: HonoModule = {
   module: bookingRequirementsModule,
   routes: bookingRequirementsRoutes,
+  publicRoutes: publicBookingRequirementsRoutes,
 }
 
+export { publicBookingRequirementsRoutes } from "./routes-public.js"
 export type {
   BookingAnswer,
   BookingQuestionExtraTrigger,
@@ -72,6 +76,10 @@ export {
   optionBookingQuestionListQuerySchema,
   productBookingQuestionListQuerySchema,
   productContactRequirementListQuerySchema,
+  publicTransportRequirementSummarySchema,
+  publicTransportRequirementsQuerySchema,
+  publicTransportRequirementsSchema,
+  transportRequirementFieldSchema,
   updateBookingAnswerSchema,
   updateBookingQuestionExtraTriggerSchema,
   updateBookingQuestionOptionSchema,

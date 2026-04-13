@@ -14,6 +14,7 @@ import {
   products,
   productTagProducts,
   productTags,
+  productTranslations,
   productTypes,
   productVisibilitySettings,
 } from "../../src/schema.js"
@@ -163,6 +164,45 @@ describe.skipIf(!DB_AVAILABLE)("Public product routes", () => {
     expect(body.data.features[0]?.title).toBe("Premium cabin")
     expect(body.data.faqs[0]?.answer).toBe("Yes.")
     expect(body.data.locations[0]?.city).toBe("Budapest")
+  })
+
+  it("returns localized public catalog fields and slug lookup", async () => {
+    const [product] = await db
+      .insert(products)
+      .values({
+        name: "Danube Cruise",
+        description: "River cruise through major capitals.",
+        status: "active",
+        activated: true,
+        visibility: "public",
+        sellCurrency: "EUR",
+      })
+      .returning()
+
+    await db.insert(productTranslations).values({
+      productId: product.id,
+      languageTag: "ro",
+      slug: "croaziera-dunare",
+      name: "Croaziera pe Dunare",
+      shortDescription: "Croaziera fluviala prin capitale europene.",
+      description: "Itinerar localizat pentru croaziera pe Dunare.",
+      seoTitle: "Croaziera pe Dunare",
+      seoDescription: "Rezerva croaziera pe Dunare.",
+    })
+
+    const detailRes = await app.request(`/${product.id}?languageTag=ro`, { method: "GET" })
+    expect(detailRes.status).toBe(200)
+    const detailBody = await detailRes.json()
+    expect(detailBody.data.name).toBe("Croaziera pe Dunare")
+    expect(detailBody.data.slug).toBe("croaziera-dunare")
+    expect(detailBody.data.seoTitle).toBe("Croaziera pe Dunare")
+    expect(detailBody.data.contentLanguageTag).toBe("ro")
+
+    const slugRes = await app.request("/slug/croaziera-dunare?languageTag=ro", { method: "GET" })
+    expect(slugRes.status).toBe(200)
+    const slugBody = await slugRes.json()
+    expect(slugBody.data.id).toBe(product.id)
+    expect(slugBody.data.shortDescription).toBe("Croaziera fluviala prin capitale europene.")
   })
 
   it("lists active public categories and tags", async () => {

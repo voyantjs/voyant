@@ -12,7 +12,10 @@ function getDb() {
 }
 
 const resolveNotificationProviders = (env: Record<string, unknown>) =>
-  createDefaultNotificationProviders(env, { emailProvider: "resend" })
+  createDefaultNotificationProviders(env, {
+    emailProvider: "resend",
+    smsProvider: "twilio",
+  })
 
 const generatePdf = hatchet.task({
   name: "products.generate-pdf",

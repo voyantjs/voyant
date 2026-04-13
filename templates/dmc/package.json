@@ -56,6 +56,7 @@
     "@voyantjs/resources": "workspace:*",
     "@voyantjs/resources-react": "workspace:*",
     "@voyantjs/sellability": "workspace:*",
+    "@voyantjs/storefront-verification": "workspace:*",
     "@voyantjs/suppliers": "workspace:*",
     "@voyantjs/suppliers-react": "workspace:*",
     "@voyantjs/transactions": "workspace:*",

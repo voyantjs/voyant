@@ -1,3 +1,5 @@
+import type { Module } from "@voyantjs/core"
+import type { HonoModule } from "@voyantjs/hono/module"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import { createNotificationService } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -6,9 +8,14 @@ import { Hono } from "hono"
 import {
   type CheckoutPolicyOptions,
   initiateCheckoutCollection,
+  listBookingReminderRuns,
   previewCheckoutCollection,
 } from "./service.js"
-import { initiateCheckoutCollectionSchema, previewCheckoutCollectionSchema } from "./validation.js"
+import {
+  checkoutReminderRunListQuerySchema,
+  initiateCheckoutCollectionSchema,
+  previewCheckoutCollectionSchema,
+} from "./validation.js"
 
 type Env = {
   Bindings: Record<string, unknown>
@@ -73,4 +80,28 @@ export function createCheckoutRoutes(
         return c.json({ error: message }, 409)
       }
     })
+}
+
+export function createCheckoutAdminRoutes() {
+  return new Hono<Env>().get("/bookings/:bookingId/reminder-runs", async (c) => {
+    const query = checkoutReminderRunListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+
+    return c.json(await listBookingReminderRuns(c.get("db"), c.req.param("bookingId"), query))
+  })
+}
+
+export const checkoutModule: Module = {
+  name: "checkout",
+}
+
+export function createCheckoutHonoModule(
+  options?: Parameters<typeof createCheckoutRoutes>[0],
+): HonoModule {
+  return {
+    module: checkoutModule,
+    routes: createCheckoutRoutes(options),
+    adminRoutes: createCheckoutAdminRoutes(),
+  }
 }

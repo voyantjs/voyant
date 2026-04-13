@@ -12,12 +12,14 @@ import {
   products,
   productTagProducts,
   productTags,
+  productTranslations,
   productTypes,
   productVisibilitySettings,
 } from "./schema.js"
 import type {
   PublicCatalogCategoryListQuery,
   PublicCatalogProductListQuery,
+  PublicCatalogProductLookupBySlugQuery,
   PublicCatalogTagListQuery,
 } from "./validation-public.js"
 
@@ -33,6 +35,11 @@ function normalizeDate(value: Date | string | null | undefined): string | null {
   }
 
   return value instanceof Date ? value.toISOString() : value
+}
+
+function normalizeLanguageTag(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase()
+  return normalized || null
 }
 
 async function listProductIdsForCategory(db: PostgresJsDatabase, categoryId: string) {
@@ -68,7 +75,7 @@ async function listFeaturedProductIds(db: PostgresJsDatabase) {
 async function hydrateCatalogProducts(
   db: PostgresJsDatabase,
   productRows: PublicCatalogProductRow[],
-  options?: { includeContent?: boolean },
+  options?: { includeContent?: boolean; languageTag?: string | null },
 ) {
   if (productRows.length === 0) {
     return []
@@ -86,6 +93,7 @@ async function hydrateCatalogProducts(
   const [
     categoryRows,
     tagRows,
+    translationRows,
     typeRows,
     capabilityRows,
     mediaRows,
@@ -127,6 +135,26 @@ async function hydrateCatalogProducts(
       .innerJoin(productTags, eq(productTags.id, productTagProducts.tagId))
       .where(inArray(productTagProducts.productId, productIds))
       .orderBy(asc(productTags.name)),
+    options?.languageTag
+      ? db
+          .select({
+            productId: productTranslations.productId,
+            languageTag: productTranslations.languageTag,
+            slug: productTranslations.slug,
+            name: productTranslations.name,
+            shortDescription: productTranslations.shortDescription,
+            description: productTranslations.description,
+            seoTitle: productTranslations.seoTitle,
+            seoDescription: productTranslations.seoDescription,
+          })
+          .from(productTranslations)
+          .where(
+            and(
+              inArray(productTranslations.productId, productIds),
+              eq(productTranslations.languageTag, options.languageTag),
+            ),
+          )
+      : Promise.resolve([]),
     productTypeIds.length > 0
       ? db
           .select({
@@ -240,6 +268,8 @@ async function hydrateCatalogProducts(
     tagsByProduct.set(row.productId, existing)
   }
 
+  const translationByProduct = new Map(translationRows.map((row) => [row.productId, row] as const))
+
   const capabilitiesByProduct = new Map<string, string[]>()
   for (const row of capabilityRows) {
     const existing = capabilitiesByProduct.get(row.productId) ?? []
@@ -279,6 +309,7 @@ async function hydrateCatalogProducts(
   const featuredIds = new Set(featuredRows.map((row) => row.productId))
 
   return productRows.map((product) => {
+    const translation = translationByProduct.get(product.id) ?? null
     const media = (mediaByProduct.get(product.id) ?? []).map((row) => ({
       id: row.id,
       mediaType: row.mediaType,
@@ -292,8 +323,13 @@ async function hydrateCatalogProducts(
 
     const base = {
       id: product.id,
-      name: product.name,
-      description: product.description ?? null,
+      name: translation?.name ?? product.name,
+      description: translation?.description ?? product.description ?? null,
+      contentLanguageTag: translation?.languageTag ?? null,
+      slug: translation?.slug ?? null,
+      shortDescription: translation?.shortDescription ?? null,
+      seoTitle: translation?.seoTitle ?? null,
+      seoDescription: translation?.seoDescription ?? null,
       bookingMode: product.bookingMode,
       capacityMode: product.capacityMode,
       visibility: product.visibility,
@@ -439,14 +475,20 @@ export const publicProductsService = {
     ])
 
     return {
-      data: await hydrateCatalogProducts(db, rows),
+      data: await hydrateCatalogProducts(db, rows, {
+        languageTag: normalizeLanguageTag(query.languageTag),
+      }),
       total: countResult[0]?.count ?? 0,
       limit: query.limit,
       offset: query.offset,
     }
   },
 
-  async getCatalogProductById(db: PostgresJsDatabase, id: string) {
+  async getCatalogProductById(
+    db: PostgresJsDatabase,
+    id: string,
+    query: { languageTag?: string | null } = {},
+  ) {
     const [row] = await db
       .select()
       .from(products)
@@ -464,8 +506,49 @@ export const publicProductsService = {
       return null
     }
 
-    const [product] = await hydrateCatalogProducts(db, [row], { includeContent: true })
+    const [product] = await hydrateCatalogProducts(db, [row], {
+      includeContent: true,
+      languageTag: normalizeLanguageTag(query.languageTag),
+    })
     return product ?? null
+  },
+
+  async getCatalogProductBySlug(
+    db: PostgresJsDatabase,
+    slug: string,
+    query: PublicCatalogProductLookupBySlugQuery = {},
+  ) {
+    const normalizedSlug = slug.trim().toLowerCase()
+    const normalizedLanguageTag = normalizeLanguageTag(query.languageTag)
+    const conditions = [
+      sql`lower(${productTranslations.slug}) = ${normalizedSlug}`,
+      eq(products.status, "active"),
+      eq(products.activated, true),
+      eq(products.visibility, "public"),
+    ]
+
+    if (normalizedLanguageTag) {
+      conditions.push(eq(productTranslations.languageTag, normalizedLanguageTag))
+    }
+
+    const [row] = await db
+      .select({
+        productId: products.id,
+        languageTag: productTranslations.languageTag,
+      })
+      .from(productTranslations)
+      .innerJoin(products, eq(products.id, productTranslations.productId))
+      .where(and(...conditions))
+      .orderBy(desc(productTranslations.updatedAt))
+      .limit(1)
+
+    if (!row) {
+      return null
+    }
+
+    return this.getCatalogProductById(db, row.productId, {
+      languageTag: normalizedLanguageTag ?? row.languageTag,
+    })
   },
 
   async listCatalogCategories(db: PostgresJsDatabase, query: PublicCatalogCategoryListQuery) {

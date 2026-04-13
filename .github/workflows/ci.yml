@@ -35,6 +35,9 @@ jobs:
       - name: Verify release train
         run: pnpm verify:release-train
 
+      - name: Verify package exports
+        run: pnpm verify:package-exports
+
       - name: Verify publish tarballs
         run: pnpm verify:publish-tarballs
 

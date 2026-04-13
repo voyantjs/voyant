@@ -156,6 +156,16 @@ export const customerPortalContactExistsResultSchema = z.object({
   linkedCustomerRecordExists: z.boolean(),
 })
 
+export const customerPortalPhoneContactExistsQuerySchema = z.object({
+  phone: z.string().min(1).max(50),
+})
+
+export const customerPortalPhoneContactExistsResultSchema = z.object({
+  phone: z.string(),
+  customerRecordExists: z.boolean(),
+  linkedCustomerRecordExists: z.boolean(),
+})
+
 export const bootstrapCustomerPortalSchema = z
   .object({
     customerRecordId: z.string().optional(),
@@ -312,6 +322,12 @@ export type CustomerPortalContactExistsQuery = z.infer<
 >
 export type CustomerPortalContactExistsResult = z.infer<
   typeof customerPortalContactExistsResultSchema
+>
+export type CustomerPortalPhoneContactExistsQuery = z.infer<
+  typeof customerPortalPhoneContactExistsQuerySchema
+>
+export type CustomerPortalPhoneContactExistsResult = z.infer<
+  typeof customerPortalPhoneContactExistsResultSchema
 >
 export type BootstrapCustomerPortalInput = z.infer<typeof bootstrapCustomerPortalSchema>
 export type BootstrapCustomerPortalResult = z.infer<typeof bootstrapCustomerPortalResultSchema>

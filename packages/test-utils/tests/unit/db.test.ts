@@ -2,10 +2,20 @@ import { afterAll, describe, expect, it } from "vitest"
 
 import { buildDescribeIf, DB_ENV_SET, describeIfDb, TEST_DATABASE_URL } from "../../src/db.js"
 
+function buildDefaultTestDbUrl(port: string) {
+  const url = new URL("postgres://localhost")
+  url.port = port
+  url.pathname = "/voyant_test"
+  url.username = "test"
+  url.password = "test"
+  return url.toString()
+}
+
 describe("db helpers (unit)", () => {
   it("TEST_DATABASE_URL falls back to the compose default when env is unset", () => {
     if (!process.env.TEST_DATABASE_URL) {
-      expect(TEST_DATABASE_URL).toBe("postgres://test:test@localhost:5433/voyant_test")
+      const port = process.env.TEST_DATABASE_PORT ?? "5436"
+      expect(TEST_DATABASE_URL).toBe(buildDefaultTestDbUrl(port))
     } else {
       expect(TEST_DATABASE_URL).toBe(process.env.TEST_DATABASE_URL)
     }

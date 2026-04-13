@@ -107,10 +107,30 @@ This repository is the workspace that powers the framework, starters, and exampl
 | `pnpm build` | Build the workspace with Turborepo |
 | `pnpm typecheck` | Run workspace typechecks |
 | `pnpm test` | Run workspace tests |
+| `pnpm test:bookings:integration` | Start or reuse the Docker test Postgres, ensure the bookings test schema, and run the bookings integration files serially |
 | `pnpm lint` | Run Biome checks across the repo |
 | `pnpm -F dmc dev` | Start the DMC template on port `3100` |
 | `pnpm -F operator dev` | Start the operator template on port `3300` |
 | `pnpm -F dev dev` | Start the internal playground on port `3200` |
+
+### Integration test database
+
+The shared Docker test Postgres is defined in [`docker-compose.test.yml`](./docker-compose.test.yml).
+
+- default host port: `5436`
+- override with `TEST_DATABASE_PORT`
+- override the full connection string with `TEST_DATABASE_URL`
+
+For the bookings package, contributors can use:
+
+```bash
+pnpm test:bookings:integration
+```
+
+That helper starts or reuses the Docker test DB, applies template migrations,
+ensures the current additive bookings-session table exists, and runs the
+bookings DB-backed integration files serially to avoid deadlocks from concurrent
+table truncation.
 
 ## Architecture
 

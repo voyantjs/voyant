@@ -10,12 +10,26 @@ import { describe } from "vitest"
 
 export { cleanupTestDb, createTestDb }
 
+const TEST_DB_PORT = process.env.TEST_DATABASE_PORT ?? "5436"
+const TEST_DB_NAME = "voyant_test"
+const TEST_DB_USER = "test"
+const TEST_DB_PASSWORD = "test"
+
+function buildDefaultTestDbUrl(port: string) {
+  const url = new URL("postgres://localhost")
+  url.port = port
+  url.pathname = `/${TEST_DB_NAME}`
+  url.username = TEST_DB_USER
+  url.password = TEST_DB_PASSWORD
+  return url.toString()
+}
+
 /**
  * Resolved test database URL. Falls back to the docker-compose.test.yml default
  * when `TEST_DATABASE_URL` is not set.
  */
 export const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? "postgres://test:test@localhost:5433/voyant_test"
+  process.env.TEST_DATABASE_URL ?? buildDefaultTestDbUrl(TEST_DB_PORT)
 
 /**
  * `true` when the `TEST_DATABASE_URL` env var is set. Cheap synchronous check —

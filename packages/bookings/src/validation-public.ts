@@ -98,6 +98,38 @@ export const publicBookingSessionMutationSchema = z.object({
   note: z.string().nullable().optional(),
 })
 
+export const publicBookingSessionStateSchema = z.object({
+  sessionId: z.string(),
+  stateKey: z.literal("wizard"),
+  currentStep: z.string().nullable(),
+  completedSteps: z.array(z.string()),
+  payload: z.record(z.string(), z.unknown()),
+  version: z.number().int().positive(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const publicUpsertBookingSessionStateSchema = z.object({
+  currentStep: z.string().max(255).nullable().optional(),
+  completedSteps: z.array(z.string().min(1).max(255)).optional(),
+  payload: z.record(z.string(), z.unknown()).default({}),
+  replacePayload: z.boolean().default(false),
+})
+
+export const publicBookingSessionRepriceSelectionSchema = z.object({
+  itemId: z.string(),
+  optionId: z.string().nullable().optional(),
+  optionUnitId: z.string().nullable().optional(),
+  pricingCategoryId: z.string().nullable().optional(),
+  quantity: z.number().int().positive().optional(),
+})
+
+export const publicRepriceBookingSessionSchema = z.object({
+  catalogId: z.string().optional(),
+  applyToSession: z.boolean().default(false),
+  selections: z.array(publicBookingSessionRepriceSelectionSchema).min(1),
+})
+
 export const publicBookingOverviewLookupQuerySchema = z.object({
   bookingNumber: z.string().min(1).max(50),
   email: z.string().email(),
@@ -194,6 +226,38 @@ export const publicBookingSessionSchema = z.object({
   items: z.array(publicBookingSessionItemSchema),
   allocations: z.array(publicBookingSessionAllocationSchema),
   checklist: publicBookingSessionChecklistSchema,
+  state: publicBookingSessionStateSchema.nullable(),
+})
+
+export const publicBookingSessionRepriceItemSchema = z.object({
+  itemId: z.string(),
+  title: z.string(),
+  productId: z.string().nullable(),
+  optionId: z.string().nullable(),
+  optionUnitId: z.string().nullable(),
+  optionUnitName: z.string().nullable(),
+  optionUnitType: z.string().nullable(),
+  pricingCategoryId: z.string().nullable(),
+  quantity: z.number().int(),
+  pricingMode: z.string(),
+  unitSellAmountCents: z.number().int().nullable(),
+  totalSellAmountCents: z.number().int().nullable(),
+  warnings: z.array(z.string()),
+})
+
+export const publicBookingSessionRepriceSummarySchema = z.object({
+  sessionId: z.string(),
+  catalogId: z.string().nullable(),
+  currencyCode: z.string(),
+  totalSellAmountCents: z.number().int(),
+  items: z.array(publicBookingSessionRepriceItemSchema),
+  warnings: z.array(z.string()),
+  appliedToSession: z.boolean(),
+})
+
+export const publicBookingSessionRepriceResultSchema = z.object({
+  pricing: publicBookingSessionRepriceSummarySchema,
+  session: publicBookingSessionSchema.nullable(),
 })
 
 export const publicBookingOverviewParticipantSchema = z.object({
@@ -243,6 +307,11 @@ export const publicBookingOverviewSchema = z.object({
 export type PublicCreateBookingSessionInput = z.infer<typeof publicCreateBookingSessionSchema>
 export type PublicUpdateBookingSessionInput = z.infer<typeof publicUpdateBookingSessionSchema>
 export type PublicBookingSessionMutationInput = z.infer<typeof publicBookingSessionMutationSchema>
+export type PublicBookingSessionState = z.infer<typeof publicBookingSessionStateSchema>
+export type PublicUpsertBookingSessionStateInput = z.infer<
+  typeof publicUpsertBookingSessionStateSchema
+>
+export type PublicBookingSessionRepriceInput = z.infer<typeof publicRepriceBookingSessionSchema>
 export type PublicBookingOverviewLookupQuery = z.infer<
   typeof publicBookingOverviewLookupQuerySchema
 >

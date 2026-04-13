@@ -77,6 +77,43 @@ export const productContactRequirementListQuerySchema = paginationSchema.extend(
   active: booleanQueryParam.optional(),
 })
 
+export const publicTransportRequirementsQuerySchema = z.object({
+  optionId: z.string().optional(),
+})
+
+export const transportRequirementFieldSchema = z.enum([
+  "date_of_birth",
+  "nationality",
+  "passport_number",
+  "passport_expiry",
+])
+
+export const publicTransportRequirementSummarySchema = z.object({
+  fieldKey: transportRequirementFieldSchema,
+  scope: contactRequirementScopeSchema,
+  isRequired: z.boolean(),
+  perParticipant: z.boolean(),
+  notes: z.string().nullable(),
+})
+
+export const publicTransportRequirementsSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable(),
+  hasTransport: z.boolean(),
+  requiresPassengerDocuments: z.boolean(),
+  requiresPassport: z.boolean(),
+  requiresNationality: z.boolean(),
+  requiresDateOfBirth: z.boolean(),
+  requiredFields: z.array(transportRequirementFieldSchema),
+  fieldsByScope: z.object({
+    booking: z.array(transportRequirementFieldSchema),
+    lead_traveler: z.array(transportRequirementFieldSchema),
+    participant: z.array(transportRequirementFieldSchema),
+    booker: z.array(transportRequirementFieldSchema),
+  }),
+  requirements: z.array(publicTransportRequirementSummarySchema),
+})
+
 export const productBookingQuestionCoreSchema = z.object({
   productId: z.string(),
   code: z.string().max(100).nullable().optional(),

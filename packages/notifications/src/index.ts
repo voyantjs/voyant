@@ -7,6 +7,7 @@ export type { DefaultNotificationProviderOptions } from "./provider-resolution.j
 export {
   createDefaultNotificationProviders,
   createResendProviderFromEnv,
+  createTwilioProviderFromEnv,
 } from "./provider-resolution.js"
 export type { LocalProviderOptions } from "./providers/local.js"
 export { createLocalProvider } from "./providers/local.js"
@@ -16,6 +17,8 @@ export type {
   ResendRenderedEmail,
 } from "./providers/resend.js"
 export { createResendProvider } from "./providers/resend.js"
+export type { TwilioFetch, TwilioProviderOptions, TwilioRenderedSms } from "./providers/twilio.js"
+export { createTwilioProvider } from "./providers/twilio.js"
 export { createNotificationsRoutes } from "./routes.js"
 export type {
   NewNotificationDelivery,

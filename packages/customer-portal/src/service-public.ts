@@ -22,6 +22,7 @@ import type {
   CustomerPortalBootstrapCandidate,
   CustomerPortalCompanion,
   CustomerPortalContactExistsResult,
+  CustomerPortalPhoneContactExistsResult,
   CustomerPortalProfile,
   UpdateCustomerPortalCompanionInput,
   UpdateCustomerPortalProfileInput,
@@ -62,6 +63,10 @@ function normalizeNullableString(value: string | null | undefined) {
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase()
+}
+
+function normalizePhone(value: string) {
+  return value.trim()
 }
 
 function toCustomerCompanion(
@@ -176,6 +181,65 @@ async function listCustomerRecordCandidatesByEmail(
   }))
 
   return candidates
+}
+
+async function listCustomerRecordCandidatesByPhone(
+  db: PostgresJsDatabase,
+  phone: string,
+): Promise<CustomerPortalBootstrapCandidate[]> {
+  const normalizedPhone = normalizePhone(phone)
+  const rows = await db
+    .select({
+      id: people.id,
+      firstName: people.firstName,
+      lastName: people.lastName,
+      preferredLanguage: people.preferredLanguage,
+      preferredCurrency: people.preferredCurrency,
+      birthday: people.birthday,
+      relation: people.relation,
+      status: people.status,
+      source: people.source,
+      sourceRef: people.sourceRef,
+    })
+    .from(people)
+    .innerJoin(
+      identityContactPoints,
+      and(
+        eq(identityContactPoints.entityType, "person"),
+        eq(identityContactPoints.entityId, people.id),
+        inArray(identityContactPoints.kind, ["phone", "mobile", "whatsapp", "sms"]),
+        or(
+          eq(identityContactPoints.normalizedValue, normalizedPhone),
+          eq(identityContactPoints.value, normalizedPhone),
+        ),
+      ),
+    )
+    .orderBy(desc(people.updatedAt))
+
+  const uniqueRows = new Map<string, (typeof rows)[number]>()
+  for (const row of rows) {
+    if (!uniqueRows.has(row.id)) {
+      uniqueRows.set(row.id, row)
+    }
+  }
+
+  return Array.from(uniqueRows.values()).map((row) => ({
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    preferredLanguage: row.preferredLanguage ?? null,
+    preferredCurrency: row.preferredCurrency ?? null,
+    birthday: row.birthday ?? null,
+    email: null,
+    phone: normalizedPhone,
+    address: null,
+    city: null,
+    country: null,
+    relation: row.relation ?? null,
+    status: row.status,
+    claimedByAnotherUser: row.source === linkedCustomerSource && Boolean(row.sourceRef),
+    linkable: row.source === linkedCustomerSource ? row.sourceRef == null : row.sourceRef == null,
+  }))
 }
 
 async function getCustomerRecord(db: PostgresJsDatabase, userId: string) {
@@ -379,6 +443,22 @@ export const publicCustomerPortalService = {
     return {
       email: normalizedEmail,
       authAccountExists: Boolean(authAccount[0]),
+      customerRecordExists: customerCandidates.length > 0,
+      linkedCustomerRecordExists: customerCandidates.some(
+        (candidate) => candidate.claimedByAnotherUser,
+      ),
+    }
+  },
+
+  async phoneContactExists(
+    db: PostgresJsDatabase,
+    phone: string,
+  ): Promise<CustomerPortalPhoneContactExistsResult> {
+    const normalizedPhone = normalizePhone(phone)
+    const customerCandidates = await listCustomerRecordCandidatesByPhone(db, normalizedPhone)
+
+    return {
+      phone: normalizedPhone,
       customerRecordExists: customerCandidates.length > 0,
       linkedCustomerRecordExists: customerCandidates.some(
         (candidate) => candidate.claimedByAnotherUser,

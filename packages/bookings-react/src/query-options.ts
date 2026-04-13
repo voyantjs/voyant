@@ -17,6 +17,8 @@ import {
   bookingPassengersResponse,
   bookingSingleResponse,
   bookingSupplierStatusesResponse,
+  publicBookingSessionResponse,
+  publicBookingSessionStateResponse,
 } from "./schemas.js"
 
 export function getBookingsQueryOptions(
@@ -114,5 +116,35 @@ export function getBookingNotesQueryOptions(
     queryKey: bookingsQueryKeys.notes(bookingId ?? ""),
     queryFn: () =>
       fetchWithValidation(`/v1/bookings/${bookingId}/notes`, bookingNotesResponse, client),
+  })
+}
+
+export function getPublicBookingSessionQueryOptions(
+  client: FetchWithValidationOptions,
+  sessionId: string | null | undefined,
+) {
+  return queryOptions({
+    queryKey: bookingsQueryKeys.publicSession(sessionId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/public/bookings/sessions/${sessionId}`,
+        publicBookingSessionResponse,
+        client,
+      ),
+  })
+}
+
+export function getPublicBookingSessionStateQueryOptions(
+  client: FetchWithValidationOptions,
+  sessionId: string | null | undefined,
+) {
+  return queryOptions({
+    queryKey: bookingsQueryKeys.publicSessionState(sessionId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/public/bookings/sessions/${sessionId}/state`,
+        publicBookingSessionStateResponse,
+        client,
+      ),
   })
 }

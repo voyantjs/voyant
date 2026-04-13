@@ -7,6 +7,7 @@ export {
 } from "./client.js"
 export * from "./hooks/index.js"
 export {
+  getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
   getPublicPaymentSession,
   startPublicBookingGuaranteePaymentSession,
@@ -27,6 +28,7 @@ export {
   getInvoicePaymentsQueryOptions,
   getInvoiceQueryOptions,
   getInvoicesQueryOptions,
+  getPublicBookingDocumentsQueryOptions,
   getPublicBookingPaymentOptionsQueryOptions,
   getPublicPaymentSessionQueryOptions,
   getSupplierPaymentsQueryOptions,

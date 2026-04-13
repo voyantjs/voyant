@@ -20,6 +20,20 @@ const app = createApp({
 })
 ```
 
+## Public storefront flow
+
+The public routes include:
+
+- `POST /v1/public/bookings/sessions`
+- `GET /v1/public/bookings/sessions/:sessionId`
+- `PUT /v1/public/bookings/sessions/:sessionId/state`
+- `POST /v1/public/bookings/sessions/:sessionId/reprice`
+- `GET /v1/public/bookings/overview`
+
+Session reads now include first-class persisted wizard state, and repricing
+supports both preview mode and `applyToSession` mode for committing the priced
+room/unit selection back onto the booking session totals.
+
 ## Entities
 
 - **Bookings** (`book`)
@@ -27,6 +41,7 @@ const app = createApp({
 - **Booking supplier statuses** (`bkss`)
 - **Booking activity log** (`bkal`)
 - **Booking notes** (`bnot`)
+- **Booking session states** (`bkst`)
 
 ## Exports
 

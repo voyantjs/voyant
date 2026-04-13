@@ -50,6 +50,44 @@ export const contractTemplatesService = {
       .limit(1)
     return row ?? null
   },
+  async getDefaultTemplate(
+    db: PostgresJsDatabase,
+    query: {
+      scope: "customer" | "supplier" | "partner" | "channel" | "other"
+      language?: string
+      fallbackLanguages?: string[]
+    },
+  ) {
+    const rows = await db
+      .select()
+      .from(contractTemplates)
+      .where(and(eq(contractTemplates.scope, query.scope), eq(contractTemplates.active, true)))
+      .orderBy(desc(contractTemplates.updatedAt))
+
+    if (rows.length === 0) {
+      return null
+    }
+
+    const preferredLanguages = [
+      query.language?.trim().toLowerCase(),
+      ...(query.fallbackLanguages ?? []).map((value) => value.trim().toLowerCase()),
+    ].filter(
+      (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+    )
+
+    if (preferredLanguages.length === 0) {
+      return rows[0] ?? null
+    }
+
+    for (const language of preferredLanguages) {
+      const match = rows.find((row) => row.language.trim().toLowerCase() === language)
+      if (match) {
+        return match
+      }
+    }
+
+    return rows[0] ?? null
+  },
   async createTemplate(db: PostgresJsDatabase, data: CreateContractTemplateInput) {
     const [row] = await db.insert(contractTemplates).values(data).returning()
     return row ?? null

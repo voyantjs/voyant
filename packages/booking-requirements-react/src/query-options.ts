@@ -1,18 +1,21 @@
 "use client"
 
 import { queryOptions } from "@tanstack/react-query"
+import { z } from "zod"
 
 import { type FetchWithValidationOptions, fetchWithValidation } from "./client.js"
 import type { UseBookingQuestionsOptions } from "./hooks/use-booking-questions.js"
 import type { UseContactRequirementsOptions } from "./hooks/use-contact-requirements.js"
 import type { UseProductsOptions } from "./hooks/use-products.js"
 import type { UseQuestionOptionsOptions } from "./hooks/use-question-options.js"
+import type { UseTransportRequirementsOptions } from "./hooks/use-transport-requirements.js"
 import { bookingRequirementsQueryKeys } from "./query-keys.js"
 import {
   bookingQuestionListResponse,
   bookingQuestionOptionListResponse,
   contactRequirementListResponse,
   productLiteListResponse,
+  publicTransportRequirementsSchema,
 } from "./schemas.js"
 
 function appendPagination(params: URLSearchParams, filters: { limit?: number; offset?: number }) {
@@ -99,6 +102,26 @@ export function getQuestionOptionsQueryOptions(
       return fetchWithValidation(
         `/v1/booking-requirements/question-options${qs ? `?${qs}` : ""}`,
         bookingQuestionOptionListResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getTransportRequirementsQueryOptions(
+  client: FetchWithValidationOptions,
+  options: UseTransportRequirementsOptions,
+) {
+  const { enabled: _enabled = true, productId, optionId } = options
+  return queryOptions({
+    queryKey: bookingRequirementsQueryKeys.transportRequirementsDetail({ productId, optionId }),
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (optionId) params.set("optionId", optionId)
+      const qs = params.toString()
+      return fetchWithValidation(
+        `/v1/public/booking-requirements/products/${productId}/transport-requirements${qs ? `?${qs}` : ""}`,
+        z.object({ data: publicTransportRequirementsSchema }),
         client,
       )
     },

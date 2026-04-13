@@ -1,3 +1,5 @@
+import { optionPriceRules, optionUnitPriceRules, priceCatalogs } from "@voyantjs/pricing/schema"
+import { optionUnits, productOptions, products } from "@voyantjs/products/schema"
 import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -62,6 +64,80 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
       .returning()
 
     return slot
+  }
+
+  async function seedPublicPricing(productId: string, optionId: string) {
+    const [product] = await db
+      .insert(products)
+      .values({
+        id: productId,
+        name: "Public roomed circuit",
+        status: "active",
+        activated: true,
+        visibility: "public",
+        sellCurrency: "EUR",
+      })
+      .returning()
+
+    const [option] = await db
+      .insert(productOptions)
+      .values({
+        id: optionId,
+        productId: product.id,
+        name: "Main departure",
+        status: "active",
+        isDefault: true,
+      })
+      .returning()
+
+    const [unit] = await db
+      .insert(optionUnits)
+      .values({
+        optionId: option.id,
+        name: "Double room",
+        unitType: "room",
+        occupancyMin: 2,
+        occupancyMax: 2,
+        isHidden: false,
+      })
+      .returning()
+
+    const [catalog] = await db
+      .insert(priceCatalogs)
+      .values({
+        code: "PUBLIC-EUR",
+        name: "Public EUR",
+        currencyCode: "EUR",
+        catalogType: "public",
+        isDefault: true,
+        active: true,
+      })
+      .returning()
+
+    const [rule] = await db
+      .insert(optionPriceRules)
+      .values({
+        productId: product.id,
+        optionId: option.id,
+        priceCatalogId: catalog.id,
+        name: "Room rule",
+        pricingMode: "per_booking",
+        baseSellAmountCents: 50000,
+        isDefault: true,
+        active: true,
+      })
+      .returning()
+
+    await db.insert(optionUnitPriceRules).values({
+      optionPriceRuleId: rule.id,
+      optionId: option.id,
+      unitId: unit.id,
+      pricingMode: "per_booking",
+      sellAmountCents: 50000,
+      active: true,
+    })
+
+    return { product, option, unit, catalog }
   }
 
   it("creates a public booking session from a storefront reservation request", async () => {
@@ -231,5 +307,112 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     expect(overview.documents).toHaveLength(1)
     expect(overview.fulfillments).toHaveLength(1)
     expect(overview.participants[0]?.firstName).toBe("Elena")
+  })
+
+  it("persists wizard session state and includes it in session reads", async () => {
+    const slot = await seedSlot()
+
+    const createRes = await app.request("/sessions", {
+      method: "POST",
+      ...json({
+        sellCurrency: "EUR",
+        items: [
+          {
+            title: "Cluj escape",
+            availabilitySlotId: slot.id,
+            quantity: 1,
+            totalSellAmountCents: 18000,
+            productId: slot.productId,
+            optionId: slot.optionId,
+          },
+        ],
+      }),
+    })
+
+    const session = (await createRes.json()).data
+
+    const stateRes = await app.request(`/sessions/${session.sessionId}/state`, {
+      method: "PUT",
+      ...json({
+        currentStep: "rooms",
+        completedSteps: ["travelers"],
+        payload: {
+          selections: [{ itemId: session.items[0].id, optionUnitId: "optu_room_double" }],
+        },
+      }),
+    })
+
+    expect(stateRes.status).toBe(200)
+    const stateBody = await stateRes.json()
+    expect(stateBody.data.currentStep).toBe("rooms")
+    expect(stateBody.data.version).toBe(1)
+
+    const sessionRes = await app.request(`/sessions/${session.sessionId}`, { method: "GET" })
+    expect(sessionRes.status).toBe(200)
+    const sessionBody = await sessionRes.json()
+    expect(sessionBody.data.state.currentStep).toBe("rooms")
+    expect(sessionBody.data.state.completedSteps).toEqual(["travelers"])
+  })
+
+  it("reprices a room selection and can apply the priced selection back onto the session", async () => {
+    const slot = await seedSlot({
+      productId: "prod_room_booking",
+      optionId: "opt_room_booking",
+    })
+    const pricing = await seedPublicPricing(slot.productId, slot.optionId)
+
+    const createRes = await app.request("/sessions", {
+      method: "POST",
+      ...json({
+        sellCurrency: "EUR",
+        pax: 2,
+        items: [
+          {
+            title: "Bucharest stay",
+            availabilitySlotId: slot.id,
+            quantity: 1,
+            totalSellAmountCents: 0,
+            productId: slot.productId,
+            optionId: slot.optionId,
+          },
+        ],
+        participants: [
+          {
+            firstName: "Radu",
+            lastName: "Pop",
+            email: "radu@example.com",
+            isPrimary: true,
+          },
+          {
+            firstName: "Maria",
+            lastName: "Pop",
+            email: "maria@example.com",
+          },
+        ],
+      }),
+    })
+
+    const session = (await createRes.json()).data
+
+    const repriceRes = await app.request(`/sessions/${session.sessionId}/reprice`, {
+      method: "POST",
+      ...json({
+        applyToSession: true,
+        selections: [
+          {
+            itemId: session.items[0].id,
+            optionUnitId: pricing.unit.id,
+            quantity: 1,
+          },
+        ],
+      }),
+    })
+
+    expect(repriceRes.status).toBe(200)
+    const body = await repriceRes.json()
+    expect(body.data.pricing.items[0]?.optionUnitId).toBe(pricing.unit.id)
+    expect(body.data.pricing.items[0]?.totalSellAmountCents).toBe(50000)
+    expect(body.data.session.items[0]?.optionUnitId).toBe(pricing.unit.id)
+    expect(body.data.session.sellAmountCents).toBe(50000)
   })
 })

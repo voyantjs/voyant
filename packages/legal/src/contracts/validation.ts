@@ -51,6 +51,22 @@ export const contractTemplateListQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
 })
 
+export const contractTemplateDefaultQuerySchema = z.object({
+  scope: contractScopeSchema.default("customer"),
+  language: z.string().min(2).max(10).optional(),
+  fallbackLanguages: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value
+        ? value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [],
+    ),
+})
+
 // ---------- contract template versions ----------
 
 export const insertContractTemplateVersionSchema = z.object({
@@ -115,6 +131,10 @@ export const renderTemplateInputSchema = z.object({
   variables: z.record(z.string(), z.unknown()),
   bodyFormat: contractBodyFormatSchema.optional(),
   body: z.string().optional(),
+})
+
+export const publicRenderTemplatePreviewInputSchema = z.object({
+  variables: z.record(z.string(), z.unknown()),
 })
 
 // ---------- contract signatures ----------

@@ -155,12 +155,6 @@ export {
   paymentInstrumentListQuerySchema,
   paymentSessionListQuerySchema,
   profitabilityQuerySchema,
-  publicBookingPaymentOptionsSchema,
-  publicPaymentOptionsQuerySchema,
-  publicPaymentSessionSchema,
-  publicStartPaymentSessionSchema,
-  publicValidateVoucherSchema,
-  publicVoucherValidationSchema,
   renderInvoiceInputSchema,
   revenueReportQuerySchema,
   supplierPaymentListQuerySchema,
@@ -186,10 +180,25 @@ export {
   updateTaxRegimeSchema,
 } from "./validation.js"
 export type {
+  PublicBookingFinanceDocuments,
   PublicBookingPaymentOptions,
+  PublicFinanceBookingDocument,
   PublicPaymentOptionsQuery,
   PublicPaymentSession,
   PublicStartPaymentSessionInput,
   PublicValidateVoucherInput,
   PublicVoucherValidationResult,
+} from "./validation-public.js"
+export {
+  publicBookingFinanceDocumentsSchema,
+  publicBookingPaymentOptionsSchema,
+  publicFinanceBookingDocumentSchema,
+  publicFinanceDocumentAvailabilitySchema,
+  publicFinanceDocumentFormatSchema,
+  publicFinanceInvoiceTypeSchema,
+  publicPaymentOptionsQuerySchema,
+  publicPaymentSessionSchema,
+  publicStartPaymentSessionSchema,
+  publicValidateVoucherSchema,
+  publicVoucherValidationSchema,
 } from "./validation-public.js"

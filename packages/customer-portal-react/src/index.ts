@@ -12,6 +12,7 @@ export {
   deleteCustomerPortalCompanion,
   getCustomerPortalBooking,
   getCustomerPortalContactExists,
+  getCustomerPortalPhoneContactExists,
   getCustomerPortalProfile,
   listCustomerPortalBookingDocuments,
   listCustomerPortalBookings,
@@ -25,7 +26,10 @@ export {
   VoyantCustomerPortalProvider,
   type VoyantCustomerPortalProviderProps,
 } from "./provider.js"
-export type { CustomerPortalContactExistsFilters } from "./query-keys.js"
+export type {
+  CustomerPortalContactExistsFilters,
+  CustomerPortalPhoneContactExistsFilters,
+} from "./query-keys.js"
 export { customerPortalQueryKeys } from "./query-keys.js"
 export {
   getCustomerPortalBookingDocumentsQueryOptions,
@@ -33,6 +37,7 @@ export {
   getCustomerPortalBookingsQueryOptions,
   getCustomerPortalCompanionsQueryOptions,
   getCustomerPortalContactExistsQueryOptions,
+  getCustomerPortalPhoneContactExistsQueryOptions,
   getCustomerPortalProfileQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

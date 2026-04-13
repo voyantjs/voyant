@@ -2,9 +2,16 @@ import { bookings } from "@voyantjs/bookings/schema"
 import { and, asc, desc, eq, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
-import { bookingGuarantees, bookingPaymentSchedules, paymentInstruments } from "./schema.js"
+import {
+  bookingGuarantees,
+  bookingPaymentSchedules,
+  invoiceRenditions,
+  invoices,
+  paymentInstruments,
+} from "./schema.js"
 import { financeService } from "./service.js"
 import type {
+  PublicBookingFinanceDocuments,
   PublicPaymentOptionsQuery,
   PublicStartPaymentSessionInput,
   PublicValidateVoucherInput,
@@ -54,6 +61,52 @@ function getMetadataStringArray(record: Record<string, unknown> | null, key: str
   return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
 }
 
+function maybeUrl(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  return /^https?:\/\//i.test(value) ? value : null
+}
+
+function getMetadataDownloadUrl(record: Record<string, unknown> | null) {
+  const directKeys = [
+    "downloadUrl",
+    "download_url",
+    "signedUrl",
+    "signed_url",
+    "publicUrl",
+    "public_url",
+    "fileUrl",
+    "file_url",
+    "url",
+  ]
+
+  for (const key of directKeys) {
+    const value = getMetadataString(record, key)
+    const url = maybeUrl(value)
+    if (url) {
+      return url
+    }
+  }
+
+  const artifact = record?.artifact
+  if (artifact && typeof artifact === "object" && !Array.isArray(artifact)) {
+    const nested = artifact as Record<string, unknown>
+    for (const key of ["downloadUrl", "download_url", "signedUrl", "publicUrl", "url"]) {
+      const value = nested[key]
+      if (typeof value === "string") {
+        const url = maybeUrl(value)
+        if (url) {
+          return url
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 function toPublicPaymentSession(
   session: NonNullable<Awaited<ReturnType<typeof financeService.getPaymentSessionById>>>,
 ) {
@@ -87,6 +140,77 @@ function toPublicPaymentSession(
 }
 
 export const publicFinanceService = {
+  async getBookingDocuments(
+    db: PostgresJsDatabase,
+    bookingId: string,
+  ): Promise<PublicBookingFinanceDocuments | null> {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const invoiceRows = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.bookingId, bookingId))
+      .orderBy(desc(invoices.createdAt))
+
+    if (invoiceRows.length === 0) {
+      return { bookingId, documents: [] }
+    }
+
+    const renditionRows = await db
+      .select()
+      .from(invoiceRenditions)
+      .where(or(...invoiceRows.map((invoice) => eq(invoiceRenditions.invoiceId, invoice.id))))
+      .orderBy(desc(invoiceRenditions.createdAt))
+
+    const renditionByInvoiceId = new Map<string, (typeof invoiceRenditions.$inferSelect)[]>()
+    for (const rendition of renditionRows) {
+      const existing = renditionByInvoiceId.get(rendition.invoiceId) ?? []
+      existing.push(rendition)
+      renditionByInvoiceId.set(rendition.invoiceId, existing)
+    }
+
+    return {
+      bookingId,
+      documents: invoiceRows.map((invoice) => {
+        const renditions = renditionByInvoiceId.get(invoice.id) ?? []
+        const selectedRendition =
+          renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
+        const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
+        const downloadUrl =
+          getMetadataDownloadUrl(metadata) ?? maybeUrl(selectedRendition?.storageKey ?? null)
+
+        return {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceType: invoice.invoiceType,
+          invoiceStatus: invoice.status,
+          currency: invoice.currency,
+          totalCents: invoice.totalCents,
+          paidCents: invoice.paidCents,
+          balanceDueCents: invoice.balanceDueCents,
+          issueDate: invoice.issueDate,
+          dueDate: invoice.dueDate,
+          renditionId: selectedRendition?.id ?? null,
+          documentStatus: selectedRendition?.status ?? "missing",
+          format: selectedRendition?.format ?? null,
+          language: selectedRendition?.language ?? null,
+          generatedAt: normalizeDateTime(selectedRendition?.generatedAt),
+          fileSize: selectedRendition?.fileSize ?? null,
+          checksum: selectedRendition?.checksum ?? null,
+          downloadUrl,
+        }
+      }),
+    }
+  },
+
   async getBookingPaymentOptions(
     db: PostgresJsDatabase,
     bookingId: string,

@@ -621,6 +621,9 @@ importers:
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
+      '@voyantjs/products':
+        specifier: workspace:*
+        version: link:../products
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -634,9 +637,6 @@ importers:
       '@voyantjs/bookings':
         specifier: workspace:*
         version: link:../bookings
-      '@voyantjs/products':
-        specifier: workspace:*
-        version: link:../products
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -705,6 +705,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@voyantjs/products':
+        specifier: workspace:*
+        version: link:../products
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -2247,6 +2250,65 @@ importers:
         specifier: ^4.1.2
         version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
 
+  packages/storefront:
+    dependencies:
+      '@voyantjs/core':
+        specifier: workspace:*
+        version: link:../core
+      '@voyantjs/hono':
+        specifier: workspace:*
+        version: link:../hono
+      hono:
+        specifier: ^4.12.10
+        version: 4.12.10
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@voyantjs/voyant-typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/storefront-verification:
+    dependencies:
+      '@voyantjs/core':
+        specifier: workspace:*
+        version: link:../core
+      '@voyantjs/db':
+        specifier: workspace:*
+        version: link:../db
+      '@voyantjs/hono':
+        specifier: workspace:*
+        version: link:../hono
+      '@voyantjs/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
+      hono:
+        specifier: ^4.12.10
+        version: 4.12.10
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@voyantjs/voyant-typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/suppliers:
     dependencies:
       '@voyantjs/core':
@@ -2584,6 +2646,9 @@ importers:
       '@voyantjs/sellability':
         specifier: workspace:*
         version: link:../../packages/sellability
+      '@voyantjs/storefront-verification':
+        specifier: workspace:*
+        version: link:../../packages/storefront-verification
       '@voyantjs/suppliers':
         specifier: workspace:*
         version: link:../../packages/suppliers
@@ -2852,6 +2917,9 @@ importers:
       '@voyantjs/sellability':
         specifier: workspace:*
         version: link:../../packages/sellability
+      '@voyantjs/storefront-verification':
+        specifier: workspace:*
+        version: link:../../packages/storefront-verification
       '@voyantjs/suppliers':
         specifier: workspace:*
         version: link:../../packages/suppliers

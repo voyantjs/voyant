@@ -140,6 +140,19 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
     })
   })
 
+  it("reports phone contact existence for CRM preflight checks", async () => {
+    await seedLinkedCustomer()
+
+    const res = await preflightApp.request("/contact-exists/phone?phone=%2B40123456789")
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).data).toEqual({
+      phone: "+40123456789",
+      customerRecordExists: true,
+      linkedCustomerRecordExists: true,
+    })
+  })
+
   it("bootstraps a new linked customer record when none exists", async () => {
     const res = await app.request("/bootstrap", {
       method: "POST",

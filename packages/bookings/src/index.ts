@@ -74,6 +74,7 @@ export type {
   BookingPassenger,
   BookingPiiAccessLog,
   BookingRedemptionEvent,
+  BookingSessionState,
   BookingSupplierStatus,
   NewBooking,
   NewBookingActivity,
@@ -87,6 +88,7 @@ export type {
   NewBookingPassenger,
   NewBookingPiiAccessLog,
   NewBookingRedemptionEvent,
+  NewBookingSessionState,
   NewBookingSupplierStatus,
 } from "./schema.js"
 export {
@@ -101,6 +103,7 @@ export {
   bookingPassengers,
   bookingPiiAccessLog,
   bookingRedemptionEvents,
+  bookingSessionStates,
   bookingSupplierStatuses,
   bookings,
 } from "./schema.js"
@@ -126,8 +129,14 @@ export {
   insertSupplierStatusSchema,
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
+  publicBookingSessionRepriceItemSchema,
+  publicBookingSessionRepriceResultSchema,
+  publicBookingSessionRepriceSummarySchema,
+  publicBookingSessionStateSchema,
   publicCreateBookingSessionSchema,
+  publicRepriceBookingSessionSchema,
   publicUpdateBookingSessionSchema,
+  publicUpsertBookingSessionStateSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,

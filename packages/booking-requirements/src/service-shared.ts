@@ -17,6 +17,8 @@ import type {
   optionBookingQuestionListQuerySchema,
   productBookingQuestionListQuerySchema,
   productContactRequirementListQuerySchema,
+  publicTransportRequirementsQuerySchema,
+  publicTransportRequirementsSchema,
   updateBookingAnswerSchema,
   updateBookingQuestionExtraTriggerSchema,
   updateBookingQuestionOptionSchema,
@@ -30,6 +32,10 @@ import type {
 export type ProductContactRequirementListQuery = z.infer<
   typeof productContactRequirementListQuerySchema
 >
+export type PublicTransportRequirementsQuery = z.infer<
+  typeof publicTransportRequirementsQuerySchema
+>
+export type PublicTransportRequirements = z.infer<typeof publicTransportRequirementsSchema>
 export type ProductBookingQuestionListQuery = z.infer<typeof productBookingQuestionListQuerySchema>
 export type OptionBookingQuestionListQuery = z.infer<typeof optionBookingQuestionListQuerySchema>
 export type BookingQuestionOptionListQuery = z.infer<typeof bookingQuestionOptionListQuerySchema>

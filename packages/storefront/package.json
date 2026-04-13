@@ -1,0 +1,62 @@
+{
+  "name": "@voyantjs/storefront",
+  "version": "0.3.0",
+  "license": "FSL-1.1-Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./public-routes": "./src/routes-public.ts",
+    "./service": "./src/service.ts",
+    "./validation": "./src/validation.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "test": "vitest run",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@voyantjs/core": "workspace:*",
+    "@voyantjs/hono": "workspace:*",
+    "hono": "^4.12.10",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./public-routes": {
+        "types": "./dist/routes-public.d.ts",
+        "import": "./dist/routes-public.js"
+      },
+      "./service": {
+        "types": "./dist/service.d.ts",
+        "import": "./dist/service.js"
+      },
+      "./validation": {
+        "types": "./dist/validation.d.ts",
+        "import": "./dist/validation.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voyantjs/voyant.git",
+    "directory": "packages/storefront"
+  }
+}

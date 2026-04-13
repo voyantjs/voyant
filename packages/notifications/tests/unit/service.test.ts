@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   createDefaultNotificationProviders,
   createResendProviderFromEnv,
+  createTwilioProviderFromEnv,
 } from "../../src/provider-resolution.js"
 import { createLocalProvider } from "../../src/providers/local.js"
 import {
@@ -168,6 +169,21 @@ describe("createDefaultNotificationProviders", () => {
       ).map((provider) => provider.name),
     ).toEqual(["local", "resend"])
   })
+
+  it("adds twilio only when explicitly requested", () => {
+    expect(
+      createDefaultNotificationProviders(
+        {
+          TWILIO_ACCOUNT_SID: "AC123",
+          TWILIO_AUTH_TOKEN: "secret",
+          TWILIO_SMS_FROM: "+40000000000",
+        },
+        {
+          smsProvider: "twilio",
+        },
+      ).map((provider) => provider.name),
+    ).toEqual(["local", "twilio"])
+  })
 })
 
 describe("createResendProviderFromEnv", () => {
@@ -181,5 +197,25 @@ describe("createResendProviderFromEnv", () => {
       EMAIL_FROM: "noreply@example.com",
     })
     expect(provider?.name).toBe("resend")
+  })
+})
+
+describe("createTwilioProviderFromEnv", () => {
+  it("returns null when env is incomplete", () => {
+    expect(
+      createTwilioProviderFromEnv({
+        TWILIO_ACCOUNT_SID: "AC123",
+        TWILIO_SMS_FROM: "+40000000000",
+      }),
+    ).toBeNull()
+  })
+
+  it("creates a twilio provider when env is complete", () => {
+    const provider = createTwilioProviderFromEnv({
+      TWILIO_ACCOUNT_SID: "AC123",
+      TWILIO_AUTH_TOKEN: "secret",
+      TWILIO_SMS_FROM: "+40000000000",
+    })
+    expect(provider?.name).toBe("twilio")
   })
 })

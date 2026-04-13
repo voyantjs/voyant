@@ -17,6 +17,11 @@ export interface BookingQuestionOptionsListFilters extends PaginationFilters {
   productBookingQuestionId?: string | undefined
 }
 
+export interface TransportRequirementsFilters {
+  productId: string
+  optionId?: string | undefined
+}
+
 export const bookingRequirementsQueryKeys = {
   all: ["voyant", "booking-requirements"] as const,
 
@@ -35,4 +40,9 @@ export const bookingRequirementsQueryKeys = {
   questionOptions: () => [...bookingRequirementsQueryKeys.all, "question-options"] as const,
   questionOptionsList: (filters: BookingQuestionOptionsListFilters) =>
     [...bookingRequirementsQueryKeys.questionOptions(), "list", filters] as const,
+
+  transportRequirements: () =>
+    [...bookingRequirementsQueryKeys.all, "transport-requirements"] as const,
+  transportRequirementsDetail: (filters: TransportRequirementsFilters) =>
+    [...bookingRequirementsQueryKeys.transportRequirements(), "detail", filters] as const,
 } as const

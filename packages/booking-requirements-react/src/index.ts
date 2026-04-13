@@ -18,6 +18,7 @@ export {
   getContactRequirementsQueryOptions,
   getProductsQueryOptions,
   getQuestionOptionsQueryOptions,
+  getTransportRequirementsQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"
 export * from "./utils.js"

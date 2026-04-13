@@ -3,8 +3,21 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import { createDbClient } from "./index.js"
 
-const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL ?? "postgres://test:test@localhost:5433/voyant_test"
+const TEST_DB_PORT = process.env.TEST_DATABASE_PORT ?? "5436"
+const TEST_DB_NAME = "voyant_test"
+const TEST_DB_USER = "test"
+const TEST_DB_PASSWORD = "test"
+
+function buildDefaultTestDbUrl(port: string) {
+  const url = new URL("postgres://localhost")
+  url.port = port
+  url.pathname = `/${TEST_DB_NAME}`
+  url.username = TEST_DB_USER
+  url.password = TEST_DB_PASSWORD
+  return url.toString()
+}
+
+const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? buildDefaultTestDbUrl(TEST_DB_PORT)
 
 type PostgresJsDatabaseWithClient = PostgresJsDatabase & {
   $client?: {

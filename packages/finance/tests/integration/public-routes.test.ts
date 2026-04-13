@@ -7,6 +7,7 @@ import { publicFinanceRoutes } from "../../src/routes-public.js"
 import {
   bookingGuarantees,
   bookingPaymentSchedules,
+  invoiceRenditions,
   invoices,
   paymentInstruments,
   paymentSessions,
@@ -141,7 +142,10 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
     return row
   }
 
-  async function seedInvoice(bookingId: string, overrides: Record<string, unknown> = {}) {
+  async function seedInvoice(
+    bookingId: string,
+    overrides: Partial<typeof invoices.$inferInsert> = {},
+  ) {
     const [invoice] = await db
       .insert(invoices)
       .values({
@@ -152,11 +156,12 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
         dueDate: "2025-07-01",
         subtotalCents: 100000,
         taxCents: 10000,
-        totalCents: (overrides.totalCents as number | undefined) ?? 110000,
-        paidCents: (overrides.paidCents as number | undefined) ?? 0,
-        balanceDueCents: (overrides.balanceDueCents as number | undefined) ?? 110000,
+        totalCents: overrides.totalCents ?? 110000,
+        paidCents: overrides.paidCents ?? 0,
+        balanceDueCents: overrides.balanceDueCents ?? 110000,
+        ...overrides,
       })
-      .returning({ id: invoices.id })
+      .returning({ id: invoices.id, invoiceNumber: invoices.invoiceNumber })
 
     return invoice
   }
@@ -229,6 +234,66 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
     expect(body.data.recommendedTarget).toEqual({
       targetType: "booking_payment_schedule",
       targetId: body.data.schedules[0].id,
+    })
+  })
+
+  it("lists booking-scoped public finance documents and prefers ready renditions", async () => {
+    const booking = await seedBooking()
+    const invoice = await seedInvoice(booking.id, { totalCents: 50000, balanceDueCents: 50000 })
+    const proforma = await seedInvoice(booking.id, {
+      totalCents: 25000,
+      balanceDueCents: 25000,
+      paidCents: 0,
+      invoiceType: "proforma",
+    })
+
+    await db.insert(invoiceRenditions).values([
+      {
+        invoiceId: invoice.id,
+        format: "pdf",
+        status: "failed",
+        errorMessage: "renderer timeout",
+        metadata: { downloadUrl: "https://example.com/failed.pdf" },
+      },
+      {
+        invoiceId: invoice.id,
+        format: "pdf",
+        status: "ready",
+        generatedAt: new Date("2025-06-02T12:00:00.000Z"),
+        fileSize: 1024,
+        checksum: "sha256:ready",
+        metadata: { downloadUrl: "https://example.com/invoice-ready.pdf" },
+      },
+    ])
+
+    const res = await app.request(`/bookings/${booking.id}/documents`)
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.bookingId).toBe(booking.id)
+    expect(body.data.documents).toHaveLength(2)
+
+    const invoiceDocument = body.data.documents.find(
+      (document: { invoiceId: string }) => document.invoiceId === invoice.id,
+    )
+    expect(invoiceDocument).toMatchObject({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceType: "invoice",
+      documentStatus: "ready",
+      format: "pdf",
+      downloadUrl: "https://example.com/invoice-ready.pdf",
+      checksum: "sha256:ready",
+    })
+
+    const proformaDocument = body.data.documents.find(
+      (document: { invoiceId: string }) => document.invoiceId === proforma.id,
+    )
+    expect(proformaDocument).toMatchObject({
+      invoiceId: proforma.id,
+      invoiceType: "proforma",
+      documentStatus: "missing",
+      downloadUrl: null,
     })
   })
 

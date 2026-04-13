@@ -11,6 +11,7 @@ import {
   customerPortalCompanionResponseSchema,
   customerPortalCompanionsResponseSchema,
   customerPortalContactExistsResponseSchema,
+  customerPortalPhoneContactExistsResponseSchema,
   customerPortalProfileResponseSchema,
   successEnvelope,
   type UpdateCustomerPortalCompanionInput,
@@ -21,6 +22,17 @@ export function getCustomerPortalContactExists(client: FetchWithValidationOption
   return fetchWithValidation(
     withQueryParams("/v1/customer-portal/contact-exists", { email }),
     customerPortalContactExistsResponseSchema,
+    client,
+  )
+}
+
+export function getCustomerPortalPhoneContactExists(
+  client: FetchWithValidationOptions,
+  phone: string,
+) {
+  return fetchWithValidation(
+    withQueryParams("/v1/customer-portal/contact-exists/phone", { phone }),
+    customerPortalPhoneContactExistsResponseSchema,
     client,
   )
 }

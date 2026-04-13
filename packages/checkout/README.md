@@ -16,9 +16,12 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 
 - `POST /v1/checkout/bookings/:bookingId/collection-plan`
 - `POST /v1/checkout/bookings/:bookingId/initiate-collection`
+- `GET /v1/admin/checkout/bookings/:bookingId/reminder-runs`
 
 ## Notes
 
 - payment-provider plugins like Netopia remain optional
 - email-provider choice remains app-owned
-- projects can override the default collection policy when mounting the routes
+- projects can override the default collection policy when mounting checkout
+- `createCheckoutHonoModule()` now mounts checkout through Voyant's module
+  system while preserving the legacy `/v1/checkout/*` public path

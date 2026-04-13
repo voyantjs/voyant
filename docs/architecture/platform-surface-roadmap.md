@@ -11,7 +11,7 @@ API plan for Voyant itself.
 - Make every public surface explicit, typed, and stable enough for multiple
   agencies to build on top of it.
 
-## Surface Model
+## Current State
 
 Voyant already has the right transport split:
 
@@ -19,142 +19,227 @@ Voyant already has the right transport split:
 - `/v1/public/*` for customer, partner, and supplier surfaces
 - `/auth/*` for session and workspace/authenticated-user operations
 
-The missing work is on top of that split:
+The current gap is no longer “invent the surface model”. The gap is:
 
-- reusable package surfaces
-- consumer-oriented response contracts
-- module boundaries that do not force storefront apps to reverse-engineer admin
-  CRUD APIs
+- release the source-level surfaces that already exist in-tree
+- finish the remaining public/storefront contracts that still force app-local
+  compatibility layers
+- add first-class lifecycle/document workflows where apps still need copied
+  orchestration
 
-## Upstream Package Plan
+## Status Snapshot
 
-### 1. Auth and workspace surface
+### Release and package integrity
 
-Own the authenticated workspace contract in Voyant:
+Resolved in source, but not in the published `0.3.0` npm train:
 
-- `/auth/me`
-- `/auth/status`
-- `/auth/workspace`
-- `/auth/workspace/active-organization`
+- `@voyantjs/finance` now exports the public finance schemas and public finance
+  routes used by `@voyantjs/finance-react`
+- `@voyantjs/products` now exports `publicProductsService`
+- `@voyantjs/bookings` now exports `publicBookingsService` and public booking
+  route helpers
+- `@voyantjs/products-react` now exports the day, version, and media hooks and
+  query helpers from the package root
 
-Runtime package:
+Required follow-up:
 
-- `@voyantjs/auth-react`
-- current user hook
-- current workspace hook
-- auth status hook
-- active organization mutation
+- republish those packages on a new version
+- keep CI/release smoke tests on runtime entrypoint exports, not just tarball
+  file presence
 
-Follow-up scope on the same package and route family:
+### Auth and workspace surface
 
-- organization members
-- pending invitations
-- invite/revoke/remove/update-role mutations
+Resolved upstream for contracts, partially resolved for reusable UI:
 
-### 2. Customer portal surface
+- `@voyantjs/auth-react` covers current user, workspace, status, active
+  organization, members, invitations, invite, remove, cancel, and role update
+  flows
+- Voyant still does not ship reusable staff team-management registry UI
 
-Do not hide customer-facing behavior inside admin modules.
+### Customer portal surface
 
-Add a dedicated customer-facing contract that covers:
+Resolved upstream for the base platform contract, adoption still incomplete in
+  downstream apps:
 
-- profile read/update
-- preferences and marketing consent
-- companions and contact relationships
-- customer-scoped booking list/detail/documents
-- contact existence checks required by account and booking flows
+- dedicated `@voyantjs/customer-portal` and
+  `@voyantjs/customer-portal-react` packages exist
+- public/authenticated routes now cover bootstrap, profile, companions,
+  booking list/detail, documents, marketing consent, email contact-exists, and
+  phone contact-exists
 
-Current implementation direction:
+Still missing on this surface:
 
-- dedicated `@voyantjs/customer-portal` package
-- dedicated `@voyantjs/customer-portal-react` consumer package for typed
-  operations, query keys, query options, and React hooks
-- authenticated profile/preferences from Better Auth `user` +
-  `user_profiles`
-- optional explicit CRM customer linkage via `people.source = "auth.user"`
-  and `people.sourceRef = user.id`
-- customer-scoped bookings resolved from the linked CRM person and safe
-  email-based booking participation fallback
-- lightweight companion/contact records backed by identity named contacts
-- authenticated bootstrap flow at `/v1/public/customer-portal/bootstrap`
-- unauthenticated contact preflight at
-  `/v1/customer-portal/contact-exists`
+- richer booking summaries and financial history
+- broader profile fields for traveler identity and billing
+- broader public document coverage
+- phone-based contact existence checks
+- a first-class companion schema for richer traveler identity data
 
-Still to add on this surface:
+### Storefront catalog surface
 
-- a reference customer onboarding flow that consumes
-  `@voyantjs/customer-portal-react`
-- stronger customer-to-CRM linking and provisioning workflows beyond
-  explicit candidate selection
-- customer document download policies beyond simple ownership filtering
-- eventual unauthenticated public-surface transport support so preflight
-  endpoints do not need to use the legacy `/v1/{module}` escape hatch
+Partially resolved:
 
-### 3. Storefront catalog surface
+- public catalog routes now cover product search/filter/sort, category listing,
+  tag listing, and product detail
 
-Catalog reads should not be a thin wrapper around product admin CRUD.
+Still missing:
 
-Expose a storefront-oriented public catalog contract that covers:
+- localized slugs on the public contract
+- SEO/meta fields required by storefront routes
+- a first-class slug lookup route or equivalent summary fields
+- a locale-aware internal product hydration/search-document helper for search
+  indexing and other background jobs
 
-- product search/filter/sort
-- category and tag listing
-- product detail
-- departure summaries tied to a product
-- offer applicability reads
+### Public pricing and availability surface
 
-### 4. Public pricing and availability surface
+Partially resolved:
 
-Pricing and availability need a public contract that is independent from
-internal scheduling CRUD.
+- public pricing and availability routes now cover snapshot-style reads
 
-Cover:
+Still missing:
 
-- departure list/detail
-- departure pricing
-- availability snapshots and prerequisites
-- applicable offers
+- full storefront departure semantics expected by older site flows
+- richer itinerary, extension, and offer payloads
+- a clean replacement for app-local departure/pricing compatibility adapters
 
-### 5. Public booking and checkout surface
+### Public booking and checkout surface
 
-Booking flow and payment flow should be explicit storefront contracts, not
-adaptations of internal reservation/payment primitives.
+Partially resolved:
 
-Cover:
+- public booking-session init/read/update/reserve and public overview are now in
+  Voyant source
 
-- booking-session init/read/update/reserve
-- booking overview by public reference
-- booking payment list in public context
-- payment session start and redirect initiation
-- payment accounts/defaults
-- voucher validation
+Still missing:
 
-## Editor Surface Plan
+- public and internal overview helpers beyond `bookingNumber + email`
+- cleaner package/service helpers for adapter-free storefront usage
 
-Shared operator UI should continue to grow, but only after the platform
-contracts above exist.
+Now covered:
 
-Priority:
+- first-class booking-session state storage at
+  `/v1/public/bookings/sessions/:sessionId/state`
+- session snapshots now include persisted wizard state
+- storefront repricing at `/v1/public/bookings/sessions/:sessionId/reprice`
+  with preview mode and explicit `applyToSession` support for committing the
+  selected unit/category pricing back onto booking items and totals
+- matching React helpers in `@voyantjs/bookings-react` for public session read,
+  state read/write, and repricing flows
 
-- first packaging milestone complete
+Now covered:
 
-Current implementation direction:
+- first-class checkout bootstrap routes in `@voyantjs/checkout`, including
+  module-based mounting and typed collection-plan/initiate-collection response
+  contracts
 
-- product option and option-unit editor surface is now packaged as registry
-  components on top of `@voyantjs/products-react`
-- product departures and recurring schedules are now packaged as registry
-  components on top of `@voyantjs/availability-react`
-- product itinerary days/services, version snapshots, and media management
-  are now packaged as registry components on top of `@voyantjs/products-react`
-- further shared editor work should stay focused on route-level operator
-  sections rather than low-level field widgets
+### Public finance surface
 
-## Execution Order
+Partially resolved:
 
-1. Finish downstream adoption of already-resolved tags/categories/pricing
-   surfaces.
-2. Ship the reusable auth/workspace contract and `@voyantjs/auth-react`.
-3. Add member and invitation management to the same auth/workspace surface.
-4. Design and implement dedicated customer portal contracts.
-5. Design and implement dedicated public catalog and public
-   pricing/availability contracts.
-6. Design and implement public booking and payment contracts.
-7. Expand shared operator editor surfaces.
+- public finance now covers booking payment options, payment-session
+  reads/starts, and voucher validation
+
+Still missing:
+
+- hosted collection/bootstrap flows for exact booking balance collection
+- first-class booking checkout start APIs that combine checkout creation and
+  provider initiation
+- customer-safe bank transfer instructions on the public finance surface
+- reminder tracking and unpaid bank-transfer reminder workflows
+
+Now covered:
+
+- booking-scoped public finance document lookup for invoice and proforma
+  renditions, including customer-safe download metadata when a ready rendition
+  has a public or signed URL available
+- admin checkout reminder tracking backed by first-class notification reminder
+  runs instead of app-local booking metadata
+
+### Legal and finance document workflows
+
+Pending:
+
+- storefront default contract-template selection is still app-owned policy
+- legal contract rendering is still template-variable replacement only and does
+  not cover richer Liquid/Lexical workflows
+- finance invoice/proforma renditions still stop at `pending` without an
+  upstream render/store/ready workflow
+
+Required upstream workflows:
+
+- render/generate/store/regenerate contract documents
+- render/generate/store/regenerate invoice and proforma documents
+- booking document preview, bundle, and email-send workflows
+
+### Storefront support surfaces
+
+Pending:
+
+- storefront lead-capture and newsletter intake contract, if that becomes a
+  repeated cross-app need instead of app-owned CRM and ESP wiring
+
+### Shared editor surface
+
+Resolved for base catalog CRUD, partially resolved for deeper product editing:
+
+- packaged/shared registry coverage now exists for products, tags, categories,
+  pricing categories, options, option units, availability, departures,
+  schedules, product days, day services, versions, and media
+
+Still missing:
+
+- supplier-service picker workflows in shared day-service UI
+- day-level media workflows beyond the current local wrapper patterns
+- upload-aware media UX as a first-class shared operator surface
+
+## Near-Term Priority
+
+1. Republish the broken or stale package surfaces so npm matches the current
+   source tree.
+2. Finish the storefront catalog, pricing, booking, and finance contracts so
+   downstream apps can remove compatibility adapters.
+3. Add first-class legal and finance document generation/storage workflows.
+4. Add generic storefront support surfaces: settings, verification,
+   lead-capture, and transport requirements.
+5. Keep growing shared operator UI only where the underlying public/admin
+   contracts are already stable.
+
+## Execution Slices
+
+### Slice 1: additive public contract upgrades
+
+Completed in the current source tree:
+
+- customer-portal phone contact-exists preflight route and React hook
+- legal default active contract-template selector with language fallback
+- legal public template preview route
+- public catalog localized slug/SEO fields and slug lookup route
+
+### Slice 2: storefront operational surfaces
+
+In progress:
+
+- first-class storefront settings contract via `@voyantjs/storefront`
+- generic email/SMS verification challenge flow via `@voyantjs/storefront-verification`
+- transport requirements surface for passport/document rules via
+  `@voyantjs/booking-requirements`
+
+Deferred for now:
+
+- storefront lead-capture/newsletter intake, with apps free to write directly
+  into admin CRM or Mailchimp-style providers until a shared upstream model is
+  justified
+
+### Slice 3: booking and finance completion
+
+Next:
+
+- customer-safe bank transfer instructions
+- unpaid bank-transfer reminder workflow behavior
+
+### Slice 4: legal and finance document lifecycle
+
+Next:
+
+- contract artifact render/store/regenerate workflow
+- invoice/proforma rendition completion workflow
+- booking document bundle and send workflow

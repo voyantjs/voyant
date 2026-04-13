@@ -1,3 +1,8 @@
+import {
+  publicBookingSessionRepriceResultSchema,
+  publicBookingSessionSchema,
+  publicBookingSessionStateSchema,
+} from "@voyantjs/bookings/validation"
 import { z } from "zod"
 
 export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
@@ -109,3 +114,8 @@ export const bookingPassengersResponse = arrayEnvelope(bookingPassengerRecordSch
 export const bookingSupplierStatusesResponse = arrayEnvelope(bookingSupplierStatusRecordSchema)
 export const bookingActivityResponse = arrayEnvelope(bookingActivityRecordSchema)
 export const bookingNotesResponse = arrayEnvelope(bookingNoteRecordSchema)
+export const publicBookingSessionResponse = singleEnvelope(publicBookingSessionSchema)
+export const publicBookingSessionStateResponse = singleEnvelope(publicBookingSessionStateSchema)
+export const publicBookingSessionRepriceResponse = singleEnvelope(
+  publicBookingSessionRepriceResultSchema,
+)

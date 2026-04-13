@@ -1,7 +1,7 @@
 import { availabilityHonoModule } from "@voyantjs/availability"
 import { bookingRequirementsHonoModule } from "@voyantjs/booking-requirements"
 import { bookingsHonoModule, bookingsSupplierExtension } from "@voyantjs/bookings"
-import { createCheckoutRoutes } from "@voyantjs/checkout"
+import { createCheckoutHonoModule } from "@voyantjs/checkout"
 import { crmBookingExtension, crmHonoModule } from "@voyantjs/crm"
 import { customerPortalHonoModule } from "@voyantjs/customer-portal"
 import { distributionBookingExtension, distributionHonoModule } from "@voyantjs/distribution"
@@ -23,6 +23,7 @@ import { pricingHonoModule } from "@voyantjs/pricing"
 import { productsBookingExtension, productsHonoModule } from "@voyantjs/products"
 import { resourcesHonoModule } from "@voyantjs/resources"
 import { sellabilityHonoModule } from "@voyantjs/sellability"
+import { createStorefrontVerificationHonoModule } from "@voyantjs/storefront-verification"
 import { suppliersHonoModule } from "@voyantjs/suppliers"
 import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/transactions"
 
@@ -30,15 +31,31 @@ import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handl
 import { getDbFromHyperdrive } from "./lib/db"
 
 const resolveNotificationProviders = (env: Record<string, unknown>) =>
-  createDefaultNotificationProviders(env, { emailProvider: "resend" })
+  createDefaultNotificationProviders(env, {
+    emailProvider: "resend",
+    smsProvider: "twilio",
+  })
 
 const notificationsHonoModule = createNotificationsHonoModule({
+  resolveProviders: resolveNotificationProviders,
+})
+const storefrontVerificationHonoModule = createStorefrontVerificationHonoModule({
+  resolveProviders: resolveNotificationProviders,
+  email: {
+    subject: "Your verification code",
+  },
+})
+const checkoutHonoModule = createCheckoutHonoModule({
   resolveProviders: resolveNotificationProviders,
 })
 
 export const app = createApp<CloudflareBindings>({
   db: (env) => getDbFromHyperdrive(env),
-  publicPaths: ["/v1/customer-portal/contact-exists"],
+  publicPaths: [
+    "/v1/customer-portal/contact-exists",
+    "/v1/storefront-verification",
+    "/v1/checkout",
+  ],
   modules: [
     crmHonoModule,
     availabilityHonoModule,
@@ -62,6 +79,8 @@ export const app = createApp<CloudflareBindings>({
     financeHonoModule,
     legalHonoModule,
     customerPortalHonoModule,
+    storefrontVerificationHonoModule,
+    checkoutHonoModule,
   ],
   extensions: [
     bookingsSupplierExtension,
@@ -78,13 +97,5 @@ export const app = createApp<CloudflareBindings>({
     resolve: async ({ request, env }) => resolveAuthRequest(request, env),
     hasPermission: async ({ request, env, permission }) =>
       hasAuthPermission(request, env, permission),
-  },
-  additionalRoutes: (hono) => {
-    hono.route(
-      "/",
-      createCheckoutRoutes({
-        resolveProviders: resolveNotificationProviders,
-      }),
-    )
   },
 })

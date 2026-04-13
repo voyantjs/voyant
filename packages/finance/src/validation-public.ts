@@ -10,6 +10,16 @@ import {
   paymentSessionTargetTypeSchema,
 } from "./validation-shared.js"
 
+export const publicFinanceInvoiceTypeSchema = z.enum(["invoice", "proforma", "credit_note"])
+export const publicFinanceDocumentAvailabilitySchema = z.enum([
+  "missing",
+  "pending",
+  "ready",
+  "failed",
+  "stale",
+])
+export const publicFinanceDocumentFormatSchema = z.enum(["html", "pdf", "xml", "json"])
+
 export const publicPaymentOptionsQuerySchema = z.object({
   personId: z.string().optional(),
   organizationId: z.string().optional(),
@@ -123,6 +133,32 @@ export const publicPaymentSessionSchema = z.object({
   failureMessage: z.string().nullable(),
 })
 
+export const publicFinanceBookingDocumentSchema = z.object({
+  invoiceId: z.string(),
+  invoiceNumber: z.string(),
+  invoiceType: publicFinanceInvoiceTypeSchema,
+  invoiceStatus: z.enum(["draft", "sent", "partially_paid", "paid", "overdue", "void"]),
+  currency: z.string(),
+  totalCents: z.number().int(),
+  paidCents: z.number().int(),
+  balanceDueCents: z.number().int(),
+  issueDate: z.string(),
+  dueDate: z.string(),
+  renditionId: z.string().nullable(),
+  documentStatus: publicFinanceDocumentAvailabilitySchema,
+  format: publicFinanceDocumentFormatSchema.nullable(),
+  language: z.string().nullable(),
+  generatedAt: z.string().nullable(),
+  fileSize: z.number().int().nullable(),
+  checksum: z.string().nullable(),
+  downloadUrl: z.string().nullable(),
+})
+
+export const publicBookingFinanceDocumentsSchema = z.object({
+  bookingId: z.string(),
+  documents: z.array(publicFinanceBookingDocumentSchema),
+})
+
 export const publicVoucherValidationSchema = z.object({
   valid: z.boolean(),
   reason: z
@@ -153,6 +189,8 @@ export const publicVoucherValidationSchema = z.object({
 export type PublicPaymentOptionsQuery = z.infer<typeof publicPaymentOptionsQuerySchema>
 export type PublicBookingPaymentOptions = z.infer<typeof publicBookingPaymentOptionsSchema>
 export type PublicPaymentSession = z.infer<typeof publicPaymentSessionSchema>
+export type PublicFinanceBookingDocument = z.infer<typeof publicFinanceBookingDocumentSchema>
+export type PublicBookingFinanceDocuments = z.infer<typeof publicBookingFinanceDocumentsSchema>
 export type PublicStartPaymentSessionInput = z.infer<typeof publicStartPaymentSessionSchema>
 export type PublicValidateVoucherInput = z.infer<typeof publicValidateVoucherSchema>
 export type PublicVoucherValidationResult = z.infer<typeof publicVoucherValidationSchema>

@@ -2,8 +2,12 @@ import {
   applyDefaultBookingPaymentPlanSchema,
   createPaymentSessionFromInvoiceSchema,
   createPaymentSessionFromScheduleSchema,
+  publicPaymentSessionSchema,
 } from "@voyantjs/finance"
 import {
+  notificationChannelSchema,
+  notificationDeliveryStatusSchema,
+  notificationReminderRunStatusSchema,
   sendInvoiceNotificationSchema,
   sendPaymentSessionNotificationSchema,
 } from "@voyantjs/notifications"
@@ -15,6 +19,10 @@ export const checkoutPaymentSessionTargetSchema = z.enum(["schedule", "invoice"]
 export const checkoutInvoiceDocumentTypeSchema = z.enum(["proforma", "invoice"])
 
 const planOverrideSchema = applyDefaultBookingPaymentPlanSchema.partial()
+const paginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+})
 
 export const previewCheckoutCollectionSchema = z.object({
   method: checkoutCollectionMethodSchema,
@@ -35,5 +43,113 @@ export const initiateCheckoutCollectionSchema = previewCheckoutCollectionSchema.
   notes: z.string().optional().nullable(),
 })
 
+export const checkoutCollectionScheduleSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  bookingItemId: z.string().nullable(),
+  scheduleType: z.string(),
+  status: z.string(),
+  dueDate: z.string(),
+  currency: z.string(),
+  amountCents: z.number().int(),
+  notes: z.string().nullable(),
+})
+
+export const checkoutCollectionInvoiceSchema = z.object({
+  id: z.string(),
+  invoiceNumber: z.string(),
+  invoiceType: z.string(),
+  bookingId: z.string(),
+  personId: z.string().nullable(),
+  organizationId: z.string().nullable(),
+  status: z.string(),
+  currency: z.string(),
+  totalCents: z.number().int(),
+  paidCents: z.number().int(),
+  balanceDueCents: z.number().int(),
+  issueDate: z.string(),
+  dueDate: z.string(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const checkoutNotificationDeliverySchema = z.object({
+  id: z.string(),
+  templateSlug: z.string().nullable(),
+  channel: notificationChannelSchema,
+  provider: z.string(),
+  status: notificationDeliveryStatusSchema,
+  toAddress: z.string(),
+  subject: z.string().nullable(),
+  sentAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+})
+
+export const checkoutCollectionPlanSchema = z.object({
+  bookingId: z.string(),
+  method: checkoutCollectionMethodSchema,
+  stage: checkoutCollectionStageSchema,
+  paymentSessionTarget: checkoutPaymentSessionTargetSchema.nullable(),
+  documentType: checkoutInvoiceDocumentTypeSchema.nullable(),
+  willCreateDefaultPaymentPlan: z.boolean(),
+  selectedSchedule: checkoutCollectionScheduleSchema.nullable(),
+  selectedInvoice: checkoutCollectionInvoiceSchema.nullable(),
+  amountCents: z.number().int(),
+  currency: z.string(),
+  recommendedAction: z.enum([
+    "create_bank_transfer_document",
+    "create_payment_session",
+    "create_invoice_then_payment_session",
+    "none",
+  ]),
+})
+
+export const initiatedCheckoutCollectionSchema = z.object({
+  plan: checkoutCollectionPlanSchema,
+  invoice: checkoutCollectionInvoiceSchema.nullable(),
+  paymentSession: publicPaymentSessionSchema.nullable(),
+  invoiceNotification: checkoutNotificationDeliverySchema.nullable(),
+  paymentSessionNotification: checkoutNotificationDeliverySchema.nullable(),
+})
+
+export const checkoutReminderRunListQuerySchema = paginationSchema.extend({
+  status: notificationReminderRunStatusSchema.optional(),
+})
+
+export const checkoutReminderRunSchema = z.object({
+  id: z.string(),
+  reminderRuleId: z.string(),
+  reminderRuleSlug: z.string().nullable(),
+  reminderRuleName: z.string().nullable(),
+  targetType: z.literal("booking_payment_schedule"),
+  targetId: z.string(),
+  bookingId: z.string().nullable(),
+  paymentSessionId: z.string().nullable(),
+  notificationDeliveryId: z.string().nullable(),
+  status: notificationReminderRunStatusSchema,
+  deliveryStatus: notificationDeliveryStatusSchema.nullable(),
+  channel: notificationChannelSchema.nullable(),
+  provider: z.string().nullable(),
+  recipient: z.string().nullable(),
+  scheduledFor: z.string(),
+  processedAt: z.string(),
+  errorMessage: z.string().nullable(),
+  relativeDaysFromDueDate: z.number().int().nullable(),
+  createdAt: z.string(),
+})
+
+export const checkoutReminderRunListResponseSchema = z.object({
+  data: z.array(checkoutReminderRunSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+})
+
 export type PreviewCheckoutCollectionInput = z.infer<typeof previewCheckoutCollectionSchema>
 export type InitiateCheckoutCollectionInput = z.infer<typeof initiateCheckoutCollectionSchema>
+export type CheckoutCollectionPlanRecord = z.infer<typeof checkoutCollectionPlanSchema>
+export type InitiatedCheckoutCollectionRecord = z.infer<typeof initiatedCheckoutCollectionSchema>
+export type CheckoutReminderRunListQuery = z.infer<typeof checkoutReminderRunListQuerySchema>
+export type CheckoutReminderRunRecord = z.infer<typeof checkoutReminderRunSchema>

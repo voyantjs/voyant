@@ -108,3 +108,38 @@ export const productLiteListResponse = paginatedEnvelope(productLiteSchema)
 export const bookingQuestionListResponse = paginatedEnvelope(bookingQuestionSchema)
 export const bookingQuestionOptionListResponse = paginatedEnvelope(bookingQuestionOptionSchema)
 export const contactRequirementListResponse = paginatedEnvelope(contactRequirementSchema)
+
+export const transportRequirementFieldSchema = z.enum([
+  "date_of_birth",
+  "nationality",
+  "passport_number",
+  "passport_expiry",
+])
+
+export const publicTransportRequirementSummarySchema = z.object({
+  fieldKey: transportRequirementFieldSchema,
+  scope: contactScopeSchema,
+  isRequired: z.boolean(),
+  perParticipant: z.boolean(),
+  notes: z.string().nullable(),
+})
+
+export const publicTransportRequirementsSchema = z.object({
+  productId: z.string(),
+  optionId: z.string().nullable(),
+  hasTransport: z.boolean(),
+  requiresPassengerDocuments: z.boolean(),
+  requiresPassport: z.boolean(),
+  requiresNationality: z.boolean(),
+  requiresDateOfBirth: z.boolean(),
+  requiredFields: z.array(transportRequirementFieldSchema),
+  fieldsByScope: z.object({
+    booking: z.array(transportRequirementFieldSchema),
+    lead_traveler: z.array(transportRequirementFieldSchema),
+    participant: z.array(transportRequirementFieldSchema),
+    booker: z.array(transportRequirementFieldSchema),
+  }),
+  requirements: z.array(publicTransportRequirementSummarySchema),
+})
+
+export type PublicTransportRequirements = z.infer<typeof publicTransportRequirementsSchema>

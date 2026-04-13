@@ -4,6 +4,7 @@ import { Hono } from "hono"
 import { contractsService } from "./service.js"
 import {
   contractListQuerySchema,
+  contractTemplateDefaultQuerySchema,
   contractTemplateListQuerySchema,
   insertContractAttachmentSchema,
   insertContractNumberSeriesSchema,
@@ -11,6 +12,7 @@ import {
   insertContractSignatureSchema,
   insertContractTemplateSchema,
   insertContractTemplateVersionSchema,
+  publicRenderTemplatePreviewInputSchema,
   renderTemplateInputSchema,
   updateContractAttachmentSchema,
   updateContractNumberSeriesSchema,
@@ -38,6 +40,14 @@ export const contractsAdminRoutes = new Hono<Env>()
       Object.fromEntries(new URL(c.req.url).searchParams),
     )
     return c.json(await contractsService.listTemplates(c.get("db"), query))
+  })
+  .get("/templates/default", async (c) => {
+    const query = contractTemplateDefaultQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    const row = await contractsService.getDefaultTemplate(c.get("db"), query)
+    if (!row) return c.json({ error: "Template not found" }, 404)
+    return c.json({ data: row })
   })
 
   .post("/templates", async (c) => {
@@ -284,6 +294,27 @@ export type ContractsAdminRoutes = typeof contractsAdminRoutes
 // ============================================================================
 
 export const contractsPublicRoutes = new Hono<Env>()
+
+  .get("/templates/default", async (c) => {
+    const query = contractTemplateDefaultQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    const row = await contractsService.getDefaultTemplate(c.get("db"), query)
+    if (!row) return c.json({ error: "Template not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .post("/templates/:id/preview", async (c) => {
+    const input = publicRenderTemplatePreviewInputSchema.parse(await c.req.json())
+    const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
+    if (!template?.active) return c.json({ error: "Template not found" }, 404)
+    const rendered = contractsService.renderPreview({
+      variables: input.variables,
+      body: template.body,
+      bodyFormat: template.bodyFormat,
+    })
+    return c.json({ data: { rendered, bodyFormat: template.bodyFormat } })
+  })
 
   .get("/:id", async (c) => {
     const row = await contractsService.getContractById(c.get("db"), c.req.param("id"))

@@ -6,7 +6,9 @@ import {
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
   publicCreateBookingSessionSchema,
+  publicRepriceBookingSessionSchema,
   publicUpdateBookingSessionSchema,
+  publicUpsertBookingSessionStateSchema,
 } from "./validation-public.js"
 
 function hasSessionResult(
@@ -27,6 +29,10 @@ function sessionConflictError(status: string) {
       return "Booking session hold has expired"
     case "participant_not_found":
       return "Booking session participant not found"
+    case "pricing_unavailable":
+      return "Pricing is not available for the selected booking session items"
+    case "quantity_change_requires_reallocation":
+      return "Changing quantity for held items requires a fresh reservation"
     default:
       return "Unable to process booking session"
   }
@@ -75,6 +81,50 @@ export const publicBookingRoutes = new Hono<Env>()
     }
 
     return c.json({ data: result.session })
+  })
+  .get("/sessions/:sessionId/state", async (c) => {
+    const state = await publicBookingsService.getSessionState(c.get("db"), c.req.param("sessionId"))
+
+    return state ? c.json({ data: state }) : notFound(c, "Booking session not found")
+  })
+  .put("/sessions/:sessionId/state", async (c) => {
+    const result = await publicBookingsService.updateSessionState(
+      c.get("db"),
+      c.req.param("sessionId"),
+      publicUpsertBookingSessionStateSchema.parse(await c.req.json()),
+    )
+
+    if (result.status === "not_found") {
+      return notFound(c, "Booking session not found")
+    }
+
+    return c.json({ data: result.state })
+  })
+  .post("/sessions/:sessionId/reprice", async (c) => {
+    const result = await publicBookingsService.repriceSession(
+      c.get("db"),
+      c.req.param("sessionId"),
+      publicRepriceBookingSessionSchema.parse(await c.req.json()),
+    )
+
+    if (result.status === "not_found") {
+      return notFound(c, "Booking session not found")
+    }
+
+    if (result.status === "invalid_selection") {
+      return c.json({ error: "Booking session contains an invalid item selection" }, 400)
+    }
+
+    if (result.status !== "ok") {
+      return c.json({ error: sessionConflictError(result.status) }, 409)
+    }
+
+    return c.json({
+      data: {
+        pricing: result.pricing,
+        session: result.session,
+      },
+    })
   })
   .post("/sessions/:sessionId/confirm", async (c) => {
     const result = await publicBookingsService.confirmSession(

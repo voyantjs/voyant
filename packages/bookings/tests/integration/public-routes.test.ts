@@ -1,10 +1,14 @@
-import { optionPriceRules, optionUnitPriceRules, priceCatalogs } from "@voyantjs/pricing/schema"
 import { optionUnits, productOptions, products } from "@voyantjs/products/schema"
 import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { availabilitySlotsRef } from "../../src/availability-ref.js"
+import {
+  optionPriceRulesRef,
+  optionUnitPriceRulesRef,
+  priceCatalogsRef,
+} from "../../src/pricing-ref.js"
 import { publicBookingRoutes } from "../../src/routes-public.js"
 import { bookingDocuments, bookingFulfillments } from "../../src/schema.js"
 
@@ -103,7 +107,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
       .returning()
 
     const [catalog] = await db
-      .insert(priceCatalogs)
+      .insert(priceCatalogsRef)
       .values({
         code: "PUBLIC-EUR",
         name: "Public EUR",
@@ -115,7 +119,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
       .returning()
 
     const [rule] = await db
-      .insert(optionPriceRules)
+      .insert(optionPriceRulesRef)
       .values({
         productId: product.id,
         optionId: option.id,
@@ -128,7 +132,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
       })
       .returning()
 
-    await db.insert(optionUnitPriceRules).values({
+    await db.insert(optionUnitPriceRulesRef).values({
       optionPriceRuleId: rule.id,
       optionId: option.id,
       unitId: unit.id,

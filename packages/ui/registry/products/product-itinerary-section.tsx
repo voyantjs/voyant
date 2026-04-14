@@ -25,6 +25,7 @@ import {
 
 import { ProductDayDialog } from "./product-day-dialog"
 import { ProductDayServiceDialog } from "./product-day-service-dialog"
+import { ProductMediaSection, type ProductMediaUploadHandler } from "./product-media-section"
 
 const serviceTypeLabels: Record<ProductDayServiceRecord["serviceType"], string> = {
   accommodation: "Accommodation",
@@ -39,12 +40,14 @@ export interface ProductItinerarySectionProps {
   productId: string
   title?: string
   description?: string
+  uploadMedia?: ProductMediaUploadHandler
 }
 
 export function ProductItinerarySection({
   productId,
   title = "Itinerary",
   description = "Manage day-by-day structure and attached services for this product.",
+  uploadMedia,
 }: ProductItinerarySectionProps) {
   const [expandedDayId, setExpandedDayId] = React.useState<string | null>(null)
   const [dayDialogOpen, setDayDialogOpen] = React.useState(false)
@@ -114,6 +117,7 @@ export function ProductItinerarySection({
                 setEditingService(service)
                 setServiceDialogOpen(true)
               }}
+              uploadMedia={uploadMedia}
             />
           ))
         )}
@@ -148,6 +152,7 @@ function DayRow({
   onDelete,
   onAddService,
   onEditService,
+  uploadMedia,
 }: {
   productId: string
   day: ProductDayRecord
@@ -157,6 +162,7 @@ function DayRow({
   onDelete: () => void
   onAddService: () => void
   onEditService: (service: ProductDayServiceRecord) => void
+  uploadMedia?: ProductMediaUploadHandler
 }) {
   const { data, isPending, isError } = useProductDayServices(productId, day.id, {
     enabled: expanded,
@@ -226,6 +232,15 @@ function DayRow({
               onEditService={onEditService}
             />
           )}
+
+          <ProductMediaSection
+            productId={productId}
+            dayId={day.id}
+            title="Media"
+            description="Manage media attached to this itinerary day."
+            compact
+            uploadMedia={uploadMedia}
+          />
         </div>
       ) : null}
     </div>

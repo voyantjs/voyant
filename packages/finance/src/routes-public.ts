@@ -33,6 +33,14 @@ export const publicFinanceRoutes = new Hono<Env>()
 
     return documents ? c.json({ data: documents }) : notFound(c, "Booking documents not found")
   })
+  .get("/bookings/:bookingId/payments", async (c) => {
+    const payments = await publicFinanceService.getBookingPayments(
+      c.get("db"),
+      c.req.param("bookingId"),
+    )
+
+    return payments ? c.json({ data: payments }) : notFound(c, "Booking payments not found")
+  })
   .get("/bookings/:bookingId/payment-options", async (c) => {
     const options = await publicFinanceService.getBookingPaymentOptions(
       c.get("db"),

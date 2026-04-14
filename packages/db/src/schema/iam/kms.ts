@@ -19,6 +19,7 @@ export type KmsEnvelope = z.infer<typeof kmsEnvelopeSchema>
 export const travelDocumentSchema = z.object({
   type: z.enum(["passport", "national_id", "visa", "drivers_license", "other"]),
   number: z.string(),
+  issuingAuthority: z.string().optional(),
   issuingCountry: z.string(),
   nationality: z.string().optional(),
   expiryDate: z.string(), // ISO date string

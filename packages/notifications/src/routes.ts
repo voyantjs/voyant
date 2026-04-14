@@ -2,8 +2,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import { createNotificationService, notificationsService } from "./service.js"
+import type { BookingDocumentAttachmentResolver } from "./service-booking-documents.js"
 import type { NotificationProvider } from "./types.js"
 import {
+  bookingDocumentBundleSchema,
   insertNotificationReminderRuleSchema,
   insertNotificationTemplateSchema,
   notificationDeliveryListQuerySchema,
@@ -11,6 +13,8 @@ import {
   notificationReminderRunListQuerySchema,
   notificationTemplateListQuerySchema,
   runDueRemindersSchema,
+  sendBookingDocumentsNotificationResultSchema,
+  sendBookingDocumentsNotificationSchema,
   sendInvoiceNotificationSchema,
   sendNotificationSchema,
   sendPaymentSessionNotificationSchema,
@@ -29,6 +33,10 @@ type Env = {
 export function createNotificationsRoutes(options?: {
   providers?: ReadonlyArray<NotificationProvider>
   resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
+  documentAttachmentResolver?: BookingDocumentAttachmentResolver
+  resolveDocumentAttachmentResolver?: (
+    bindings: Record<string, unknown>,
+  ) => BookingDocumentAttachmentResolver | undefined
 }) {
   return new Hono<Env>()
     .get("/templates", async (c) => {
@@ -152,6 +160,59 @@ export function createNotificationsRoutes(options?: {
         return c.json({ data: row }, 201)
       } catch (error) {
         const message = error instanceof Error ? error.message : "Invoice notification failed"
+        return c.json({ error: message }, 400)
+      }
+    })
+    .get("/bookings/:id/document-bundle", async (c) => {
+      const bundle = await notificationsService.listBookingDocumentBundle(
+        c.get("db"),
+        c.req.param("id"),
+      )
+      if (!bundle) return c.json({ error: "Booking not found" }, 404)
+      return c.json({ data: bookingDocumentBundleSchema.parse(bundle) })
+    })
+    .post("/bookings/:id/send-documents", async (c) => {
+      try {
+        const dispatcher = createNotificationService(
+          options?.resolveProviders?.(c.env) ?? options?.providers ?? [],
+        )
+        const result = await notificationsService.sendBookingDocumentsNotification(
+          c.get("db"),
+          dispatcher,
+          c.req.param("id"),
+          sendBookingDocumentsNotificationSchema.parse(await c.req.json().catch(() => ({}))),
+          {
+            attachmentResolver:
+              options?.resolveDocumentAttachmentResolver?.(c.env) ??
+              options?.documentAttachmentResolver,
+          },
+        )
+        if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
+        if (result.status === "no_documents") return c.json({ error: "No booking documents" }, 400)
+        if (result.status === "no_recipient")
+          return c.json({ error: "No recipient available" }, 400)
+        if (result.status === "no_attachments") {
+          return c.json({ error: "No deliverable document attachments available" }, 400)
+        }
+        if (result.status === "send_failed") {
+          return c.json({ error: "Booking document notification failed" }, 400)
+        }
+        return c.json(
+          {
+            data: sendBookingDocumentsNotificationResultSchema.parse({
+              bookingId: result.bookingId,
+              recipient: result.recipient,
+              documents: result.documents,
+              deliveryId: result.delivery.id,
+              provider: result.delivery.provider,
+              status: result.delivery.status,
+            }),
+          },
+          201,
+        )
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Booking document notification failed"
         return c.json({ error: message }, 400)
       }
     })

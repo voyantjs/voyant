@@ -8,6 +8,8 @@ Notifications module for Voyant. It includes:
 - database-backed delivery logs
 - notification reminder rules and reminder runs
 - finance-aware send flows for invoices and payment sessions
+- booking document bundle/list + send flows for contract and invoice/proforma
+  artifacts
 - routes for template management, delivery listing, reminder management, and sending
 
 CRM communication history should remain a business-facing log. This module owns transport templates, delivery attempts, provider message ids, and reminder-oriented operational sends.
@@ -36,6 +38,13 @@ await notifications.sendWith("resend", {
   template: "welcome",
   subject: "Hello",
   html: "<p>Welcome</p>",
+  attachments: [
+    {
+      filename: "invoice.pdf",
+      path: "https://cdn.example.com/invoices/invoice.pdf",
+      contentType: "application/pdf",
+    },
+  ],
 })
 ```
 
@@ -73,12 +82,25 @@ await sendDueNotificationReminders(db, process.env, {
 })
 ```
 
+Reminder rules can currently target:
+
+- `booking_payment_schedule`
+- `invoice`
+
 For finance-aware collection sends, the routes also support:
 
 - `POST /payment-sessions/:id/send`
 - `POST /invoices/:id/send`
+- `GET /bookings/:id/document-bundle`
+- `POST /bookings/:id/send-documents`
 
 Those routes resolve recipients from the payment session, invoice, and linked booking participants, then render the selected notification template with finance context such as payment links, invoice balances, and booking references.
+
+Booking document sends bundle the latest customer-facing contract attachment and
+ready invoice/proforma rendition for a booking. By default they use `metadata.url`
+or `metadata.downloadUrl` on the legal/finance artifact as the attachment path.
+Apps can override that behavior with `documentAttachmentResolver` when mounting
+`createNotificationsRoutes()` or `createNotificationsHonoModule()`.
 
 ## Exports
 

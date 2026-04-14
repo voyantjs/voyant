@@ -1,4 +1,5 @@
 import { bookingItems, bookings } from "@voyantjs/bookings/schema"
+import { renderStructuredTemplate } from "@voyantjs/utils/template-renderer"
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
@@ -257,67 +258,12 @@ function formatNumber(
   return `${prefix}${separator}${padded}`
 }
 
-// ============================================================================
-// Template rendering (mustache)
-// ============================================================================
-
-function resolveMustachePath(path: string, scope: Record<string, unknown>): unknown {
-  const parts = path.match(/[^.[\]]+/g) ?? []
-  let current: unknown = scope
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined
-    current = (current as Record<string, unknown>)[part]
-  }
-  return current
-}
-
-function stringifyMustacheValue(value: unknown): string {
-  if (value == null) return ""
-  if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
-  return JSON.stringify(value)
-}
-
-function renderMustache(body: string, variables: Record<string, unknown>): string {
-  return body.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, path: string) => {
-    const value = resolveMustachePath(path.trim(), variables)
-    return stringifyMustacheValue(value)
-  })
-}
-
 export function renderInvoiceBody(
   body: string,
   bodyFormat: "html" | "markdown" | "lexical_json",
   variables: Record<string, unknown>,
 ): string {
-  if (bodyFormat === "lexical_json") {
-    try {
-      const parsed: unknown = JSON.parse(body)
-      return JSON.stringify(renderLexicalNode(parsed, variables))
-    } catch {
-      return renderMustache(body, variables)
-    }
-  }
-  return renderMustache(body, variables)
-}
-
-function renderLexicalNode(node: unknown, variables: Record<string, unknown>): unknown {
-  if (node == null || typeof node !== "object") return node
-  if (Array.isArray(node)) {
-    return node.map((n) => renderLexicalNode(n, variables))
-  }
-  const obj = node as Record<string, unknown>
-  const result: Record<string, unknown> = { ...obj }
-  if (typeof obj.text === "string") {
-    result.text = renderMustache(obj.text, variables)
-  }
-  if (obj.children) {
-    result.children = renderLexicalNode(obj.children, variables)
-  }
-  if (obj.root) {
-    result.root = renderLexicalNode(obj.root, variables)
-  }
-  return result
+  return renderStructuredTemplate(body, bodyFormat, variables)
 }
 
 async function paginate<T extends object>(

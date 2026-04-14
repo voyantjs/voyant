@@ -6,6 +6,7 @@ import type { publicBookingRoutes } from "./routes-public.js"
 import { type Env, getRuntimeEnv } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
 import { bookingsService } from "./service.js"
+import { publicBookingsService } from "./service-public.js"
 import {
   bookingListQuerySchema,
   cancelBookingSchema,
@@ -23,6 +24,7 @@ import {
   insertParticipantSchema,
   insertPassengerSchema,
   insertSupplierStatusSchema,
+  internalBookingOverviewLookupQuerySchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
@@ -166,6 +168,22 @@ export const bookingRoutes = new Hono<Env>()
   .get("/", async (c) => {
     const query = bookingListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
     return c.json(await bookingsService.listBookings(c.get("db"), query))
+  })
+
+  // 1a. GET /overview — Internal/admin booking overview lookup
+  .get("/overview", async (c) => {
+    const overview = await publicBookingsService.getOverviewByLookup(
+      c.get("db"),
+      internalBookingOverviewLookupQuerySchema.parse(
+        Object.fromEntries(new URL(c.req.url).searchParams),
+      ),
+    )
+
+    if (!overview) {
+      return c.json({ error: "Booking overview not found" }, 404)
+    }
+
+    return c.json({ data: overview })
   })
 
   // 2. GET /:id — Get single booking

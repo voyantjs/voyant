@@ -82,6 +82,18 @@ describe("renderInvoiceBody — mustache (markdown/html)", () => {
   it("leaves body with no placeholders unchanged", () => {
     expect(renderInvoiceBody("Plain body.", "markdown", { a: 1 })).toBe("Plain body.")
   })
+
+  it("supports liquid loops and conditionals in html/markdown bodies", () => {
+    const body =
+      "{% if lines.size > 0 %}{% for line in lines %}{{ line.description }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No lines{% endif %}"
+
+    expect(
+      renderInvoiceBody(body, "html", {
+        lines: [{ description: "Tour Package" }, { description: "Extras" }],
+      }),
+    ).toBe("Tour Package, Extras")
+    expect(renderInvoiceBody(body, "markdown", { lines: [] })).toBe("No lines")
+  })
 })
 
 describe("renderInvoiceBody — lexical_json", () => {
@@ -152,5 +164,23 @@ describe("renderInvoiceBody — lexical_json", () => {
     const parsed = JSON.parse(output)
     expect(parsed[0].text).toBe("X")
     expect(parsed[1].text).toBe("Y")
+  })
+
+  it("supports liquid filters inside lexical text nodes", () => {
+    const lexical = JSON.stringify({
+      root: {
+        children: [
+          {
+            type: "paragraph",
+            children: [{ type: "text", text: "Lines: {{ lines | json }}" }],
+          },
+        ],
+      },
+    })
+    const output = renderInvoiceBody(lexical, "lexical_json", {
+      lines: [{ description: "Tour Package" }],
+    })
+    const parsed = JSON.parse(output)
+    expect(parsed.root.children[0].children[0].text).toBe('Lines: [{"description":"Tour Package"}]')
   })
 })

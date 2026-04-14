@@ -1,9 +1,21 @@
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
 import {
+  getStorefrontDeparture,
+  getStorefrontDepartureItinerary,
+  getStorefrontProductExtensions,
+  listStorefrontProductDepartures,
+  previewStorefrontDeparturePrice,
+} from "./service-departures.js"
+import {
+  type StorefrontDepartureListQuery,
+  type StorefrontDeparturePricePreviewInput,
   type StorefrontFormField,
   type StorefrontFormFieldInput,
   type StorefrontPaymentMethod,
   type StorefrontPaymentMethodCode,
   type StorefrontPaymentMethodInput,
+  type StorefrontPromotionalOffer,
   type StorefrontSettings,
   type StorefrontSettingsInput,
   storefrontSettingsInputSchema,
@@ -12,6 +24,17 @@ import {
 
 export interface StorefrontServiceOptions {
   settings?: StorefrontSettingsInput
+  offers?: {
+    listApplicableOffers?: (input: {
+      productId: string
+      departureId?: string
+      locale?: string
+    }) => Promise<StorefrontPromotionalOffer[]> | StorefrontPromotionalOffer[]
+    getOfferBySlug?: (input: {
+      slug: string
+      locale?: string
+    }) => Promise<StorefrontPromotionalOffer | null> | StorefrontPromotionalOffer | null
+  }
 }
 
 const defaultPaymentLabels: Record<StorefrontPaymentMethodCode, string> = {
@@ -82,6 +105,46 @@ export function createStorefrontService(options?: StorefrontServiceOptions) {
   return {
     getSettings(): StorefrontSettings {
       return settings
+    },
+    getDeparture(db: PostgresJsDatabase, departureId: string) {
+      return getStorefrontDeparture(db, departureId)
+    },
+    listProductDepartures(
+      db: PostgresJsDatabase,
+      productId: string,
+      query: StorefrontDepartureListQuery,
+    ) {
+      return listStorefrontProductDepartures(db, productId, query)
+    },
+    previewDeparturePrice(
+      db: PostgresJsDatabase,
+      departureId: string,
+      input: StorefrontDeparturePricePreviewInput,
+    ) {
+      return previewStorefrontDeparturePrice(db, departureId, input)
+    },
+    getProductExtensions(db: PostgresJsDatabase, productId: string, optionId?: string) {
+      return getStorefrontProductExtensions(db, productId, optionId)
+    },
+    getDepartureItinerary(
+      db: PostgresJsDatabase,
+      input: { departureId: string; productId: string },
+    ) {
+      return getStorefrontDepartureItinerary(db, input)
+    },
+    async listApplicableOffers(input: {
+      productId: string
+      departureId?: string
+      locale?: string
+    }): Promise<StorefrontPromotionalOffer[]> {
+      const offers = await options?.offers?.listApplicableOffers?.(input)
+      return offers ?? []
+    },
+    async getOfferBySlug(input: {
+      slug: string
+      locale?: string
+    }): Promise<StorefrontPromotionalOffer | null> {
+      return (await options?.offers?.getOfferBySlug?.(input)) ?? null
     },
   }
 }

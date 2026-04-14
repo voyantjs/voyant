@@ -3,14 +3,19 @@ import { Hono } from "hono"
 
 import { productsService } from "./service.js"
 import {
+  destinationListQuerySchema,
+  destinationTranslationListQuerySchema,
   insertDaySchema,
   insertDayServiceSchema,
+  insertDestinationSchema,
+  insertDestinationTranslationSchema,
   insertOptionUnitSchema,
   insertOptionUnitTranslationSchema,
   insertProductActivationSettingSchema,
   insertProductCapabilitySchema,
   insertProductCategorySchema,
   insertProductDeliveryFormatSchema,
+  insertProductDestinationSchema,
   insertProductFaqSchema,
   insertProductFeatureSchema,
   insertProductLocationSchema,
@@ -31,6 +36,7 @@ import {
   productCapabilityListQuerySchema,
   productCategoryListQuerySchema,
   productDeliveryFormatListQuerySchema,
+  productDestinationListQuerySchema,
   productFaqListQuerySchema,
   productFeatureListQuerySchema,
   productListQuerySchema,
@@ -46,6 +52,8 @@ import {
   reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
+  updateDestinationSchema,
+  updateDestinationTranslationSchema,
   updateOptionUnitSchema,
   updateOptionUnitTranslationSchema,
   updateProductActivationSettingSchema,
@@ -64,6 +72,7 @@ import {
   updateProductTranslationSchema,
   updateProductTypeSchema,
   updateProductVisibilitySettingSchema,
+  upsertProductBrochureSchema,
 } from "./validation.js"
 
 type Env = {
@@ -529,6 +538,135 @@ export const productRoutes = new Hono<Env>()
 
     if (!row) {
       return c.json({ error: "Product location not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  .get("/destinations", async (c) => {
+    const query = destinationListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await productsService.listDestinations(c.get("db"), query))
+  })
+
+  .get("/destinations/:id", async (c) => {
+    const row = await productsService.getDestinationById(c.get("db"), c.req.param("id"))
+    if (!row) {
+      return c.json({ error: "Destination not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .post("/destinations", async (c) => {
+    const row = await productsService.createDestination(
+      c.get("db"),
+      insertDestinationSchema.parse(await c.req.json()),
+    )
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/destinations/:id", async (c) => {
+    const row = await productsService.updateDestination(
+      c.get("db"),
+      c.req.param("id"),
+      updateDestinationSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Destination not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/destinations/:id", async (c) => {
+    const row = await productsService.deleteDestination(c.get("db"), c.req.param("id"))
+
+    if (!row) {
+      return c.json({ error: "Destination not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  .get("/destination-translations", async (c) => {
+    const query = destinationTranslationListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await productsService.listDestinationTranslations(c.get("db"), query))
+  })
+
+  .post("/destinations/:id/translations", async (c) => {
+    const row = await productsService.upsertDestinationTranslation(
+      c.get("db"),
+      c.req.param("id"),
+      insertDestinationTranslationSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Destination not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/destination-translations/:id", async (c) => {
+    const row = await productsService.updateDestinationTranslation(
+      c.get("db"),
+      c.req.param("id"),
+      updateDestinationTranslationSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Destination translation not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/destination-translations/:id", async (c) => {
+    const row = await productsService.deleteDestinationTranslation(c.get("db"), c.req.param("id"))
+
+    if (!row) {
+      return c.json({ error: "Destination translation not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  .get("/destination-links", async (c) => {
+    const query = productDestinationListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await productsService.listProductDestinations(c.get("db"), query))
+  })
+
+  .post("/:id/destinations", async (c) => {
+    const row = await productsService.assignProductDestination(
+      c.get("db"),
+      c.req.param("id"),
+      insertProductDestinationSchema.parse(await c.req.json()),
+    )
+
+    if (!row) {
+      return c.json({ error: "Product or destination not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .delete("/:id/destinations/:destinationId", async (c) => {
+    const row = await productsService.removeProductDestination(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("destinationId"),
+    )
+
+    if (!row) {
+      return c.json({ error: "Product destination link not found" }, 404)
     }
 
     return c.json({ success: true }, 200)
@@ -1051,6 +1189,68 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.deleteMedia(c.get("db"), c.req.param("mediaId"))
     if (!row) {
       return c.json({ error: "Media not found" }, 404)
+    }
+    return c.json({ data: row })
+  })
+
+  // GET /:id/brochure — Get canonical brochure for product
+  .get("/:id/brochure", async (c) => {
+    const row = await productsService.getBrochure(c.get("db"), c.req.param("id"))
+    if (!row) {
+      return c.json({ error: "Product brochure not found" }, 404)
+    }
+    return c.json({ data: row })
+  })
+
+  // GET /:id/brochure/versions — List brochure history for product
+  .get("/:id/brochure/versions", async (c) => {
+    return c.json({ data: await productsService.listBrochures(c.get("db"), c.req.param("id")) })
+  })
+
+  // PUT /:id/brochure — Upsert canonical brochure for product
+  .put("/:id/brochure", async (c) => {
+    const row = await productsService.upsertBrochure(
+      c.get("db"),
+      c.req.param("id"),
+      upsertProductBrochureSchema.parse(await c.req.json()),
+    )
+    if (!row) {
+      return c.json({ error: "Product not found" }, 404)
+    }
+    return c.json({ data: row }, 201)
+  })
+
+  // DELETE /:id/brochure — Delete canonical brochure for product
+  .delete("/:id/brochure", async (c) => {
+    const row = await productsService.deleteBrochure(c.get("db"), c.req.param("id"))
+    if (!row) {
+      return c.json({ error: "Product brochure not found" }, 404)
+    }
+    return c.json({ data: row })
+  })
+
+  // POST /:id/brochure/versions/:brochureId/set-current — Promote brochure version
+  .post("/:id/brochure/versions/:brochureId/set-current", async (c) => {
+    const row = await productsService.setCurrentBrochure(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("brochureId"),
+    )
+    if (!row) {
+      return c.json({ error: "Product brochure version not found" }, 404)
+    }
+    return c.json({ data: row })
+  })
+
+  // DELETE /:id/brochure/versions/:brochureId — Delete brochure version
+  .delete("/:id/brochure/versions/:brochureId", async (c) => {
+    const row = await productsService.deleteBrochureVersion(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("brochureId"),
+    )
+    if (!row) {
+      return c.json({ error: "Product brochure version not found" }, 404)
     }
     return c.json({ data: row })
   })

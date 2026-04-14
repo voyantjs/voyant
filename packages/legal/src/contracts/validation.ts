@@ -137,6 +137,33 @@ export const publicRenderTemplatePreviewInputSchema = z.object({
   variables: z.record(z.string(), z.unknown()),
 })
 
+export const generateContractDocumentInputSchema = z.object({
+  kind: z.string().min(1).max(50).default("document"),
+  replaceExisting: z.boolean().default(true),
+  issueIfDraft: z.boolean().default(true),
+})
+
+export const generatedContractDocumentAttachmentSchema = z.object({
+  id: z.string(),
+  contractId: z.string(),
+  kind: z.string(),
+  name: z.string(),
+  mimeType: z.string().nullable(),
+  fileSize: z.number().int().nullable(),
+  storageKey: z.string().nullable(),
+  checksum: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  createdAt: z.string(),
+})
+
+export const generatedContractDocumentResultSchema = z.object({
+  contractId: z.string(),
+  contractStatus: contractStatusSchema,
+  renderedBodyFormat: contractBodyFormatSchema,
+  renderedBody: z.string(),
+  attachment: generatedContractDocumentAttachmentSchema,
+})
+
 // ---------- contract signatures ----------
 
 const contractSignatureCoreSchema = z.object({
@@ -169,3 +196,5 @@ const contractAttachmentCoreSchema = z.object({
 
 export const insertContractAttachmentSchema = contractAttachmentCoreSchema
 export const updateContractAttachmentSchema = contractAttachmentCoreSchema.partial()
+
+export type GenerateContractDocumentInput = z.infer<typeof generateContractDocumentInputSchema>

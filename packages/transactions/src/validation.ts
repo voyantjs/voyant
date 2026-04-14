@@ -6,6 +6,33 @@ const paginationSchema = z.object({
 })
 
 const moneySchema = z.number().int().nullable().optional()
+const metadataRecordSchema = z.record(z.string(), z.unknown())
+
+export const storefrontOfferDiscountTypeSchema = z.enum(["percentage", "fixed_amount"])
+
+export const storefrontOfferMetadataSchema = z.object({
+  enabled: z.boolean().default(true),
+  locale: z.string().trim().min(2).optional().nullable(),
+  slug: z.string().trim().min(1).optional().nullable(),
+  description: z.string().trim().min(1).optional().nullable(),
+  discountType: storefrontOfferDiscountTypeSchema,
+  discountValue: z.string().trim().min(1),
+  currency: z.string().trim().length(3).optional().nullable(),
+  applicableProductIds: z.array(z.string()).default([]),
+  applicableDepartureIds: z.array(z.string()).default([]),
+  validFrom: z.string().optional().nullable(),
+  validTo: z.string().optional().nullable(),
+  minPassengers: z.number().int().min(1).optional().nullable(),
+  imageMobileUrl: z.string().trim().min(1).optional().nullable(),
+  imageDesktopUrl: z.string().trim().min(1).optional().nullable(),
+  stackable: z.boolean().default(false),
+})
+
+export const offerMetadataSchema = z
+  .object({
+    storefrontPromotionalOffer: storefrontOfferMetadataSchema.optional(),
+  })
+  .catchall(z.unknown())
 
 export const offerStatusSchema = z.enum([
   "draft",
@@ -114,7 +141,7 @@ const offerCoreSchema = z.object({
   acceptedAt: z.string().nullable().optional(),
   convertedAt: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  metadata: offerMetadataSchema.nullable().optional(),
 })
 
 const participantCoreSchema = z.object({
@@ -206,7 +233,7 @@ const orderTermCoreSchema = z.object({
   acceptanceStatus: orderTermAcceptanceStatusSchema.default("pending"),
   acceptedAt: z.string().nullable().optional(),
   acceptedBy: z.string().max(255).nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  metadata: metadataRecordSchema.nullable().optional(),
 })
 
 const orderTermRequiredParentSchema = orderTermCoreSchema.refine(

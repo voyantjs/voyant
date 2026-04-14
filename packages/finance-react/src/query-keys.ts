@@ -37,6 +37,8 @@ export const financeQueryKeys = {
   publicCheckout: () => [...financeQueryKeys.all, "public-checkout"] as const,
   publicBookingDocuments: (bookingId: string) =>
     [...financeQueryKeys.publicCheckout(), "booking-documents", bookingId] as const,
+  publicBookingPayments: (bookingId: string) =>
+    [...financeQueryKeys.publicCheckout(), "booking-payments", bookingId] as const,
   publicBookingPaymentOptions: (bookingId: string, filters: PublicBookingPaymentOptionsFilters) =>
     [...financeQueryKeys.publicCheckout(), "booking-payment-options", bookingId, filters] as const,
   publicPaymentSession: (sessionId: string) =>

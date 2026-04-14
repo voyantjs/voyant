@@ -1,8 +1,10 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
 import {
+  destinations,
+  destinationTranslations,
   optionUnits,
   optionUnitTranslations,
   productActivationSettings,
@@ -12,6 +14,7 @@ import {
   productDayServices,
   productDays,
   productDeliveryFormats,
+  productDestinations,
   productFaqs,
   productFeatures,
   productLocations,
@@ -29,8 +32,12 @@ import {
   productVisibilitySettings,
 } from "./schema.js"
 import type {
+  destinationListQuerySchema,
+  destinationTranslationListQuerySchema,
   insertDaySchema,
   insertDayServiceSchema,
+  insertDestinationSchema,
+  insertDestinationTranslationSchema,
   insertOptionUnitSchema,
   insertOptionUnitTranslationSchema,
   insertProductActivationSettingSchema,
@@ -57,6 +64,7 @@ import type {
   productCapabilityListQuerySchema,
   productCategoryListQuerySchema,
   productDeliveryFormatListQuerySchema,
+  productDestinationListQuerySchema,
   productFaqListQuerySchema,
   productFeatureListQuerySchema,
   productListQuerySchema,
@@ -72,6 +80,8 @@ import type {
   reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
+  updateDestinationSchema,
+  updateDestinationTranslationSchema,
   updateOptionUnitSchema,
   updateOptionUnitTranslationSchema,
   updateProductActivationSettingSchema,
@@ -90,6 +100,7 @@ import type {
   updateProductTranslationSchema,
   updateProductTypeSchema,
   updateProductVisibilitySettingSchema,
+  upsertProductBrochureSchema,
 } from "./validation.js"
 
 type ProductListQuery = z.infer<typeof productListQuerySchema>
@@ -134,6 +145,13 @@ type UpdateProductFaqInput = z.infer<typeof updateProductFaqSchema>
 type ProductLocationListQuery = z.infer<typeof productLocationListQuerySchema>
 type CreateProductLocationInput = z.infer<typeof insertProductLocationSchema>
 type UpdateProductLocationInput = z.infer<typeof updateProductLocationSchema>
+type DestinationListQuery = z.infer<typeof destinationListQuerySchema>
+type CreateDestinationInput = z.infer<typeof insertDestinationSchema>
+type UpdateDestinationInput = z.infer<typeof updateDestinationSchema>
+type DestinationTranslationListQuery = z.infer<typeof destinationTranslationListQuerySchema>
+type CreateDestinationTranslationInput = z.infer<typeof insertDestinationTranslationSchema>
+type UpdateDestinationTranslationInput = z.infer<typeof updateDestinationTranslationSchema>
+type ProductDestinationListQuery = z.infer<typeof productDestinationListQuerySchema>
 type CreateDayInput = z.infer<typeof insertDaySchema>
 type UpdateDayInput = z.infer<typeof updateDaySchema>
 type CreateDayServiceInput = z.infer<typeof insertDayServiceSchema>
@@ -152,6 +170,7 @@ type UpdateProductTagInput = z.infer<typeof updateProductTagSchema>
 type ProductMediaListQuery = z.infer<typeof productMediaListQuerySchema>
 type CreateProductMediaInput = z.infer<typeof insertProductMediaSchema>
 type UpdateProductMediaInput = z.infer<typeof updateProductMediaSchema>
+type UpsertProductBrochureInput = z.infer<typeof upsertProductBrochureSchema>
 type ReorderProductMediaInput = z.infer<typeof reorderProductMediaSchema>
 
 async function recalculateProductCost(db: PostgresJsDatabase, productId: string) {
@@ -990,6 +1009,348 @@ export const productsService = {
       .delete(productLocations)
       .where(eq(productLocations.id, id))
       .returning({ id: productLocations.id })
+
+    return row ?? null
+  },
+
+  async listDestinations(db: PostgresJsDatabase, query: DestinationListQuery) {
+    const conditions = []
+
+    if (query.parentId) {
+      conditions.push(eq(destinations.parentId, query.parentId))
+    }
+
+    if (query.active !== undefined) {
+      conditions.push(eq(destinations.active, query.active))
+    }
+
+    if (query.search) {
+      const term = `%${query.search}%`
+      const translationRows = await db
+        .select({ destinationId: destinationTranslations.destinationId })
+        .from(destinationTranslations)
+        .where(
+          and(
+            query.languageTag
+              ? eq(destinationTranslations.languageTag, query.languageTag)
+              : undefined,
+            or(
+              ilike(destinationTranslations.name, term),
+              ilike(destinationTranslations.description, term),
+            ),
+          ),
+        )
+
+      const destinationIds = translationRows.map((row) => row.destinationId)
+      conditions.push(
+        destinationIds.length > 0 ? inArray(destinations.id, destinationIds) : sql`1 = 0`,
+      )
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(destinations)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(asc(destinations.sortOrder), asc(destinations.slug)),
+      db.select({ count: sql<number>`count(*)::int` }).from(destinations).where(where),
+    ])
+
+    const destinationIds = rows.map((row) => row.id)
+    const translations =
+      destinationIds.length > 0
+        ? await db
+            .select()
+            .from(destinationTranslations)
+            .where(
+              and(
+                inArray(destinationTranslations.destinationId, destinationIds),
+                ...(query.languageTag
+                  ? [eq(destinationTranslations.languageTag, query.languageTag)]
+                  : []),
+              ),
+            )
+            .orderBy(
+              asc(destinationTranslations.languageTag),
+              asc(destinationTranslations.createdAt),
+            )
+        : []
+
+    const translationsByDestination = new Map<string, Array<(typeof translations)[number]>>()
+    for (const row of translations) {
+      const existing = translationsByDestination.get(row.destinationId) ?? []
+      existing.push(row)
+      translationsByDestination.set(row.destinationId, existing)
+    }
+
+    return {
+      data: rows.map((row) => ({
+        ...row,
+        translation: (translationsByDestination.get(row.id) ?? [])[0] ?? null,
+      })),
+      total: countResult[0]?.count ?? 0,
+      limit: query.limit,
+      offset: query.offset,
+    }
+  },
+
+  async getDestinationById(db: PostgresJsDatabase, id: string) {
+    const [row] = await db.select().from(destinations).where(eq(destinations.id, id)).limit(1)
+    if (!row) {
+      return null
+    }
+
+    const translations = await db
+      .select()
+      .from(destinationTranslations)
+      .where(eq(destinationTranslations.destinationId, id))
+      .orderBy(asc(destinationTranslations.languageTag), asc(destinationTranslations.createdAt))
+
+    return {
+      ...row,
+      translations,
+    }
+  },
+
+  async createDestination(db: PostgresJsDatabase, data: CreateDestinationInput) {
+    const [row] = await db.insert(destinations).values(data).returning()
+    return row ?? null
+  },
+
+  async updateDestination(db: PostgresJsDatabase, id: string, data: UpdateDestinationInput) {
+    const [row] = await db
+      .update(destinations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(destinations.id, id))
+      .returning()
+
+    return row ?? null
+  },
+
+  async deleteDestination(db: PostgresJsDatabase, id: string) {
+    const [row] = await db
+      .delete(destinations)
+      .where(eq(destinations.id, id))
+      .returning({ id: destinations.id })
+
+    return row ?? null
+  },
+
+  async listDestinationTranslations(
+    db: PostgresJsDatabase,
+    query: DestinationTranslationListQuery,
+  ) {
+    const conditions = []
+
+    if (query.destinationId) {
+      conditions.push(eq(destinationTranslations.destinationId, query.destinationId))
+    }
+
+    if (query.languageTag) {
+      conditions.push(eq(destinationTranslations.languageTag, query.languageTag))
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(destinationTranslations)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(asc(destinationTranslations.languageTag), asc(destinationTranslations.createdAt)),
+      db.select({ count: sql<number>`count(*)::int` }).from(destinationTranslations).where(where),
+    ])
+
+    return {
+      data: rows,
+      total: countResult[0]?.count ?? 0,
+      limit: query.limit,
+      offset: query.offset,
+    }
+  },
+
+  async upsertDestinationTranslation(
+    db: PostgresJsDatabase,
+    destinationId: string,
+    data: CreateDestinationTranslationInput,
+  ) {
+    const [destination] = await db
+      .select({ id: destinations.id })
+      .from(destinations)
+      .where(eq(destinations.id, destinationId))
+      .limit(1)
+
+    if (!destination) {
+      return null
+    }
+
+    const [existing] = await db
+      .select()
+      .from(destinationTranslations)
+      .where(
+        and(
+          eq(destinationTranslations.destinationId, destinationId),
+          eq(destinationTranslations.languageTag, data.languageTag),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      const [row] = await db
+        .update(destinationTranslations)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(destinationTranslations.id, existing.id))
+        .returning()
+      return row ?? null
+    }
+
+    const [row] = await db
+      .insert(destinationTranslations)
+      .values({ destinationId, ...data })
+      .returning()
+    return row ?? null
+  },
+
+  async updateDestinationTranslation(
+    db: PostgresJsDatabase,
+    id: string,
+    data: UpdateDestinationTranslationInput,
+  ) {
+    const [row] = await db
+      .update(destinationTranslations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(destinationTranslations.id, id))
+      .returning()
+
+    return row ?? null
+  },
+
+  async deleteDestinationTranslation(db: PostgresJsDatabase, id: string) {
+    const [row] = await db
+      .delete(destinationTranslations)
+      .where(eq(destinationTranslations.id, id))
+      .returning({ id: destinationTranslations.id })
+
+    return row ?? null
+  },
+
+  async listProductDestinations(db: PostgresJsDatabase, query: ProductDestinationListQuery) {
+    const conditions = []
+
+    if (query.productId) {
+      conditions.push(eq(productDestinations.productId, query.productId))
+    }
+
+    if (query.destinationId) {
+      conditions.push(eq(productDestinations.destinationId, query.destinationId))
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select({
+          productId: productDestinations.productId,
+          destinationId: productDestinations.destinationId,
+          sortOrder: productDestinations.sortOrder,
+          createdAt: productDestinations.createdAt,
+          updatedAt: productDestinations.updatedAt,
+          destinationSlug: destinations.slug,
+          destinationType: destinations.destinationType,
+          destinationActive: destinations.active,
+        })
+        .from(productDestinations)
+        .innerJoin(destinations, eq(destinations.id, productDestinations.destinationId))
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(asc(productDestinations.sortOrder), asc(destinations.slug)),
+      db.select({ count: sql<number>`count(*)::int` }).from(productDestinations).where(where),
+    ])
+
+    return {
+      data: rows,
+      total: countResult[0]?.count ?? 0,
+      limit: query.limit,
+      offset: query.offset,
+    }
+  },
+
+  async assignProductDestination(
+    db: PostgresJsDatabase,
+    productId: string,
+    input: { destinationId: string; sortOrder?: number },
+  ) {
+    const product = await ensureProductExists(db, productId)
+    if (!product) {
+      return null
+    }
+
+    const [destination] = await db
+      .select({ id: destinations.id })
+      .from(destinations)
+      .where(eq(destinations.id, input.destinationId))
+      .limit(1)
+
+    if (!destination) {
+      return null
+    }
+
+    const [existing] = await db
+      .select()
+      .from(productDestinations)
+      .where(
+        and(
+          eq(productDestinations.productId, productId),
+          eq(productDestinations.destinationId, input.destinationId),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      const [row] = await db
+        .update(productDestinations)
+        .set({ sortOrder: input.sortOrder ?? existing.sortOrder, updatedAt: new Date() })
+        .where(
+          and(
+            eq(productDestinations.productId, productId),
+            eq(productDestinations.destinationId, input.destinationId),
+          ),
+        )
+        .returning()
+      return row ?? null
+    }
+
+    const [row] = await db
+      .insert(productDestinations)
+      .values({
+        productId,
+        destinationId: input.destinationId,
+        sortOrder: input.sortOrder ?? 0,
+      })
+      .returning()
+    return row ?? null
+  },
+
+  async removeProductDestination(db: PostgresJsDatabase, productId: string, destinationId: string) {
+    const [row] = await db
+      .delete(productDestinations)
+      .where(
+        and(
+          eq(productDestinations.productId, productId),
+          eq(productDestinations.destinationId, destinationId),
+        ),
+      )
+      .returning({
+        productId: productDestinations.productId,
+        destinationId: productDestinations.destinationId,
+      })
 
     return row ?? null
   },
@@ -1973,6 +2334,14 @@ export const productsService = {
       conditions.push(eq(productMedia.mediaType, query.mediaType))
     }
 
+    if (query.isBrochure !== undefined) {
+      conditions.push(eq(productMedia.isBrochure, query.isBrochure))
+    }
+
+    if (query.isBrochureCurrent !== undefined) {
+      conditions.push(eq(productMedia.isBrochureCurrent, query.isBrochureCurrent))
+    }
+
     const where = and(...conditions)
 
     const [rows, countResult] = await Promise.all([
@@ -2007,6 +2376,14 @@ export const productsService = {
 
     if (query.mediaType) {
       conditions.push(eq(productMedia.mediaType, query.mediaType))
+    }
+
+    if (query.isBrochure !== undefined) {
+      conditions.push(eq(productMedia.isBrochure, query.isBrochure))
+    }
+
+    if (query.isBrochureCurrent !== undefined) {
+      conditions.push(eq(productMedia.isBrochureCurrent, query.isBrochureCurrent))
     }
 
     const where = and(...conditions)
@@ -2046,6 +2423,10 @@ export const productsService = {
     }
 
     if (data.dayId) {
+      if (data.isBrochure) {
+        return null
+      }
+
       const [day] = await db
         .select({ id: productDays.id, productId: productDays.productId })
         .from(productDays)
@@ -2055,6 +2436,19 @@ export const productsService = {
       if (!day || day.productId !== productId) {
         return null
       }
+    }
+
+    if (data.isBrochure) {
+      await db
+        .update(productMedia)
+        .set({ isBrochureCurrent: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(productMedia.productId, productId),
+            eq(productMedia.isBrochure, true),
+            sql`${productMedia.dayId} is null`,
+          ),
+        )
     }
 
     const [row] = await db
@@ -2071,6 +2465,9 @@ export const productsService = {
         altText: data.altText ?? null,
         sortOrder: data.sortOrder,
         isCover: data.isCover,
+        isBrochure: data.isBrochure,
+        isBrochureCurrent: data.isBrochureCurrent,
+        brochureVersion: data.brochureVersion ?? null,
       })
       .returning()
 
@@ -2078,6 +2475,29 @@ export const productsService = {
   },
 
   async updateMedia(db: PostgresJsDatabase, id: string, data: UpdateProductMediaInput) {
+    const existing = await this.getMediaById(db, id)
+    if (!existing) {
+      return null
+    }
+
+    if (data.isBrochure === true && existing.dayId) {
+      return null
+    }
+
+    if (data.isBrochure === true) {
+      await db
+        .update(productMedia)
+        .set({ isBrochureCurrent: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(productMedia.productId, existing.productId),
+            eq(productMedia.isBrochure, true),
+            sql`${productMedia.dayId} is null`,
+            sql`${productMedia.id} <> ${id}`,
+          ),
+        )
+    }
+
     const [row] = await db
       .update(productMedia)
       .set({ ...data, updatedAt: new Date() })
@@ -2135,5 +2555,202 @@ export const productsService = {
     )
 
     return results.filter((r) => r != null)
+  },
+
+  async getBrochure(db: PostgresJsDatabase, productId: string) {
+    const [row] = await db
+      .select()
+      .from(productMedia)
+      .where(
+        and(
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          eq(productMedia.isBrochureCurrent, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+      .orderBy(
+        desc(productMedia.brochureVersion),
+        desc(productMedia.updatedAt),
+        desc(productMedia.createdAt),
+      )
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async listBrochures(db: PostgresJsDatabase, productId: string) {
+    return db
+      .select()
+      .from(productMedia)
+      .where(
+        and(
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+      .orderBy(
+        desc(productMedia.isBrochureCurrent),
+        desc(productMedia.brochureVersion),
+        desc(productMedia.updatedAt),
+        desc(productMedia.createdAt),
+      )
+  },
+
+  async upsertBrochure(
+    db: PostgresJsDatabase,
+    productId: string,
+    data: UpsertProductBrochureInput,
+  ) {
+    const product = await ensureProductExists(db, productId)
+    if (!product) {
+      return null
+    }
+
+    const brochures = await this.listBrochures(db, productId)
+    const nextVersion =
+      brochures.reduce((maxVersion, brochure) => {
+        const version = brochure.brochureVersion ?? 0
+        return version > maxVersion ? version : maxVersion
+      }, 0) + 1
+
+    return this.createMedia(db, productId, {
+      mediaType: "document",
+      dayId: null,
+      name: data.name,
+      url: data.url,
+      storageKey: data.storageKey ?? null,
+      mimeType: data.mimeType ?? "application/pdf",
+      fileSize: data.fileSize ?? null,
+      altText: data.altText ?? null,
+      sortOrder: data.sortOrder,
+      isCover: false,
+      isBrochure: true,
+      isBrochureCurrent: true,
+      brochureVersion: nextVersion,
+    })
+  },
+
+  async deleteBrochure(db: PostgresJsDatabase, productId: string) {
+    const brochure = await this.getBrochure(db, productId)
+    if (!brochure) {
+      return null
+    }
+
+    const [row] = await db.delete(productMedia).where(eq(productMedia.id, brochure.id)).returning()
+
+    const [previous] = await db
+      .select()
+      .from(productMedia)
+      .where(
+        and(
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+      .orderBy(
+        desc(productMedia.brochureVersion),
+        desc(productMedia.updatedAt),
+        desc(productMedia.createdAt),
+      )
+      .limit(1)
+
+    if (previous) {
+      await db
+        .update(productMedia)
+        .set({ isBrochureCurrent: true, updatedAt: new Date() })
+        .where(eq(productMedia.id, previous.id))
+    }
+
+    return row ?? null
+  },
+
+  async setCurrentBrochure(db: PostgresJsDatabase, productId: string, brochureId: string) {
+    const [brochure] = await db
+      .select()
+      .from(productMedia)
+      .where(
+        and(
+          eq(productMedia.id, brochureId),
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+      .limit(1)
+
+    if (!brochure) {
+      return null
+    }
+
+    await db
+      .update(productMedia)
+      .set({ isBrochureCurrent: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+
+    const [row] = await db
+      .update(productMedia)
+      .set({ isBrochureCurrent: true, updatedAt: new Date() })
+      .where(eq(productMedia.id, brochureId))
+      .returning()
+
+    return row ?? null
+  },
+
+  async deleteBrochureVersion(db: PostgresJsDatabase, productId: string, brochureId: string) {
+    const [brochure] = await db
+      .select()
+      .from(productMedia)
+      .where(
+        and(
+          eq(productMedia.id, brochureId),
+          eq(productMedia.productId, productId),
+          eq(productMedia.isBrochure, true),
+          sql`${productMedia.dayId} is null`,
+        ),
+      )
+      .limit(1)
+
+    if (!brochure) {
+      return null
+    }
+
+    const [row] = await db.delete(productMedia).where(eq(productMedia.id, brochureId)).returning()
+
+    if (brochure.isBrochureCurrent) {
+      const [previous] = await db
+        .select()
+        .from(productMedia)
+        .where(
+          and(
+            eq(productMedia.productId, productId),
+            eq(productMedia.isBrochure, true),
+            sql`${productMedia.dayId} is null`,
+          ),
+        )
+        .orderBy(
+          desc(productMedia.brochureVersion),
+          desc(productMedia.updatedAt),
+          desc(productMedia.createdAt),
+        )
+        .limit(1)
+
+      if (previous) {
+        await db
+          .update(productMedia)
+          .set({ isBrochureCurrent: true, updatedAt: new Date() })
+          .where(eq(productMedia.id, previous.id))
+      }
+    }
+
+    return row ?? null
   },
 }

@@ -104,6 +104,18 @@ describe("renderTemplate — mustache (markdown/html)", () => {
   it("treats null and undefined as empty string", () => {
     expect(renderTemplate("A:{{a}}|B:{{b}}", "markdown", { a: null, b: undefined })).toBe("A:|B:")
   })
+
+  it("supports liquid loops and conditionals in html/markdown templates", () => {
+    const body =
+      "{% if passengers.size > 0 %}{% for passenger in passengers %}{{ passenger.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No passengers{% endif %}"
+
+    expect(
+      renderTemplate(body, "html", {
+        passengers: [{ name: "Alice" }, { name: "Bob" }],
+      }),
+    ).toBe("Alice, Bob")
+    expect(renderTemplate(body, "markdown", { passengers: [] })).toBe("No passengers")
+  })
 })
 
 describe("renderTemplate — lexical_json", () => {
@@ -175,6 +187,26 @@ describe("renderTemplate — lexical_json", () => {
     const output = renderTemplate(lexical, "lexical_json", { msg: "hi" })
     const parsed = JSON.parse(output)
     expect(parsed.text).toBe("hi")
+  })
+
+  it("supports liquid filters inside lexical text nodes", () => {
+    const lexical = JSON.stringify({
+      root: {
+        type: "root",
+        children: [
+          {
+            type: "paragraph",
+            children: [{ type: "text", text: "Passengers: {{ passengers | json }}" }],
+          },
+        ],
+      },
+    })
+
+    const output = renderTemplate(lexical, "lexical_json", {
+      passengers: [{ name: "Alice" }],
+    })
+    const parsed = JSON.parse(output)
+    expect(parsed.root.children[0].children[0].text).toBe('Passengers: [{"name":"Alice"}]')
   })
 })
 

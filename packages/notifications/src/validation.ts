@@ -14,13 +14,28 @@ export const notificationTargetTypeSchema = z.enum([
   "other",
 ])
 export const notificationReminderStatusSchema = z.enum(["draft", "active", "archived"])
-export const notificationReminderTargetTypeSchema = z.enum(["booking_payment_schedule"])
+export const notificationReminderTargetTypeSchema = z.enum(["booking_payment_schedule", "invoice"])
 export const notificationReminderRunStatusSchema = z.enum([
   "processing",
   "sent",
   "skipped",
   "failed",
 ])
+export const notificationDocumentTypeSchema = z.enum(["contract", "invoice", "proforma"])
+export const notificationDocumentSourceSchema = z.enum(["legal", "finance"])
+export const notificationAttachmentSchema = z
+  .object({
+    filename: z.string().min(1).max(500),
+    contentBase64: z.string().min(1).optional().nullable(),
+    path: z.string().min(1).max(4000).optional().nullable(),
+    contentType: z.string().max(255).optional().nullable(),
+    disposition: z.enum(["attachment", "inline"]).optional().nullable(),
+    contentId: z.string().max(255).optional().nullable(),
+  })
+  .refine((value) => Boolean(value.contentBase64 || value.path), {
+    message: "contentBase64 or path is required",
+    path: ["contentBase64"],
+  })
 
 const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -122,6 +137,7 @@ const transportNotificationCoreSchema = z.object({
   subject: z.string().max(2000).optional().nullable(),
   html: z.string().optional().nullable(),
   text: z.string().optional().nullable(),
+  attachments: z.array(notificationAttachmentSchema).optional().nullable(),
   data: z.record(z.string(), z.unknown()).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
@@ -154,6 +170,7 @@ export const sendNotificationSchema = z
     subject: z.string().max(2000).optional().nullable(),
     html: z.string().optional().nullable(),
     text: z.string().optional().nullable(),
+    attachments: z.array(notificationAttachmentSchema).optional().nullable(),
     data: z.record(z.string(), z.unknown()).optional().nullable(),
     targetType: notificationTargetTypeSchema.default("other"),
     targetId: z.string().optional().nullable(),
@@ -172,3 +189,53 @@ export const sendNotificationSchema = z
       message: "templateId, templateSlug, or direct content is required",
     },
   )
+
+export const bookingDocumentBundleItemSchema = z.object({
+  key: z.string().min(1),
+  source: notificationDocumentSourceSchema,
+  documentType: notificationDocumentTypeSchema,
+  bookingId: z.string().min(1),
+  contractId: z.string().optional().nullable(),
+  invoiceId: z.string().optional().nullable(),
+  attachmentId: z.string().optional().nullable(),
+  renditionId: z.string().optional().nullable(),
+  contractStatus: z.string().optional().nullable(),
+  invoiceStatus: z.string().optional().nullable(),
+  name: z.string().min(1),
+  format: z.string().optional().nullable(),
+  mimeType: z.string().optional().nullable(),
+  storageKey: z.string().optional().nullable(),
+  downloadUrl: z.string().url().optional().nullable(),
+  language: z.string().optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  createdAt: z.string().datetime(),
+})
+
+export const bookingDocumentBundleSchema = z.object({
+  bookingId: z.string().min(1),
+  documents: z.array(bookingDocumentBundleItemSchema),
+})
+
+export const sendBookingDocumentsNotificationSchema = z.object({
+  templateId: z.string().optional().nullable(),
+  templateSlug: z.string().optional().nullable(),
+  provider: z.string().optional().nullable(),
+  to: z.string().min(1).optional().nullable(),
+  from: z.string().max(500).optional().nullable(),
+  subject: z.string().max(2000).optional().nullable(),
+  html: z.string().optional().nullable(),
+  text: z.string().optional().nullable(),
+  data: z.record(z.string(), z.unknown()).optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  scheduledFor: z.string().optional().nullable(),
+  documentTypes: z.array(notificationDocumentTypeSchema).optional().nullable(),
+})
+
+export const sendBookingDocumentsNotificationResultSchema = z.object({
+  bookingId: z.string().min(1),
+  recipient: z.string().min(1),
+  documents: z.array(bookingDocumentBundleItemSchema),
+  deliveryId: z.string().min(1),
+  provider: z.string().optional().nullable(),
+  status: notificationDeliveryStatusSchema,
+})

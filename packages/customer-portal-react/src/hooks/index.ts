@@ -3,6 +3,10 @@ export {
   useCustomerPortalBooking,
 } from "./use-customer-portal-booking.js"
 export {
+  type UseCustomerPortalBookingBillingContactOptions,
+  useCustomerPortalBookingBillingContact,
+} from "./use-customer-portal-booking-billing-contact.js"
+export {
   type UseCustomerPortalBookingDocumentsOptions,
   useCustomerPortalBookingDocuments,
 } from "./use-customer-portal-booking-documents.js"

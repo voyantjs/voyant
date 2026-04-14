@@ -9,6 +9,7 @@ export * from "./hooks/index.js"
 export {
   getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
+  getPublicBookingPayments,
   getPublicPaymentSession,
   startPublicBookingGuaranteePaymentSession,
   startPublicBookingSchedulePaymentSession,
@@ -30,6 +31,7 @@ export {
   getInvoicesQueryOptions,
   getPublicBookingDocumentsQueryOptions,
   getPublicBookingPaymentOptionsQueryOptions,
+  getPublicBookingPaymentsQueryOptions,
   getPublicPaymentSessionQueryOptions,
   getSupplierPaymentsQueryOptions,
 } from "./query-options.js"

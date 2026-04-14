@@ -5,10 +5,14 @@ export {
   createCheckoutRoutes,
 } from "./routes.js"
 export type {
+  CheckoutBankTransferDetails,
   CheckoutCollectionPlan,
+  CheckoutPaymentStarter,
   CheckoutPolicyOptions,
+  CheckoutProviderStartResult,
   CheckoutReminderRunList,
   CheckoutReminderRunSummary,
+  CheckoutRuntimeOptions,
   InitiatedCheckoutCollection,
 } from "./service.js"
 export {
@@ -18,7 +22,10 @@ export {
   resolvePaymentSessionTarget,
 } from "./service.js"
 export type {
+  CheckoutBankTransferInstructionsRecord,
   CheckoutCollectionPlanRecord,
+  CheckoutProviderStartInput,
+  CheckoutProviderStartResultRecord,
   CheckoutReminderRunListQuery,
   CheckoutReminderRunRecord,
   InitiateCheckoutCollectionInput,
@@ -26,6 +33,7 @@ export type {
   PreviewCheckoutCollectionInput,
 } from "./validation.js"
 export {
+  checkoutBankTransferInstructionsSchema,
   checkoutCollectionInvoiceSchema,
   checkoutCollectionMethodSchema,
   checkoutCollectionPlanSchema,
@@ -34,6 +42,8 @@ export {
   checkoutInvoiceDocumentTypeSchema,
   checkoutNotificationDeliverySchema,
   checkoutPaymentSessionTargetSchema,
+  checkoutProviderStartInputSchema,
+  checkoutProviderStartResultSchema,
   checkoutReminderRunListQuerySchema,
   checkoutReminderRunListResponseSchema,
   checkoutReminderRunSchema,

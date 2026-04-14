@@ -97,6 +97,13 @@ export {
   transactionTravelerCategoryEnum,
 } from "./schema.js"
 export {
+  createStorefrontPromotionalOffersResolver,
+  getStorefrontPromotionalOfferBySlug,
+  listStorefrontPromotionalOffers,
+  storefrontOfferEnvelopeSchema,
+  storefrontPromotionalOfferSchema,
+} from "./storefront-offers.js"
+export {
   insertOfferItemParticipantSchema,
   insertOfferItemSchema,
   insertOfferParticipantSchema,
@@ -109,6 +116,7 @@ export {
   offerItemListQuerySchema,
   offerItemParticipantListQuerySchema,
   offerListQuerySchema,
+  offerMetadataSchema,
   offerParticipantListQuerySchema,
   offerStatusSchema,
   orderItemListQuerySchema,
@@ -119,6 +127,8 @@ export {
   orderTermAcceptanceStatusSchema,
   orderTermListQuerySchema,
   orderTermTypeSchema,
+  storefrontOfferDiscountTypeSchema,
+  storefrontOfferMetadataSchema,
   transactionItemParticipantRoleSchema,
   transactionItemStatusSchema,
   transactionItemTypeSchema,

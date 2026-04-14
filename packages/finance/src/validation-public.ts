@@ -159,6 +159,25 @@ export const publicBookingFinanceDocumentsSchema = z.object({
   documents: z.array(publicFinanceBookingDocumentSchema),
 })
 
+export const publicFinanceBookingPaymentSchema = z.object({
+  id: z.string(),
+  invoiceId: z.string(),
+  invoiceNumber: z.string(),
+  invoiceType: publicFinanceInvoiceTypeSchema,
+  status: z.enum(["pending", "completed", "failed", "refunded"]),
+  paymentMethod: paymentMethodSchema,
+  amountCents: z.number().int(),
+  currency: z.string(),
+  paymentDate: z.string(),
+  referenceNumber: z.string().nullable(),
+  notes: z.string().nullable(),
+})
+
+export const publicBookingFinancePaymentsSchema = z.object({
+  bookingId: z.string(),
+  payments: z.array(publicFinanceBookingPaymentSchema),
+})
+
 export const publicVoucherValidationSchema = z.object({
   valid: z.boolean(),
   reason: z
@@ -191,6 +210,8 @@ export type PublicBookingPaymentOptions = z.infer<typeof publicBookingPaymentOpt
 export type PublicPaymentSession = z.infer<typeof publicPaymentSessionSchema>
 export type PublicFinanceBookingDocument = z.infer<typeof publicFinanceBookingDocumentSchema>
 export type PublicBookingFinanceDocuments = z.infer<typeof publicBookingFinanceDocumentsSchema>
+export type PublicFinanceBookingPayment = z.infer<typeof publicFinanceBookingPaymentSchema>
+export type PublicBookingFinancePayments = z.infer<typeof publicBookingFinancePaymentsSchema>
 export type PublicStartPaymentSessionInput = z.infer<typeof publicStartPaymentSessionSchema>
 export type PublicValidateVoucherInput = z.infer<typeof publicValidateVoucherSchema>
 export type PublicVoucherValidationResult = z.infer<typeof publicVoucherValidationSchema>

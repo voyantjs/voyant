@@ -1,9 +1,15 @@
+import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { contractsAdminRoutes, contractsPublicRoutes } from "../../src/contracts/routes.js"
-import { contractTemplates } from "../../src/contracts/schema.js"
+import { contractsPublicRoutes, createContractsAdminRoutes } from "../../src/contracts/routes.js"
+import {
+  contractAttachments,
+  contracts,
+  contractTemplates,
+  contractTemplateVersions,
+} from "../../src/contracts/schema.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 
@@ -16,6 +22,7 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
   let adminApp: Hono
   let publicApp: Hono
   let db: PostgresJsDatabase
+  let generatedNames: string[]
 
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
@@ -27,7 +34,26 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       c.set("db" as never, db)
       await next()
     })
-    adminApp.route("/", contractsAdminRoutes)
+    adminApp.route(
+      "/",
+      createContractsAdminRoutes({
+        documentGenerator: async ({ contract }) => {
+          const name = `contract-${generatedNames.length + 1}.pdf`
+          generatedNames.push(name)
+          return {
+            kind: "document",
+            name,
+            mimeType: "application/pdf",
+            fileSize: 1024,
+            storageKey: `contracts/${contract.id}/${name}`,
+            metadata: {
+              source: "legal-test",
+              url: `https://cdn.example.com/contracts/${contract.id}/${name}`,
+            },
+          }
+        },
+      }),
+    )
 
     publicApp = new Hono()
     publicApp.use("*", async (c, next) => {
@@ -40,6 +66,7 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
   beforeEach(async () => {
     const { cleanupTestDb } = await import("@voyantjs/db/test-utils")
     await cleanupTestDb(db)
+    generatedNames = []
   })
 
   it("selects the default active template using language fallback order", async () => {
@@ -105,5 +132,84 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       rendered: "Salut Ana Popescu",
       bodyFormat: "markdown",
     })
+  })
+
+  it("generates and regenerates a canonical contract document attachment", async () => {
+    const [template] = await db
+      .insert(contractTemplates)
+      .values({
+        name: "Customer RO",
+        slug: "customer-ro",
+        scope: "customer",
+        language: "ro",
+        bodyFormat: "markdown",
+        body: "Salut {{customer.firstName}}",
+        active: true,
+      })
+      .returning()
+
+    const [version] = await db
+      .insert(contractTemplateVersions)
+      .values({
+        templateId: template.id,
+        version: 1,
+        bodyFormat: "markdown",
+        body: "Salut {{customer.firstName}}",
+      })
+      .returning()
+
+    await db
+      .update(contractTemplates)
+      .set({ currentVersionId: version.id })
+      .where(eq(contractTemplates.id, template.id))
+
+    const [contract] = await db
+      .insert(contracts)
+      .values({
+        title: "Booking contract",
+        scope: "customer",
+        status: "draft",
+        templateVersionId: version.id,
+        variables: {
+          customer: { firstName: "Ana" },
+        },
+      })
+      .returning()
+
+    const firstRes = await adminApp.request(`/${contract.id}/generate-document`, {
+      method: "POST",
+      ...json({}),
+    })
+
+    expect(firstRes.status).toBe(201)
+    const firstBody = await firstRes.json()
+    expect(firstBody.data.renderedBody).toBe("Salut Ana")
+    expect(firstBody.data.attachment.name).toBe("contract-1.pdf")
+
+    const [issuedContract] = await db
+      .select()
+      .from(contracts)
+      .where(eq(contracts.id, contract.id))
+      .limit(1)
+
+    expect(issuedContract?.status).toBe("issued")
+    expect(issuedContract?.renderedBody).toBe("Salut Ana")
+
+    const secondRes = await adminApp.request(`/${contract.id}/regenerate-document`, {
+      method: "POST",
+      ...json({}),
+    })
+
+    expect(secondRes.status).toBe(200)
+    expect((await secondRes.json()).data.attachment.name).toBe("contract-2.pdf")
+
+    const attachments = await db
+      .select()
+      .from(contractAttachments)
+      .where(eq(contractAttachments.contractId, contract.id))
+
+    expect(attachments).toHaveLength(1)
+    expect(attachments[0]?.name).toBe("contract-2.pdf")
+    expect(attachments[0]?.storageKey).toContain("contract-2.pdf")
   })
 })

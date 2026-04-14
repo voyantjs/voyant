@@ -4,15 +4,18 @@ import { type FetchWithValidationOptions, fetchWithValidation, withQueryParams }
 import {
   type BootstrapCustomerPortalInput,
   type CreateCustomerPortalCompanionInput,
+  customerPortalBookingBillingContactResponseSchema,
   customerPortalBookingDocumentsResponseSchema,
   customerPortalBookingResponseSchema,
   customerPortalBookingsResponseSchema,
   customerPortalBootstrapResponseSchema,
+  customerPortalCompanionImportResponseSchema,
   customerPortalCompanionResponseSchema,
   customerPortalCompanionsResponseSchema,
   customerPortalContactExistsResponseSchema,
   customerPortalPhoneContactExistsResponseSchema,
   customerPortalProfileResponseSchema,
+  type ImportCustomerPortalBookingParticipantsInput,
   successEnvelope,
   type UpdateCustomerPortalCompanionInput,
   type UpdateCustomerPortalProfileInput,
@@ -98,6 +101,21 @@ export function createCustomerPortalCompanion(
   )
 }
 
+export function importCustomerPortalBookingParticipants(
+  client: FetchWithValidationOptions,
+  input: ImportCustomerPortalBookingParticipantsInput = {},
+) {
+  return fetchWithValidation(
+    "/v1/public/customer-portal/companions/import-booking-participants",
+    customerPortalCompanionImportResponseSchema,
+    client,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  )
+}
+
 export function updateCustomerPortalCompanion(
   client: FetchWithValidationOptions,
   companionId: string,
@@ -140,6 +158,17 @@ export function getCustomerPortalBooking(client: FetchWithValidationOptions, boo
   return fetchWithValidation(
     `/v1/public/customer-portal/bookings/${bookingId}`,
     customerPortalBookingResponseSchema,
+    client,
+  )
+}
+
+export function getCustomerPortalBookingBillingContact(
+  client: FetchWithValidationOptions,
+  bookingId: string,
+) {
+  return fetchWithValidation(
+    `/v1/public/customer-portal/bookings/${bookingId}/billing-contact`,
+    customerPortalBookingBillingContactResponseSchema,
     client,
   )
 }

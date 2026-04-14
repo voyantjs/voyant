@@ -7,6 +7,7 @@ import {
   creditNoteStatusSchema,
   invoiceStatusSchema,
   paginationSchema,
+  paymentMethodSchema,
   taxScopeSchema,
 } from "./validation-shared.js"
 
@@ -241,8 +242,71 @@ const invoiceExternalRefCoreSchema = z.object({
 export const insertInvoiceExternalRefSchema = invoiceExternalRefCoreSchema
 export const updateInvoiceExternalRefSchema = invoiceExternalRefCoreSchema.partial()
 
+export const pollInvoiceSettlementInputSchema = z.object({
+  provider: z.string().min(1).max(100).optional().nullable(),
+  reconcilePayment: z.boolean().default(true),
+  paymentMethod: paymentMethodSchema.default("bank_transfer"),
+  paymentDate: z.string().optional().nullable(),
+  referenceNumber: z.string().max(255).optional().nullable(),
+  notes: z.string().optional().nullable(),
+})
+
+export const polledInvoiceSettlementProviderResultSchema = z.object({
+  provider: z.string(),
+  externalRefId: z.string(),
+  externalId: z.string().nullable(),
+  externalNumber: z.string().nullable(),
+  externalUrl: z.string().nullable(),
+  status: z.string().nullable(),
+  paidAmountCents: z.number().int().nullable(),
+  unpaidAmountCents: z.number().int().nullable(),
+  syncedAt: z.string().nullable(),
+  settledAt: z.string().nullable(),
+  createdPaymentId: z.string().nullable(),
+  newlyAppliedAmountCents: z.number().int(),
+  syncError: z.string().nullable(),
+})
+
+export const polledInvoiceSettlementResultSchema = z.object({
+  invoiceId: z.string(),
+  invoiceStatus: invoiceStatusSchema,
+  paidCents: z.number().int(),
+  balanceDueCents: z.number().int(),
+  results: z.array(polledInvoiceSettlementProviderResultSchema),
+})
+
 export const renderInvoiceInputSchema = z.object({
   templateId: z.string().optional().nullable(),
   format: invoiceRenditionFormatSchema.default("pdf"),
   language: z.string().optional().nullable(),
 })
+
+export const generateInvoiceDocumentInputSchema = renderInvoiceInputSchema.extend({
+  replaceExisting: z.boolean().default(true),
+})
+
+export const generatedInvoiceDocumentResultSchema = z.object({
+  invoiceId: z.string(),
+  renderedBodyFormat: invoiceTemplateBodyFormatSchema,
+  renderedBody: z.string(),
+  rendition: z.object({
+    id: z.string(),
+    invoiceId: z.string(),
+    templateId: z.string().nullable(),
+    format: invoiceRenditionFormatSchema,
+    status: invoiceRenditionStatusSchema,
+    storageKey: z.string().nullable(),
+    fileSize: z.number().int().nullable(),
+    checksum: z.string().nullable(),
+    language: z.string().nullable(),
+    errorMessage: z.string().nullable(),
+    generatedAt: z.string().nullable(),
+    metadata: z.record(z.string(), z.unknown()).nullable(),
+    createdAt: z.string(),
+  }),
+})
+
+export type GenerateInvoiceDocumentInput = z.infer<typeof generateInvoiceDocumentInputSchema>
+export type GeneratedInvoiceDocumentResult = z.infer<typeof generatedInvoiceDocumentResultSchema>
+export type PollInvoiceSettlementInput = z.infer<typeof pollInvoiceSettlementInputSchema>
+export type PolledInvoiceSettlementResult = z.infer<typeof polledInvoiceSettlementResultSchema>

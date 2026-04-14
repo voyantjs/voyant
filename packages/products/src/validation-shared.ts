@@ -73,6 +73,7 @@ export const productLocationTypeSchema = z.enum([
   "point_of_interest",
   "other",
 ])
+export const destinationTypeSchema = z.enum(["destination", "region", "country", "city"])
 export const productMediaTypeSchema = z.enum(["image", "video", "document"])
 export const languageTagSchema = z
   .string()

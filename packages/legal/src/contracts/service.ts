@@ -1,4 +1,5 @@
 import { contractRecordsService } from "./service-contracts.js"
+import { contractDocumentsService } from "./service-documents.js"
 import { contractSeriesService } from "./service-series.js"
 import {
   allocateContractNumber,
@@ -13,4 +14,5 @@ export const contractsService = {
   ...contractTemplatesService,
   ...contractSeriesService,
   ...contractRecordsService,
+  ...contractDocumentsService,
 }

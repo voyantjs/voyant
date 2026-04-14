@@ -6,6 +6,27 @@
 export type NotificationChannel = "email" | "sms" | (string & {})
 
 /**
+ * Attachment payload for channels that support file delivery, such as email.
+ *
+ * Use `contentBase64` when the caller already has the rendered bytes, or `path`
+ * when the downstream provider can fetch the attachment from a URL/file path.
+ */
+export interface NotificationAttachment {
+  /** User-visible file name. */
+  filename: string
+  /** Base64-encoded content for inline upload. */
+  contentBase64?: string
+  /** Provider-resolvable URL or path. */
+  path?: string
+  /** MIME type hint. */
+  contentType?: string
+  /** Optional disposition override. */
+  disposition?: "attachment" | "inline"
+  /** Optional inline content id. */
+  contentId?: string
+}
+
+/**
  * Payload describing a single notification to send. The `template` and
  * `data` fields are interpreted by the handling provider.
  */
@@ -28,6 +49,8 @@ export interface NotificationPayload {
   html?: string
   /** Optional pre-rendered text body. */
   text?: string
+  /** Optional attachments for providers that support them. */
+  attachments?: ReadonlyArray<NotificationAttachment>
 }
 
 /**

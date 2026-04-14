@@ -9,7 +9,20 @@ export type { ProductRoutes } from "./routes.js"
 export type { PublicProductRoutes } from "./routes-public.js"
 export { publicProductRoutes } from "./routes-public.js"
 export { productsService } from "./service.js"
+export { catalogProductsService } from "./service-catalog.js"
 export { publicProductsService } from "./service-public.js"
+export {
+  createBasicPdfProductBrochurePrinter,
+  createCloudflareBrowserProductBrochurePrinter,
+  createCloudflareBrowserProductBrochurePrinterFromEnv,
+  createDefaultProductBrochureTemplate,
+  type GenerateAndStoreProductBrochureOptions,
+  generateAndStoreProductBrochure,
+  loadProductBrochureTemplateContext,
+  type ProductBrochurePrinter,
+  type ProductBrochureTemplateDefinition,
+  renderProductBrochureTemplate,
+} from "./tasks/index.js"
 
 export const productLinkable: LinkableDefinition = {
   module: "products",
@@ -168,4 +181,24 @@ export {
   updateProductTranslationSchema,
   updateProductTypeSchema,
   updateProductVisibilitySettingSchema,
+  upsertProductBrochureSchema,
 } from "./validation.js"
+export type {
+  CatalogSearchDocument,
+  CatalogSearchDocumentListQuery,
+  CatalogSearchDocumentListResponse,
+  LocalizedCatalogProductDetail,
+  LocalizedCatalogProductSummary,
+} from "./validation-catalog.js"
+export {
+  catalogSearchDocumentListQuerySchema,
+  catalogSearchDocumentListResponseSchema,
+  catalogSearchDocumentSchema,
+  localizedCatalogProductDetailSchema,
+  localizedCatalogProductSummarySchema,
+} from "./validation-catalog.js"
+export {
+  publicCatalogDestinationListQuerySchema,
+  publicCatalogDestinationListResponseSchema,
+  publicCatalogDestinationSchema,
+} from "./validation-public.js"

@@ -1,10 +1,10 @@
 import { bookingParticipants, bookings } from "@voyantjs/bookings/schema"
-import { bookingPaymentSchedules } from "@voyantjs/finance"
-import { and, desc, eq, or } from "drizzle-orm"
+import { bookingPaymentSchedules, invoices } from "@voyantjs/finance"
+import { and, desc, eq, gt, or } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import { notificationReminderRules, notificationReminderRuns } from "./schema.js"
-import { sendNotification } from "./service-deliveries.js"
+import { sendInvoiceNotification, sendNotification } from "./service-deliveries.js"
 import type {
   BookingPaymentScheduleRow,
   NotificationReminderRuleRow,
@@ -207,6 +207,166 @@ async function sendBookingPaymentScheduleReminder(
   }
 }
 
+async function sendInvoiceReminder(
+  db: PostgresJsDatabase,
+  dispatcher: NotificationService,
+  rule: NotificationReminderRuleRow,
+  invoice: typeof invoices.$inferSelect,
+  now: Date,
+) {
+  const runDate = toDateString(startOfUtcDay(now))
+  const dedupeKey = buildReminderDedupeKey(rule.id, invoice.id, runDate)
+
+  const [existingRun] = await db
+    .select({ id: notificationReminderRuns.id })
+    .from(notificationReminderRuns)
+    .where(eq(notificationReminderRuns.dedupeKey, dedupeKey))
+    .limit(1)
+  if (existingRun) {
+    return null
+  }
+
+  const [booking] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, invoice.bookingId))
+    .limit(1)
+
+  if (!booking) {
+    const [run] = await db
+      .insert(notificationReminderRuns)
+      .values({
+        reminderRuleId: rule.id,
+        targetType: "invoice",
+        targetId: invoice.id,
+        dedupeKey,
+        bookingId: invoice.bookingId,
+        personId: invoice.personId ?? null,
+        organizationId: invoice.organizationId ?? null,
+        paymentSessionId: null,
+        notificationDeliveryId: null,
+        status: "skipped",
+        recipient: null,
+        scheduledFor: now,
+        processedAt: now,
+        errorMessage: "Booking not found for invoice reminder",
+        metadata: {
+          dueDate: invoice.dueDate,
+          relativeDaysFromDueDate: rule.relativeDaysFromDueDate,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceType: invoice.invoiceType,
+        },
+      })
+      .returning()
+    return run ?? null
+  }
+
+  const participants = await db
+    .select({
+      id: bookingParticipants.id,
+      firstName: bookingParticipants.firstName,
+      lastName: bookingParticipants.lastName,
+      email: bookingParticipants.email,
+      participantType: bookingParticipants.participantType,
+      isPrimary: bookingParticipants.isPrimary,
+    })
+    .from(bookingParticipants)
+    .where(eq(bookingParticipants.bookingId, booking.id))
+    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+
+  const recipient = resolveReminderRecipient(participants)
+  const [processingRun] = await db
+    .insert(notificationReminderRuns)
+    .values({
+      reminderRuleId: rule.id,
+      targetType: "invoice",
+      targetId: invoice.id,
+      dedupeKey,
+      bookingId: booking.id,
+      personId: invoice.personId ?? booking.personId ?? null,
+      organizationId: invoice.organizationId ?? booking.organizationId ?? null,
+      paymentSessionId: null,
+      notificationDeliveryId: null,
+      status: "processing",
+      recipient: recipient?.email ?? null,
+      scheduledFor: now,
+      processedAt: now,
+      errorMessage: null,
+      metadata: {
+        dueDate: invoice.dueDate,
+        relativeDaysFromDueDate: rule.relativeDaysFromDueDate,
+        bookingNumber: booking.bookingNumber,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: invoice.invoiceType,
+      },
+    })
+    .onConflictDoNothing({ target: notificationReminderRuns.dedupeKey })
+    .returning()
+
+  if (!processingRun) {
+    return null
+  }
+
+  if (!recipient?.email) {
+    const [run] = await db
+      .update(notificationReminderRuns)
+      .set({
+        status: "skipped",
+        errorMessage: "No participant email available for invoice reminder",
+        processedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(notificationReminderRuns.id, processingRun.id))
+      .returning()
+    return run ?? null
+  }
+
+  try {
+    const delivery = await sendInvoiceNotification(db, dispatcher, invoice.id, {
+      templateId: rule.templateId ?? null,
+      templateSlug: rule.templateSlug ?? null,
+      channel: rule.channel,
+      provider: rule.provider ?? null,
+      to: recipient.email,
+      data: {
+        reminderOffsetDays: rule.relativeDaysFromDueDate,
+        reminderRunId: processingRun.id,
+      },
+      metadata: {
+        reminderRuleId: rule.id,
+        reminderRunId: processingRun.id,
+      },
+      scheduledFor: now.toISOString(),
+    })
+
+    const [run] = await db
+      .update(notificationReminderRuns)
+      .set({
+        notificationDeliveryId: delivery?.id ?? null,
+        status: "sent",
+        processedAt: new Date(),
+        updatedAt: new Date(),
+        errorMessage: null,
+      })
+      .where(eq(notificationReminderRuns.id, processingRun.id))
+      .returning()
+    return run ?? null
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invoice reminder failed"
+    const [run] = await db
+      .update(notificationReminderRuns)
+      .set({
+        status: "failed",
+        errorMessage: message,
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(notificationReminderRuns.id, processingRun.id))
+      .returning()
+    return run ?? null
+  }
+}
+
 export async function runDueReminders(
   db: PostgresJsDatabase,
   dispatcher: NotificationService,
@@ -229,30 +389,64 @@ export async function runDueReminders(
 
   for (const rule of activeRules) {
     const matchingDueDate = toDateString(addUtcDays(today, -rule.relativeDaysFromDueDate))
-    const schedules = await db
-      .select()
-      .from(bookingPaymentSchedules)
-      .where(
-        and(
-          eq(bookingPaymentSchedules.dueDate, matchingDueDate),
-          or(
-            eq(bookingPaymentSchedules.status, "pending"),
-            eq(bookingPaymentSchedules.status, "due"),
+    if (rule.targetType === "booking_payment_schedule") {
+      const schedules = await db
+        .select()
+        .from(bookingPaymentSchedules)
+        .where(
+          and(
+            eq(bookingPaymentSchedules.dueDate, matchingDueDate),
+            or(
+              eq(bookingPaymentSchedules.status, "pending"),
+              eq(bookingPaymentSchedules.status, "due"),
+            ),
           ),
-        ),
-      )
-      .orderBy(bookingPaymentSchedules.createdAt)
+        )
+        .orderBy(bookingPaymentSchedules.createdAt)
 
-    for (const schedule of schedules) {
-      const run = await sendBookingPaymentScheduleReminder(db, dispatcher, rule, schedule, now)
-      if (!run) {
-        continue
+      for (const schedule of schedules) {
+        const run = await sendBookingPaymentScheduleReminder(db, dispatcher, rule, schedule, now)
+        if (!run) {
+          continue
+        }
+
+        summary.processed += 1
+        if (run.status === "sent") summary.sent += 1
+        if (run.status === "skipped") summary.skipped += 1
+        if (run.status === "failed") summary.failed += 1
       }
+      continue
+    }
 
-      summary.processed += 1
-      if (run.status === "sent") summary.sent += 1
-      if (run.status === "skipped") summary.skipped += 1
-      if (run.status === "failed") summary.failed += 1
+    if (rule.targetType === "invoice") {
+      const dueInvoices = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.dueDate, matchingDueDate),
+            gt(invoices.balanceDueCents, 0),
+            or(eq(invoices.invoiceType, "invoice"), eq(invoices.invoiceType, "proforma")),
+            or(
+              eq(invoices.status, "sent"),
+              eq(invoices.status, "partially_paid"),
+              eq(invoices.status, "overdue"),
+            ),
+          ),
+        )
+        .orderBy(invoices.createdAt)
+
+      for (const invoice of dueInvoices) {
+        const run = await sendInvoiceReminder(db, dispatcher, rule, invoice, now)
+        if (!run) {
+          continue
+        }
+
+        summary.processed += 1
+        if (run.status === "sent") summary.sent += 1
+        if (run.status === "skipped") summary.skipped += 1
+        if (run.status === "failed") summary.failed += 1
+      }
     }
   }
 

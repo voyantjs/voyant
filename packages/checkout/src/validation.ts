@@ -8,6 +8,7 @@ import {
   notificationChannelSchema,
   notificationDeliveryStatusSchema,
   notificationReminderRunStatusSchema,
+  notificationReminderTargetTypeSchema,
   sendInvoiceNotificationSchema,
   sendPaymentSessionNotificationSchema,
 } from "@voyantjs/notifications"
@@ -17,6 +18,10 @@ export const checkoutCollectionMethodSchema = z.enum(["card", "bank_transfer"])
 export const checkoutCollectionStageSchema = z.enum(["initial", "reminder", "manual"])
 export const checkoutPaymentSessionTargetSchema = z.enum(["schedule", "invoice"])
 export const checkoutInvoiceDocumentTypeSchema = z.enum(["proforma", "invoice"])
+export const checkoutProviderStartInputSchema = z.object({
+  provider: z.string().min(1).max(255),
+  payload: z.record(z.string(), z.unknown()).optional().nullable(),
+})
 
 const planOverrideSchema = applyDefaultBookingPaymentPlanSchema.partial()
 const paginationSchema = z.object({
@@ -29,6 +34,7 @@ export const previewCheckoutCollectionSchema = z.object({
   stage: checkoutCollectionStageSchema.default("initial"),
   scheduleId: z.string().optional(),
   invoiceId: z.string().optional(),
+  amountCents: z.number().int().min(1).optional(),
   ensureDefaultPaymentPlan: z.boolean().default(true),
   paymentSessionTarget: checkoutPaymentSessionTargetSchema.optional(),
   paymentPlan: planOverrideSchema.optional(),
@@ -40,6 +46,7 @@ export const initiateCheckoutCollectionSchema = previewCheckoutCollectionSchema.
     .optional(),
   paymentSessionNotification: sendPaymentSessionNotificationSchema.optional(),
   invoiceNotification: sendInvoiceNotificationSchema.optional(),
+  startProvider: checkoutProviderStartInputSchema.optional(),
   notes: z.string().optional().nullable(),
 })
 
@@ -87,6 +94,30 @@ export const checkoutNotificationDeliverySchema = z.object({
   errorMessage: z.string().nullable(),
 })
 
+export const checkoutBankTransferInstructionsSchema = z.object({
+  provider: z.string().nullable(),
+  invoiceId: z.string(),
+  invoiceNumber: z.string(),
+  documentType: checkoutInvoiceDocumentTypeSchema,
+  amountCents: z.number().int(),
+  currency: z.string(),
+  dueDate: z.string().nullable(),
+  beneficiary: z.string(),
+  iban: z.string(),
+  bankName: z.string().nullable(),
+  notes: z.string().nullable(),
+})
+
+export const checkoutProviderStartResultSchema = z.object({
+  provider: z.string(),
+  paymentSessionId: z.string(),
+  redirectUrl: z.string().nullable(),
+  externalReference: z.string().nullable(),
+  providerSessionId: z.string().nullable(),
+  providerPaymentId: z.string().nullable(),
+  response: z.record(z.string(), z.unknown()).nullable(),
+})
+
 export const checkoutCollectionPlanSchema = z.object({
   bookingId: z.string(),
   method: checkoutCollectionMethodSchema,
@@ -112,6 +143,8 @@ export const initiatedCheckoutCollectionSchema = z.object({
   paymentSession: publicPaymentSessionSchema.nullable(),
   invoiceNotification: checkoutNotificationDeliverySchema.nullable(),
   paymentSessionNotification: checkoutNotificationDeliverySchema.nullable(),
+  bankTransferInstructions: checkoutBankTransferInstructionsSchema.nullable(),
+  providerStart: checkoutProviderStartResultSchema.nullable(),
 })
 
 export const checkoutReminderRunListQuerySchema = paginationSchema.extend({
@@ -123,7 +156,7 @@ export const checkoutReminderRunSchema = z.object({
   reminderRuleId: z.string(),
   reminderRuleSlug: z.string().nullable(),
   reminderRuleName: z.string().nullable(),
-  targetType: z.literal("booking_payment_schedule"),
+  targetType: notificationReminderTargetTypeSchema,
   targetId: z.string(),
   bookingId: z.string().nullable(),
   paymentSessionId: z.string().nullable(),
@@ -151,5 +184,10 @@ export type PreviewCheckoutCollectionInput = z.infer<typeof previewCheckoutColle
 export type InitiateCheckoutCollectionInput = z.infer<typeof initiateCheckoutCollectionSchema>
 export type CheckoutCollectionPlanRecord = z.infer<typeof checkoutCollectionPlanSchema>
 export type InitiatedCheckoutCollectionRecord = z.infer<typeof initiatedCheckoutCollectionSchema>
+export type CheckoutProviderStartInput = z.infer<typeof checkoutProviderStartInputSchema>
+export type CheckoutBankTransferInstructionsRecord = z.infer<
+  typeof checkoutBankTransferInstructionsSchema
+>
+export type CheckoutProviderStartResultRecord = z.infer<typeof checkoutProviderStartResultSchema>
 export type CheckoutReminderRunListQuery = z.infer<typeof checkoutReminderRunListQuerySchema>
 export type CheckoutReminderRunRecord = z.infer<typeof checkoutReminderRunSchema>

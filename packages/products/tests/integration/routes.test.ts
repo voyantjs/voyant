@@ -1,3 +1,4 @@
+import { type SQL, sql } from "drizzle-orm"
 import { Hono } from "hono"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
@@ -7,6 +8,49 @@ const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 
 describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
   let app: Hono
+
+  async function ensureDestinationTables(db: { execute: (statement: SQL) => Promise<unknown> }) {
+    const statements: SQL[] = [
+      sql`CREATE TABLE IF NOT EXISTS destinations (
+        id text PRIMARY KEY NOT NULL,
+        parent_id text,
+        slug text NOT NULL,
+        code text,
+        destination_type text DEFAULT 'destination' NOT NULL,
+        sort_order integer DEFAULT 0 NOT NULL,
+        active boolean DEFAULT true NOT NULL,
+        metadata jsonb,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+      )`,
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS uidx_destinations_slug ON destinations (slug)`,
+      sql`CREATE TABLE IF NOT EXISTS destination_translations (
+        id text PRIMARY KEY NOT NULL,
+        destination_id text NOT NULL,
+        language_tag text NOT NULL,
+        name text NOT NULL,
+        description text,
+        seo_title text,
+        seo_description text,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+      )`,
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS uidx_destination_translations_locale
+        ON destination_translations (destination_id, language_tag)`,
+      sql`CREATE TABLE IF NOT EXISTS product_destinations (
+        product_id text NOT NULL,
+        destination_id text NOT NULL,
+        sort_order integer DEFAULT 0 NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL,
+        PRIMARY KEY (product_id, destination_id)
+      )`,
+    ]
+
+    for (const statement of statements) {
+      await db.execute(statement)
+    }
+  }
 
   async function createProduct() {
     const res = await app.request("/", {
@@ -24,6 +68,7 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
     const db = createTestDb()
+    await ensureDestinationTables(db)
     await cleanupTestDb(db)
 
     app = new Hono()
@@ -37,7 +82,9 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
 
   beforeEach(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
-    await cleanupTestDb(createTestDb())
+    const db = createTestDb()
+    await ensureDestinationTables(db)
+    await cleanupTestDb(db)
   })
 
   it("creates a product", async () => {
@@ -159,5 +206,55 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
     const body = await listRes.json()
     expect(body.data).toHaveLength(1)
     expect(body.data[0]?.googlePlaceId).toBe("test-place-id")
+  })
+
+  it("creates destinations, translations, and product destination links", async () => {
+    const product = await createProduct()
+
+    const createDestinationRes = await app.request("/destinations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug: "romania",
+        destinationType: "country",
+      }),
+    })
+
+    expect(createDestinationRes.status).toBe(201)
+    const { data: destination } = await createDestinationRes.json()
+
+    const createTranslationRes = await app.request(`/destinations/${destination.id}/translations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        languageTag: "ro",
+        name: "Romania",
+        description: "Destinatie europeana",
+      }),
+    })
+
+    expect(createTranslationRes.status).toBe(201)
+
+    const createLinkRes = await app.request(`/${product.id}/destinations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        destinationId: destination.id,
+      }),
+    })
+
+    expect(createLinkRes.status).toBe(201)
+
+    const listDestinationsRes = await app.request("/destinations?languageTag=ro", { method: "GET" })
+    expect(listDestinationsRes.status).toBe(200)
+    const listDestinationsBody = await listDestinationsRes.json()
+    expect(listDestinationsBody.data[0]?.translation?.name).toBe("Romania")
+
+    const listLinksRes = await app.request(`/destination-links?productId=${product.id}`, {
+      method: "GET",
+    })
+    expect(listLinksRes.status).toBe(200)
+    const listLinksBody = await listLinksRes.json()
+    expect(listLinksBody.data[0]?.destinationId).toBe(destination.id)
   })
 })

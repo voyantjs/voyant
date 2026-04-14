@@ -2,7 +2,11 @@ import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 import { Hono } from "hono"
 import { contractsLinkable } from "./contracts/index.js"
-import { contractsAdminRoutes, contractsPublicRoutes } from "./contracts/routes.js"
+import {
+  type ContractsRouteOptions,
+  createContractsAdminRoutes,
+  createContractsPublicRoutes,
+} from "./contracts/routes.js"
 import { policiesLinkable } from "./policies/index.js"
 import { policiesAdminRoutes, policiesPublicRoutes } from "./policies/routes.js"
 
@@ -16,19 +20,24 @@ export const legalModule: Module = {
   linkable: legalLinkable,
 }
 
-const legalAdminRoutes = new Hono()
-  .route("/contracts", contractsAdminRoutes)
-  .route("/policies", policiesAdminRoutes)
+export function createLegalHonoModule(options: ContractsRouteOptions = {}): HonoModule {
+  const legalAdminRoutes = new Hono()
+    .route("/contracts", createContractsAdminRoutes(options))
+    .route("/policies", policiesAdminRoutes)
 
-const legalPublicRoutes = new Hono()
-  .route("/contracts", contractsPublicRoutes)
-  .route("/policies", policiesPublicRoutes)
+  const legalPublicRoutes = new Hono()
+    .route("/contracts", createContractsPublicRoutes())
+    .route("/policies", policiesPublicRoutes)
 
-export const legalHonoModule: HonoModule = {
-  module: legalModule,
-  adminRoutes: legalAdminRoutes,
-  publicRoutes: legalPublicRoutes,
+  return {
+    module: legalModule,
+    adminRoutes: legalAdminRoutes,
+    publicRoutes: legalPublicRoutes,
+  }
 }
 
+export const legalHonoModule: HonoModule = createLegalHonoModule()
+
 export * from "./contracts/index.js"
+export type { ContractsRouteOptions } from "./contracts/routes.js"
 export * from "./policies/index.js"

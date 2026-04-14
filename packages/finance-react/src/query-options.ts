@@ -11,11 +11,13 @@ import type { UseInvoicePaymentsOptions } from "./hooks/use-invoice-payments.js"
 import type { UseInvoicesOptions } from "./hooks/use-invoices.js"
 import type { UsePublicBookingDocumentsOptions } from "./hooks/use-public-booking-documents.js"
 import type { UsePublicBookingPaymentOptionsOptions } from "./hooks/use-public-booking-payment-options.js"
+import type { UsePublicBookingPaymentsOptions } from "./hooks/use-public-booking-payments.js"
 import type { UsePublicPaymentSessionOptions } from "./hooks/use-public-payment-session.js"
 import type { UseSupplierPaymentsOptions } from "./hooks/use-supplier-payments.js"
 import {
   getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
+  getPublicBookingPayments,
   getPublicPaymentSession,
 } from "./operations.js"
 import { financeQueryKeys } from "./query-keys.js"
@@ -206,6 +208,25 @@ export function getPublicBookingDocumentsQueryOptions(
       }
 
       return getPublicBookingDocuments(client, bookingId)
+    },
+  })
+}
+
+export function getPublicBookingPaymentsQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UsePublicBookingPaymentsOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.publicBookingPayments(bookingId ?? ""),
+    queryFn: async () => {
+      if (!bookingId) {
+        throw new Error("getPublicBookingPaymentsQueryOptions requires a bookingId")
+      }
+
+      return getPublicBookingPayments(client, bookingId)
     },
   })
 }

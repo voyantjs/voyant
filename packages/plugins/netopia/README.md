@@ -27,6 +27,13 @@ Mounted as a finance extension, the package exposes:
 - `POST /providers/netopia/callback`
 - `GET /providers/netopia/config`
 
+## Checkout integration
+
+If you use `@voyantjs/checkout`, the plugin now also exports
+`createNetopiaCheckoutStarter()`. That lets checkout create the payment session
+and start the Netopia redirect flow in one request while keeping provider
+startup optional in core checkout.
+
 Because this is a finance extension, these routes mount under the finance module path in the app.
 
 ## Usage

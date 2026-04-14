@@ -23,7 +23,10 @@ async function cleanupNotificationsTestData(
       notification_deliveries,
       notification_templates,
       payment_sessions,
+      invoice_renditions,
       invoices,
+      contract_attachments,
+      contracts,
       booking_payment_schedules,
       booking_participants,
       bookings
@@ -98,10 +101,13 @@ export function createNotificationsTestContext() {
     await db.execute(sql`
       DO $$
       BEGIN
-        CREATE TYPE notification_reminder_target_type AS ENUM ('booking_payment_schedule');
+        CREATE TYPE notification_reminder_target_type AS ENUM ('booking_payment_schedule', 'invoice');
       EXCEPTION
         WHEN duplicate_object THEN NULL;
       END $$;
+    `)
+    await db.execute(sql`
+      ALTER TYPE notification_reminder_target_type ADD VALUE IF NOT EXISTS 'invoice';
     `)
     await db.execute(sql`
       DO $$
@@ -152,6 +158,32 @@ export function createNotificationsTestContext() {
       )
     `)
     await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS contracts (
+        id text PRIMARY KEY NOT NULL,
+        booking_id text,
+        scope text NOT NULL DEFAULT 'customer',
+        status text NOT NULL DEFAULT 'draft',
+        title text NOT NULL,
+        language text NOT NULL DEFAULT 'en',
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+      )
+    `)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS contract_attachments (
+        id text PRIMARY KEY NOT NULL,
+        contract_id text NOT NULL,
+        kind text NOT NULL DEFAULT 'appendix',
+        name text NOT NULL,
+        mime_type text,
+        file_size integer,
+        storage_key text,
+        checksum text,
+        metadata jsonb,
+        created_at timestamp with time zone DEFAULT now() NOT NULL
+      )
+    `)
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS invoices (
         id text PRIMARY KEY NOT NULL,
         invoice_number text NOT NULL,
@@ -168,6 +200,24 @@ export function createNotificationsTestContext() {
         balance_due_cents integer NOT NULL DEFAULT 0,
         issue_date date NOT NULL,
         due_date date NOT NULL,
+        language text,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+      )
+    `)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS invoice_renditions (
+        id text PRIMARY KEY NOT NULL,
+        invoice_id text NOT NULL,
+        template_id text,
+        format text NOT NULL DEFAULT 'pdf',
+        status text NOT NULL DEFAULT 'ready',
+        storage_key text,
+        file_size integer,
+        checksum text,
+        language text,
+        generated_at timestamp with time zone,
+        metadata jsonb,
         created_at timestamp with time zone DEFAULT now() NOT NULL,
         updated_at timestamp with time zone DEFAULT now() NOT NULL
       )

@@ -1,3 +1,4 @@
+import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
 
@@ -5,14 +6,34 @@ import { publicCustomerPortalService } from "./service-public.js"
 import {
   bootstrapCustomerPortalSchema,
   createCustomerPortalCompanionSchema,
+  importCustomerPortalBookingParticipantsSchema,
   updateCustomerPortalCompanionSchema,
   updateCustomerPortalProfileSchema,
 } from "./validation-public.js"
 
 type Env = {
+  Bindings: Record<string, unknown>
   Variables: {
     db: PostgresJsDatabase
     userId?: string
+  }
+}
+
+function getRuntimeEnv(c: Context<Env>) {
+  const processEnv =
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+
+  return {
+    ...processEnv,
+    ...(c.env ?? {}),
+  } as Record<string, string | undefined>
+}
+
+function resolveOptionalKms(c: Context<Env>) {
+  try {
+    return createKmsProviderFromEnv(getRuntimeEnv(c))
+  } catch {
+    return null
   }
 }
 
@@ -45,7 +66,9 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
       return unauthorized(c)
     }
 
-    const profile = await publicCustomerPortalService.getProfile(c.get("db"), userId)
+    const profile = await publicCustomerPortalService.getProfileWithOptions(c.get("db"), userId, {
+      kms: resolveOptionalKms(c),
+    })
     return profile ? c.json({ data: profile }) : notFound(c, "Customer profile not found")
   })
   .patch("/me", async (c) => {
@@ -54,10 +77,13 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
       return unauthorized(c)
     }
 
-    const result = await publicCustomerPortalService.updateProfile(
+    const result = await publicCustomerPortalService.updateProfileWithOptions(
       c.get("db"),
       userId,
       updateCustomerPortalProfileSchema.parse(await c.req.json()),
+      {
+        kms: resolveOptionalKms(c),
+      },
     )
 
     if (hasErrorResult(result)) {
@@ -125,6 +151,24 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     }
 
     return c.json({ data: companion }, 201)
+  })
+  .post("/companions/import-booking-participants", async (c) => {
+    const userId = c.get("userId")
+    if (!userId) {
+      return unauthorized(c)
+    }
+
+    const result = await publicCustomerPortalService.importBookingParticipantsAsCompanions(
+      c.get("db"),
+      userId,
+      importCustomerPortalBookingParticipantsSchema.parse(await c.req.json()),
+    )
+
+    if (!result) {
+      return c.json({ error: "Customer record is not linked to this account" }, 409)
+    }
+
+    return c.json({ data: result })
   })
   .patch("/companions/:companionId", async (c) => {
     const userId = c.get("userId")
@@ -207,6 +251,20 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     )
 
     return documents ? c.json({ data: documents }) : notFound(c, "Booking not found")
+  })
+  .get("/bookings/:bookingId/billing-contact", async (c) => {
+    const userId = c.get("userId")
+    if (!userId) {
+      return unauthorized(c)
+    }
+
+    const billingContact = await publicCustomerPortalService.getBookingBillingContact(
+      c.get("db"),
+      userId,
+      c.req.param("bookingId"),
+    )
+
+    return billingContact ? c.json({ data: billingContact }) : notFound(c, "Booking not found")
   })
 
 export type PublicCustomerPortalRoutes = typeof publicCustomerPortalRoutes

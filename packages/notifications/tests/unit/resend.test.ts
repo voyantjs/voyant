@@ -122,6 +122,37 @@ describe("createResendProvider", () => {
     expect(body.text).toBe("Direct text")
   })
 
+  it("passes attachments through to the Resend API payload", async () => {
+    const fetchMock = vi.fn<ResendFetch>(async () => okResponse({ id: "em_5" }))
+    const provider = createResendProvider({
+      apiKey: "re_test",
+      from: "hello@voyant.dev",
+      fetch: fetchMock,
+    })
+
+    await provider.send({
+      to: "c@example.com",
+      channel: "email",
+      template: "documents",
+      attachments: [
+        {
+          filename: "invoice.pdf",
+          path: "https://cdn.example.com/invoice.pdf",
+          contentType: "application/pdf",
+        },
+      ],
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body) as Record<string, unknown>
+    expect(body.attachments).toEqual([
+      {
+        filename: "invoice.pdf",
+        path: "https://cdn.example.com/invoice.pdf",
+        content_type: "application/pdf",
+      },
+    ])
+  })
+
   it("rejects non-email channels", async () => {
     const provider = createResendProvider({
       apiKey: "re_test",

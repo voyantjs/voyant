@@ -12,6 +12,8 @@ export const customerPortalQueryKeys = {
   companions: () => [...customerPortalQueryKeys.all, "companions"] as const,
   bookings: () => [...customerPortalQueryKeys.all, "bookings"] as const,
   booking: (bookingId: string) => [...customerPortalQueryKeys.bookings(), bookingId] as const,
+  bookingBillingContact: (bookingId: string) =>
+    [...customerPortalQueryKeys.booking(bookingId), "billing-contact"] as const,
   bookingDocuments: (bookingId: string) =>
     [...customerPortalQueryKeys.booking(bookingId), "documents"] as const,
   contactExists: () => [...customerPortalQueryKeys.all, "contact-exists"] as const,

@@ -20,6 +20,7 @@ import {
 } from "./schema.js"
 import { bookingsService } from "./service.js"
 import type {
+  InternalBookingOverviewLookupQuery,
   PublicBookingOverviewLookupQuery,
   PublicBookingSessionMutationInput,
   PublicBookingSessionRepriceInput,
@@ -253,6 +254,159 @@ async function generateBookingNumber(db: PostgresJsDatabase) {
   }
 
   throw new Error("Unable to generate a unique booking number")
+}
+
+async function buildOverviewSnapshot(
+  db: PostgresJsDatabase,
+  query: {
+    bookingId?: string | null
+    bookingNumber?: string | null
+    bookingCode?: string | null
+    email?: string | null
+  },
+) {
+  const bookingLookupNumber = query.bookingNumber ?? query.bookingCode ?? null
+  const [booking] = await db
+    .select()
+    .from(bookings)
+    .where(
+      query.bookingId
+        ? eq(bookings.id, query.bookingId)
+        : bookingLookupNumber
+          ? eq(bookings.bookingNumber, bookingLookupNumber)
+          : eq(bookings.id, "__missing__"),
+    )
+    .limit(1)
+
+  if (!booking) {
+    return null
+  }
+
+  const [participants, items, itemParticipantLinks, documents, fulfillments] = await Promise.all([
+    db
+      .select()
+      .from(bookingParticipants)
+      .where(eq(bookingParticipants.bookingId, booking.id))
+      .orderBy(asc(bookingParticipants.createdAt)),
+    db
+      .select()
+      .from(bookingItems)
+      .where(eq(bookingItems.bookingId, booking.id))
+      .orderBy(asc(bookingItems.createdAt)),
+    db
+      .select({
+        id: bookingItemParticipants.id,
+        bookingItemId: bookingItemParticipants.bookingItemId,
+        participantId: bookingItemParticipants.participantId,
+        role: bookingItemParticipants.role,
+        isPrimary: bookingItemParticipants.isPrimary,
+      })
+      .from(bookingItemParticipants)
+      .innerJoin(bookingItems, eq(bookingItems.id, bookingItemParticipants.bookingItemId))
+      .where(eq(bookingItems.bookingId, booking.id))
+      .orderBy(asc(bookingItemParticipants.createdAt)),
+    db
+      .select()
+      .from(bookingDocuments)
+      .where(eq(bookingDocuments.bookingId, booking.id))
+      .orderBy(asc(bookingDocuments.createdAt)),
+    db
+      .select()
+      .from(bookingFulfillments)
+      .where(eq(bookingFulfillments.bookingId, booking.id))
+      .orderBy(asc(bookingFulfillments.createdAt)),
+  ])
+
+  const email = query.email?.trim().toLowerCase() ?? null
+  if (email) {
+    const authorized = participants.some(
+      (participant) => participant.email?.toLowerCase() === email,
+    )
+    if (!authorized) {
+      return null
+    }
+  }
+
+  const itemLinksByItemId = new Map<
+    string,
+    Array<{
+      id: string
+      participantId: string
+      role: string
+      isPrimary: boolean
+    }>
+  >()
+
+  for (const link of itemParticipantLinks) {
+    const existing = itemLinksByItemId.get(link.bookingItemId) ?? []
+    existing.push({
+      id: link.id,
+      participantId: link.participantId,
+      role: link.role,
+      isPrimary: link.isPrimary,
+    })
+    itemLinksByItemId.set(link.bookingItemId, existing)
+  }
+
+  return {
+    bookingId: booking.id,
+    bookingNumber: booking.bookingNumber,
+    status: booking.status,
+    sellCurrency: booking.sellCurrency,
+    sellAmountCents: booking.sellAmountCents ?? null,
+    startDate: normalizeDate(booking.startDate),
+    endDate: normalizeDate(booking.endDate),
+    pax: booking.pax ?? null,
+    confirmedAt: normalizeDateTime(booking.confirmedAt),
+    cancelledAt: normalizeDateTime(booking.cancelledAt),
+    completedAt: normalizeDateTime(booking.completedAt),
+    participants: participants.map((participant) => ({
+      id: participant.id,
+      participantType: participant.participantType,
+      firstName: participant.firstName,
+      lastName: participant.lastName,
+      isPrimary: participant.isPrimary,
+    })),
+    items: items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description ?? null,
+      itemType: item.itemType,
+      status: item.status,
+      serviceDate: normalizeDate(item.serviceDate),
+      startsAt: normalizeDateTime(item.startsAt),
+      endsAt: normalizeDateTime(item.endsAt),
+      quantity: item.quantity,
+      sellCurrency: item.sellCurrency,
+      unitSellAmountCents: item.unitSellAmountCents ?? null,
+      totalSellAmountCents: item.totalSellAmountCents ?? null,
+      costCurrency: item.costCurrency ?? null,
+      unitCostAmountCents: item.unitCostAmountCents ?? null,
+      totalCostAmountCents: item.totalCostAmountCents ?? null,
+      notes: item.notes ?? null,
+      productId: item.productId ?? null,
+      optionId: item.optionId ?? null,
+      optionUnitId: item.optionUnitId ?? null,
+      pricingCategoryId: item.pricingCategoryId ?? null,
+      participantLinks: itemLinksByItemId.get(item.id) ?? [],
+    })),
+    documents: documents.map((document) => ({
+      id: document.id,
+      participantId: document.participantId ?? null,
+      type: document.type,
+      fileName: document.fileName,
+      fileUrl: document.fileUrl,
+    })),
+    fulfillments: fulfillments.map((fulfillment) => ({
+      id: fulfillment.id,
+      bookingItemId: fulfillment.bookingItemId ?? null,
+      participantId: fulfillment.participantId ?? null,
+      fulfillmentType: fulfillment.fulfillmentType,
+      deliveryChannel: fulfillment.deliveryChannel,
+      status: fulfillment.status,
+      artifactUrl: fulfillment.artifactUrl ?? null,
+    })),
+  }
 }
 
 function buildUnitWarnings(
@@ -1160,138 +1314,10 @@ export const publicBookingsService = {
   },
 
   async getOverview(db: PostgresJsDatabase, query: PublicBookingOverviewLookupQuery) {
-    const [booking] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.bookingNumber, query.bookingNumber))
-      .limit(1)
+    return buildOverviewSnapshot(db, query)
+  },
 
-    if (!booking) {
-      return null
-    }
-
-    const [participants, items, itemParticipantLinks, documents, fulfillments] = await Promise.all([
-      db
-        .select()
-        .from(bookingParticipants)
-        .where(eq(bookingParticipants.bookingId, booking.id))
-        .orderBy(asc(bookingParticipants.createdAt)),
-      db
-        .select()
-        .from(bookingItems)
-        .where(eq(bookingItems.bookingId, booking.id))
-        .orderBy(asc(bookingItems.createdAt)),
-      db
-        .select({
-          id: bookingItemParticipants.id,
-          bookingItemId: bookingItemParticipants.bookingItemId,
-          participantId: bookingItemParticipants.participantId,
-          role: bookingItemParticipants.role,
-          isPrimary: bookingItemParticipants.isPrimary,
-        })
-        .from(bookingItemParticipants)
-        .innerJoin(bookingItems, eq(bookingItems.id, bookingItemParticipants.bookingItemId))
-        .where(eq(bookingItems.bookingId, booking.id))
-        .orderBy(asc(bookingItemParticipants.createdAt)),
-      db
-        .select()
-        .from(bookingDocuments)
-        .where(eq(bookingDocuments.bookingId, booking.id))
-        .orderBy(asc(bookingDocuments.createdAt)),
-      db
-        .select()
-        .from(bookingFulfillments)
-        .where(eq(bookingFulfillments.bookingId, booking.id))
-        .orderBy(asc(bookingFulfillments.createdAt)),
-    ])
-
-    const email = query.email.trim().toLowerCase()
-    const authorized = participants.some(
-      (participant) => participant.email?.toLowerCase() === email,
-    )
-    if (!authorized) {
-      return null
-    }
-
-    const itemLinksByItemId = new Map<
-      string,
-      Array<{
-        id: string
-        participantId: string
-        role: string
-        isPrimary: boolean
-      }>
-    >()
-
-    for (const link of itemParticipantLinks) {
-      const existing = itemLinksByItemId.get(link.bookingItemId) ?? []
-      existing.push({
-        id: link.id,
-        participantId: link.participantId,
-        role: link.role,
-        isPrimary: link.isPrimary,
-      })
-      itemLinksByItemId.set(link.bookingItemId, existing)
-    }
-
-    return {
-      bookingId: booking.id,
-      bookingNumber: booking.bookingNumber,
-      status: booking.status,
-      sellCurrency: booking.sellCurrency,
-      sellAmountCents: booking.sellAmountCents ?? null,
-      startDate: normalizeDate(booking.startDate),
-      endDate: normalizeDate(booking.endDate),
-      pax: booking.pax ?? null,
-      confirmedAt: normalizeDateTime(booking.confirmedAt),
-      cancelledAt: normalizeDateTime(booking.cancelledAt),
-      completedAt: normalizeDateTime(booking.completedAt),
-      participants: participants.map((participant) => ({
-        id: participant.id,
-        participantType: participant.participantType,
-        firstName: participant.firstName,
-        lastName: participant.lastName,
-        isPrimary: participant.isPrimary,
-      })),
-      items: items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description ?? null,
-        itemType: item.itemType,
-        status: item.status,
-        serviceDate: normalizeDate(item.serviceDate),
-        startsAt: normalizeDateTime(item.startsAt),
-        endsAt: normalizeDateTime(item.endsAt),
-        quantity: item.quantity,
-        sellCurrency: item.sellCurrency,
-        unitSellAmountCents: item.unitSellAmountCents ?? null,
-        totalSellAmountCents: item.totalSellAmountCents ?? null,
-        costCurrency: item.costCurrency ?? null,
-        unitCostAmountCents: item.unitCostAmountCents ?? null,
-        totalCostAmountCents: item.totalCostAmountCents ?? null,
-        notes: item.notes ?? null,
-        productId: item.productId ?? null,
-        optionId: item.optionId ?? null,
-        optionUnitId: item.optionUnitId ?? null,
-        pricingCategoryId: item.pricingCategoryId ?? null,
-        participantLinks: itemLinksByItemId.get(item.id) ?? [],
-      })),
-      documents: documents.map((document) => ({
-        id: document.id,
-        participantId: document.participantId ?? null,
-        type: document.type,
-        fileName: document.fileName,
-        fileUrl: document.fileUrl,
-      })),
-      fulfillments: fulfillments.map((fulfillment) => ({
-        id: fulfillment.id,
-        bookingItemId: fulfillment.bookingItemId ?? null,
-        participantId: fulfillment.participantId ?? null,
-        fulfillmentType: fulfillment.fulfillmentType,
-        deliveryChannel: fulfillment.deliveryChannel,
-        status: fulfillment.status,
-        artifactUrl: fulfillment.artifactUrl ?? null,
-      })),
-    }
+  async getOverviewByLookup(db: PostgresJsDatabase, query: InternalBookingOverviewLookupQuery) {
+    return buildOverviewSnapshot(db, query)
   },
 }

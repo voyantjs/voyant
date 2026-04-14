@@ -2,22 +2,22 @@ import { and, asc, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import {
-  productCapabilities,
+  destinations,
+  destinationTranslations,
   productCategories,
   productCategoryProducts,
-  productFaqs,
-  productFeatures,
+  productDestinations,
   productLocations,
-  productMedia,
   products,
   productTagProducts,
   productTags,
   productTranslations,
-  productTypes,
   productVisibilitySettings,
 } from "./schema.js"
+import { catalogProductsService } from "./service-catalog.js"
 import type {
   PublicCatalogCategoryListQuery,
+  PublicCatalogDestinationListQuery,
   PublicCatalogProductListQuery,
   PublicCatalogProductLookupBySlugQuery,
   PublicCatalogTagListQuery,
@@ -27,14 +27,6 @@ type PublicCatalogProductRow = typeof products.$inferSelect
 
 function impossibleCondition() {
   return sql`1 = 0`
-}
-
-function normalizeDate(value: Date | string | null | undefined): string | null {
-  if (!value) {
-    return null
-  }
-
-  return value instanceof Date ? value.toISOString() : value
 }
 
 function normalizeLanguageTag(value: string | null | undefined) {
@@ -63,6 +55,25 @@ async function listProductIdsForTag(db: PostgresJsDatabase, tagId: string) {
   return rows.map((row) => row.productId)
 }
 
+async function listProductIdsForDestinationId(db: PostgresJsDatabase, destinationId: string) {
+  const rows = await db
+    .select({ productId: productDestinations.productId })
+    .from(productDestinations)
+    .where(eq(productDestinations.destinationId, destinationId))
+
+  return rows.map((row) => row.productId)
+}
+
+async function listProductIdsForDestinationSlug(db: PostgresJsDatabase, slug: string) {
+  const rows = await db
+    .select({ productId: productDestinations.productId })
+    .from(productDestinations)
+    .innerJoin(destinations, eq(destinations.id, productDestinations.destinationId))
+    .where(eq(destinations.slug, slug))
+
+  return rows.map((row) => row.productId)
+}
+
 async function listFeaturedProductIds(db: PostgresJsDatabase) {
   const rows = await db
     .select({ productId: productVisibilitySettings.productId })
@@ -72,322 +83,54 @@ async function listFeaturedProductIds(db: PostgresJsDatabase) {
   return rows.map((row) => row.productId)
 }
 
+async function listProductIdsForLocationTitle(db: PostgresJsDatabase, title: string) {
+  const rows = await db
+    .select({ productId: productLocations.productId })
+    .from(productLocations)
+    .where(ilike(productLocations.title, title))
+
+  return rows.map((row) => row.productId)
+}
+
+async function listProductIdsForLocationCity(db: PostgresJsDatabase, city: string) {
+  const rows = await db
+    .select({ productId: productLocations.productId })
+    .from(productLocations)
+    .where(ilike(productLocations.city, city))
+
+  return rows.map((row) => row.productId)
+}
+
+async function listProductIdsForLocationCountryCode(db: PostgresJsDatabase, countryCode: string) {
+  const rows = await db
+    .select({ productId: productLocations.productId })
+    .from(productLocations)
+    .where(eq(productLocations.countryCode, countryCode))
+
+  return rows.map((row) => row.productId)
+}
+
+async function listProductIdsForLocationType(
+  db: PostgresJsDatabase,
+  locationType: NonNullable<PublicCatalogProductListQuery["locationType"]>,
+) {
+  const rows = await db
+    .select({ productId: productLocations.productId })
+    .from(productLocations)
+    .where(eq(productLocations.locationType, locationType))
+
+  return rows.map((row) => row.productId)
+}
+
 async function hydrateCatalogProducts(
   db: PostgresJsDatabase,
   productRows: PublicCatalogProductRow[],
   options?: { includeContent?: boolean; languageTag?: string | null },
 ) {
-  if (productRows.length === 0) {
-    return []
-  }
-
-  const productIds = productRows.map((product) => product.id)
-  const productTypeIds = Array.from(
-    new Set(
-      productRows
-        .map((product) => product.productTypeId)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  )
-
-  const [
-    categoryRows,
-    tagRows,
-    translationRows,
-    typeRows,
-    capabilityRows,
-    mediaRows,
-    featuredRows,
-    featureRows,
-    faqRows,
-    locationRows,
-  ] = await Promise.all([
-    db
-      .select({
-        productId: productCategoryProducts.productId,
-        id: productCategories.id,
-        parentId: productCategories.parentId,
-        name: productCategories.name,
-        slug: productCategories.slug,
-        description: productCategories.description,
-        sortOrder: productCategories.sortOrder,
-      })
-      .from(productCategoryProducts)
-      .innerJoin(productCategories, eq(productCategories.id, productCategoryProducts.categoryId))
-      .where(
-        and(
-          inArray(productCategoryProducts.productId, productIds),
-          eq(productCategories.active, true),
-        ),
-      )
-      .orderBy(
-        asc(productCategoryProducts.sortOrder),
-        asc(productCategories.sortOrder),
-        asc(productCategories.name),
-      ),
-    db
-      .select({
-        productId: productTagProducts.productId,
-        id: productTags.id,
-        name: productTags.name,
-      })
-      .from(productTagProducts)
-      .innerJoin(productTags, eq(productTags.id, productTagProducts.tagId))
-      .where(inArray(productTagProducts.productId, productIds))
-      .orderBy(asc(productTags.name)),
-    options?.languageTag
-      ? db
-          .select({
-            productId: productTranslations.productId,
-            languageTag: productTranslations.languageTag,
-            slug: productTranslations.slug,
-            name: productTranslations.name,
-            shortDescription: productTranslations.shortDescription,
-            description: productTranslations.description,
-            seoTitle: productTranslations.seoTitle,
-            seoDescription: productTranslations.seoDescription,
-          })
-          .from(productTranslations)
-          .where(
-            and(
-              inArray(productTranslations.productId, productIds),
-              eq(productTranslations.languageTag, options.languageTag),
-            ),
-          )
-      : Promise.resolve([]),
-    productTypeIds.length > 0
-      ? db
-          .select({
-            id: productTypes.id,
-            code: productTypes.code,
-            name: productTypes.name,
-            description: productTypes.description,
-          })
-          .from(productTypes)
-          .where(and(inArray(productTypes.id, productTypeIds), eq(productTypes.active, true)))
-      : Promise.resolve([]),
-    db
-      .select({
-        productId: productCapabilities.productId,
-        capability: productCapabilities.capability,
-      })
-      .from(productCapabilities)
-      .where(
-        and(
-          inArray(productCapabilities.productId, productIds),
-          eq(productCapabilities.enabled, true),
-        ),
-      )
-      .orderBy(asc(productCapabilities.capability)),
-    db
-      .select({
-        productId: productMedia.productId,
-        id: productMedia.id,
-        mediaType: productMedia.mediaType,
-        name: productMedia.name,
-        url: productMedia.url,
-        mimeType: productMedia.mimeType,
-        altText: productMedia.altText,
-        sortOrder: productMedia.sortOrder,
-        isCover: productMedia.isCover,
-      })
-      .from(productMedia)
-      .where(inArray(productMedia.productId, productIds))
-      .orderBy(
-        desc(productMedia.isCover),
-        asc(productMedia.sortOrder),
-        asc(productMedia.createdAt),
-      ),
-    db
-      .select({ productId: productVisibilitySettings.productId })
-      .from(productVisibilitySettings)
-      .where(
-        and(
-          inArray(productVisibilitySettings.productId, productIds),
-          eq(productVisibilitySettings.isFeatured, true),
-        ),
-      ),
-    options?.includeContent
-      ? db
-          .select({
-            productId: productFeatures.productId,
-            id: productFeatures.id,
-            featureType: productFeatures.featureType,
-            title: productFeatures.title,
-            description: productFeatures.description,
-            sortOrder: productFeatures.sortOrder,
-          })
-          .from(productFeatures)
-          .where(inArray(productFeatures.productId, productIds))
-          .orderBy(asc(productFeatures.sortOrder), asc(productFeatures.createdAt))
-      : Promise.resolve([]),
-    options?.includeContent
-      ? db
-          .select({
-            productId: productFaqs.productId,
-            id: productFaqs.id,
-            question: productFaqs.question,
-            answer: productFaqs.answer,
-            sortOrder: productFaqs.sortOrder,
-          })
-          .from(productFaqs)
-          .where(inArray(productFaqs.productId, productIds))
-          .orderBy(asc(productFaqs.sortOrder), asc(productFaqs.createdAt))
-      : Promise.resolve([]),
-    options?.includeContent
-      ? db
-          .select({
-            productId: productLocations.productId,
-            id: productLocations.id,
-            locationType: productLocations.locationType,
-            title: productLocations.title,
-            address: productLocations.address,
-            city: productLocations.city,
-            countryCode: productLocations.countryCode,
-            latitude: productLocations.latitude,
-            longitude: productLocations.longitude,
-            sortOrder: productLocations.sortOrder,
-          })
-          .from(productLocations)
-          .where(inArray(productLocations.productId, productIds))
-          .orderBy(asc(productLocations.sortOrder), asc(productLocations.createdAt))
-      : Promise.resolve([]),
-  ])
-
-  const categoriesByProduct = new Map<string, Array<(typeof categoryRows)[number]>>()
-  for (const row of categoryRows) {
-    const existing = categoriesByProduct.get(row.productId) ?? []
-    existing.push(row)
-    categoriesByProduct.set(row.productId, existing)
-  }
-
-  const tagsByProduct = new Map<string, Array<(typeof tagRows)[number]>>()
-  for (const row of tagRows) {
-    const existing = tagsByProduct.get(row.productId) ?? []
-    existing.push(row)
-    tagsByProduct.set(row.productId, existing)
-  }
-
-  const translationByProduct = new Map(translationRows.map((row) => [row.productId, row] as const))
-
-  const capabilitiesByProduct = new Map<string, string[]>()
-  for (const row of capabilityRows) {
-    const existing = capabilitiesByProduct.get(row.productId) ?? []
-    existing.push(row.capability)
-    capabilitiesByProduct.set(row.productId, existing)
-  }
-
-  const mediaByProduct = new Map<string, Array<(typeof mediaRows)[number]>>()
-  for (const row of mediaRows) {
-    const existing = mediaByProduct.get(row.productId) ?? []
-    existing.push(row)
-    mediaByProduct.set(row.productId, existing)
-  }
-
-  const featuresByProduct = new Map<string, Array<(typeof featureRows)[number]>>()
-  for (const row of featureRows) {
-    const existing = featuresByProduct.get(row.productId) ?? []
-    existing.push(row)
-    featuresByProduct.set(row.productId, existing)
-  }
-
-  const faqsByProduct = new Map<string, Array<(typeof faqRows)[number]>>()
-  for (const row of faqRows) {
-    const existing = faqsByProduct.get(row.productId) ?? []
-    existing.push(row)
-    faqsByProduct.set(row.productId, existing)
-  }
-
-  const locationsByProduct = new Map<string, Array<(typeof locationRows)[number]>>()
-  for (const row of locationRows) {
-    const existing = locationsByProduct.get(row.productId) ?? []
-    existing.push(row)
-    locationsByProduct.set(row.productId, existing)
-  }
-
-  const typeById = new Map(typeRows.map((row) => [row.id, row] as const))
-  const featuredIds = new Set(featuredRows.map((row) => row.productId))
-
-  return productRows.map((product) => {
-    const translation = translationByProduct.get(product.id) ?? null
-    const media = (mediaByProduct.get(product.id) ?? []).map((row) => ({
-      id: row.id,
-      mediaType: row.mediaType,
-      name: row.name,
-      url: row.url,
-      mimeType: row.mimeType ?? null,
-      altText: row.altText ?? null,
-      sortOrder: row.sortOrder,
-      isCover: row.isCover,
-    }))
-
-    const base = {
-      id: product.id,
-      name: translation?.name ?? product.name,
-      description: translation?.description ?? product.description ?? null,
-      contentLanguageTag: translation?.languageTag ?? null,
-      slug: translation?.slug ?? null,
-      shortDescription: translation?.shortDescription ?? null,
-      seoTitle: translation?.seoTitle ?? null,
-      seoDescription: translation?.seoDescription ?? null,
-      bookingMode: product.bookingMode,
-      capacityMode: product.capacityMode,
-      visibility: product.visibility,
-      sellCurrency: product.sellCurrency,
-      sellAmountCents: product.sellAmountCents ?? null,
-      startDate: normalizeDate(product.startDate),
-      endDate: normalizeDate(product.endDate),
-      pax: product.pax ?? null,
-      productType: product.productTypeId ? (typeById.get(product.productTypeId) ?? null) : null,
-      categories: (categoriesByProduct.get(product.id) ?? []).map((row) => ({
-        id: row.id,
-        parentId: row.parentId ?? null,
-        name: row.name,
-        slug: row.slug,
-        description: row.description ?? null,
-        sortOrder: row.sortOrder,
-      })),
-      tags: (tagsByProduct.get(product.id) ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-      })),
-      capabilities: capabilitiesByProduct.get(product.id) ?? [],
-      coverMedia: media.find((item) => item.isCover) ?? media[0] ?? null,
-      isFeatured: featuredIds.has(product.id),
-    }
-
-    if (!options?.includeContent) {
-      return base
-    }
-
-    return {
-      ...base,
-      media,
-      features: (featuresByProduct.get(product.id) ?? []).map((row) => ({
-        id: row.id,
-        featureType: row.featureType,
-        title: row.title,
-        description: row.description ?? null,
-        sortOrder: row.sortOrder,
-      })),
-      faqs: (faqsByProduct.get(product.id) ?? []).map((row) => ({
-        id: row.id,
-        question: row.question,
-        answer: row.answer,
-        sortOrder: row.sortOrder,
-      })),
-      locations: (locationsByProduct.get(product.id) ?? []).map((row) => ({
-        id: row.id,
-        locationType: row.locationType,
-        title: row.title,
-        address: row.address ?? null,
-        city: row.city ?? null,
-        countryCode: row.countryCode ?? null,
-        latitude: row.latitude ?? null,
-        longitude: row.longitude ?? null,
-        sortOrder: row.sortOrder,
-      })),
-    }
+  return catalogProductsService.hydrateProducts(db, productRows, {
+    includeContent: options?.includeContent,
+    languageTag: options?.languageTag,
+    fallbackLanguageTags: options?.languageTag ? [options.languageTag] : [],
   })
 }
 
@@ -448,6 +191,20 @@ export const publicProductsService = {
       )
     }
 
+    if (query.destinationId) {
+      const productIds = await listProductIdsForDestinationId(db, query.destinationId)
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
+      )
+    }
+
+    if (query.destinationSlug) {
+      const productIds = await listProductIdsForDestinationSlug(db, query.destinationSlug)
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
+      )
+    }
+
     if (query.featured !== undefined) {
       const productIds = await listFeaturedProductIds(db)
       conditions.push(
@@ -458,6 +215,37 @@ export const publicProductsService = {
           : productIds.length > 0
             ? notInArray(products.id, productIds)
             : sql`1 = 1`,
+      )
+    }
+
+    if (query.locationTitle) {
+      const productIds = await listProductIdsForLocationTitle(db, query.locationTitle)
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
+      )
+    }
+
+    if (query.locationCity) {
+      const productIds = await listProductIdsForLocationCity(db, query.locationCity)
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
+      )
+    }
+
+    if (query.locationCountryCode) {
+      const productIds = await listProductIdsForLocationCountryCode(
+        db,
+        query.locationCountryCode.toUpperCase(),
+      )
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
+      )
+    }
+
+    if (query.locationType) {
+      const productIds = await listProductIdsForLocationType(db, query.locationType)
+      conditions.push(
+        productIds.length > 0 ? inArray(products.id, productIds) : impossibleCondition(),
       )
     }
 
@@ -551,6 +339,15 @@ export const publicProductsService = {
     })
   },
 
+  async getCatalogProductBrochure(
+    db: PostgresJsDatabase,
+    productId: string,
+    query: { languageTag?: string | null } = {},
+  ) {
+    const product = await this.getCatalogProductById(db, productId, query)
+    return product && "brochure" in product ? product.brochure : null
+  },
+
   async listCatalogCategories(db: PostgresJsDatabase, query: PublicCatalogCategoryListQuery) {
     const conditions = [eq(productCategories.active, true)]
 
@@ -626,6 +423,101 @@ export const publicProductsService = {
 
     return {
       data: rows,
+      total: countResult[0]?.count ?? 0,
+      limit: query.limit,
+      offset: query.offset,
+    }
+  },
+
+  async listCatalogDestinations(db: PostgresJsDatabase, query: PublicCatalogDestinationListQuery) {
+    const conditions = []
+
+    if (query.parentId) {
+      conditions.push(eq(destinations.parentId, query.parentId))
+    }
+
+    if (query.active !== undefined) {
+      conditions.push(eq(destinations.active, query.active))
+    }
+
+    if (query.destinationType) {
+      conditions.push(eq(destinations.destinationType, query.destinationType))
+    }
+
+    if (query.search) {
+      const translationRows = await db
+        .select({ destinationId: destinationTranslations.destinationId })
+        .from(destinationTranslations)
+        .where(
+          and(
+            ...(query.languageTag
+              ? [eq(destinationTranslations.languageTag, query.languageTag)]
+              : []),
+            or(
+              ilike(destinationTranslations.name, `%${query.search}%`),
+              ilike(destinationTranslations.description, `%${query.search}%`),
+            ),
+          ),
+        )
+      const destinationIds = translationRows.map((row) => row.destinationId)
+      conditions.push(
+        destinationIds.length > 0
+          ? inArray(destinations.id, destinationIds)
+          : impossibleCondition(),
+      )
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(destinations)
+        .where(where)
+        .limit(query.limit)
+        .offset(query.offset)
+        .orderBy(asc(destinations.sortOrder), asc(destinations.slug)),
+      db.select({ count: sql<number>`count(*)::int` }).from(destinations).where(where),
+    ])
+
+    const destinationIds = rows.map((row) => row.id)
+    const translations =
+      destinationIds.length > 0
+        ? await db
+            .select()
+            .from(destinationTranslations)
+            .where(
+              and(
+                inArray(destinationTranslations.destinationId, destinationIds),
+                ...(query.languageTag
+                  ? [eq(destinationTranslations.languageTag, query.languageTag)]
+                  : []),
+              ),
+            )
+        : []
+
+    const translationByDestination = new Map<string, (typeof translations)[number]>()
+    for (const row of translations) {
+      if (!translationByDestination.has(row.destinationId)) {
+        translationByDestination.set(row.destinationId, row)
+      }
+    }
+
+    return {
+      data: rows.map((row) => {
+        const translation = translationByDestination.get(row.id)
+        return {
+          id: row.id,
+          parentId: row.parentId ?? null,
+          slug: row.slug,
+          name: translation?.name ?? row.slug,
+          description: translation?.description ?? null,
+          seoTitle: translation?.seoTitle ?? null,
+          seoDescription: translation?.seoDescription ?? null,
+          destinationType: row.destinationType,
+          sortOrder: row.sortOrder,
+        }
+      }),
       total: countResult[0]?.count ?? 0,
       limit: query.limit,
       offset: query.offset,

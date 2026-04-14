@@ -15,7 +15,13 @@ import {
 } from "../../src/products-ref.js"
 import { bookingRoutes } from "../../src/routes.js"
 import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
-import { bookingAllocations, bookingPiiAccessLog } from "../../src/schema.js"
+import {
+  bookingAllocations,
+  bookingDocuments,
+  bookingFulfillments,
+  bookingParticipants,
+  bookingPiiAccessLog,
+} from "../../src/schema.js"
 import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
@@ -332,6 +338,48 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
   }
 
   describe("Bookings CRUD", () => {
+    it("looks up booking overview internally by booking code without customer email", async () => {
+      const booking = await seedBooking({
+        bookingNumber: "BK-ADMIN-0001",
+        status: "confirmed",
+        sellAmountCents: 24000,
+      })
+
+      await db.insert(bookingParticipants).values({
+        bookingId: booking.id,
+        participantType: "traveler",
+        firstName: "Elena",
+        lastName: "Popescu",
+        email: "elena@example.com",
+        isPrimary: true,
+      })
+      await db.insert(bookingDocuments).values({
+        bookingId: booking.id,
+        type: "passport_copy",
+        fileName: "passport.pdf",
+        fileUrl: "https://example.com/passport.pdf",
+      })
+      await db.insert(bookingFulfillments).values({
+        bookingId: booking.id,
+        fulfillmentType: "voucher",
+        deliveryChannel: "email",
+        status: "issued",
+      })
+
+      const res = await app.request("/overview?bookingCode=BK-ADMIN-0001")
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toMatchObject({
+        bookingId: booking.id,
+        bookingNumber: "BK-ADMIN-0001",
+        status: "confirmed",
+      })
+      expect(body.data.documents).toHaveLength(1)
+      expect(body.data.fulfillments).toHaveLength(1)
+      expect(body.data.participants[0]?.firstName).toBe("Elena")
+    })
+
     it("creates a booking from a product", async () => {
       const { product, option, unit } = await seedProductBundle()
 

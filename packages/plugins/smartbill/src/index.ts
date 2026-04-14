@@ -10,6 +10,15 @@ export type {
 } from "./plugin.js"
 export { smartbillPlugin } from "./plugin.js"
 export type {
+  SmartbillInvoiceSettlementPoller,
+  SmartbillInvoiceSettlementPollerOptions,
+  SmartbillSettlementExternalRef,
+  SmartbillSettlementInvoice,
+  SmartbillSettlementPollerContext,
+  SmartbillSettlementPollerResult,
+} from "./settlement.js"
+export { createSmartbillInvoiceSettlementPoller } from "./settlement.js"
+export type {
   SmartbillClient,
   SmartbillFetch,
   SmartbillInvoiceBody,

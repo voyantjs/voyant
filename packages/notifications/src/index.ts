@@ -48,24 +48,36 @@ export {
 } from "./schema.js"
 export type { NotificationService } from "./service.js"
 export {
+  createDefaultBookingDocumentAttachment,
   createNotificationService,
   NotificationError,
   notificationsService,
   renderNotificationTemplate,
 } from "./service.js"
+export type {
+  BookingDocumentAttachmentResolver,
+  SendBookingDocumentsRuntimeOptions,
+} from "./service-booking-documents.js"
+export { bookingDocumentNotificationsService } from "./service-booking-documents.js"
 export { sendDueNotificationReminders } from "./tasks/index.js"
 export type {
+  NotificationAttachment,
   NotificationChannel,
   NotificationPayload,
   NotificationProvider,
   NotificationResult,
 } from "./types.js"
 export {
+  bookingDocumentBundleItemSchema,
+  bookingDocumentBundleSchema,
   insertNotificationReminderRuleSchema,
   insertNotificationTemplateSchema,
+  notificationAttachmentSchema,
   notificationChannelSchema,
   notificationDeliveryListQuerySchema,
   notificationDeliveryStatusSchema,
+  notificationDocumentSourceSchema,
+  notificationDocumentTypeSchema,
   notificationReminderRuleListQuerySchema,
   notificationReminderRunListQuerySchema,
   notificationReminderRunStatusSchema,
@@ -75,6 +87,8 @@ export {
   notificationTemplateListQuerySchema,
   notificationTemplateStatusSchema,
   runDueRemindersSchema,
+  sendBookingDocumentsNotificationResultSchema,
+  sendBookingDocumentsNotificationSchema,
   sendInvoiceNotificationSchema,
   sendNotificationSchema,
   sendPaymentSessionNotificationSchema,

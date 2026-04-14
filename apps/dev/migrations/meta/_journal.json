@@ -29,6 +29,27 @@
       "when": 1775580592237,
       "tag": "0003_clean_lily_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776118384256,
+      "tag": "0004_add_marketing_consent_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776189000002,
+      "tag": "0005_add_product_media_brochure_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776191000002,
+      "tag": "0006_add_product_brochure_versions",
+      "breakpoints": true
     }
   ]
 }

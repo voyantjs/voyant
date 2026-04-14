@@ -1,8 +1,17 @@
 import type { LinkableDefinition, Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
+import { Hono } from "hono"
 
 import { financeRoutes } from "./routes.js"
+import {
+  createFinanceAdminDocumentRoutes,
+  type FinanceDocumentRouteOptions,
+} from "./routes-documents.js"
 import { publicFinanceRoutes } from "./routes-public.js"
+import {
+  createFinanceAdminSettlementRoutes,
+  type FinanceSettlementRouteOptions,
+} from "./routes-settlement.js"
 
 export type { FinanceRoutes } from "./routes.js"
 export type { PublicFinanceRoutes } from "./routes-public.js"
@@ -41,13 +50,36 @@ export const financeModule: Module = {
   linkable: financeLinkable,
 }
 
-export const financeHonoModule: HonoModule = {
-  module: financeModule,
-  adminRoutes: financeRoutes,
-  publicRoutes: publicFinanceRoutes,
-  routes: financeRoutes,
+export interface FinanceHonoModuleOptions
+  extends FinanceDocumentRouteOptions,
+    FinanceSettlementRouteOptions {}
+
+export function createFinanceHonoModule(options: FinanceHonoModuleOptions = {}): HonoModule {
+  const adminRoutes = new Hono()
+    .route("/", financeRoutes)
+    .route("/", createFinanceAdminDocumentRoutes(options))
+    .route("/", createFinanceAdminSettlementRoutes(options))
+
+  return {
+    module: financeModule,
+    adminRoutes,
+    publicRoutes: publicFinanceRoutes,
+    routes: adminRoutes,
+  }
 }
 
+export const financeHonoModule: HonoModule = createFinanceHonoModule()
+
+export {
+  createFinanceAdminDocumentRoutes,
+  type FinanceDocumentRouteOptions,
+  type InvoiceDocumentGenerator,
+} from "./routes-documents.js"
+export {
+  createFinanceAdminSettlementRoutes,
+  type FinanceSettlementRouteOptions,
+  type InvoiceSettlementPoller,
+} from "./routes-settlement.js"
 export type {
   BookingGuarantee,
   BookingItemCommission,
@@ -114,6 +146,34 @@ export {
 } from "./schema.js"
 export type { InvoiceFromBookingData } from "./service.js"
 export { financeService, renderInvoiceBody } from "./service.js"
+export type {
+  GeneratedInvoiceDocumentRecord,
+  GeneratedInvoiceRenditionArtifact,
+  InvoiceDocumentGeneratorContext,
+  InvoiceDocumentRuntimeOptions,
+  StorageBackedInvoiceDocumentGeneratorOptions,
+  StorageBackedInvoiceDocumentSerializer,
+  StorageBackedInvoiceDocumentUpload,
+} from "./service-documents.js"
+export {
+  createPdfInvoiceDocumentGenerator,
+  createStorageBackedInvoiceDocumentGenerator,
+  defaultPdfInvoiceDocumentSerializer,
+  defaultStorageBackedInvoiceDocumentSerializer,
+  financeDocumentsService,
+} from "./service-documents.js"
+export type {
+  FinanceSettlementRuntimeOptions,
+  InvoiceSettlementPollerContext,
+  InvoiceSettlementPollerResult,
+} from "./service-settlement.js"
+export { financeSettlementService } from "./service-settlement.js"
+export type {
+  GeneratedInvoiceDocumentResult,
+  GenerateInvoiceDocumentInput,
+  PolledInvoiceSettlementResult,
+  PollInvoiceSettlementInput,
+} from "./validation.js"
 export {
   agingReportQuerySchema,
   allocateInvoiceNumberInputSchema,
@@ -125,6 +185,8 @@ export {
   createPaymentSessionFromScheduleSchema,
   expirePaymentSessionSchema,
   failPaymentSessionSchema,
+  generatedInvoiceDocumentResultSchema,
+  generateInvoiceDocumentInputSchema,
   insertBookingGuaranteeSchema,
   insertBookingItemCommissionSchema,
   insertBookingItemTaxLineSchema,
@@ -154,6 +216,9 @@ export {
   paymentCaptureListQuerySchema,
   paymentInstrumentListQuerySchema,
   paymentSessionListQuerySchema,
+  polledInvoiceSettlementProviderResultSchema,
+  polledInvoiceSettlementResultSchema,
+  pollInvoiceSettlementInputSchema,
   profitabilityQuerySchema,
   renderInvoiceInputSchema,
   revenueReportQuerySchema,
@@ -181,8 +246,10 @@ export {
 } from "./validation.js"
 export type {
   PublicBookingFinanceDocuments,
+  PublicBookingFinancePayments,
   PublicBookingPaymentOptions,
   PublicFinanceBookingDocument,
+  PublicFinanceBookingPayment,
   PublicPaymentOptionsQuery,
   PublicPaymentSession,
   PublicStartPaymentSessionInput,
@@ -191,8 +258,10 @@ export type {
 } from "./validation-public.js"
 export {
   publicBookingFinanceDocumentsSchema,
+  publicBookingFinancePaymentsSchema,
   publicBookingPaymentOptionsSchema,
   publicFinanceBookingDocumentSchema,
+  publicFinanceBookingPaymentSchema,
   publicFinanceDocumentAvailabilitySchema,
   publicFinanceDocumentFormatSchema,
   publicFinanceInvoiceTypeSchema,

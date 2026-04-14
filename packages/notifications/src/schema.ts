@@ -48,6 +48,7 @@ export const notificationReminderStatusEnum = pgEnum("notification_reminder_stat
 
 export const notificationReminderTargetTypeEnum = pgEnum("notification_reminder_target_type", [
   "booking_payment_schedule",
+  "invoice",
 ])
 
 export const notificationReminderRunStatusEnum = pgEnum("notification_reminder_run_status", [

@@ -6,6 +6,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import {
+  type CheckoutBankTransferDetails,
+  type CheckoutPaymentStarter,
   type CheckoutPolicyOptions,
   initiateCheckoutCollection,
   listBookingReminderRuns,
@@ -30,6 +32,14 @@ export function createCheckoutRoutes(
     policy?: CheckoutPolicyOptions
     providers?: ReadonlyArray<NotificationProvider>
     resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
+    paymentStarters?: Record<string, CheckoutPaymentStarter>
+    resolvePaymentStarters?: (
+      bindings: Record<string, unknown>,
+    ) => Record<string, CheckoutPaymentStarter>
+    bankTransferDetails?: CheckoutBankTransferDetails | null
+    resolveBankTransferDetails?: (
+      bindings: Record<string, unknown>,
+    ) => CheckoutBankTransferDetails | null
   } = {},
 ) {
   return new Hono<Env>()
@@ -64,6 +74,13 @@ export function createCheckoutRoutes(
           initiateCheckoutCollectionSchema.parse(await c.req.json()),
           options.policy,
           dispatcher,
+          {
+            bindings: c.env,
+            paymentStarters:
+              options.resolvePaymentStarters?.(c.env) ?? options.paymentStarters ?? {},
+            bankTransferDetails:
+              options.resolveBankTransferDetails?.(c.env) ?? options.bankTransferDetails ?? null,
+          },
         )
 
         if (!result) {

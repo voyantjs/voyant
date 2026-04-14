@@ -5,6 +5,7 @@ import {
   type PublicStartPaymentSessionInput,
   type PublicValidateVoucherInput,
   publicBookingFinanceDocumentsResponse,
+  publicBookingFinancePaymentsResponse,
   publicBookingPaymentOptionsResponse,
   publicPaymentSessionResponse,
   publicVoucherValidationResponse,
@@ -14,6 +15,14 @@ export function getPublicBookingDocuments(client: FetchWithValidationOptions, bo
   return fetchWithValidation(
     `/v1/public/finance/bookings/${bookingId}/documents`,
     publicBookingFinanceDocumentsResponse,
+    client,
+  )
+}
+
+export function getPublicBookingPayments(client: FetchWithValidationOptions, bookingId: string) {
+  return fetchWithValidation(
+    `/v1/public/finance/bookings/${bookingId}/payments`,
+    publicBookingFinancePaymentsResponse,
     client,
   )
 }

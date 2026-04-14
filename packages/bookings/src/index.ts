@@ -127,6 +127,7 @@ export {
   insertParticipantSchema,
   insertPassengerSchema,
   insertSupplierStatusSchema,
+  internalBookingOverviewLookupQuerySchema,
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
   publicBookingSessionRepriceItemSchema,

@@ -250,6 +250,9 @@ export const PREFIXES = {
   product_types: "ptyp",
   product_categories: "pctg",
   product_tags: "ptag",
+  destinations: "dest",
+  destination_translations: "dtrn",
+  product_destinations: "pdst",
 
   // --- BOOKING EXTENSIONS ---
   booking_product_details: "bkpd",

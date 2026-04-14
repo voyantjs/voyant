@@ -73,6 +73,55 @@ export const productTags = pgTable(
 export type ProductTag = typeof productTags.$inferSelect
 export type NewProductTag = typeof productTags.$inferInsert
 
+export const destinations = pgTable(
+  "destinations",
+  {
+    id: typeId("destinations"),
+    parentId: typeIdRef("parent_id"),
+    slug: text("slug").notNull(),
+    code: text("code"),
+    destinationType: text("destination_type").notNull().default("destination"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    active: boolean("active").notNull().default(true),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uidx_destinations_slug").on(table.slug),
+    uniqueIndex("uidx_destinations_code").on(table.code),
+    index("idx_destinations_parent").on(table.parentId),
+    index("idx_destinations_active").on(table.active),
+  ],
+)
+
+export type Destination = typeof destinations.$inferSelect
+export type NewDestination = typeof destinations.$inferInsert
+
+export const destinationTranslations = pgTable(
+  "destination_translations",
+  {
+    id: typeId("destination_translations"),
+    destinationId: typeIdRef("destination_id")
+      .notNull()
+      .references(() => destinations.id, { onDelete: "cascade" }),
+    languageTag: text("language_tag").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uidx_destination_translations_locale").on(table.destinationId, table.languageTag),
+    index("idx_destination_translations_language").on(table.languageTag),
+  ],
+)
+
+export type DestinationTranslation = typeof destinationTranslations.$inferSelect
+export type NewDestinationTranslation = typeof destinationTranslations.$inferInsert
+
 export const productCategoryProducts = pgTable(
   "product_category_products",
   {
@@ -106,5 +155,24 @@ export const productTagProducts = pgTable(
   (table) => [
     primaryKey({ columns: [table.productId, table.tagId] }),
     index("idx_ptp_tag").on(table.tagId),
+  ],
+)
+
+export const productDestinations = pgTable(
+  "product_destinations",
+  {
+    productId: typeIdRef("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    destinationId: typeIdRef("destination_id")
+      .notNull()
+      .references(() => destinations.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.productId, table.destinationId] }),
+    index("idx_product_destinations_destination").on(table.destinationId),
   ],
 )

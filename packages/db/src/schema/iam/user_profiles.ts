@@ -100,6 +100,7 @@ export const userProfilesTable = pgTable(
 
     marketingConsent: boolean("marketing_consent").notNull().default(false),
     marketingConsentAt: timestamp("marketing_consent_at", { withTimezone: true }),
+    marketingConsentSource: text("marketing_consent_source"),
 
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -134,6 +135,7 @@ const userProfileCoreSchema = z.object({
   notificationDefaults: z.record(z.string(), z.unknown()).optional().nullable(),
   marketingConsent: z.boolean().default(false),
   marketingConsentAt: z.date().optional().nullable(),
+  marketingConsentSource: z.string().max(255).optional().nullable(),
   lastActiveAt: z.date().optional().nullable(),
 })
 
@@ -172,6 +174,7 @@ export const decryptedUserProfileSchema = z.object({
   notificationDefaults: z.record(z.string(), z.unknown()).nullable(),
   marketingConsent: z.boolean(),
   marketingConsentAt: z.date().nullable(),
+  marketingConsentSource: z.string().nullable(),
   lastActiveAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),

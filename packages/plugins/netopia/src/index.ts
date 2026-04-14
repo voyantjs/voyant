@@ -1,3 +1,4 @@
+export { createNetopiaCheckoutStarter } from "./checkout.js"
 export {
   createNetopiaClient,
   type NetopiaClientApi,

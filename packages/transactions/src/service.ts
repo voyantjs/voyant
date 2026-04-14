@@ -48,9 +48,15 @@ import {
   updateOrderParticipant,
   updateOrderTerm,
 } from "./service-orders.js"
+import {
+  getStorefrontPromotionalOfferBySlug,
+  listStorefrontPromotionalOffers,
+} from "./storefront-offers.js"
 
 export const transactionsService = {
   listOffers,
+  listStorefrontPromotionalOffers,
+  getStorefrontPromotionalOfferBySlug,
   getOfferById,
   createOffer,
   createOfferBundle,

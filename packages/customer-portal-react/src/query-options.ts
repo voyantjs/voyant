@@ -5,6 +5,7 @@ import { queryOptions } from "@tanstack/react-query"
 import type { FetchWithValidationOptions } from "./client.js"
 import {
   getCustomerPortalBooking,
+  getCustomerPortalBookingBillingContact,
   getCustomerPortalContactExists,
   getCustomerPortalPhoneContactExists,
   getCustomerPortalProfile,
@@ -46,6 +47,16 @@ export function getCustomerPortalBookingQueryOptions(
   return queryOptions({
     queryKey: customerPortalQueryKeys.booking(bookingId),
     queryFn: () => getCustomerPortalBooking(client, bookingId),
+  })
+}
+
+export function getCustomerPortalBookingBillingContactQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string,
+) {
+  return queryOptions({
+    queryKey: customerPortalQueryKeys.bookingBillingContact(bookingId),
+    queryFn: () => getCustomerPortalBookingBillingContact(client, bookingId),
   })
 }
 

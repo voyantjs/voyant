@@ -7,12 +7,14 @@ import type { z } from "zod"
 
 import type { notificationReminderRules } from "./schema.js"
 import type {
+  NotificationAttachment,
   NotificationChannel,
   NotificationPayload,
   NotificationProvider,
   NotificationResult,
 } from "./types.js"
 import type {
+  bookingDocumentBundleItemSchema,
   insertNotificationReminderRuleSchema,
   insertNotificationTemplateSchema,
   notificationDeliveryListQuerySchema,
@@ -20,6 +22,7 @@ import type {
   notificationReminderRunListQuerySchema,
   notificationTemplateListQuerySchema,
   runDueRemindersSchema,
+  sendBookingDocumentsNotificationSchema,
   sendInvoiceNotificationSchema,
   sendNotificationSchema,
   sendPaymentSessionNotificationSchema,
@@ -49,6 +52,10 @@ export type SendPaymentSessionNotificationInput = z.infer<
   typeof sendPaymentSessionNotificationSchema
 >
 export type SendInvoiceNotificationInput = z.infer<typeof sendInvoiceNotificationSchema>
+export type SendBookingDocumentsNotificationInput = z.infer<
+  typeof sendBookingDocumentsNotificationSchema
+>
+export type BookingDocumentBundleItem = z.infer<typeof bookingDocumentBundleItemSchema>
 
 export type ReminderSweepResult = {
   processed: number
@@ -109,6 +116,22 @@ export function createNotificationService(
       return byChannel.get(channel)
     },
   }
+}
+
+export function summarizeNotificationAttachments(
+  attachments: ReadonlyArray<NotificationAttachment> | null | undefined,
+) {
+  if (!attachments || attachments.length === 0) {
+    return []
+  }
+
+  return attachments.map((attachment) => ({
+    filename: attachment.filename,
+    path: attachment.path ?? null,
+    contentType: attachment.contentType ?? null,
+    disposition: attachment.disposition ?? null,
+    contentId: attachment.contentId ?? null,
+  }))
 }
 
 function resolveMustachePath(path: string, scope: Record<string, unknown>): unknown {

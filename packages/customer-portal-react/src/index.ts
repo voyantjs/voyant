@@ -11,9 +11,11 @@ export {
   createCustomerPortalCompanion,
   deleteCustomerPortalCompanion,
   getCustomerPortalBooking,
+  getCustomerPortalBookingBillingContact,
   getCustomerPortalContactExists,
   getCustomerPortalPhoneContactExists,
   getCustomerPortalProfile,
+  importCustomerPortalBookingParticipants,
   listCustomerPortalBookingDocuments,
   listCustomerPortalBookings,
   listCustomerPortalCompanions,
@@ -32,6 +34,7 @@ export type {
 } from "./query-keys.js"
 export { customerPortalQueryKeys } from "./query-keys.js"
 export {
+  getCustomerPortalBookingBillingContactQueryOptions,
   getCustomerPortalBookingDocumentsQueryOptions,
   getCustomerPortalBookingQueryOptions,
   getCustomerPortalBookingsQueryOptions,

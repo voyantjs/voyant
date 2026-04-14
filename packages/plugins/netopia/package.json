@@ -20,6 +20,7 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
+    "@voyantjs/checkout": "workspace:*",
     "@voyantjs/core": "workspace:*",
     "@voyantjs/finance": "workspace:*",
     "@voyantjs/hono": "workspace:*",

@@ -1,6 +1,12 @@
 import type { LinkableDefinition } from "@voyantjs/core"
 
-export type { ContractsAdminRoutes, ContractsPublicRoutes } from "./routes.js"
+export type {
+  ContractDocumentGenerator,
+  ContractsAdminRoutes,
+  ContractsPublicRoutes,
+  ContractsRouteOptions,
+} from "./routes.js"
+export { createContractsAdminRoutes, createContractsPublicRoutes } from "./routes.js"
 
 export const contractLinkable: LinkableDefinition = {
   module: "legal",
@@ -49,6 +55,21 @@ export {
   renderTemplate,
   validateTemplateVariables,
 } from "./service.js"
+export type {
+  ContractDocumentGeneratorContext,
+  ContractDocumentRuntimeOptions,
+  GeneratedContractDocumentArtifact,
+  GeneratedContractDocumentRecord,
+  StorageBackedContractDocumentGeneratorOptions,
+  StorageBackedContractDocumentSerializer,
+  StorageBackedContractDocumentUpload,
+} from "./service-documents.js"
+export {
+  createPdfContractDocumentGenerator,
+  createStorageBackedContractDocumentGenerator,
+  defaultPdfContractDocumentSerializer,
+  defaultStorageBackedContractDocumentSerializer,
+} from "./service-documents.js"
 export {
   contractBodyFormatSchema,
   contractListQuerySchema,
@@ -57,6 +78,9 @@ export {
   contractSignatureMethodSchema,
   contractStatusSchema,
   contractTemplateListQuerySchema,
+  generateContractDocumentInputSchema,
+  generatedContractDocumentAttachmentSchema,
+  generatedContractDocumentResultSchema,
   insertContractAttachmentSchema,
   insertContractNumberSeriesSchema,
   insertContractSchema,

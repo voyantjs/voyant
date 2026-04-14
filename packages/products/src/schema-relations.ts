@@ -22,8 +22,11 @@ import {
   productVisibilitySettings,
 } from "./schema-settings"
 import {
+  destinations,
+  destinationTranslations,
   productCategories,
   productCategoryProducts,
+  productDestinations,
   productTagProducts,
   productTags,
   productTypes,
@@ -49,6 +52,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   notes: many(productNotes),
   media: many(productMedia),
   categoryLinks: many(productCategoryProducts),
+  destinationLinks: many(productDestinations),
   tagLinks: many(productTagProducts),
 }))
 
@@ -176,6 +180,24 @@ export const productTypesRelations = relations(productTypes, ({ many }) => ({
   products: many(products),
 }))
 
+export const destinationsRelations = relations(destinations, ({ one, many }) => ({
+  parent: one(destinations, {
+    fields: [destinations.parentId],
+    references: [destinations.id],
+    relationName: "destinationParentChild",
+  }),
+  children: many(destinations, { relationName: "destinationParentChild" }),
+  translations: many(destinationTranslations),
+  productLinks: many(productDestinations),
+}))
+
+export const destinationTranslationsRelations = relations(destinationTranslations, ({ one }) => ({
+  destination: one(destinations, {
+    fields: [destinationTranslations.destinationId],
+    references: [destinations.id],
+  }),
+}))
+
 export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
   parent: one(productCategories, {
     fields: [productCategories.parentId],
@@ -209,5 +231,16 @@ export const productTagProductsRelations = relations(productTagProducts, ({ one 
   tag: one(productTags, {
     fields: [productTagProducts.tagId],
     references: [productTags.id],
+  }),
+}))
+
+export const productDestinationsRelations = relations(productDestinations, ({ one }) => ({
+  product: one(products, {
+    fields: [productDestinations.productId],
+    references: [products.id],
+  }),
+  destination: one(destinations, {
+    fields: [productDestinations.destinationId],
+    references: [destinations.id],
   }),
 }))

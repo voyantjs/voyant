@@ -1,10 +1,16 @@
+export { createDefaultBookingDocumentAttachment } from "./service-booking-documents.js"
 export type { NotificationService } from "./service-shared.js"
 export {
   createNotificationService,
   NotificationError,
   renderNotificationTemplate,
+  summarizeNotificationAttachments,
 } from "./service-shared.js"
 
+import {
+  bookingDocumentNotificationsService,
+  createDefaultBookingDocumentAttachment,
+} from "./service-booking-documents.js"
 import {
   getDeliveryById,
   listDeliveries,
@@ -43,4 +49,8 @@ export const notificationsService = {
   runDueReminders,
   sendPaymentSessionNotification,
   sendInvoiceNotification,
+  listBookingDocumentBundle: bookingDocumentNotificationsService.listBookingDocumentBundle,
+  sendBookingDocumentsNotification:
+    bookingDocumentNotificationsService.sendBookingDocumentsNotification,
+  createDefaultBookingDocumentAttachment,
 }

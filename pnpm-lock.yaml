@@ -902,12 +902,21 @@ importers:
       '@voyantjs/db':
         specifier: workspace:*
         version: link:../db
+      '@voyantjs/finance':
+        specifier: workspace:*
+        version: link:../finance
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
       '@voyantjs/identity':
         specifier: workspace:*
         version: link:../identity
+      '@voyantjs/legal':
+        specifier: workspace:*
+        version: link:../legal
+      '@voyantjs/utils':
+        specifier: workspace:*
+        version: link:../utils
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -1291,6 +1300,12 @@ importers:
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
+      '@voyantjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@voyantjs/voyant-storage':
+        specifier: workspace:*
+        version: link:../storage
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -1609,6 +1624,12 @@ importers:
       '@voyantjs/suppliers':
         specifier: workspace:*
         version: link:../suppliers
+      '@voyantjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@voyantjs/voyant-storage':
+        specifier: workspace:*
+        version: link:../storage
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -1773,6 +1794,9 @@ importers:
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
+      '@voyantjs/legal':
+        specifier: workspace:*
+        version: link:../legal
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -1835,6 +1859,9 @@ importers:
 
   packages/plugins/netopia:
     dependencies:
+      '@voyantjs/checkout':
+        specifier: workspace:*
+        version: link:../../checkout
       '@voyantjs/core':
         specifier: workspace:*
         version: link:../../core
@@ -2003,6 +2030,12 @@ importers:
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
+      '@voyantjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@voyantjs/voyant-storage':
+        specifier: workspace:*
+        version: link:../storage
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
@@ -2252,12 +2285,30 @@ importers:
 
   packages/storefront:
     dependencies:
+      '@voyantjs/availability':
+        specifier: workspace:*
+        version: link:../availability
       '@voyantjs/core':
         specifier: workspace:*
         version: link:../core
+      '@voyantjs/extras':
+        specifier: workspace:*
+        version: link:../extras
       '@voyantjs/hono':
         specifier: workspace:*
         version: link:../hono
+      '@voyantjs/pricing':
+        specifier: workspace:*
+        version: link:../pricing
+      '@voyantjs/products':
+        specifier: workspace:*
+        version: link:../products
+      '@voyantjs/sellability':
+        specifier: workspace:*
+        version: link:../sellability
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
       hono:
         specifier: ^4.12.10
         version: 4.12.10
@@ -2265,6 +2316,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@voyantjs/db':
+        specifier: workspace:*
+        version: link:../db
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -2274,6 +2328,43 @@ importers:
       vitest:
         specifier: ^4.1.2
         version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/storefront-react:
+    dependencies:
+      '@voyantjs/react':
+        specifier: workspace:*
+        version: link:../react
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.96.2
+        version: 5.96.2(react@19.2.4)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@voyantjs/storefront':
+        specifier: workspace:*
+        version: link:../storefront
+      '@voyantjs/voyant-typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.2
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.2)(typescript@6.0.2))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(sass@1.77.4)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/storefront-verification:
     dependencies:
@@ -2501,6 +2592,12 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260403.1)(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(@upstash/redis@1.35.6)(kysely@0.28.15)(pg@8.16.3)(postgres@3.4.8)
+      liquidjs:
+        specifier: ^10.24.0
+        version: 10.25.5
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -6059,6 +6156,10 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
 
+  commander@10.0.1:
+    resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
+    engines: {node: '>=14'}
+
   commander@11.1.0:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
     engines: {node: '>=16'}
@@ -7234,6 +7335,11 @@ packages:
   lint-staged@16.4.0:
     resolution: {integrity: sha512-lBWt8hujh/Cjysw5GYVmZpFHXDCgZzhrOm8vbcUdobADZNOK/bRshr2kM3DfgrrtR1DQhfupW9gnIXOfiFi+bw==}
     engines: {node: '>=20.17'}
+    hasBin: true
+
+  liquidjs@10.25.5:
+    resolution: {integrity: sha512-GKiKeZjJDdVoQAu+S9rzkYsYnYhcep5W3WwZXgb5f+yq484P/k9JqamBbGYu+LBEixcUAXZr2jogdAIjB3ki1w==}
+    engines: {node: '>=16'}
     hasBin: true
 
   listr2@9.0.5:
@@ -11796,6 +11902,8 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
+  commander@10.0.1: {}
+
   commander@11.1.0: {}
 
   commander@14.0.3: {}
@@ -12941,6 +13049,10 @@ snapshots:
       string-argv: 0.3.2
       tinyexec: 1.0.4
       yaml: 2.8.3
+
+  liquidjs@10.25.5:
+    dependencies:
+      commander: 10.0.1
 
   listr2@9.0.5:
     dependencies:

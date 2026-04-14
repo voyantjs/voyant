@@ -1,7 +1,9 @@
 import {
   publicBookingFinanceDocumentsSchema,
+  publicBookingFinancePaymentsSchema,
   publicBookingPaymentOptionsSchema,
   publicFinanceBookingDocumentSchema,
+  publicFinanceBookingPaymentSchema,
   publicPaymentOptionsQuerySchema,
   publicPaymentSessionSchema,
   publicStartPaymentSessionSchema,
@@ -135,8 +137,10 @@ export const invoiceNotesResponse = arrayEnvelope(financeNoteRecordSchema)
 
 export {
   publicBookingFinanceDocumentsSchema,
+  publicBookingFinancePaymentsSchema,
   publicBookingPaymentOptionsSchema,
   publicFinanceBookingDocumentSchema,
+  publicFinanceBookingPaymentSchema,
   publicPaymentOptionsQuerySchema,
   publicPaymentSessionSchema,
   publicStartPaymentSessionSchema,
@@ -148,6 +152,9 @@ export const publicBookingPaymentOptionsResponse = singleEnvelope(publicBookingP
 export const publicBookingFinanceDocumentsResponse = singleEnvelope(
   publicBookingFinanceDocumentsSchema,
 )
+export const publicBookingFinancePaymentsResponse = singleEnvelope(
+  publicBookingFinancePaymentsSchema,
+)
 export const publicPaymentSessionResponse = singleEnvelope(publicPaymentSessionSchema)
 export const publicVoucherValidationResponse = singleEnvelope(publicVoucherValidationSchema)
 
@@ -155,7 +162,9 @@ export type PublicBookingPaymentOptionsRecord = z.infer<typeof publicBookingPaym
 export type PublicBookingFinanceDocumentsRecord = z.infer<
   typeof publicBookingFinanceDocumentsSchema
 >
+export type PublicBookingFinancePaymentsRecord = z.infer<typeof publicBookingFinancePaymentsSchema>
 export type PublicFinanceBookingDocumentRecord = z.infer<typeof publicFinanceBookingDocumentSchema>
+export type PublicFinanceBookingPaymentRecord = z.infer<typeof publicFinanceBookingPaymentSchema>
 export type PublicPaymentSessionRecord = z.infer<typeof publicPaymentSessionSchema>
 export type PublicStartPaymentSessionInput = z.input<typeof publicStartPaymentSessionSchema>
 export type PublicValidateVoucherInput = z.input<typeof publicValidateVoucherSchema>

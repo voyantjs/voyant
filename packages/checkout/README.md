@@ -8,8 +8,14 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 
 - previews a booking collection plan
 - creates bank-transfer collection documents (`proforma` by default)
+- supports exact-amount collection overrides by falling back to invoice-backed
+  collection when the requested amount does not match an existing schedule
 - creates card collection `payment_sessions`
 - supports schedule-backed or invoice-backed card collection
+- can start the provider flow in the same checkout request when a payment
+  starter is configured
+- can return customer-safe bank-transfer instructions when a bank-transfer
+  resolver is configured
 - optionally sends invoice or payment-session notifications
 
 ## Routes
@@ -21,6 +27,10 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 ## Notes
 
 - payment-provider plugins like Netopia remain optional
+- provider startup is injected through `paymentStarters` or
+  `resolvePaymentStarters`
+- bank-transfer instructions are injected through `bankTransferDetails` or
+  `resolveBankTransferDetails`
 - email-provider choice remains app-owned
 - projects can override the default collection policy when mounting checkout
 - `createCheckoutHonoModule()` now mounts checkout through Voyant's module

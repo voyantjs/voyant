@@ -135,6 +135,17 @@ export const publicBookingOverviewLookupQuerySchema = z.object({
   email: z.string().email(),
 })
 
+export const internalBookingOverviewLookupQuerySchema = z
+  .object({
+    bookingId: z.string().min(1).max(50).optional(),
+    bookingNumber: z.string().min(1).max(50).optional(),
+    bookingCode: z.string().min(1).max(50).optional(),
+    email: z.string().email().optional(),
+  })
+  .refine((value) => Boolean(value.bookingId || value.bookingNumber || value.bookingCode), {
+    message: "Provide a bookingId, bookingNumber, or bookingCode",
+  })
+
 export const publicBookingSessionParticipantSchema = z.object({
   id: z.string(),
   participantType: bookingParticipantTypeSchema,
@@ -314,4 +325,7 @@ export type PublicUpsertBookingSessionStateInput = z.infer<
 export type PublicBookingSessionRepriceInput = z.infer<typeof publicRepriceBookingSessionSchema>
 export type PublicBookingOverviewLookupQuery = z.infer<
   typeof publicBookingOverviewLookupQuerySchema
+>
+export type InternalBookingOverviewLookupQuery = z.infer<
+  typeof internalBookingOverviewLookupQuerySchema
 >

@@ -18,6 +18,8 @@ import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import type {
+  CheckoutBankTransferInstructionsRecord,
+  CheckoutProviderStartInput,
   CheckoutReminderRunListQuery,
   InitiateCheckoutCollectionInput,
   PreviewCheckoutCollectionInput,
@@ -71,12 +73,54 @@ export interface CheckoutCollectionPlan {
     | "none"
 }
 
+export interface CheckoutBankTransferDetails {
+  provider?: string | null
+  beneficiary: string
+  iban: string
+  bankName?: string | null
+  currency?: string | null
+  notes?: string | null
+}
+
+export interface CheckoutProviderStartResult {
+  provider: string
+  paymentSessionId: string
+  redirectUrl: string | null
+  externalReference: string | null
+  providerSessionId: string | null
+  providerPaymentId: string | null
+  response: Record<string, unknown> | null
+}
+
+export interface CheckoutPaymentStarterContext {
+  db: PostgresJsDatabase
+  bookingId: string
+  plan: CheckoutCollectionPlan
+  invoice: typeof invoices.$inferSelect | null
+  paymentSession: PaymentSession
+  input: InitiateCheckoutCollectionInput
+  startProvider: CheckoutProviderStartInput
+  bindings: Record<string, unknown>
+}
+
+export type CheckoutPaymentStarter = (
+  context: CheckoutPaymentStarterContext,
+) => Promise<CheckoutProviderStartResult>
+
 export interface InitiatedCheckoutCollection {
   plan: CheckoutCollectionPlan
   invoice: typeof invoices.$inferSelect | null
   paymentSession: PaymentSession | null
   invoiceNotification: NotificationDelivery | null
   paymentSessionNotification: NotificationDelivery | null
+  bankTransferInstructions: CheckoutBankTransferInstructionsRecord | null
+  providerStart: CheckoutProviderStartResult | null
+}
+
+export interface CheckoutRuntimeOptions {
+  bindings?: Record<string, unknown>
+  bankTransferDetails?: CheckoutBankTransferDetails | null
+  paymentStarters?: Record<string, CheckoutPaymentStarter>
 }
 
 export interface CheckoutReminderRunSummary {
@@ -84,7 +128,7 @@ export interface CheckoutReminderRunSummary {
   reminderRuleId: string
   reminderRuleSlug: string | null
   reminderRuleName: string | null
-  targetType: "booking_payment_schedule"
+  targetType: "booking_payment_schedule" | "invoice"
   targetId: string
   bookingId: string | null
   paymentSessionId: string | null
@@ -183,6 +227,39 @@ function lineDescription(
     return `Booking ${booking.bookingNumber} ${kind} reminder`
   }
   return `Booking ${booking.bookingNumber} ${kind}`
+}
+
+function normalizeExactAmountCents(amountCents: number | undefined) {
+  return typeof amountCents === "number" && Number.isFinite(amountCents) && amountCents > 0
+    ? Math.round(amountCents)
+    : null
+}
+
+function toInvoiceDueDateTime(value: string | null | undefined) {
+  return value ? `${value}T00:00:00.000Z` : null
+}
+
+function buildBankTransferInstructions(
+  invoice: typeof invoices.$inferSelect,
+  details: CheckoutBankTransferDetails | null | undefined,
+): CheckoutBankTransferInstructionsRecord | null {
+  if (!details) {
+    return null
+  }
+
+  return {
+    provider: details.provider ?? null,
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    documentType: invoice.invoiceType === "proforma" ? "proforma" : "invoice",
+    amountCents: invoice.balanceDueCents,
+    currency: details.currency ?? invoice.currency,
+    dueDate: toInvoiceDueDateTime(invoice.dueDate),
+    beneficiary: details.beneficiary,
+    iban: details.iban,
+    bankName: details.bankName ?? null,
+    notes: details.notes ?? null,
+  }
 }
 
 async function loadBookingContext(
@@ -313,18 +390,37 @@ export async function previewCheckoutCollection(
     options,
   )
 
-  const paymentSessionTarget = resolvePaymentSessionTarget(
+  let paymentSessionTarget = resolvePaymentSessionTarget(
     input.method,
     input.stage,
     input.paymentSessionTarget,
     options,
   )
-  const documentType = resolveDocumentType(input.method, paymentSessionTarget, options)
-  const selectedSchedule = pickSchedule(schedules, input.scheduleId)
-  const selectedInvoice = pickInvoice(context.outstandingInvoices, input.invoiceId)
+  let documentType = resolveDocumentType(input.method, paymentSessionTarget, options)
+  let selectedSchedule = pickSchedule(schedules, input.scheduleId)
+  let selectedInvoice = pickInvoice(context.outstandingInvoices, input.invoiceId)
+  const requestedAmountCents = normalizeExactAmountCents(input.amountCents)
 
   let amountCents = 0
-  if (paymentSessionTarget === "invoice") {
+  if (requestedAmountCents !== null) {
+    amountCents = requestedAmountCents
+
+    if (
+      paymentSessionTarget === "schedule" &&
+      selectedSchedule &&
+      selectedSchedule.amountCents === requestedAmountCents
+    ) {
+      selectedInvoice = null
+    } else {
+      paymentSessionTarget = "invoice"
+      documentType = resolveDocumentType(input.method, paymentSessionTarget, options)
+      selectedInvoice =
+        selectedInvoice && selectedInvoice.balanceDueCents === requestedAmountCents
+          ? selectedInvoice
+          : null
+      selectedSchedule = null
+    }
+  } else if (paymentSessionTarget === "invoice") {
     amountCents =
       selectedInvoice?.balanceDueCents ??
       selectedSchedule?.amountCents ??
@@ -430,6 +526,7 @@ export async function initiateCheckoutCollection(
   input: InitiateCheckoutCollectionInput,
   options: CheckoutPolicyOptions = {},
   dispatcher?: NotificationService,
+  runtime: CheckoutRuntimeOptions = {},
 ): Promise<InitiatedCheckoutCollection | null> {
   const context = await loadBookingContext(db, bookingId)
   if (!context) return null
@@ -444,9 +541,15 @@ export async function initiateCheckoutCollection(
   let paymentSession: PaymentSession | null = null
   let invoiceNotification: NotificationDelivery | null = null
   let paymentSessionNotification: NotificationDelivery | null = null
+  let bankTransferInstructions: CheckoutBankTransferInstructionsRecord | null = null
+  let providerStart: CheckoutProviderStartResult | null = null
 
   if (input.method === "bank_transfer") {
     invoice = await createCollectionInvoice(db, context, plan, input.notes ?? null)
+    bankTransferInstructions = buildBankTransferInstructions(
+      invoice,
+      runtime.bankTransferDetails ?? null,
+    )
 
     if (dispatcher && input.invoiceNotification) {
       invoiceNotification = await notificationsService.sendInvoiceNotification(
@@ -520,12 +623,50 @@ export async function initiateCheckoutCollection(
     }
   }
 
+  if (input.startProvider) {
+    if (input.method !== "card") {
+      throw new Error("Provider start is only available for card collections")
+    }
+    if (!paymentSession) {
+      throw new Error("No payment session available for provider start")
+    }
+
+    const starter = runtime.paymentStarters?.[input.startProvider.provider]
+    if (!starter) {
+      throw new Error(`Payment provider "${input.startProvider.provider}" is not configured`)
+    }
+
+    providerStart = await starter({
+      db,
+      bookingId,
+      plan,
+      invoice: invoice ?? null,
+      paymentSession,
+      input,
+      startProvider: input.startProvider,
+      bindings: runtime.bindings ?? {},
+    })
+
+    if (providerStart.paymentSessionId !== paymentSession.id) {
+      const updatedSession = await financeService.getPaymentSessionById(
+        db,
+        providerStart.paymentSessionId,
+      )
+      paymentSession = updatedSession ?? paymentSession
+    } else {
+      const updatedSession = await financeService.getPaymentSessionById(db, paymentSession.id)
+      paymentSession = updatedSession ?? paymentSession
+    }
+  }
+
   return {
     plan,
     invoice: invoice ?? null,
     paymentSession,
     invoiceNotification,
     paymentSessionNotification,
+    bankTransferInstructions,
+    providerStart,
   }
 }
 

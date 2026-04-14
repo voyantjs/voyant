@@ -4,6 +4,7 @@ import { Hono } from "hono"
 import { publicProductsService } from "./service-public.js"
 import {
   publicCatalogCategoryListQuerySchema,
+  publicCatalogDestinationListQuerySchema,
   publicCatalogProductListQuerySchema,
   publicCatalogProductLookupBySlugQuerySchema,
   publicCatalogTagListQuerySchema,
@@ -51,6 +52,12 @@ export const publicProductRoutes = new Hono<Env>()
     )
     return c.json(await publicProductsService.listCatalogTags(c.get("db"), query))
   })
+  .get("/destinations", async (c) => {
+    const query = publicCatalogDestinationListQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    return c.json(await publicProductsService.listCatalogDestinations(c.get("db"), query))
+  })
   .get("/:id", async (c) => {
     const query = publicCatalogProductLookupBySlugQuerySchema.parse(
       Object.fromEntries(new URL(c.req.url).searchParams),
@@ -63,6 +70,22 @@ export const publicProductRoutes = new Hono<Env>()
 
     if (!row) {
       return c.json({ error: "Catalog product not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+  .get("/:id/brochure", async (c) => {
+    const query = publicCatalogProductLookupBySlugQuerySchema.parse(
+      Object.fromEntries(new URL(c.req.url).searchParams),
+    )
+    const row = await publicProductsService.getCatalogProductBrochure(
+      c.get("db"),
+      c.req.param("id"),
+      query,
+    )
+
+    if (!row) {
+      return c.json({ error: "Catalog product brochure not found" }, 404)
     }
 
     return c.json({ data: row })

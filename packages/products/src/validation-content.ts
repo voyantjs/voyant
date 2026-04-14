@@ -1,5 +1,6 @@
 import {
   booleanQueryParam,
+  destinationTypeSchema,
   languageTagSchema,
   productFeatureTypeSchema,
   productLocationTypeSchema,
@@ -31,6 +32,26 @@ const productLocationCoreSchema = z.object({
   tripadvisorLocationId: z.string().max(255).optional().nullable(),
   sortOrder: z.number().int().default(0),
 })
+const destinationCoreSchema = z.object({
+  parentId: z.string().optional().nullable(),
+  slug: z.string().min(1).max(255),
+  code: z.string().max(100).optional().nullable(),
+  destinationType: destinationTypeSchema.default("destination"),
+  sortOrder: z.number().int().default(0),
+  active: z.boolean().default(true),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+const destinationTranslationCoreSchema = z.object({
+  languageTag: languageTagSchema,
+  name: z.string().min(1).max(255),
+  description: z.string().optional().nullable(),
+  seoTitle: z.string().max(255).optional().nullable(),
+  seoDescription: z.string().optional().nullable(),
+})
+const productDestinationCoreSchema = z.object({
+  destinationId: z.string(),
+  sortOrder: z.number().int().default(0),
+})
 
 export const insertProductFeatureSchema = productFeatureCoreSchema
 export const updateProductFeatureSchema = productFeatureCoreSchema.partial()
@@ -55,6 +76,32 @@ export const productLocationListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
+export const insertDestinationSchema = destinationCoreSchema
+export const updateDestinationSchema = destinationCoreSchema.partial()
+export const destinationListQuerySchema = z.object({
+  parentId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+  search: z.string().optional(),
+  languageTag: languageTagSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+export const insertDestinationTranslationSchema = destinationTranslationCoreSchema
+export const updateDestinationTranslationSchema = destinationTranslationCoreSchema.partial()
+export const destinationTranslationListQuerySchema = z.object({
+  destinationId: z.string().optional(),
+  languageTag: languageTagSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+export const insertProductDestinationSchema = productDestinationCoreSchema
+export const updateProductDestinationSchema = productDestinationCoreSchema.partial()
+export const productDestinationListQuerySchema = z.object({
+  productId: z.string().optional(),
+  destinationId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
 
 export type InsertProductFeature = z.infer<typeof insertProductFeatureSchema>
 export type UpdateProductFeature = z.infer<typeof updateProductFeatureSchema>
@@ -62,6 +109,12 @@ export type InsertProductFaq = z.infer<typeof insertProductFaqSchema>
 export type UpdateProductFaq = z.infer<typeof updateProductFaqSchema>
 export type InsertProductLocation = z.infer<typeof insertProductLocationSchema>
 export type UpdateProductLocation = z.infer<typeof updateProductLocationSchema>
+export type InsertDestination = z.infer<typeof insertDestinationSchema>
+export type UpdateDestination = z.infer<typeof updateDestinationSchema>
+export type InsertDestinationTranslation = z.infer<typeof insertDestinationTranslationSchema>
+export type UpdateDestinationTranslation = z.infer<typeof updateDestinationTranslationSchema>
+export type InsertProductDestination = z.infer<typeof insertProductDestinationSchema>
+export type UpdateProductDestination = z.infer<typeof updateProductDestinationSchema>
 
 const productTranslationCoreSchema = z.object({
   languageTag: languageTagSchema,
@@ -149,14 +202,30 @@ const productMediaCoreSchema = z.object({
   altText: z.string().max(1000).optional().nullable(),
   sortOrder: z.number().int().default(0),
   isCover: z.boolean().default(false),
+  isBrochure: z.boolean().default(false),
+  isBrochureCurrent: z.boolean().default(false),
+  brochureVersion: z.number().int().min(1).optional().nullable(),
 })
 export const insertProductMediaSchema = productMediaCoreSchema.extend({
   dayId: z.string().optional().nullable(),
 })
 export const updateProductMediaSchema = productMediaCoreSchema.partial()
+export const upsertProductBrochureSchema = productMediaCoreSchema
+  .omit({
+    mediaType: true,
+    isCover: true,
+    isBrochure: true,
+    isBrochureCurrent: true,
+    brochureVersion: true,
+  })
+  .extend({
+    mimeType: z.string().max(255).optional().nullable().default("application/pdf"),
+  })
 export const productMediaListQuerySchema = z.object({
   dayId: z.string().optional(),
   mediaType: productMediaTypeSchema.optional(),
+  isBrochure: booleanQueryParam.optional(),
+  isBrochureCurrent: booleanQueryParam.optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -165,6 +234,7 @@ export const reorderProductMediaSchema = z.object({
 })
 export type InsertProductMedia = z.infer<typeof insertProductMediaSchema>
 export type UpdateProductMedia = z.infer<typeof updateProductMediaSchema>
+export type UpsertProductBrochure = z.infer<typeof upsertProductBrochureSchema>
 export type ProductMediaListQuery = z.infer<typeof productMediaListQuerySchema>
 export type ReorderProductMedia = z.infer<typeof reorderProductMediaSchema>
 

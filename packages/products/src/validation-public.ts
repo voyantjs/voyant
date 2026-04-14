@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import {
   booleanQueryParam,
+  destinationTypeSchema,
   languageTagSchema,
   productBookingModeSchema,
   productCapabilitySchema,
@@ -20,6 +21,12 @@ export const publicCatalogProductListQuerySchema = z.object({
   productTypeId: z.string().optional(),
   categoryId: z.string().optional(),
   tagId: z.string().optional(),
+  destinationId: z.string().optional(),
+  destinationSlug: z.string().trim().min(1).optional(),
+  locationTitle: z.string().trim().min(1).optional(),
+  locationCity: z.string().trim().min(1).optional(),
+  locationCountryCode: z.string().trim().min(2).max(3).optional(),
+  locationType: productLocationTypeSchema.optional(),
   featured: booleanQueryParam.optional(),
   sort: z.enum(["name", "createdAt", "startDate", "price"]).default("name"),
   direction: z.enum(["asc", "desc"]).default("asc"),
@@ -36,6 +43,16 @@ export const publicCatalogCategoryListQuerySchema = z.object({
 
 export const publicCatalogTagListQuerySchema = z.object({
   search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+export const publicCatalogDestinationListQuerySchema = z.object({
+  search: z.string().optional(),
+  parentId: z.string().optional(),
+  active: booleanQueryParam.optional(),
+  languageTag: languageTagSchema.optional(),
+  destinationType: destinationTypeSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(100),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -74,6 +91,9 @@ export const publicCatalogProductMediaSchema = z.object({
   altText: z.string().nullable(),
   sortOrder: z.number().int(),
   isCover: z.boolean(),
+  isBrochure: z.boolean(),
+  isBrochureCurrent: z.boolean(),
+  brochureVersion: z.number().int().nullable(),
 })
 
 export const publicCatalogProductFeatureSchema = z.object({
@@ -103,6 +123,18 @@ export const publicCatalogProductLocationSchema = z.object({
   sortOrder: z.number().int(),
 })
 
+export const publicCatalogDestinationSchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  seoTitle: z.string().nullable(),
+  seoDescription: z.string().nullable(),
+  destinationType: destinationTypeSchema,
+  sortOrder: z.number().int(),
+})
+
 export const publicCatalogProductSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -124,15 +156,17 @@ export const publicCatalogProductSummarySchema = z.object({
   categories: z.array(publicCatalogProductCategorySchema),
   tags: z.array(publicCatalogProductTagSchema),
   capabilities: z.array(productCapabilitySchema),
+  destinations: z.array(publicCatalogDestinationSchema),
+  locations: z.array(publicCatalogProductLocationSchema),
   coverMedia: publicCatalogProductMediaSchema.nullable(),
   isFeatured: z.boolean(),
 })
 
 export const publicCatalogProductDetailSchema = publicCatalogProductSummarySchema.extend({
+  brochure: publicCatalogProductMediaSchema.nullable(),
   media: z.array(publicCatalogProductMediaSchema),
   features: z.array(publicCatalogProductFeatureSchema),
   faqs: z.array(publicCatalogProductFaqSchema),
-  locations: z.array(publicCatalogProductLocationSchema),
 })
 
 export const publicCatalogProductListResponseSchema = z.object({
@@ -156,9 +190,19 @@ export const publicCatalogTagListResponseSchema = z.object({
   offset: z.number().int(),
 })
 
+export const publicCatalogDestinationListResponseSchema = z.object({
+  data: z.array(publicCatalogDestinationSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+})
+
 export type PublicCatalogProductListQuery = z.infer<typeof publicCatalogProductListQuerySchema>
 export type PublicCatalogCategoryListQuery = z.infer<typeof publicCatalogCategoryListQuerySchema>
 export type PublicCatalogTagListQuery = z.infer<typeof publicCatalogTagListQuerySchema>
+export type PublicCatalogDestinationListQuery = z.infer<
+  typeof publicCatalogDestinationListQuerySchema
+>
 export type PublicCatalogProductLookupBySlugQuery = z.infer<
   typeof publicCatalogProductLookupBySlugQuerySchema
 >

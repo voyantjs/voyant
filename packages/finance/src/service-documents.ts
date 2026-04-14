@@ -1,0 +1,363 @@
+import { renderPdfDocument } from "@voyantjs/utils/pdf-renderer"
+import type { StorageProvider, StorageUploadBody } from "@voyantjs/voyant-storage"
+import { and, desc, eq } from "drizzle-orm"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
+
+import {
+  type invoiceLineItems,
+  type invoiceRenditions,
+  type invoices,
+  invoiceTemplates,
+  type payments,
+} from "./schema.js"
+import { financeService, renderInvoiceBody } from "./service.js"
+import type { GenerateInvoiceDocumentInput } from "./validation.js"
+
+export interface GeneratedInvoiceRenditionArtifact {
+  format?: "html" | "pdf" | "xml" | "json"
+  storageKey?: string | null
+  fileSize?: number | null
+  checksum?: string | null
+  language?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
+export interface InvoiceDocumentGeneratorContext {
+  db: PostgresJsDatabase
+  invoice: typeof invoices.$inferSelect
+  template: typeof invoiceTemplates.$inferSelect | null
+  lineItems: Array<typeof invoiceLineItems.$inferSelect>
+  payments: Array<typeof payments.$inferSelect>
+  renderedBody: string
+  renderedBodyFormat: "html" | "markdown" | "lexical_json"
+  variables: Record<string, unknown>
+  bindings: Record<string, unknown>
+  targetFormat: "html" | "pdf" | "xml" | "json"
+  language: string | null
+}
+
+export type InvoiceDocumentGenerator = (
+  context: InvoiceDocumentGeneratorContext,
+) => Promise<GeneratedInvoiceRenditionArtifact>
+
+export interface InvoiceDocumentRuntimeOptions {
+  bindings?: Record<string, unknown>
+  generator: InvoiceDocumentGenerator
+}
+
+export interface StorageBackedInvoiceDocumentUpload {
+  body: StorageUploadBody
+  format?: "html" | "pdf" | "xml" | "json"
+  key?: string | null
+  metadata?: Record<string, unknown> | null
+  language?: string | null
+}
+
+export type StorageBackedInvoiceDocumentSerializer = (
+  context: InvoiceDocumentGeneratorContext,
+) => Promise<StorageBackedInvoiceDocumentUpload> | StorageBackedInvoiceDocumentUpload
+
+export interface StorageBackedInvoiceDocumentGeneratorOptions {
+  storage: StorageProvider
+  keyPrefix?: string | ((context: InvoiceDocumentGeneratorContext) => Promise<string> | string)
+  serializer?: StorageBackedInvoiceDocumentSerializer
+  signedUrlExpiresIn?: number
+}
+
+export interface GeneratedInvoiceDocumentRecord {
+  invoiceId: string
+  renderedBodyFormat: "html" | "markdown" | "lexical_json"
+  renderedBody: string
+  rendition: typeof invoiceRenditions.$inferSelect
+}
+
+type PreparedInvoiceDocument =
+  | { status: "not_found" }
+  | {
+      status: "ready"
+      invoice: typeof invoices.$inferSelect
+      template: typeof invoiceTemplates.$inferSelect | null
+      lineItems: Array<typeof invoiceLineItems.$inferSelect>
+      payments: Array<typeof payments.$inferSelect>
+      renderedBody: string
+      renderedBodyFormat: "html" | "markdown" | "lexical_json"
+      variables: Record<string, unknown>
+      targetFormat: "html" | "pdf" | "xml" | "json"
+      language: string | null
+    }
+
+function defaultInvoiceDocumentMimeType(format: InvoiceDocumentGeneratorContext["targetFormat"]) {
+  switch (format) {
+    case "html":
+      return "text/html; charset=utf-8"
+    case "json":
+      return "application/json; charset=utf-8"
+    case "xml":
+      return "application/xml; charset=utf-8"
+    default:
+      return "application/pdf"
+  }
+}
+
+function encodeStringBody(value: string): Uint8Array {
+  return new TextEncoder().encode(value)
+}
+
+function getBodySize(body: StorageUploadBody) {
+  if (body instanceof Uint8Array) return body.byteLength
+  if (body instanceof ArrayBuffer) return body.byteLength
+  return body.size
+}
+
+function toUploadMetadata(metadata: Record<string, unknown> | null | undefined) {
+  const entries = Object.entries(metadata ?? {}).filter(([, value]) =>
+    ["string", "number", "boolean"].includes(typeof value),
+  )
+
+  return entries.length > 0
+    ? Object.fromEntries(entries.map(([key, value]) => [key, String(value)]))
+    : undefined
+}
+
+export function defaultStorageBackedInvoiceDocumentSerializer(
+  context: InvoiceDocumentGeneratorContext,
+): Promise<StorageBackedInvoiceDocumentUpload> | StorageBackedInvoiceDocumentUpload {
+  switch (context.targetFormat) {
+    case "html":
+      return {
+        body: encodeStringBody(context.renderedBody),
+        format: "html",
+        language: context.language,
+        metadata: { renderedBodyFormat: context.renderedBodyFormat },
+      }
+    case "json":
+      return {
+        body: encodeStringBody(JSON.stringify(context.variables, null, 2)),
+        format: "json",
+        language: context.language,
+        metadata: { renderedBodyFormat: context.renderedBodyFormat },
+      }
+    case "xml":
+      return {
+        body: encodeStringBody(context.renderedBody),
+        format: "xml",
+        language: context.language,
+        metadata: { renderedBodyFormat: context.renderedBodyFormat },
+      }
+    default:
+      return defaultPdfInvoiceDocumentSerializer(context)
+  }
+}
+
+export async function defaultPdfInvoiceDocumentSerializer(
+  context: InvoiceDocumentGeneratorContext,
+): Promise<StorageBackedInvoiceDocumentUpload> {
+  const body = await renderPdfDocument({
+    title: `Invoice ${context.invoice.id}`,
+    content: context.renderedBody,
+    format:
+      context.renderedBodyFormat === "lexical_json"
+        ? "lexical_json"
+        : context.renderedBodyFormat === "html"
+          ? "html"
+          : "markdown",
+    metadataLines: [
+      `Invoice ID: ${context.invoice.id}`,
+      ...(context.language ? [`Language: ${context.language}`] : []),
+    ],
+  })
+
+  return {
+    body,
+    format: "pdf",
+    language: context.language,
+    metadata: {
+      renderedBodyFormat: context.renderedBodyFormat,
+      renderer: "voyant-basic-pdf",
+    },
+  }
+}
+
+export function createStorageBackedInvoiceDocumentGenerator(
+  options: StorageBackedInvoiceDocumentGeneratorOptions,
+): InvoiceDocumentGenerator {
+  const serializer = options.serializer ?? defaultStorageBackedInvoiceDocumentSerializer
+
+  return async (context) => {
+    const upload = await serializer(context)
+    const format = upload.format ?? context.targetFormat
+    const keyPrefix =
+      typeof options.keyPrefix === "function"
+        ? await options.keyPrefix(context)
+        : (options.keyPrefix ?? `invoices/${context.invoice.id}`)
+    const key = upload.key?.trim() || `${keyPrefix.replace(/\/$/, "")}/rendition.${format}`
+    const uploaded = await options.storage.upload(upload.body, {
+      key,
+      contentType: defaultInvoiceDocumentMimeType(format),
+      metadata: toUploadMetadata(upload.metadata),
+    })
+    const downloadUrl =
+      uploaded.url ||
+      (options.signedUrlExpiresIn
+        ? await options.storage.signedUrl(uploaded.key, options.signedUrlExpiresIn)
+        : "")
+
+    return {
+      format,
+      storageKey: uploaded.key,
+      fileSize: getBodySize(upload.body),
+      language: upload.language ?? context.language,
+      metadata: {
+        ...(upload.metadata ?? {}),
+        storageProvider: options.storage.name,
+        ...(uploaded.url ? { url: uploaded.url } : {}),
+        ...(downloadUrl ? { downloadUrl } : {}),
+      },
+    }
+  }
+}
+
+export function createPdfInvoiceDocumentGenerator(
+  options: Omit<StorageBackedInvoiceDocumentGeneratorOptions, "serializer">,
+): InvoiceDocumentGenerator {
+  return createStorageBackedInvoiceDocumentGenerator({
+    ...options,
+    serializer: defaultPdfInvoiceDocumentSerializer,
+  })
+}
+
+async function prepareInvoiceDocument(
+  db: PostgresJsDatabase,
+  invoiceId: string,
+  input: GenerateInvoiceDocumentInput,
+): Promise<PreparedInvoiceDocument> {
+  const invoice = await financeService.getInvoiceById(db, invoiceId)
+  if (!invoice) {
+    return { status: "not_found" }
+  }
+
+  let templateId = input.templateId ?? invoice.templateId ?? null
+  if (!templateId) {
+    const [defaultTemplate] = await db
+      .select()
+      .from(invoiceTemplates)
+      .where(and(eq(invoiceTemplates.isDefault, true), eq(invoiceTemplates.active, true)))
+      .orderBy(desc(invoiceTemplates.updatedAt))
+      .limit(1)
+
+    templateId = defaultTemplate?.id ?? null
+  }
+
+  const [template, lineItems, paymentRows] = await Promise.all([
+    templateId ? financeService.getInvoiceTemplateById(db, templateId) : Promise.resolve(null),
+    financeService.listInvoiceLineItems(db, invoiceId),
+    financeService.listPayments(db, invoiceId),
+  ])
+
+  const renderedBodyFormat = template?.bodyFormat ?? "html"
+  const variables: Record<string, unknown> = {
+    invoice,
+    lineItems,
+    payments: paymentRows,
+  }
+  const renderedBody = template
+    ? renderInvoiceBody(template.body, template.bodyFormat, variables)
+    : JSON.stringify(variables)
+
+  return {
+    status: "ready",
+    invoice,
+    template,
+    lineItems,
+    payments: paymentRows,
+    renderedBody,
+    renderedBodyFormat,
+    variables,
+    targetFormat: input.format,
+    language: input.language ?? invoice.language ?? template?.language ?? null,
+  }
+}
+
+export const financeDocumentsService = {
+  async generateInvoiceDocument(
+    db: PostgresJsDatabase,
+    invoiceId: string,
+    input: GenerateInvoiceDocumentInput,
+    runtime: InvoiceDocumentRuntimeOptions,
+  ): Promise<
+    | { status: "not_found" | "generator_failed" }
+    | ({ status: "generated" } & GeneratedInvoiceDocumentRecord)
+  > {
+    const prepared = await prepareInvoiceDocument(db, invoiceId, input)
+    if (prepared.status === "not_found") {
+      return { status: "not_found" }
+    }
+
+    let artifact: GeneratedInvoiceRenditionArtifact
+    try {
+      artifact = await runtime.generator({
+        db,
+        invoice: prepared.invoice,
+        template: prepared.template,
+        lineItems: prepared.lineItems,
+        payments: prepared.payments,
+        renderedBody: prepared.renderedBody,
+        renderedBodyFormat: prepared.renderedBodyFormat,
+        variables: prepared.variables,
+        bindings: runtime.bindings ?? {},
+        targetFormat: prepared.targetFormat,
+        language: prepared.language,
+      })
+    } catch {
+      return { status: "generator_failed" }
+    }
+
+    if (input.replaceExisting) {
+      const existing = await financeService.listInvoiceRenditions(db, invoiceId)
+      for (const rendition of existing) {
+        if (
+          rendition.format === (artifact.format ?? prepared.targetFormat) &&
+          rendition.status !== "stale"
+        ) {
+          await financeService.updateInvoiceRendition(db, rendition.id, { status: "stale" })
+        }
+      }
+    }
+
+    const rendition = await financeService.createInvoiceRendition(db, invoiceId, {
+      templateId: prepared.template?.id ?? null,
+      format: artifact.format ?? prepared.targetFormat,
+      status: "ready",
+      storageKey: artifact.storageKey ?? null,
+      fileSize: artifact.fileSize ?? null,
+      checksum: artifact.checksum ?? null,
+      language: artifact.language ?? prepared.language ?? null,
+      generatedAt: new Date().toISOString(),
+      metadata: {
+        ...(artifact.metadata ?? {}),
+        renderedBodyFormat: prepared.renderedBodyFormat,
+      },
+    })
+
+    if (!rendition) {
+      return { status: "not_found" }
+    }
+
+    return {
+      status: "generated",
+      invoiceId: prepared.invoice.id,
+      renderedBodyFormat: prepared.renderedBodyFormat,
+      renderedBody: prepared.renderedBody,
+      rendition,
+    }
+  },
+
+  async regenerateInvoiceDocument(
+    db: PostgresJsDatabase,
+    invoiceId: string,
+    input: GenerateInvoiceDocumentInput,
+    runtime: InvoiceDocumentRuntimeOptions,
+  ) {
+    return this.generateInvoiceDocument(db, invoiceId, input, runtime)
+  },
+}

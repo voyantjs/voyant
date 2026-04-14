@@ -11,6 +11,7 @@ import {
   invoices,
   paymentInstruments,
   paymentSessions,
+  payments,
 } from "../../src/schema.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
@@ -295,6 +296,63 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
       documentStatus: "missing",
       downloadUrl: null,
     })
+  })
+
+  it("lists booking-scoped public finance payments with invoice context", async () => {
+    const booking = await seedBooking()
+    const invoice = await seedInvoice(booking.id, {
+      invoiceType: "invoice",
+      totalCents: 50000,
+      paidCents: 30000,
+      balanceDueCents: 20000,
+    })
+
+    await db.insert(payments).values([
+      {
+        invoiceId: invoice.id,
+        amountCents: 10000,
+        currency: "USD",
+        paymentMethod: "credit_card",
+        status: "completed",
+        paymentDate: "2025-06-03",
+        referenceNumber: "PAY-1001",
+      },
+      {
+        invoiceId: invoice.id,
+        amountCents: 20000,
+        currency: "USD",
+        paymentMethod: "bank_transfer",
+        status: "pending",
+        paymentDate: "2025-06-05",
+        referenceNumber: "PAY-1002",
+      },
+    ])
+
+    const res = await app.request(`/bookings/${booking.id}/payments`)
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.bookingId).toBe(booking.id)
+    expect(body.data.payments).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: "invoice",
+        paymentMethod: "bank_transfer",
+        status: "pending",
+        amountCents: 20000,
+        referenceNumber: "PAY-1002",
+      }),
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: "invoice",
+        paymentMethod: "credit_card",
+        status: "completed",
+        amountCents: 10000,
+        referenceNumber: "PAY-1001",
+      }),
+    ])
   })
 
   it("starts and reads a public payment session for a booking schedule", async () => {

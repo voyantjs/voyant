@@ -90,6 +90,14 @@ export function createResendProvider(options: ResendProviderOptions): Notificati
         subject: payload.subject ?? rendered.subject,
         html: payload.html ?? rendered.html,
         text: payload.text ?? rendered.text,
+        attachments: payload.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.contentBase64,
+          path: attachment.path,
+          content_type: attachment.contentType,
+          disposition: attachment.disposition,
+          content_id: attachment.contentId,
+        })),
       }
       const response = await fetchImpl(`${baseUrl}/emails`, {
         method: "POST",

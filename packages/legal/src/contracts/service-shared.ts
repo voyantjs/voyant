@@ -1,3 +1,4 @@
+import { renderStructuredTemplate } from "@voyantjs/utils/template-renderer"
 import { sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
@@ -37,13 +38,6 @@ export function toTimestamp(value?: string | null): Date | null {
   return value ? new Date(value) : null
 }
 
-type LexicalNode = {
-  type?: string
-  text?: string
-  children?: LexicalNode[]
-  [key: string]: unknown
-}
-
 function resolvePath(obj: unknown, path: string): unknown {
   if (obj === null || obj === undefined) return undefined
   const segments: Array<string | number> = []
@@ -70,55 +64,12 @@ function resolvePath(obj: unknown, path: string): unknown {
   return current
 }
 
-function stringifyValue(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
-  return JSON.stringify(value)
-}
-
-const MUSTACHE_RE = /\{\{\s*([^}]+?)\s*\}\}/g
-
-function renderMustache(body: string, variables: Record<string, unknown>): string {
-  return body.replace(MUSTACHE_RE, (_, path: string) => {
-    const resolved = resolvePath(variables, path.trim())
-    return stringifyValue(resolved)
-  })
-}
-
-function walkLexical(node: LexicalNode, variables: Record<string, unknown>): LexicalNode {
-  const next: LexicalNode = { ...node }
-  if (typeof next.text === "string") {
-    next.text = renderMustache(next.text, variables)
-  }
-  if (Array.isArray(next.children)) {
-    next.children = next.children.map((child) => walkLexical(child, variables))
-  }
-  return next
-}
-
 export function renderTemplate(
   body: string,
   bodyFormat: "markdown" | "html" | "lexical_json",
   variables: Record<string, unknown>,
 ): string {
-  if (bodyFormat === "lexical_json") {
-    try {
-      const parsed: unknown = JSON.parse(body)
-      if (parsed && typeof parsed === "object") {
-        const obj = parsed as { root?: unknown } & Record<string, unknown>
-        if (obj.root && typeof obj.root === "object") {
-          const result = { ...obj, root: walkLexical(obj.root as LexicalNode, variables) }
-          return JSON.stringify(result)
-        }
-        return JSON.stringify(walkLexical(obj as LexicalNode, variables))
-      }
-      return body
-    } catch {
-      return renderMustache(body, variables)
-    }
-  }
-  return renderMustache(body, variables)
+  return renderStructuredTemplate(body, bodyFormat, variables)
 }
 
 export function validateTemplateVariables(

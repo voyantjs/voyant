@@ -1,9 +1,15 @@
 "use client"
 
+import { useQueries } from "@tanstack/react-query"
 import {
   type ProductDayServiceRecord,
   useProductDayServiceMutation,
 } from "@voyantjs/products-react"
+import {
+  getSupplierServicesQueryOptions,
+  useSuppliers,
+  useVoyantSuppliersContext,
+} from "@voyantjs/suppliers-react"
 import { Loader2 } from "lucide-react"
 import * as React from "react"
 
@@ -84,6 +90,14 @@ export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayS
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductDayServiceMutation()
+  const suppliersClient = useVoyantSuppliersContext()
+  const suppliersQuery = useSuppliers({ enabled: true, limit: 100 })
+  const supplierServiceQueries = useQueries({
+    queries: (suppliersQuery.data?.data ?? []).map((supplier) => ({
+      ...getSupplierServicesQueryOptions(suppliersClient, supplier.id),
+      enabled: true,
+    })),
+  })
 
   React.useEffect(() => {
     setState(initialState(mode))
@@ -91,12 +105,43 @@ export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayS
   }, [mode])
 
   const isSubmitting = create.isPending || update.isPending
+  const isLoadingSupplierServices =
+    suppliersQuery.isPending || supplierServiceQueries.some((query) => query.isPending)
+  const supplierServiceOptions = React.useMemo(() => {
+    const suppliersById = new Map(
+      (suppliersQuery.data?.data ?? []).map((supplier) => [supplier.id, supplier] as const),
+    )
+
+    return supplierServiceQueries.flatMap((query) => {
+      const services = query.data?.data ?? []
+      return services.map((service) => {
+        const supplier = suppliersById.get(service.supplierId)
+        return {
+          id: service.id,
+          supplierName: supplier?.name ?? "Supplier",
+          service,
+          label: `${supplier?.name ?? "Supplier"} — ${service.name} (${SERVICE_TYPES.find((type) => type.value === service.serviceType)?.label ?? service.serviceType})`,
+        }
+      })
+    })
+  }, [supplierServiceQueries, suppliersQuery.data?.data])
 
   const field =
     <K extends keyof FormState>(key: K) =>
     (value: FormState[K]) => {
       setState((previous) => ({ ...previous, [key]: value }))
     }
+
+  const handleSupplierServiceSelect = (supplierServiceId: string) => {
+    field("supplierServiceId")(supplierServiceId)
+    const option = supplierServiceOptions.find((entry) => entry.id === supplierServiceId)
+    if (!option) {
+      return
+    }
+
+    field("name")(option.service.name)
+    field("serviceType")(option.service.serviceType)
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -163,6 +208,31 @@ export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayS
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isLoadingSupplierServices ? (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label>Supplier service</Label>
+            <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+              Loading supplier services...
+            </div>
+          </div>
+        ) : supplierServiceOptions.length > 0 ? (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label>Supplier service</Label>
+            <Select value={state.supplierServiceId} onValueChange={handleSupplierServiceSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a supplier service" />
+              </SelectTrigger>
+              <SelectContent>
+                {supplierServiceOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1.5">
           <Label>Service type</Label>
           <Select

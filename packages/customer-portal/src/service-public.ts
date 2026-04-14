@@ -4,12 +4,21 @@ import {
   bookingItemParticipants,
   bookingItems,
   bookingParticipants,
+  bookingSessionStates,
   bookings,
 } from "@voyantjs/bookings/schema"
 import { crmService, people } from "@voyantjs/crm"
 import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
+import { type TravelDocument, travelDocumentSchema } from "@voyantjs/db/schema/iam/kms"
+import { invoiceRenditions, invoices, payments } from "@voyantjs/finance/schema"
 import { identityContactPoints } from "@voyantjs/identity/schema"
 import { identityService } from "@voyantjs/identity/service"
+import { contractAttachments, contracts } from "@voyantjs/legal/contracts/schema"
+import {
+  decryptOptionalJsonEnvelope,
+  encryptOptionalJsonEnvelope,
+  type KmsProvider,
+} from "@voyantjs/utils"
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
@@ -17,13 +26,22 @@ import type {
   BootstrapCustomerPortalInput,
   BootstrapCustomerPortalResult,
   CreateCustomerPortalCompanionInput,
+  CustomerPortalAddress,
+  CustomerPortalBookingBillingContact,
   CustomerPortalBookingDetail,
+  CustomerPortalBookingDocument,
+  CustomerPortalBookingFinancialDocument,
+  CustomerPortalBookingFinancials,
+  CustomerPortalBookingPayment,
   CustomerPortalBookingSummary,
   CustomerPortalBootstrapCandidate,
   CustomerPortalCompanion,
   CustomerPortalContactExistsResult,
   CustomerPortalPhoneContactExistsResult,
   CustomerPortalProfile,
+  ImportCustomerPortalBookingParticipantsInput,
+  ImportCustomerPortalBookingParticipantsResult,
+  UpdateCustomerPortalAddressInput,
   UpdateCustomerPortalCompanionInput,
   UpdateCustomerPortalProfileInput,
 } from "./validation-public.js"
@@ -31,6 +49,46 @@ import { customerPortalBookingDetailSchema } from "./validation-public.js"
 
 const linkedCustomerSource = "auth.user"
 const companionMetadataKind = "companion"
+const bookingWizardStateKey = "wizard"
+const peopleKeyRef = { keyType: "people" as const }
+
+interface CustomerPortalServiceOptions {
+  kms?: KmsProvider | null
+}
+
+function resolveMarketingConsentState(params: {
+  currentConsent: boolean | null | undefined
+  currentConsentAt: Date | string | null | undefined
+  currentConsentSource: string | null | undefined
+  nextConsent?: boolean
+  nextConsentSource?: string | null
+}) {
+  const currentConsent = params.currentConsent ?? false
+  const nextConsent = params.nextConsent ?? currentConsent
+  const currentConsentAt =
+    params.currentConsentAt instanceof Date
+      ? params.currentConsentAt
+      : params.currentConsentAt
+        ? new Date(params.currentConsentAt)
+        : null
+  const normalizedNextSource =
+    params.nextConsentSource !== undefined
+      ? (normalizeNullableString(params.nextConsentSource) ?? null)
+      : (params.currentConsentSource ?? null)
+
+  return {
+    marketingConsent: nextConsent,
+    marketingConsentAt:
+      params.nextConsent === undefined
+        ? currentConsentAt
+        : nextConsent
+          ? currentConsent
+            ? (currentConsentAt ?? new Date())
+            : new Date()
+          : null,
+    marketingConsentSource: nextConsent ? normalizedNextSource : null,
+  }
+}
 
 function normalizeDate(value: Date | string | null | undefined) {
   if (!value) {
@@ -69,9 +127,630 @@ function normalizePhone(value: string) {
   return value.trim()
 }
 
+function normalizeCompanionLookupName(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function deriveMiddleName(
+  fullName: string | null | undefined,
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+) {
+  const normalizedFullName = fullName?.trim() ?? ""
+  if (!normalizedFullName) {
+    return null
+  }
+
+  const normalizedFirstName = firstName?.trim() ?? ""
+  const normalizedLastName = lastName?.trim() ?? ""
+  let working = normalizedFullName
+
+  if (normalizedFirstName && working.toLowerCase().startsWith(normalizedFirstName.toLowerCase())) {
+    working = working.slice(normalizedFirstName.length).trim()
+  }
+
+  if (normalizedLastName && working.toLowerCase().endsWith(normalizedLastName.toLowerCase())) {
+    working = working.slice(0, -normalizedLastName.length).trim()
+  }
+
+  return working.length > 0 ? working : null
+}
+
+function toStoredProfileDocumentType(
+  type: "passport" | "id_card" | "visa" | "drivers_license" | "other",
+): "passport" | "national_id" | "visa" | "drivers_license" | "other" {
+  return type === "id_card" ? "national_id" : type
+}
+
+function toPublicProfileDocumentType(
+  type: "passport" | "national_id" | "visa" | "drivers_license" | "other",
+): "passport" | "id_card" | "visa" | "drivers_license" | "other" {
+  return type === "national_id" ? "id_card" : type
+}
+
+function getMetadataRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  return value as Record<string, unknown>
+}
+
+function getMetadataString(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = record?.[key]
+    if (typeof value === "string" && value.length > 0) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function getRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  return value as Record<string, unknown>
+}
+
+function formatCustomerAddress(address: {
+  fullText?: string | null
+  line1?: string | null
+  line2?: string | null
+  city?: string | null
+  region?: string | null
+  postalCode?: string | null
+  country?: string | null
+}) {
+  if (address.fullText) {
+    return address.fullText
+  }
+
+  const parts = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.region,
+    address.postalCode,
+    address.country,
+  ].filter((value): value is string => Boolean(value))
+
+  return parts.length > 0 ? parts.join(", ") : null
+}
+
+function toCustomerAddress(
+  address: Awaited<ReturnType<typeof identityService.listAddressesForEntity>>[number],
+): CustomerPortalAddress {
+  return {
+    id: address.id,
+    label: address.label,
+    fullText: address.fullText ?? null,
+    line1: address.line1 ?? null,
+    line2: address.line2 ?? null,
+    city: address.city ?? null,
+    region: address.region ?? null,
+    postalCode: address.postalCode ?? null,
+    country: address.country ?? null,
+    isPrimary: address.isPrimary,
+  }
+}
+
+function getNestedRecord(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = getRecord(record?.[key])
+    if (value) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function getRecordString(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = record?.[key]
+    if (typeof value === "string") {
+      const trimmed = value.trim()
+      if (trimmed.length > 0) {
+        return trimmed
+      }
+    }
+  }
+
+  return null
+}
+
+function getRecordBoolean(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = record?.[key]
+    if (typeof value === "boolean") {
+      return value
+    }
+  }
+
+  return null
+}
+
+function splitCompanionName(value: string | null | undefined) {
+  const parts = String(value ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    return {
+      firstName: null,
+      middleName: null,
+      lastName: null,
+    }
+  }
+
+  if (parts.length === 1) {
+    return {
+      firstName: parts[0] ?? null,
+      middleName: null,
+      lastName: null,
+    }
+  }
+
+  return {
+    firstName: parts[0] ?? null,
+    middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : null,
+    lastName: parts.at(-1) ?? null,
+  }
+}
+
+function normalizeCompanionAddressRecord(
+  value: Record<string, unknown> | null,
+): CustomerPortalCompanion["person"]["addresses"][number] {
+  return {
+    type: getRecordString(value, ["type"]) ?? null,
+    country: getRecordString(value, ["country"]) ?? null,
+    state: getRecordString(value, ["state", "region"]) ?? null,
+    city: getRecordString(value, ["city"]) ?? null,
+    postalCode: getRecordString(value, ["postalCode", "postal"]) ?? null,
+    addressLine1: getRecordString(value, ["addressLine1", "line1"]) ?? null,
+    addressLine2: getRecordString(value, ["addressLine2", "line2"]) ?? null,
+    isDefault: getRecordBoolean(value, ["isDefault"]) ?? false,
+  }
+}
+
+function normalizeCompanionDocumentRecord(
+  value: Record<string, unknown> | null,
+): CustomerPortalCompanion["person"]["documents"][number] | null {
+  const type = getRecordString(value, ["type"])
+  if (
+    type !== "passport" &&
+    type !== "id_card" &&
+    type !== "visa" &&
+    type !== "drivers_license" &&
+    type !== "other"
+  ) {
+    return null
+  }
+
+  return {
+    type,
+    number: getRecordString(value, ["number"]) ?? null,
+    issuingAuthority: getRecordString(value, ["issuingAuthority"]) ?? null,
+    country: getRecordString(value, ["country", "issuingCountry"]) ?? null,
+    issueDate: getRecordString(value, ["issueDate"]) ?? null,
+    expiryDate: getRecordString(value, ["expiryDate"]) ?? null,
+  }
+}
+
+function getCompanionPersonMetadata(metadata: Record<string, unknown> | null) {
+  const personMetadata = getNestedRecord(metadata, ["person", "traveler", "identity"])
+  const derivedName = splitCompanionName(getRecordString(metadata, ["name"]))
+
+  const addresses = Array.isArray(personMetadata?.addresses)
+    ? personMetadata.addresses
+        .map((value) => normalizeCompanionAddressRecord(getRecord(value)))
+        .filter(Boolean)
+    : []
+  const documents = Array.isArray(personMetadata?.documents)
+    ? personMetadata.documents
+        .map((value) => normalizeCompanionDocumentRecord(getRecord(value)))
+        .filter((value): value is NonNullable<typeof value> => Boolean(value))
+    : []
+
+  return {
+    firstName: getRecordString(personMetadata, ["firstName"]) ?? derivedName.firstName,
+    middleName: getRecordString(personMetadata, ["middleName"]) ?? derivedName.middleName,
+    lastName: getRecordString(personMetadata, ["lastName"]) ?? derivedName.lastName,
+    dateOfBirth: getRecordString(personMetadata, ["dateOfBirth"]) ?? null,
+    addresses,
+    documents,
+  } satisfies CustomerPortalCompanion["person"]
+}
+
+function getCompanionTypeKey(metadata: Record<string, unknown> | null) {
+  return getRecordString(metadata, ["typeKey", "relationshipType"])
+}
+
+function buildStoredCompanionMetadata(input: {
+  existingMetadata?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
+  typeKey?: string | null
+  person?: {
+    firstName?: string | null
+    middleName?: string | null
+    lastName?: string | null
+    dateOfBirth?: string | null
+    addresses?:
+      | Array<{
+          type?: string | null
+          country?: string | null
+          state?: string | null
+          city?: string | null
+          postalCode?: string | null
+          addressLine1?: string | null
+          addressLine2?: string | null
+          isDefault?: boolean
+        }>
+      | undefined
+    documents?:
+      | Array<{
+          type: "passport" | "id_card" | "visa" | "drivers_license" | "other"
+          number?: string | null
+          issuingAuthority?: string | null
+          country?: string | null
+          issueDate?: string | null
+          expiryDate?: string | null
+        }>
+      | undefined
+  }
+}) {
+  const baseMetadata =
+    input.metadata !== undefined
+      ? { ...((input.metadata as Record<string, unknown> | null) ?? {}) }
+      : { ...((input.existingMetadata as Record<string, unknown> | null) ?? {}) }
+
+  baseMetadata.kind = companionMetadataKind
+
+  if (input.typeKey !== undefined) {
+    const typeKey = normalizeNullableString(input.typeKey)
+    if (typeKey) {
+      baseMetadata.typeKey = typeKey
+    } else {
+      delete baseMetadata.typeKey
+    }
+  }
+
+  if (input.person !== undefined) {
+    baseMetadata.person = {
+      firstName: normalizeNullableString(input.person.firstName) ?? null,
+      middleName: normalizeNullableString(input.person.middleName) ?? null,
+      lastName: normalizeNullableString(input.person.lastName) ?? null,
+      dateOfBirth: normalizeNullableString(input.person.dateOfBirth) ?? null,
+      addresses:
+        input.person.addresses?.map((address) => ({
+          type: normalizeNullableString(address.type) ?? null,
+          country: normalizeNullableString(address.country) ?? null,
+          state: normalizeNullableString(address.state) ?? null,
+          city: normalizeNullableString(address.city) ?? null,
+          postalCode: normalizeNullableString(address.postalCode) ?? null,
+          addressLine1: normalizeNullableString(address.addressLine1) ?? null,
+          addressLine2: normalizeNullableString(address.addressLine2) ?? null,
+          isDefault: address.isDefault ?? false,
+        })) ?? [],
+      documents:
+        input.person.documents?.map((document) => ({
+          type: document.type,
+          number: normalizeNullableString(document.number) ?? null,
+          issuingAuthority: normalizeNullableString(document.issuingAuthority) ?? null,
+          country: normalizeNullableString(document.country) ?? null,
+          issueDate: normalizeNullableString(document.issueDate) ?? null,
+          expiryDate: normalizeNullableString(document.expiryDate) ?? null,
+        })) ?? [],
+    }
+  }
+
+  return baseMetadata
+}
+
+function selectPreferredAddress(
+  addresses: Awaited<ReturnType<typeof identityService.listAddressesForEntity>>,
+) {
+  return (
+    addresses.find((address) => address.label === "billing") ??
+    addresses.find((address) => address.isPrimary) ??
+    addresses[0] ??
+    null
+  )
+}
+
+function resolveBillingContactFromSessionPayload(
+  payload: Record<string, unknown> | null | undefined,
+): CustomerPortalBookingBillingContact | null {
+  const root = getRecord(payload)
+  const stepData = getNestedRecord(root, ["stepData", "steps"])
+  const billingRecord =
+    getNestedRecord(root, ["billing", "billingContact", "contact"]) ??
+    getNestedRecord(stepData, ["billing", "billingContact", "contact"])
+
+  const billing = getNestedRecord(billingRecord, ["billing", "contact"]) ?? billingRecord
+
+  if (!billing) {
+    return null
+  }
+
+  return {
+    email: getRecordString(billing, ["email"]),
+    phone: getRecordString(billing, ["phone"]),
+    firstName: getRecordString(billing, ["firstName"]),
+    lastName: getRecordString(billing, ["lastName"]),
+    country: getRecordString(billing, ["country"]),
+    state: getRecordString(billing, ["state", "region"]),
+    city: getRecordString(billing, ["city"]),
+    address1: getRecordString(billing, ["addressLine1", "address1", "line1"]),
+    postal: getRecordString(billing, ["postalCode", "postal", "zip"]),
+  }
+}
+
+function resolveFinanceDocumentFileName(
+  invoiceNumber: string,
+  invoiceType: "invoice" | "proforma" | "credit_note",
+  format: string | null,
+) {
+  const extension = format ?? "pdf"
+  return `${invoiceType}-${invoiceNumber}.${extension}`
+}
+
+async function listLegalDocumentsForBooking(db: PostgresJsDatabase, bookingId: string) {
+  const contractRows = await db
+    .select({
+      id: contracts.id,
+      contractNumber: contracts.contractNumber,
+    })
+    .from(contracts)
+    .where(eq(contracts.bookingId, bookingId))
+    .orderBy(desc(contracts.createdAt))
+
+  if (contractRows.length === 0) {
+    return []
+  }
+
+  const attachmentRows = await db
+    .select()
+    .from(contractAttachments)
+    .where(
+      and(
+        eq(contractAttachments.kind, "document"),
+        or(...contractRows.map((contract) => eq(contractAttachments.contractId, contract.id))),
+      ),
+    )
+    .orderBy(desc(contractAttachments.createdAt))
+
+  const bestAttachmentByContractId = new Map<string, typeof contractAttachments.$inferSelect>()
+  for (const attachment of attachmentRows) {
+    const metadata = getMetadataRecord(attachment.metadata)
+    const downloadUrl = getMetadataString(metadata, ["url", "downloadUrl"])
+    if (!downloadUrl || bestAttachmentByContractId.has(attachment.contractId)) {
+      continue
+    }
+    bestAttachmentByContractId.set(attachment.contractId, attachment)
+  }
+
+  return contractRows.flatMap<CustomerPortalBookingDocument>((contract) => {
+    const attachment = bestAttachmentByContractId.get(contract.id)
+    if (!attachment) {
+      return []
+    }
+
+    const metadata = getMetadataRecord(attachment.metadata)
+    const downloadUrl = getMetadataString(metadata, ["url", "downloadUrl"])
+    if (!downloadUrl) {
+      return []
+    }
+
+    return [
+      {
+        id: attachment.id,
+        source: "legal" as const,
+        participantId: null,
+        type: "contract" as const,
+        fileName: attachment.name,
+        fileUrl: downloadUrl,
+        mimeType: attachment.mimeType ?? null,
+        reference: contract.contractNumber ?? null,
+      },
+    ]
+  })
+}
+
+function resolveFinanceDocumentDownloadUrl(metadata: Record<string, unknown> | null) {
+  return getMetadataString(metadata, [
+    "downloadUrl",
+    "download_url",
+    "signedUrl",
+    "signed_url",
+    "publicUrl",
+    "public_url",
+    "fileUrl",
+    "file_url",
+    "url",
+  ])
+}
+
+function selectBookingSummaryProductTitle(
+  items: Array<{
+    title: string
+    itemType: string
+  }>,
+) {
+  const preferredItem =
+    items.find((item) => item.itemType === "unit") ??
+    items.find((item) => item.itemType === "accommodation") ??
+    items.find((item) => item.itemType === "transport") ??
+    items[0] ??
+    null
+
+  return preferredItem?.title ?? null
+}
+
+function deriveBookingSummaryPaymentStatus(
+  invoicesForBooking: Array<{
+    invoiceType: "invoice" | "proforma" | "credit_note"
+    status: "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "void"
+    paidCents: number
+    balanceDueCents: number
+  }>,
+  fallbackSellAmountCents: number | null,
+) {
+  const activeInvoices = invoicesForBooking.filter(
+    (invoice) => invoice.invoiceType !== "credit_note" && invoice.status !== "void",
+  )
+
+  if (activeInvoices.length === 0) {
+    return fallbackSellAmountCents && fallbackSellAmountCents > 0 ? "unpaid" : "paid"
+  }
+
+  if (
+    activeInvoices.some((invoice) => invoice.status === "overdue" && invoice.balanceDueCents > 0)
+  ) {
+    return "overdue"
+  }
+
+  const totalPaidCents = activeInvoices.reduce(
+    (sum, invoice) => sum + Math.max(0, invoice.paidCents),
+    0,
+  )
+  const totalBalanceDueCents = activeInvoices.reduce(
+    (sum, invoice) => sum + Math.max(0, invoice.balanceDueCents),
+    0,
+  )
+
+  if (totalBalanceDueCents <= 0) {
+    return "paid"
+  }
+
+  if (totalPaidCents > 0) {
+    return "partially_paid"
+  }
+
+  return "unpaid"
+}
+
+async function getFinanceDataForBooking(
+  db: PostgresJsDatabase,
+  bookingId: string,
+): Promise<{
+  documents: CustomerPortalBookingFinancialDocument[]
+  payments: CustomerPortalBookingPayment[]
+  portalDocuments: CustomerPortalBookingDocument[]
+}> {
+  const invoiceRows = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.bookingId, bookingId))
+    .orderBy(desc(invoices.createdAt))
+
+  if (invoiceRows.length === 0) {
+    return { documents: [], payments: [], portalDocuments: [] }
+  }
+
+  const invoiceIds = invoiceRows.map((invoice) => invoice.id)
+  const renditionRows = await db
+    .select()
+    .from(invoiceRenditions)
+    .where(inArray(invoiceRenditions.invoiceId, invoiceIds))
+    .orderBy(desc(invoiceRenditions.createdAt))
+  const paymentRows = await db
+    .select()
+    .from(payments)
+    .where(inArray(payments.invoiceId, invoiceIds))
+    .orderBy(desc(payments.paymentDate), desc(payments.createdAt))
+
+  const renditionByInvoiceId = new Map<string, (typeof invoiceRenditions.$inferSelect)[]>()
+  for (const rendition of renditionRows) {
+    const existing = renditionByInvoiceId.get(rendition.invoiceId) ?? []
+    existing.push(rendition)
+    renditionByInvoiceId.set(rendition.invoiceId, existing)
+  }
+
+  const invoiceById = new Map(invoiceRows.map((invoice) => [invoice.id, invoice]))
+
+  const documents = invoiceRows.map<CustomerPortalBookingFinancialDocument>((invoice) => {
+    const renditions = renditionByInvoiceId.get(invoice.id) ?? []
+    const selectedRendition =
+      renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
+    const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
+    const downloadUrl = resolveFinanceDocumentDownloadUrl(metadata)
+
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceType: invoice.invoiceType,
+      invoiceStatus: invoice.status,
+      currency: invoice.currency,
+      totalCents: invoice.totalCents,
+      paidCents: invoice.paidCents,
+      balanceDueCents: invoice.balanceDueCents,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      documentStatus: selectedRendition?.status ?? "missing",
+      format: selectedRendition?.format ?? null,
+      generatedAt: normalizeDateTime(selectedRendition?.generatedAt ?? null),
+      downloadUrl,
+    }
+  })
+
+  const paymentHistory = paymentRows.flatMap<CustomerPortalBookingPayment>((payment) => {
+    const invoice = invoiceById.get(payment.invoiceId)
+    if (!invoice) {
+      return []
+    }
+
+    return [
+      {
+        id: payment.id,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: invoice.invoiceType,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+        amountCents: payment.amountCents,
+        currency: payment.currency,
+        paymentDate: payment.paymentDate,
+        referenceNumber: payment.referenceNumber ?? null,
+        notes: payment.notes ?? null,
+      },
+    ]
+  })
+
+  const portalDocuments = documents.flatMap<CustomerPortalBookingDocument>((document) => {
+    if (!document.downloadUrl) {
+      return []
+    }
+
+    return [
+      {
+        id: document.invoiceId,
+        source: "finance",
+        participantId: null,
+        type: document.invoiceType,
+        fileName: resolveFinanceDocumentFileName(
+          document.invoiceNumber,
+          document.invoiceType,
+          document.format,
+        ),
+        fileUrl: document.downloadUrl,
+        mimeType: document.format === "pdf" ? "application/pdf" : null,
+        reference: document.invoiceNumber,
+      },
+    ]
+  })
+
+  return { documents, payments: paymentHistory, portalDocuments }
+}
+
 function toCustomerCompanion(
   row: Awaited<ReturnType<typeof identityService.listNamedContactsForEntity>>[number],
 ): CustomerPortalCompanion {
+  const metadata = (row.metadata as Record<string, unknown> | null) ?? null
   return {
     id: row.id,
     role: row.role,
@@ -81,8 +760,28 @@ function toCustomerCompanion(
     phone: row.phone ?? null,
     isPrimary: row.isPrimary,
     notes: row.notes ?? null,
-    metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+    typeKey: getCompanionTypeKey(metadata) ?? null,
+    person: getCompanionPersonMetadata({
+      ...metadata,
+      name: row.name,
+    }),
+    metadata,
   }
+}
+
+function getCompanionLookupKeys(input: {
+  name: string
+  email?: string | null
+  phone?: string | null
+}) {
+  const keys = [normalizeCompanionLookupName(input.name)]
+  if (input.email) {
+    keys.push(`email:${normalizeEmail(input.email)}`)
+  }
+  if (input.phone) {
+    keys.push(`phone:${normalizePhone(input.phone)}`)
+  }
+  return keys
 }
 
 async function getAuthProfileRow(db: PostgresJsDatabase, userId: string) {
@@ -99,8 +798,10 @@ async function getAuthProfileRow(db: PostgresJsDatabase, userId: string) {
       locale: userProfilesTable.locale,
       timezone: userProfilesTable.timezone,
       seatingPreference: userProfilesTable.seatingPreference,
+      documentsEncrypted: userProfilesTable.documentsEncrypted,
       marketingConsent: userProfilesTable.marketingConsent,
       marketingConsentAt: userProfilesTable.marketingConsentAt,
+      marketingConsentSource: userProfilesTable.marketingConsentSource,
       notificationDefaults: userProfilesTable.notificationDefaults,
       uiPrefs: userProfilesTable.uiPrefs,
     })
@@ -110,6 +811,33 @@ async function getAuthProfileRow(db: PostgresJsDatabase, userId: string) {
     .limit(1)
 
   return row ?? null
+}
+
+async function getProfileDocuments(
+  authProfile: Awaited<ReturnType<typeof getAuthProfileRow>>,
+  options?: CustomerPortalServiceOptions,
+) {
+  if (!authProfile?.documentsEncrypted || !options?.kms) {
+    return []
+  }
+
+  const decrypted =
+    (await decryptOptionalJsonEnvelope(
+      options.kms,
+      peopleKeyRef,
+      authProfile.documentsEncrypted,
+      travelDocumentSchema.array(),
+    )) ?? []
+
+  return decrypted.map((document: TravelDocument) => ({
+    type: toPublicProfileDocumentType(document.type),
+    number: document.number,
+    issuingAuthority: document.issuingAuthority ?? null,
+    issuingCountry: document.issuingCountry,
+    nationality: document.nationality ?? null,
+    expiryDate: document.expiryDate,
+    issueDate: document.issueDate ?? null,
+  }))
 }
 
 async function resolveLinkedCustomerRecordId(
@@ -174,6 +902,7 @@ async function listCustomerRecordCandidatesByEmail(
     address: null,
     city: null,
     country: null,
+    billingAddress: null,
     relation: row.relation ?? null,
     status: row.status,
     claimedByAnotherUser: row.source === linkedCustomerSource && Boolean(row.sourceRef),
@@ -235,6 +964,7 @@ async function listCustomerRecordCandidatesByPhone(
     address: null,
     city: null,
     country: null,
+    billingAddress: null,
     relation: row.relation ?? null,
     status: row.status,
     claimedByAnotherUser: row.source === linkedCustomerSource && Boolean(row.sourceRef),
@@ -248,10 +978,15 @@ async function getCustomerRecord(db: PostgresJsDatabase, userId: string) {
     return null
   }
 
-  const person = await crmService.getPersonById(db, personId)
+  const [person, addresses] = await Promise.all([
+    crmService.getPersonById(db, personId),
+    identityService.listAddressesForEntity(db, "person", personId),
+  ])
   if (!person) {
     return null
   }
+
+  const billingAddress = selectPreferredAddress(addresses)
 
   return {
     id: person.id,
@@ -265,9 +1000,54 @@ async function getCustomerRecord(db: PostgresJsDatabase, userId: string) {
     address: person.address ?? null,
     city: person.city ?? null,
     country: person.country ?? null,
+    billingAddress: billingAddress ? toCustomerAddress(billingAddress) : null,
     relation: person.relation ?? null,
     status: person.status,
   }
+}
+
+async function upsertCustomerBillingAddress(
+  db: PostgresJsDatabase,
+  personId: string,
+  input: UpdateCustomerPortalAddressInput,
+  fallback?: {
+    address?: string | null
+    city?: string | null
+    country?: string | null
+  },
+) {
+  const existingAddresses = await identityService.listAddressesForEntity(db, "person", personId)
+  const existingAddress = selectPreferredAddress(existingAddresses)
+  const fallbackAddress = normalizeNullableString(fallback?.address)
+  const fallbackCity = normalizeNullableString(fallback?.city)
+  const fallbackCountry = normalizeNullableString(fallback?.country)
+
+  const merged = {
+    label: input.label ?? existingAddress?.label ?? "billing",
+    fullText:
+      normalizeNullableString(input.fullText) ??
+      (input.line1 === undefined ? fallbackAddress : null) ??
+      existingAddress?.fullText ??
+      null,
+    line1: normalizeNullableString(input.line1) ?? existingAddress?.line1 ?? null,
+    line2: normalizeNullableString(input.line2) ?? existingAddress?.line2 ?? null,
+    city: normalizeNullableString(input.city) ?? fallbackCity ?? existingAddress?.city ?? null,
+    region: normalizeNullableString(input.region) ?? existingAddress?.region ?? null,
+    postalCode: normalizeNullableString(input.postalCode) ?? existingAddress?.postalCode ?? null,
+    country:
+      normalizeNullableString(input.country) ?? fallbackCountry ?? existingAddress?.country ?? null,
+    isPrimary: input.isPrimary ?? existingAddress?.isPrimary ?? existingAddresses.length === 0,
+  }
+
+  if (existingAddress) {
+    return identityService.updateAddress(db, existingAddress.id, merged)
+  }
+
+  return identityService.createAddress(db, {
+    entityType: "person",
+    entityId: personId,
+    ...merged,
+  })
 }
 
 async function getAccessibleBookingIds(
@@ -305,16 +1085,125 @@ async function getAccessibleBookingIds(
   )
 }
 
+async function hasBookingAccess(params: {
+  db: PostgresJsDatabase
+  bookingId: string
+  userId: string
+  authEmail: string
+  linkedPersonId: string | null
+}) {
+  const ownershipConditions = [sql`lower(${bookingParticipants.email}) = ${params.authEmail}`]
+
+  if (params.linkedPersonId) {
+    ownershipConditions.push(eq(bookingParticipants.personId, params.linkedPersonId))
+  }
+
+  const [participantMatch, bookingMatch] = await Promise.all([
+    params.db
+      .select({ bookingId: bookingParticipants.bookingId })
+      .from(bookingParticipants)
+      .where(and(eq(bookingParticipants.bookingId, params.bookingId), or(...ownershipConditions)))
+      .limit(1),
+    params.linkedPersonId
+      ? params.db
+          .select({ bookingId: bookings.id })
+          .from(bookings)
+          .where(
+            and(eq(bookings.id, params.bookingId), eq(bookings.personId, params.linkedPersonId)),
+          )
+          .limit(1)
+      : Promise.resolve([]),
+  ])
+
+  return Boolean(participantMatch[0] || bookingMatch[0])
+}
+
+async function getBookingBillingContact(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  customerRecord: Awaited<ReturnType<typeof getCustomerRecord>> | null,
+): Promise<CustomerPortalBookingBillingContact | null> {
+  const [stateRows, primaryParticipantRows] = await Promise.all([
+    db
+      .select({ payload: bookingSessionStates.payload })
+      .from(bookingSessionStates)
+      .where(
+        and(
+          eq(bookingSessionStates.bookingId, bookingId),
+          eq(bookingSessionStates.stateKey, bookingWizardStateKey),
+        ),
+      )
+      .limit(1),
+    db
+      .select({
+        firstName: bookingParticipants.firstName,
+        lastName: bookingParticipants.lastName,
+        email: bookingParticipants.email,
+        phone: bookingParticipants.phone,
+      })
+      .from(bookingParticipants)
+      .where(
+        and(eq(bookingParticipants.bookingId, bookingId), eq(bookingParticipants.isPrimary, true)),
+      )
+      .orderBy(asc(bookingParticipants.createdAt))
+      .limit(1),
+  ])
+
+  const stateRow = stateRows[0] ?? null
+  const primaryParticipant = primaryParticipantRows[0] ?? null
+
+  const sessionBillingContact = resolveBillingContactFromSessionPayload(stateRow?.payload ?? null)
+  const billingAddress = customerRecord?.billingAddress ?? null
+
+  const result: CustomerPortalBookingBillingContact = {
+    email:
+      sessionBillingContact?.email ?? primaryParticipant?.email ?? customerRecord?.email ?? null,
+    phone:
+      sessionBillingContact?.phone ?? primaryParticipant?.phone ?? customerRecord?.phone ?? null,
+    firstName:
+      sessionBillingContact?.firstName ??
+      primaryParticipant?.firstName ??
+      customerRecord?.firstName ??
+      null,
+    lastName:
+      sessionBillingContact?.lastName ??
+      primaryParticipant?.lastName ??
+      customerRecord?.lastName ??
+      null,
+    country:
+      sessionBillingContact?.country ?? billingAddress?.country ?? customerRecord?.country ?? null,
+    state: sessionBillingContact?.state ?? billingAddress?.region ?? null,
+    city: sessionBillingContact?.city ?? billingAddress?.city ?? customerRecord?.city ?? null,
+    address1: sessionBillingContact?.address1 ?? billingAddress?.line1 ?? null,
+    postal: sessionBillingContact?.postal ?? billingAddress?.postalCode ?? null,
+  }
+
+  const hasValue = Object.values(result).some(
+    (value) => typeof value === "string" && value.length > 0,
+  )
+  return hasValue ? result : null
+}
+
 async function buildBookingDetail(
   db: PostgresJsDatabase,
   bookingId: string,
+  customerRecord: Awaited<ReturnType<typeof getCustomerRecord>> | null = null,
 ): Promise<CustomerPortalBookingDetail | null> {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1)
   if (!booking) {
     return null
   }
 
-  const [participants, items, itemParticipantLinks, documents, fulfillments] = await Promise.all([
+  const [
+    participants,
+    items,
+    itemParticipantLinks,
+    documents,
+    fulfillments,
+    legalDocuments,
+    financeData,
+    billingContact,
+  ] = await Promise.all([
     db
       .select()
       .from(bookingParticipants)
@@ -347,6 +1236,9 @@ async function buildBookingDetail(
       .from(bookingFulfillments)
       .where(eq(bookingFulfillments.bookingId, booking.id))
       .orderBy(asc(bookingFulfillments.createdAt)),
+    listLegalDocumentsForBooking(db, booking.id),
+    getFinanceDataForBooking(db, booking.id),
+    getBookingBillingContact(db, booking.id, customerRecord),
   ])
 
   const itemLinksByItemId = new Map<
@@ -370,6 +1262,26 @@ async function buildBookingDetail(
     itemLinksByItemId.set(link.bookingItemId, existing)
   }
 
+  const unifiedDocuments: CustomerPortalBookingDocument[] = [
+    ...documents.map((document: (typeof documents)[number]) => ({
+      id: document.id,
+      source: "booking_document" as const,
+      participantId: document.participantId ?? null,
+      type: document.type,
+      fileName: document.fileName,
+      fileUrl: document.fileUrl,
+      mimeType: null,
+      reference: null,
+    })),
+    ...legalDocuments,
+    ...financeData.portalDocuments,
+  ]
+
+  const financials: CustomerPortalBookingFinancials = {
+    documents: financeData.documents,
+    payments: financeData.payments,
+  }
+
   return customerPortalBookingDetailSchema.parse({
     bookingId: booking.id,
     bookingNumber: booking.bookingNumber,
@@ -382,14 +1294,14 @@ async function buildBookingDetail(
     confirmedAt: normalizeDateTime(booking.confirmedAt),
     cancelledAt: normalizeDateTime(booking.cancelledAt),
     completedAt: normalizeDateTime(booking.completedAt),
-    participants: participants.map((participant) => ({
+    participants: participants.map((participant: (typeof participants)[number]) => ({
       id: participant.id,
       participantType: participant.participantType,
       firstName: participant.firstName,
       lastName: participant.lastName,
       isPrimary: participant.isPrimary,
     })),
-    items: items.map((item) => ({
+    items: items.map((item: (typeof items)[number]) => ({
       id: item.id,
       title: item.title,
       description: item.description ?? null,
@@ -405,14 +1317,10 @@ async function buildBookingDetail(
       notes: item.notes ?? null,
       participantLinks: itemLinksByItemId.get(item.id) ?? [],
     })),
-    documents: documents.map((document) => ({
-      id: document.id,
-      participantId: document.participantId ?? null,
-      type: document.type,
-      fileName: document.fileName,
-      fileUrl: document.fileUrl,
-    })),
-    fulfillments: fulfillments.map((fulfillment) => ({
+    billingContact,
+    documents: unifiedDocuments,
+    financials,
+    fulfillments: fulfillments.map((fulfillment: (typeof fulfillments)[number]) => ({
       id: fulfillment.id,
       bookingItemId: fulfillment.bookingItemId ?? null,
       participantId: fulfillment.participantId ?? null,
@@ -467,6 +1375,14 @@ export const publicCustomerPortalService = {
   },
 
   async getProfile(db: PostgresJsDatabase, userId: string): Promise<CustomerPortalProfile | null> {
+    return this.getProfileWithOptions(db, userId)
+  },
+
+  async getProfileWithOptions(
+    db: PostgresJsDatabase,
+    userId: string,
+    options?: CustomerPortalServiceOptions,
+  ): Promise<CustomerPortalProfile | null> {
     const [authProfile, customerRecord] = await Promise.all([
       getAuthProfileRow(db, userId),
       getCustomerRecord(db, userId),
@@ -476,18 +1392,35 @@ export const publicCustomerPortalService = {
       return null
     }
 
+    const documents = await getProfileDocuments(authProfile, options)
+    const billingAddress = customerRecord?.billingAddress ?? null
+
     return {
       userId: authProfile.id,
       email: authProfile.email,
       emailVerified: authProfile.emailVerified,
       firstName: authProfile.firstName ?? null,
+      middleName: deriveMiddleName(authProfile.name, authProfile.firstName, authProfile.lastName),
       lastName: authProfile.lastName ?? null,
       avatarUrl: authProfile.avatarUrl ?? authProfile.image ?? null,
       locale: authProfile.locale ?? "en",
       timezone: authProfile.timezone ?? null,
       seatingPreference: authProfile.seatingPreference ?? null,
+      dateOfBirth: customerRecord?.birthday ?? null,
+      address: billingAddress
+        ? {
+            country: billingAddress.country,
+            state: billingAddress.region,
+            city: billingAddress.city,
+            postalCode: billingAddress.postalCode,
+            addressLine1: billingAddress.line1,
+            addressLine2: billingAddress.line2,
+          }
+        : null,
+      documents,
       marketingConsent: authProfile.marketingConsent ?? false,
       marketingConsentAt: normalizeDateTime(authProfile.marketingConsentAt),
+      marketingConsentSource: authProfile.marketingConsentSource ?? null,
       notificationDefaults:
         (authProfile.notificationDefaults as Record<string, unknown> | null) ?? null,
       uiPrefs: (authProfile.uiPrefs as Record<string, unknown> | null) ?? null,
@@ -502,6 +1435,17 @@ export const publicCustomerPortalService = {
   ): Promise<
     { profile: CustomerPortalProfile } | { error: "not_found" | "customer_record_required" }
   > {
+    return this.updateProfileWithOptions(db, userId, input)
+  },
+
+  async updateProfileWithOptions(
+    db: PostgresJsDatabase,
+    userId: string,
+    input: UpdateCustomerPortalProfileInput,
+    options?: CustomerPortalServiceOptions,
+  ): Promise<
+    { profile: CustomerPortalProfile } | { error: "not_found" | "customer_record_required" }
+  > {
     const authProfile = await getAuthProfileRow(db, userId)
     if (!authProfile) {
       return { error: "not_found" }
@@ -512,9 +1456,59 @@ export const publicCustomerPortalService = {
       return { error: "customer_record_required" }
     }
 
+    const existingMiddleName = deriveMiddleName(
+      authProfile.name,
+      authProfile.firstName,
+      authProfile.lastName,
+    )
     const nextFirstName = input.firstName ?? authProfile.firstName ?? null
+    const nextMiddleName = input.middleName ?? existingMiddleName
     const nextLastName = input.lastName ?? authProfile.lastName ?? null
-    const nextDisplayName = [nextFirstName, nextLastName].filter(Boolean).join(" ").trim()
+    const nextDisplayName = [nextFirstName, nextMiddleName, nextLastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim()
+    const nextMarketingConsent = resolveMarketingConsentState({
+      currentConsent: authProfile.marketingConsent,
+      currentConsentAt: authProfile.marketingConsentAt,
+      currentConsentSource: authProfile.marketingConsentSource,
+      nextConsent: input.marketingConsent,
+      nextConsentSource: input.marketingConsentSource,
+    })
+
+    const nextDateOfBirth = input.dateOfBirth !== undefined ? input.dateOfBirth : undefined
+    const nextAddressRecord =
+      input.address !== undefined
+        ? {
+            city: input.address.city,
+            country: input.address.country,
+            billingAddress: {
+              line1: input.address.addressLine1,
+              line2: input.address.addressLine2,
+              city: input.address.city,
+              region: input.address.state,
+              postalCode: input.address.postalCode,
+              country: input.address.country,
+            },
+          }
+        : undefined
+
+    const documentsEncrypted =
+      input.documents !== undefined && options?.kms
+        ? await encryptOptionalJsonEnvelope(
+            options.kms,
+            peopleKeyRef,
+            input.documents.map((document) => ({
+              type: toStoredProfileDocumentType(document.type),
+              number: document.number,
+              issuingAuthority: document.issuingAuthority ?? undefined,
+              issuingCountry: document.issuingCountry,
+              nationality: document.nationality ?? undefined,
+              expiryDate: document.expiryDate,
+              issueDate: document.issueDate ?? undefined,
+            })),
+          )
+        : undefined
 
     await db
       .insert(userProfilesTable)
@@ -522,6 +1516,7 @@ export const publicCustomerPortalService = {
         id: userId,
         firstName: nextFirstName,
         lastName: nextLastName,
+        ...(documentsEncrypted !== undefined ? { documentsEncrypted } : {}),
         avatarUrl: input.avatarUrl ?? authProfile.avatarUrl ?? authProfile.image ?? null,
         locale: input.locale ?? authProfile.locale ?? "en",
         timezone: input.timezone !== undefined ? input.timezone : (authProfile.timezone ?? null),
@@ -529,18 +1524,9 @@ export const publicCustomerPortalService = {
           input.seatingPreference !== undefined
             ? input.seatingPreference
             : (authProfile.seatingPreference ?? null),
-        marketingConsent:
-          input.marketingConsent !== undefined
-            ? input.marketingConsent
-            : (authProfile.marketingConsent ?? false),
-        marketingConsentAt:
-          input.marketingConsent === undefined
-            ? (authProfile.marketingConsentAt ?? null)
-            : input.marketingConsent
-              ? authProfile.marketingConsent
-                ? (authProfile.marketingConsentAt ?? new Date())
-                : new Date()
-              : null,
+        marketingConsent: nextMarketingConsent.marketingConsent,
+        marketingConsentAt: nextMarketingConsent.marketingConsentAt,
+        marketingConsentSource: nextMarketingConsent.marketingConsentSource,
         notificationDefaults:
           input.notificationDefaults !== undefined
             ? input.notificationDefaults
@@ -555,6 +1541,7 @@ export const publicCustomerPortalService = {
         set: {
           firstName: nextFirstName,
           lastName: nextLastName,
+          ...(documentsEncrypted !== undefined ? { documentsEncrypted } : {}),
           avatarUrl: input.avatarUrl ?? authProfile.avatarUrl ?? authProfile.image ?? null,
           locale: input.locale ?? authProfile.locale ?? "en",
           timezone: input.timezone !== undefined ? input.timezone : (authProfile.timezone ?? null),
@@ -562,18 +1549,9 @@ export const publicCustomerPortalService = {
             input.seatingPreference !== undefined
               ? input.seatingPreference
               : (authProfile.seatingPreference ?? null),
-          marketingConsent:
-            input.marketingConsent !== undefined
-              ? input.marketingConsent
-              : (authProfile.marketingConsent ?? false),
-          marketingConsentAt:
-            input.marketingConsent === undefined
-              ? (authProfile.marketingConsentAt ?? null)
-              : input.marketingConsent
-                ? authProfile.marketingConsent
-                  ? (authProfile.marketingConsentAt ?? new Date())
-                  : new Date()
-                : null,
+          marketingConsent: nextMarketingConsent.marketingConsent,
+          marketingConsentAt: nextMarketingConsent.marketingConsentAt,
+          marketingConsentSource: nextMarketingConsent.marketingConsentSource,
           notificationDefaults:
             input.notificationDefaults !== undefined
               ? input.notificationDefaults
@@ -596,9 +1574,32 @@ export const publicCustomerPortalService = {
       .where(eq(authUser.id, userId))
 
     if (customerRecordId) {
-      const nextCustomerRecord = input.customerRecord
+      const nextCustomerRecord =
+        input.customerRecord !== undefined ||
+        nextDateOfBirth !== undefined ||
+        nextAddressRecord !== undefined
+          ? {
+              ...(input.customerRecord ?? {}),
+              ...(nextDateOfBirth !== undefined ? { birthday: nextDateOfBirth } : {}),
+              ...(nextAddressRecord ?? {}),
+            }
+          : undefined
 
       if (nextCustomerRecord || input.firstName !== undefined || input.lastName !== undefined) {
+        const billingAddress =
+          nextCustomerRecord?.billingAddress !== undefined
+            ? await upsertCustomerBillingAddress(
+                db,
+                customerRecordId,
+                nextCustomerRecord.billingAddress,
+                {
+                  address: nextCustomerRecord.address,
+                  city: nextCustomerRecord.city,
+                  country: nextCustomerRecord.country,
+                },
+              )
+            : null
+
         await crmService.updatePerson(db, customerRecordId, {
           ...(input.firstName !== undefined ? { firstName: input.firstName ?? "" } : {}),
           ...(input.lastName !== undefined ? { lastName: input.lastName ?? "" } : {}),
@@ -619,11 +1620,31 @@ export const publicCustomerPortalService = {
           ...(nextCustomerRecord?.country !== undefined
             ? { country: nextCustomerRecord.country }
             : {}),
+          ...(nextCustomerRecord?.billingAddress !== undefined
+            ? {
+                address:
+                  nextCustomerRecord.address !== undefined
+                    ? nextCustomerRecord.address
+                    : formatCustomerAddress(billingAddress ?? nextCustomerRecord.billingAddress),
+                city:
+                  nextCustomerRecord.city !== undefined
+                    ? nextCustomerRecord.city
+                    : (normalizeNullableString(nextCustomerRecord.billingAddress.city) ??
+                      billingAddress?.city ??
+                      null),
+                country:
+                  nextCustomerRecord.country !== undefined
+                    ? nextCustomerRecord.country
+                    : (normalizeNullableString(nextCustomerRecord.billingAddress.country) ??
+                      billingAddress?.country ??
+                      null),
+              }
+            : {}),
         })
       }
     }
 
-    const profile = await this.getProfile(db, userId)
+    const profile = await this.getProfileWithOptions(db, userId, options)
     if (!profile) {
       return { error: "not_found" }
     }
@@ -660,19 +1681,29 @@ export const publicCustomerPortalService = {
     const nextLastName =
       input.lastName ?? authProfile.lastName ?? authProfile.name.split(" ").slice(1).join(" ") ?? ""
 
-    if (input.marketingConsent !== undefined) {
+    if (input.marketingConsent !== undefined || input.marketingConsentSource !== undefined) {
+      const nextMarketingConsent = resolveMarketingConsentState({
+        currentConsent: authProfile.marketingConsent,
+        currentConsentAt: authProfile.marketingConsentAt,
+        currentConsentSource: authProfile.marketingConsentSource,
+        nextConsent: input.marketingConsent,
+        nextConsentSource: input.marketingConsentSource,
+      })
+
       await db
         .insert(userProfilesTable)
         .values({
           id: userId,
-          marketingConsent: input.marketingConsent,
-          marketingConsentAt: input.marketingConsent ? new Date() : null,
+          marketingConsent: nextMarketingConsent.marketingConsent,
+          marketingConsentAt: nextMarketingConsent.marketingConsentAt,
+          marketingConsentSource: nextMarketingConsent.marketingConsentSource,
         })
         .onConflictDoUpdate({
           target: userProfilesTable.id,
           set: {
-            marketingConsent: input.marketingConsent,
-            marketingConsentAt: input.marketingConsent ? new Date() : null,
+            marketingConsent: nextMarketingConsent.marketingConsent,
+            marketingConsentAt: nextMarketingConsent.marketingConsentAt,
+            marketingConsentSource: nextMarketingConsent.marketingConsentSource,
             updatedAt: new Date(),
           },
         })
@@ -714,10 +1745,39 @@ export const publicCustomerPortalService = {
         ...(input.customerRecord?.country !== undefined
           ? { country: input.customerRecord.country }
           : {}),
+        ...(input.customerRecord?.billingAddress !== undefined
+          ? {
+              address:
+                input.customerRecord.address !== undefined
+                  ? input.customerRecord.address
+                  : formatCustomerAddress(input.customerRecord.billingAddress),
+              city:
+                input.customerRecord.city !== undefined
+                  ? input.customerRecord.city
+                  : (normalizeNullableString(input.customerRecord.billingAddress.city) ?? null),
+              country:
+                input.customerRecord.country !== undefined
+                  ? input.customerRecord.country
+                  : (normalizeNullableString(input.customerRecord.billingAddress.country) ?? null),
+            }
+          : {}),
       })
 
       if (!updated) {
         return { error: "customer_record_not_found" }
+      }
+
+      if (input.customerRecord?.billingAddress) {
+        await upsertCustomerBillingAddress(
+          db,
+          input.customerRecordId,
+          input.customerRecord.billingAddress,
+          {
+            address: input.customerRecord.address,
+            city: input.customerRecord.city,
+            country: input.customerRecord.country,
+          },
+        )
       }
 
       const profile = await this.getProfile(db, userId)
@@ -763,13 +1823,36 @@ export const publicCustomerPortalService = {
       email: normalizedEmail,
       phone: input.customerRecord?.phone ?? null,
       website: null,
-      address: input.customerRecord?.address ?? null,
-      city: input.customerRecord?.city ?? null,
-      country: input.customerRecord?.country ?? null,
+      address:
+        input.customerRecord?.billingAddress !== undefined
+          ? input.customerRecord.address !== undefined
+            ? input.customerRecord.address
+            : formatCustomerAddress(input.customerRecord.billingAddress)
+          : (input.customerRecord?.address ?? null),
+      city:
+        input.customerRecord?.billingAddress !== undefined
+          ? input.customerRecord.city !== undefined
+            ? input.customerRecord.city
+            : (normalizeNullableString(input.customerRecord.billingAddress.city) ?? null)
+          : (input.customerRecord?.city ?? null),
+      country:
+        input.customerRecord?.billingAddress !== undefined
+          ? input.customerRecord.country !== undefined
+            ? input.customerRecord.country
+            : (normalizeNullableString(input.customerRecord.billingAddress.country) ?? null)
+          : (input.customerRecord?.country ?? null),
     })
 
     if (!created) {
       return { error: "not_found" }
+    }
+
+    if (input.customerRecord?.billingAddress) {
+      await upsertCustomerBillingAddress(db, created.id, input.customerRecord.billingAddress, {
+        address: input.customerRecord.address,
+        city: input.customerRecord.city,
+        country: input.customerRecord.country,
+      })
     }
 
     const profile = await this.getProfile(db, userId)
@@ -796,6 +1879,117 @@ export const publicCustomerPortalService = {
       .map(toCustomerCompanion)
   },
 
+  async importBookingParticipantsAsCompanions(
+    db: PostgresJsDatabase,
+    userId: string,
+    input: ImportCustomerPortalBookingParticipantsInput,
+  ): Promise<ImportCustomerPortalBookingParticipantsResult | null> {
+    const authProfile = await getAuthProfileRow(db, userId)
+    const personId = await resolveLinkedCustomerRecordId(db, userId)
+    if (!authProfile || !personId) {
+      return null
+    }
+
+    const accessibleBookingIds = await getAccessibleBookingIds(db, {
+      userId,
+      email: authProfile.email,
+    })
+    const targetBookingIds =
+      input.bookingIds?.filter((bookingId) => accessibleBookingIds.includes(bookingId)) ??
+      accessibleBookingIds
+
+    if (targetBookingIds.length === 0) {
+      return { created: [], skippedCount: 0 }
+    }
+
+    const [existingCompanionRows, participantRows] = await Promise.all([
+      identityService.listNamedContactsForEntity(db, "person", personId),
+      db
+        .select()
+        .from(bookingParticipants)
+        .where(inArray(bookingParticipants.bookingId, targetBookingIds))
+        .orderBy(asc(bookingParticipants.createdAt)),
+    ])
+
+    const existingKeys = new Set(
+      existingCompanionRows
+        .filter(
+          (row) =>
+            ((row.metadata as Record<string, unknown> | null)?.kind ?? null) ===
+            companionMetadataKind,
+        )
+        .flatMap((row) =>
+          getCompanionLookupKeys({
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+          }),
+        ),
+    )
+
+    let skippedCount = 0
+    const created: CustomerPortalCompanion[] = []
+
+    for (const participant of participantRows) {
+      if (participant.participantType === "staff") {
+        skippedCount += 1
+        continue
+      }
+
+      const name = `${participant.firstName} ${participant.lastName}`.trim()
+      if (!name) {
+        skippedCount += 1
+        continue
+      }
+
+      const email = normalizeNullableString(participant.email)
+      const phone = normalizeNullableString(participant.phone)
+      const lookupKeys = getCompanionLookupKeys({ name, email, phone })
+
+      if (lookupKeys.some((key) => existingKeys.has(key))) {
+        skippedCount += 1
+        continue
+      }
+
+      const row = await identityService.createNamedContact(db, {
+        entityType: "person",
+        entityId: personId,
+        role: "general",
+        name,
+        title: null,
+        email,
+        phone,
+        isPrimary: false,
+        notes: normalizeNullableString(participant.notes),
+        metadata: buildStoredCompanionMetadata({
+          metadata: {
+            source: "booking_participant_import",
+            bookingId: participant.bookingId,
+            participantId: participant.id,
+            participantType: participant.participantType,
+            travelerCategory: participant.travelerCategory ?? null,
+          },
+          person: {
+            firstName: participant.firstName,
+            lastName: participant.lastName,
+          },
+        }),
+      })
+
+      if (!row) {
+        skippedCount += 1
+        continue
+      }
+
+      created.push(toCustomerCompanion(row))
+      for (const key of lookupKeys) {
+        existingKeys.add(key)
+      }
+    }
+
+    return { created, skippedCount }
+  },
+
   async createCompanion(
     db: PostgresJsDatabase,
     userId: string,
@@ -816,10 +2010,11 @@ export const publicCustomerPortalService = {
       phone: normalizeNullableString(input.phone),
       isPrimary: input.isPrimary,
       notes: normalizeNullableString(input.notes),
-      metadata: {
-        kind: companionMetadataKind,
-        ...((input.metadata as Record<string, unknown> | null) ?? {}),
-      },
+      metadata: buildStoredCompanionMetadata({
+        metadata: (input.metadata as Record<string, unknown> | null) ?? undefined,
+        typeKey: input.typeKey,
+        person: input.person,
+      }),
     })
 
     return row ? toCustomerCompanion(row) : null
@@ -855,12 +2050,16 @@ export const publicCustomerPortalService = {
       ...(input.phone !== undefined ? { phone: normalizeNullableString(input.phone) } : {}),
       ...(input.isPrimary !== undefined ? { isPrimary: input.isPrimary } : {}),
       ...(input.notes !== undefined ? { notes: normalizeNullableString(input.notes) } : {}),
-      ...(input.metadata !== undefined
+      ...(input.metadata !== undefined || input.typeKey !== undefined || input.person !== undefined
         ? {
-            metadata: {
-              kind: companionMetadataKind,
-              ...(input.metadata ?? {}),
-            },
+            metadata: buildStoredCompanionMetadata({
+              existingMetadata: (existing.metadata as Record<string, unknown> | null) ?? undefined,
+              ...(input.metadata !== undefined
+                ? { metadata: (input.metadata as Record<string, unknown> | null) ?? null }
+                : {}),
+              ...(input.typeKey !== undefined ? { typeKey: input.typeKey } : {}),
+              ...(input.person !== undefined ? { person: input.person } : {}),
+            }),
           }
         : {}),
     })
@@ -910,7 +2109,7 @@ export const publicCustomerPortalService = {
       return []
     }
 
-    const [bookingRows, participantRows] = await Promise.all([
+    const [bookingRows, participantRows, itemRows, invoiceRows] = await Promise.all([
       db
         .select()
         .from(bookings)
@@ -921,6 +2120,28 @@ export const publicCustomerPortalService = {
         .from(bookingParticipants)
         .where(inArray(bookingParticipants.bookingId, bookingIds))
         .orderBy(asc(bookingParticipants.createdAt)),
+      db
+        .select({
+          bookingId: bookingItems.bookingId,
+          title: bookingItems.title,
+          itemType: bookingItems.itemType,
+          createdAt: bookingItems.createdAt,
+        })
+        .from(bookingItems)
+        .where(inArray(bookingItems.bookingId, bookingIds))
+        .orderBy(asc(bookingItems.createdAt)),
+      db
+        .select({
+          bookingId: invoices.bookingId,
+          invoiceType: invoices.invoiceType,
+          status: invoices.status,
+          paidCents: invoices.paidCents,
+          balanceDueCents: invoices.balanceDueCents,
+          createdAt: invoices.createdAt,
+        })
+        .from(invoices)
+        .where(inArray(invoices.bookingId, bookingIds))
+        .orderBy(desc(invoices.createdAt)),
     ])
 
     const participantsByBookingId = new Map<string, typeof participantRows>()
@@ -930,8 +2151,24 @@ export const publicCustomerPortalService = {
       participantsByBookingId.set(participant.bookingId, bucket)
     }
 
+    const itemsByBookingId = new Map<string, typeof itemRows>()
+    for (const item of itemRows) {
+      const bucket = itemsByBookingId.get(item.bookingId) ?? []
+      bucket.push(item)
+      itemsByBookingId.set(item.bookingId, bucket)
+    }
+
+    const invoicesByBookingId = new Map<string, typeof invoiceRows>()
+    for (const invoice of invoiceRows) {
+      const bucket = invoicesByBookingId.get(invoice.bookingId) ?? []
+      bucket.push(invoice)
+      invoicesByBookingId.set(invoice.bookingId, bucket)
+    }
+
     return bookingRows.map((booking) => {
       const participants = participantsByBookingId.get(booking.id) ?? []
+      const items = itemsByBookingId.get(booking.id) ?? []
+      const bookingInvoices = invoicesByBookingId.get(booking.id) ?? []
       const primaryTraveler =
         participants.find((participant) => participant.isPrimary) ?? participants[0] ?? null
 
@@ -941,6 +2178,11 @@ export const publicCustomerPortalService = {
         status: booking.status,
         sellCurrency: booking.sellCurrency,
         sellAmountCents: booking.sellAmountCents ?? null,
+        productTitle: selectBookingSummaryProductTitle(items),
+        paymentStatus: deriveBookingSummaryPaymentStatus(
+          bookingInvoices,
+          booking.sellAmountCents ?? null,
+        ),
         startDate: normalizeDate(booking.startDate),
         endDate: normalizeDate(booking.endDate),
         pax: booking.pax ?? null,
@@ -964,38 +2206,54 @@ export const publicCustomerPortalService = {
       return null
     }
 
-    const linkedPersonId = await resolveLinkedCustomerRecordId(db, userId)
-    const authEmail = authProfile.email.trim().toLowerCase()
-    const ownershipConditions = [sql`lower(${bookingParticipants.email}) = ${authEmail}`]
-
-    if (linkedPersonId) {
-      ownershipConditions.push(eq(bookingParticipants.personId, linkedPersonId))
-    }
-
-    const [participantMatch, bookingMatch] = await Promise.all([
-      db
-        .select({ bookingId: bookingParticipants.bookingId })
-        .from(bookingParticipants)
-        .where(and(eq(bookingParticipants.bookingId, bookingId), or(...ownershipConditions)))
-        .limit(1),
-      linkedPersonId
-        ? db
-            .select({ bookingId: bookings.id })
-            .from(bookings)
-            .where(and(eq(bookings.id, bookingId), eq(bookings.personId, linkedPersonId)))
-            .limit(1)
-        : Promise.resolve([]),
+    const [linkedPersonId, customerRecord] = await Promise.all([
+      resolveLinkedCustomerRecordId(db, userId),
+      getCustomerRecord(db, userId),
     ])
+    const authEmail = authProfile.email.trim().toLowerCase()
+    const canAccess = await hasBookingAccess({
+      db,
+      bookingId,
+      userId,
+      authEmail,
+      linkedPersonId,
+    })
 
-    if (!participantMatch[0] && !bookingMatch[0]) {
+    if (!canAccess) {
       return null
     }
 
-    return buildBookingDetail(db, bookingId)
+    return buildBookingDetail(db, bookingId, customerRecord)
   },
 
   async listBookingDocuments(db: PostgresJsDatabase, userId: string, bookingId: string) {
     const detail = await this.getBooking(db, userId, bookingId)
     return detail?.documents ?? null
+  },
+
+  async getBookingBillingContact(db: PostgresJsDatabase, userId: string, bookingId: string) {
+    const authProfile = await getAuthProfileRow(db, userId)
+    if (!authProfile) {
+      return null
+    }
+
+    const [linkedPersonId, customerRecord] = await Promise.all([
+      resolveLinkedCustomerRecordId(db, userId),
+      getCustomerRecord(db, userId),
+    ])
+
+    const canAccess = await hasBookingAccess({
+      db,
+      bookingId,
+      userId,
+      authEmail: authProfile.email.trim().toLowerCase(),
+      linkedPersonId,
+    })
+
+    if (!canAccess) {
+      return null
+    }
+
+    return getBookingBillingContact(db, bookingId, customerRecord)
   },
 }

@@ -8,10 +8,12 @@ import {
   invoiceRenditions,
   invoices,
   paymentInstruments,
+  payments,
 } from "./schema.js"
 import { financeService } from "./service.js"
 import type {
   PublicBookingFinanceDocuments,
+  PublicBookingFinancePayments,
   PublicPaymentOptionsQuery,
   PublicStartPaymentSessionInput,
   PublicValidateVoucherInput,
@@ -326,6 +328,68 @@ export const publicFinanceService = {
               targetId: recommendedSchedule?.id ?? recommendedGuarantee?.id ?? null,
             }
           : null,
+    }
+  },
+
+  async getBookingPayments(
+    db: PostgresJsDatabase,
+    bookingId: string,
+  ): Promise<PublicBookingFinancePayments | null> {
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+
+    if (!booking) {
+      return null
+    }
+
+    const invoiceRows = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        invoiceType: invoices.invoiceType,
+      })
+      .from(invoices)
+      .where(eq(invoices.bookingId, bookingId))
+      .orderBy(desc(invoices.createdAt))
+
+    if (invoiceRows.length === 0) {
+      return { bookingId, payments: [] }
+    }
+
+    const invoiceById = new Map(invoiceRows.map((invoice) => [invoice.id, invoice]))
+    const paymentRows = await db
+      .select()
+      .from(payments)
+      .where(or(...invoiceRows.map((invoice) => eq(payments.invoiceId, invoice.id))))
+      .orderBy(desc(payments.paymentDate), desc(payments.createdAt))
+
+    return {
+      bookingId,
+      payments: paymentRows.flatMap((payment) => {
+        const invoice = invoiceById.get(payment.invoiceId)
+        if (!invoice) {
+          return []
+        }
+
+        return [
+          {
+            id: payment.id,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceType: invoice.invoiceType,
+            status: payment.status,
+            paymentMethod: payment.paymentMethod,
+            amountCents: payment.amountCents,
+            currency: payment.currency,
+            paymentDate: payment.paymentDate,
+            referenceNumber: payment.referenceNumber ?? null,
+            notes: payment.notes ?? null,
+          },
+        ]
+      }),
     }
   },
 

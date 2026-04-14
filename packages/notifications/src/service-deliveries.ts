@@ -18,9 +18,38 @@ import {
   paginate,
   renderNotificationTemplate,
   resolveReminderRecipient,
+  summarizeNotificationAttachments,
   toTimestamp,
 } from "./service-shared.js"
 import { getTemplateById, getTemplateBySlug } from "./service-templates.js"
+import type { NotificationAttachment } from "./types.js"
+
+function normalizeAttachments(
+  attachments:
+    | Array<{
+        filename: string
+        contentBase64?: string | null
+        path?: string | null
+        contentType?: string | null
+        disposition?: "attachment" | "inline" | null
+        contentId?: string | null
+      }>
+    | null
+    | undefined,
+): NotificationAttachment[] | undefined {
+  if (!attachments || attachments.length === 0) {
+    return undefined
+  }
+
+  return attachments.map((attachment) => ({
+    filename: attachment.filename,
+    ...(attachment.contentBase64 ? { contentBase64: attachment.contentBase64 } : {}),
+    ...(attachment.path ? { path: attachment.path } : {}),
+    ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
+    ...(attachment.disposition ? { disposition: attachment.disposition } : {}),
+    ...(attachment.contentId ? { contentId: attachment.contentId } : {}),
+  }))
+}
 
 export async function listDeliveries(db: PostgresJsDatabase, query: NotificationDeliveryListQuery) {
   const conditions = []
@@ -95,6 +124,8 @@ export async function sendNotification(
   const subject = input.subject ?? renderNotificationTemplate(template?.subjectTemplate, data)
   const html = input.html ?? renderNotificationTemplate(template?.htmlTemplate, data)
   const text = input.text ?? renderNotificationTemplate(template?.textTemplate, data)
+  const attachments = normalizeAttachments(input.attachments)
+  const attachmentSummary = summarizeNotificationAttachments(attachments)
 
   const [pending] = await db
     .insert(notificationDeliveries)
@@ -118,7 +149,14 @@ export async function sendNotification(
       htmlBody: html ?? null,
       textBody: text ?? null,
       payloadData: data,
-      metadata: input.metadata ?? null,
+      metadata:
+        (input.metadata ?? null) || attachmentSummary.length > 0
+          ? {
+              ...(input.metadata ?? {}),
+              attachmentCount: attachmentSummary.length,
+              attachments: attachmentSummary,
+            }
+          : null,
       errorMessage: null,
       scheduledFor: toTimestamp(input.scheduledFor),
       sentAt: null,
@@ -143,6 +181,7 @@ export async function sendNotification(
             subject: subject ?? undefined,
             html: html ?? undefined,
             text: text ?? undefined,
+            attachments,
           })
         : await dispatcher.sendWith(provider, {
             to: input.to,
@@ -154,6 +193,7 @@ export async function sendNotification(
             subject: subject ?? undefined,
             html: html ?? undefined,
             text: text ?? undefined,
+            attachments,
           })
 
     const [sent] = await db

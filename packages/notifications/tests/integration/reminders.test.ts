@@ -96,4 +96,103 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder routes", () => {
     const deliveriesBody = await deliveriesRes.json()
     expect(deliveriesBody.total).toBe(1)
   })
+
+  it("creates and runs due invoice reminder rules for unpaid bank-transfer documents", async () => {
+    const createTemplateRes = await ctx.request("/templates", {
+      method: "POST",
+      ...json({
+        slug: "invoice-reminder",
+        name: "Invoice Reminder",
+        channel: "email",
+        provider: "local",
+        status: "active",
+        subjectTemplate: "Invoice {{ invoice.invoiceNumber }} due for {{ booking.bookingNumber }}",
+        textTemplate: "Due {{ invoice.dueDate }} balance {{ invoice.balanceDueCents }}",
+      }),
+    })
+    const { data: template } = await createTemplateRes.json()
+
+    await ctx.db.execute(sql`
+      INSERT INTO bookings (id, booking_number, person_id, sell_currency, sell_amount_cents)
+      VALUES ('book_inv', 'BK-INV-1', 'person_2', 'EUR', 90000)
+    `)
+    await ctx.db.execute(sql`
+      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      VALUES ('bkpt_inv', 'book_inv', 'Mara', 'Traveler', 'mara@example.com', 'traveler', true)
+    `)
+    await ctx.db.execute(sql`
+      INSERT INTO invoices (
+        id,
+        invoice_number,
+        invoice_type,
+        booking_id,
+        person_id,
+        status,
+        currency,
+        subtotal_cents,
+        tax_cents,
+        total_cents,
+        paid_cents,
+        balance_due_cents,
+        issue_date,
+        due_date
+      )
+      VALUES (
+        'inv_test',
+        'PRO-2001',
+        'proforma',
+        'book_inv',
+        'person_2',
+        'sent',
+        'EUR',
+        90000,
+        0,
+        90000,
+        0,
+        90000,
+        DATE '2026-04-01',
+        DATE '2026-04-10'
+      )
+    `)
+
+    const createRuleRes = await ctx.request("/reminder-rules", {
+      method: "POST",
+      ...json({
+        slug: "invoice-due-2-days-before",
+        name: "Invoice Due 2 Days Before",
+        status: "active",
+        targetType: "invoice",
+        channel: "email",
+        provider: "local",
+        templateId: template.id,
+        relativeDaysFromDueDate: -2,
+      }),
+    })
+    expect(createRuleRes.status).toBe(201)
+
+    const runRes = await ctx.request("/reminders/run-due", {
+      method: "POST",
+      ...json({ now: "2026-04-08T09:00:00.000Z" }),
+    })
+    expect(runRes.status).toBe(200)
+    const runBody = await runRes.json()
+    expect(runBody.data.processed).toBe(1)
+    expect(runBody.data.sent).toBe(1)
+    expect(ctx.sink).toHaveBeenCalledOnce()
+    expect(ctx.sink.mock.calls[0]?.[0]).toMatchObject({
+      to: "mara@example.com",
+      channel: "email",
+    })
+
+    const runsRes = await ctx.request("/reminder-runs?bookingId=book_inv&targetType=invoice")
+    expect(runsRes.status).toBe(200)
+    const runsBody = await runsRes.json()
+    expect(runsBody.total).toBe(1)
+    expect(runsBody.data[0].targetType).toBe("invoice")
+
+    const deliveriesRes = await ctx.request("/deliveries?targetType=invoice&targetId=inv_test")
+    expect(deliveriesRes.status).toBe(200)
+    const deliveriesBody = await deliveriesRes.json()
+    expect(deliveriesBody.total).toBe(1)
+  })
 })

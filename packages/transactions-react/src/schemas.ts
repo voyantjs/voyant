@@ -1,4 +1,4 @@
-import { insertOfferSchema, insertOrderSchema } from "@voyantjs/transactions"
+import { insertOfferSchema, insertOrderSchema, offerMetadataSchema } from "@voyantjs/transactions"
 import { z } from "zod"
 
 export const paginatedEnvelope = <T extends z.ZodTypeAny>(item: T) =>
@@ -33,12 +33,13 @@ export const offerRecordSchema = insertOfferSchema.extend({
   acceptedAt: z.string().nullable(),
   convertedAt: z.string().nullable(),
   notes: z.string().nullable(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  metadata: offerMetadataSchema.nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
 
 export type OfferRecord = z.infer<typeof offerRecordSchema>
+export type OfferMetadataRecord = z.infer<typeof offerMetadataSchema>
 
 export const orderRecordSchema = insertOrderSchema.extend({
   id: z.string(),

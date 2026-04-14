@@ -1,0 +1,365 @@
+import { writeFileSync } from "node:fs"
+import { join } from "node:path"
+
+import { getTableColumns } from "drizzle-orm"
+import { getTableConfig } from "drizzle-orm/pg-core"
+import { getTableName, isTable } from "drizzle-orm/table"
+
+import * as availabilitySchema from "../packages/availability/src/schema.ts"
+import * as bookingRequirementsSchema from "../packages/booking-requirements/src/schema.ts"
+import * as bookingsTravelDetailsSchema from "../packages/bookings/src/schema/travel-details.ts"
+import * as bookingsCoreSchema from "../packages/bookings/src/schema-core.ts"
+import * as bookingsItemsSchema from "../packages/bookings/src/schema-items.ts"
+import * as bookingsOperationsSchema from "../packages/bookings/src/schema-operations.ts"
+import * as crmBookingExtensionSchema from "../packages/crm/src/booking-extension.ts"
+import * as crmAccountsSchema from "../packages/crm/src/schema-accounts.ts"
+import * as crmActivitiesSchema from "../packages/crm/src/schema-activities.ts"
+import * as crmSalesSchema from "../packages/crm/src/schema-sales.ts"
+import * as dbApiKeySchema from "../packages/db/src/schema/iam/apikey.ts"
+import * as dbAuthSchema from "../packages/db/src/schema/iam/auth.ts"
+import * as dbUserProfilesSchema from "../packages/db/src/schema/iam/user_profiles.ts"
+import * as dbDomainsSchema from "../packages/db/src/schema/infra/domains.ts"
+import * as dbEmailDomainRecordsSchema from "../packages/db/src/schema/infra/email_domain_records.ts"
+import * as dbWebhookSubscriptionsSchema from "../packages/db/src/schema/infra/webhook_subscriptions.ts"
+import * as distributionBookingExtensionSchema from "../packages/distribution/src/booking-extension.ts"
+import * as distributionAutomationSchema from "../packages/distribution/src/schema-automation.ts"
+import * as distributionCoreSchema from "../packages/distribution/src/schema-core.ts"
+import * as distributionFinanceSchema from "../packages/distribution/src/schema-finance.ts"
+import * as distributionInventorySchema from "../packages/distribution/src/schema-inventory.ts"
+import * as externalRefsSchema from "../packages/external-refs/src/schema.ts"
+import * as extrasSchema from "../packages/extras/src/schema.ts"
+import * as facilitiesSchema from "../packages/facilities/src/schema.ts"
+import * as financeSchema from "../packages/finance/src/schema.ts"
+import * as groundDispatchSchema from "../packages/ground/src/schema-dispatch.ts"
+import * as groundOperationsSchema from "../packages/ground/src/schema-operations.ts"
+import * as groundOperatorsSchema from "../packages/ground/src/schema-operators.ts"
+import * as hospitalityBookingsSchema from "../packages/hospitality/src/schema-bookings.ts"
+import * as hospitalityOperationsSchema from "../packages/hospitality/src/schema-operations.ts"
+import * as hospitalityPricingSchema from "../packages/hospitality/src/schema-pricing.ts"
+import * as identitySchema from "../packages/identity/src/schema.ts"
+import * as legalContractsSchema from "../packages/legal/src/contracts/schema.ts"
+import * as legalPoliciesSchema from "../packages/legal/src/policies/schema.ts"
+import * as marketsSchema from "../packages/markets/src/schema.ts"
+import * as notificationsSchema from "../packages/notifications/src/schema.ts"
+import * as pricingCatalogsSchema from "../packages/pricing/src/schema-catalogs.ts"
+import * as pricingCategoriesSchema from "../packages/pricing/src/schema-categories.ts"
+import * as pricingOptionRulesSchema from "../packages/pricing/src/schema-option-rules.ts"
+import * as pricingPoliciesSchema from "../packages/pricing/src/schema-policies.ts"
+import * as productsBookingExtensionSchema from "../packages/products/src/booking-extension.ts"
+import * as productsCoreSchema from "../packages/products/src/schema-core.ts"
+import * as productsItinerarySchema from "../packages/products/src/schema-itinerary.ts"
+import * as productsSettingsSchema from "../packages/products/src/schema-settings.ts"
+import * as productsTaxonomySchema from "../packages/products/src/schema-taxonomy.ts"
+import * as resourcesSchema from "../packages/resources/src/schema.ts"
+import * as sellabilitySchema from "../packages/sellability/src/schema.ts"
+import * as storefrontVerificationSchema from "../packages/storefront-verification/src/schema.ts"
+import * as suppliersSchema from "../packages/suppliers/src/schema.ts"
+import * as transactionsBookingExtensionSchema from "../packages/transactions/src/booking-extension.ts"
+import * as transactionsAuditSchema from "../packages/transactions/src/schema-audit.ts"
+import * as transactionsOffersSchema from "../packages/transactions/src/schema-offers.ts"
+import * as transactionsOrdersSchema from "../packages/transactions/src/schema-orders.ts"
+
+type ImportedModule = Record<string, unknown>
+
+interface SectionDefinition {
+  title: string
+  modules: ImportedModule[]
+}
+
+interface TableDoc {
+  name: string
+  note?: string
+  markdown: string
+}
+
+const tableNotes = new Map<string, string>([
+  ["user", "Better Auth"],
+  ["session", "Better Auth"],
+  ["account", "Better Auth"],
+  ["verification", "Better Auth"],
+  ["organization", "Better Auth organization plugin"],
+  ["member", "Better Auth organization plugin"],
+  ["invitation", "Better Auth organization plugin"],
+  ["apikey", "Better Auth API key"],
+])
+
+const sections: SectionDefinition[] = [
+  {
+    title: "IAM & Auth",
+    modules: [dbAuthSchema, dbApiKeySchema, dbUserProfilesSchema],
+  },
+  {
+    title: "Infrastructure",
+    modules: [dbDomainsSchema, dbEmailDomainRecordsSchema, dbWebhookSubscriptionsSchema],
+  },
+  {
+    title: "CRM",
+    modules: [crmAccountsSchema, crmSalesSchema, crmActivitiesSchema, crmBookingExtensionSchema],
+  },
+  {
+    title: "Identity",
+    modules: [identitySchema],
+  },
+  {
+    title: "Catalog & Products",
+    modules: [
+      productsCoreSchema,
+      productsSettingsSchema,
+      productsItinerarySchema,
+      productsTaxonomySchema,
+      productsBookingExtensionSchema,
+      facilitiesSchema,
+    ],
+  },
+  {
+    title: "Availability, Pricing & Booking Rules",
+    modules: [
+      availabilitySchema,
+      pricingCategoriesSchema,
+      pricingCatalogsSchema,
+      pricingOptionRulesSchema,
+      pricingPoliciesSchema,
+      bookingRequirementsSchema,
+      extrasSchema,
+    ],
+  },
+  {
+    title: "Bookings",
+    modules: [
+      bookingsCoreSchema,
+      bookingsItemsSchema,
+      bookingsOperationsSchema,
+      bookingsTravelDetailsSchema,
+    ],
+  },
+  {
+    title: "Transactions & Sellability",
+    modules: [
+      transactionsOffersSchema,
+      transactionsOrdersSchema,
+      transactionsAuditSchema,
+      transactionsBookingExtensionSchema,
+      sellabilitySchema,
+    ],
+  },
+  {
+    title: "Suppliers & Resources",
+    modules: [suppliersSchema, resourcesSchema],
+  },
+  {
+    title: "Markets & Distribution",
+    modules: [
+      marketsSchema,
+      distributionCoreSchema,
+      distributionInventorySchema,
+      distributionFinanceSchema,
+      distributionAutomationSchema,
+      distributionBookingExtensionSchema,
+    ],
+  },
+  {
+    title: "Finance",
+    modules: [financeSchema],
+  },
+  {
+    title: "Legal",
+    modules: [legalContractsSchema, legalPoliciesSchema],
+  },
+  {
+    title: "Notifications & Verification",
+    modules: [notificationsSchema, storefrontVerificationSchema],
+  },
+  {
+    title: "Hospitality",
+    modules: [hospitalityBookingsSchema, hospitalityPricingSchema, hospitalityOperationsSchema],
+  },
+  {
+    title: "Ground & Transport",
+    modules: [groundOperatorsSchema, groundDispatchSchema, groundOperationsSchema],
+  },
+  {
+    title: "External References",
+    modules: [externalRefsSchema],
+  },
+]
+
+function getDefaultMarker(column: {
+  default: unknown
+  defaultFn?: unknown
+  hasDefault: boolean
+}): string | null {
+  if (!column.hasDefault && !column.defaultFn) {
+    return null
+  }
+
+  if (typeof column.default === "string") {
+    return `default ${JSON.stringify(column.default)}`
+  }
+
+  if (typeof column.default === "number" || typeof column.default === "boolean") {
+    return `default ${String(column.default)}`
+  }
+
+  if (Array.isArray(column.default)) {
+    return `default ${JSON.stringify(column.default)}`
+  }
+
+  return "default"
+}
+
+function formatColumnName(propertyName: string, sqlName: string): string {
+  if (propertyName === sqlName) {
+    return `\`${sqlName}\``
+  }
+
+  return `\`${sqlName}\` (\`${propertyName}\`)`
+}
+
+function collectTableDocs(modules: ImportedModule[]): TableDoc[] {
+  const seenTables = new Set<string>()
+  const docs: TableDoc[] = []
+
+  for (const module of modules) {
+    for (const value of Object.values(module)) {
+      if (!isTable(value)) {
+        continue
+      }
+
+      const tableName = getTableName(value)
+      if (seenTables.has(tableName)) {
+        continue
+      }
+
+      seenTables.add(tableName)
+
+      const tableConfig = getTableConfig(value)
+      const columnEntries = Object.entries(getTableColumns(value))
+      const primaryKeyColumns = new Set<string>()
+
+      for (const primaryKey of tableConfig.primaryKeys) {
+        for (const column of primaryKey.columns) {
+          primaryKeyColumns.add(column.name)
+        }
+      }
+
+      const singleColumnUniqueNames = new Set<string>()
+      const compositeUniqueConstraints: string[] = []
+
+      for (const uniqueConstraint of tableConfig.uniqueConstraints) {
+        if (uniqueConstraint.columns.length === 1) {
+          singleColumnUniqueNames.add(uniqueConstraint.columns[0].name)
+          continue
+        }
+
+        compositeUniqueConstraints.push(
+          uniqueConstraint.columns.map((column) => `\`${column.name}\``).join(", "),
+        )
+      }
+
+      const foreignKeysByColumn = new Map<string, string[]>()
+
+      for (const foreignKey of tableConfig.foreignKeys) {
+        const reference = foreignKey.reference()
+
+        reference.columns.forEach((column, index) => {
+          const target = `${getTableName(reference.foreignTable)}.${reference.foreignColumns[index]?.name ?? "id"}`
+          const existing = foreignKeysByColumn.get(column.name) ?? []
+          existing.push(target)
+          foreignKeysByColumn.set(column.name, existing)
+        })
+      }
+
+      const rows = columnEntries.map(([propertyName, column]) => {
+        const markers: string[] = [column.getSQLType()]
+
+        if (primaryKeyColumns.has(column.name) || column.primary) {
+          markers.push("PK")
+        }
+
+        const foreignKeys = foreignKeysByColumn.get(column.name) ?? []
+        for (const foreignKey of foreignKeys) {
+          markers.push(`FK -> ${foreignKey}`)
+        }
+
+        if (column.isUnique || singleColumnUniqueNames.has(column.name)) {
+          markers.push("unique")
+        }
+
+        if (column.notNull) {
+          markers.push("not null")
+        } else {
+          markers.push("nullable")
+        }
+
+        const defaultMarker = getDefaultMarker(column)
+        if (defaultMarker) {
+          markers.push(defaultMarker)
+        }
+
+        if (column.generatedIdentity) {
+          markers.push("generated identity")
+        } else if (column.generated) {
+          markers.push("generated")
+        }
+
+        return `| ${formatColumnName(propertyName, column.name)} | ${markers.join(" • ")} |`
+      })
+
+      const compositePrimaryKeys = tableConfig.primaryKeys
+        .filter((primaryKey) => primaryKey.columns.length > 1)
+        .map((primaryKey) => primaryKey.columns.map((column) => `\`${column.name}\``).join(", "))
+
+      const constraintLines: string[] = []
+
+      for (const primaryKey of compositePrimaryKeys) {
+        constraintLines.push(`- Primary key: ${primaryKey}`)
+      }
+
+      for (const uniqueConstraint of compositeUniqueConstraints) {
+        constraintLines.push(`- Unique: ${uniqueConstraint}`)
+      }
+
+      const constraintBlock =
+        constraintLines.length > 0 ? `\nConstraints:\n${constraintLines.join("\n")}\n` : ""
+
+      docs.push({
+        name: tableName,
+        note: tableNotes.get(tableName),
+        markdown: `### \`${tableName}\`${tableNotes.has(tableName) ? ` (${tableNotes.get(tableName)})` : ""}\n| Column | Type |\n|--------|------|\n${rows.join("\n")}\n${constraintBlock}`,
+      })
+    }
+  }
+
+  return docs.sort((left, right) => left.name.localeCompare(right.name))
+}
+
+function main(): void {
+  const generatedAt = new Date().toISOString().slice(0, 10)
+  const lines: string[] = [
+    "# Voyant Database Schema Reference",
+    "",
+    `> Auto-generated from Drizzle table definitions via \`pnpm generate:schema-docs\` on ${generatedAt}.`,
+    "> SQL column names are shown first; TypeScript property names are included when they differ.",
+    "> Constraint markers are derived from the schema source, not from a live database introspection run.",
+    "",
+  ]
+
+  for (const section of sections) {
+    const tables = collectTableDocs(section.modules)
+    if (tables.length === 0) {
+      continue
+    }
+
+    lines.push(`## ${section.title}`, "")
+
+    for (const table of tables) {
+      lines.push(table.markdown.trimEnd(), "")
+    }
+  }
+
+  const outputPath = join(process.cwd(), "SCHEMA.md")
+  writeFileSync(outputPath, `${lines.join("\n").trimEnd()}\n`, "utf8")
+  console.log(`Wrote ${outputPath}`)
+}
+
+main()

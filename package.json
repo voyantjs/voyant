@@ -14,6 +14,7 @@
     "release": "changeset publish",
     "verify:release-train": "node scripts/verify-release-train.cjs",
     "package:starters": "node scripts/package-starters.mjs",
+    "generate:schema-docs": "tsx scripts/generate-schema-docs.ts",
     "verify:package-exports": "tsx scripts/verify-package-exports.ts",
     "verify:publish-tarballs": "node scripts/verify-package-tarballs.mjs",
     "prepare": "husky",

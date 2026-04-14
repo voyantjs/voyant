@@ -109,6 +109,7 @@ This repository is the workspace that powers the framework, starters, and exampl
 | `pnpm test` | Run workspace tests |
 | `pnpm test:bookings:integration` | Start or reuse the Docker test Postgres, ensure the bookings test schema, and run the bookings integration files serially |
 | `pnpm lint` | Run Biome checks across the repo |
+| `pnpm generate:schema-docs` | Regenerate [`SCHEMA.md`](./SCHEMA.md) from the Drizzle table definitions |
 | `pnpm -F dmc dev` | Start the DMC template on port `3100` |
 | `pnpm -F operator dev` | Start the operator template on port `3300` |
 | `pnpm -F dev dev` | Start the internal playground on port `3200` |

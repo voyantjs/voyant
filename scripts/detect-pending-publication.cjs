@@ -2,6 +2,7 @@ const { writeFileSync } = require("node:fs")
 const { EOL } = require("node:os")
 
 const { read } = require("@changesets/config")
+const getReleasePlan = require("@changesets/get-release-plan").default
 const { getPackages } = require("@manypkg/get-packages")
 const semver = require("semver")
 
@@ -39,7 +40,11 @@ async function main() {
   const cwd = process.cwd()
   const packages = await getPackages(cwd)
   const config = await read(cwd, packages)
-  const publishablePackages = getPublishablePackages(packages, config)
+  const noFixedConfig = { ...config, fixed: [] }
+  const releasePlan = await getReleasePlan(cwd, undefined, noFixedConfig)
+  const directReleases = releasePlan.releases.filter((release) => release.type !== "none")
+  const hasReleasableChangesets = directReleases.length > 0
+  const publishablePackages = getPublishablePackages(packages, noFixedConfig)
   const sharedTrainVersion = getSharedTrainVersion(publishablePackages)
 
   const canonicalPackage =
@@ -58,6 +63,7 @@ async function main() {
     JSON.stringify(
       {
         canonicalPackage: canonicalPackage.packageJson.name,
+        hasReleasableChangesets,
         latestPublishedVersion,
         pendingPublication,
         sharedTrainVersion,
@@ -68,6 +74,7 @@ async function main() {
   )
 
   appendGithubOutput("canonical_package", canonicalPackage.packageJson.name)
+  appendGithubOutput("has_releasable_changesets", hasReleasableChangesets ? "true" : "false")
   appendGithubOutput("latest_published_version", latestPublishedVersion ?? "")
   appendGithubOutput("pending", pendingPublication ? "true" : "false")
   appendGithubOutput("shared_train_version", sharedTrainVersion)

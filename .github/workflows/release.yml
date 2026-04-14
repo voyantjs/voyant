@@ -115,7 +115,7 @@ jobs:
 
       - name: Create Release PR or Publish
         id: changesets
-        if: steps.pending_publish.outputs.pending != 'true'
+        if: steps.pending_publish.outputs.has_releasable_changesets == 'true'
         uses: changesets/action@v1
         with:
           createGithubReleases: false
@@ -128,10 +128,14 @@ jobs:
 
       - name: Publish pending release train
         id: publish_pending
-        if: steps.pending_publish.outputs.pending == 'true'
+        if: steps.pending_publish.outputs.has_releasable_changesets != 'true' && steps.pending_publish.outputs.pending == 'true'
         run: |
           pnpm release
           echo "published=true" >> "$GITHUB_OUTPUT"
+
+      - name: No release action needed
+        if: steps.pending_publish.outputs.has_releasable_changesets != 'true' && steps.pending_publish.outputs.pending != 'true'
+        run: echo "No releasable changesets and npm is already up to date."
 
       - name: Determine release version
         if: steps.changesets.outputs.published == 'true' || steps.publish_pending.outputs.published == 'true'

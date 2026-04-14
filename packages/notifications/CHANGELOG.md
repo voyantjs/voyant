@@ -1,5 +1,35 @@
 # @voyantjs/notifications
 
+## 0.4.0
+
+### Minor Changes
+
+- e84fe0f: Add first-class booking document bundle and send workflows. Notifications can
+  now list booking-scoped contract/invoice/proforma artifacts, send email
+  attachments, and deliver those attachments through Resend using artifact
+  download URLs or custom attachment resolvers.
+- e84fe0f: Add invoice-targeted reminder rules and runs so unpaid invoice/proforma
+  documents created for bank-transfer checkout flows can use the same first-class
+  reminder engine and checkout reminder visibility as schedule-backed reminders.
+
+### Patch Changes
+
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/bookings@0.4.0
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/finance@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/legal@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

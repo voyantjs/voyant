@@ -1,5 +1,35 @@
 # @voyantjs/customer-portal-react
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Expose booking billing contact through customer-portal booking detail and a
+  dedicated public route, with React query helpers for storefront payment and
+  remainder flows.
+- e84fe0f: Add `productTitle` and native `paymentStatus` to public customer-portal
+  booking summaries so storefront account lists can render booking rows without
+  separate booking-detail and finance hydration calls.
+- e84fe0f: Promote public companion traveler identity fields into the shared
+  customer-portal contract with first-class `typeKey` and typed person, address,
+  and document shapes instead of forcing apps to read and write those values only
+  through untyped companion metadata.
+- e84fe0f: Add a first-class customer-portal action to import accessible booking
+  participants into companions with duplicate detection, plus matching React
+  operations and mutation support.
+- e84fe0f: Enrich the public customer-portal profile with middle name, top-level
+  date-of-birth/address fields, consent provenance/source, and encrypted travel
+  document reads/writes backed by `user_profiles.documentsEncrypted`.
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/customer-portal@0.4.0
+  - @voyantjs/react@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

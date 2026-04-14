@@ -1,5 +1,20 @@
 # @voyantjs/bookings
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Add a first-class admin booking overview lookup route and shared service helper
+  that can resolve booking overviews by booking id, booking number, or booking
+  code without requiring the public customer email lookup contract.
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/utils@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

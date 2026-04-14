@@ -1,5 +1,14 @@
 # @voyantjs/availability
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [e84fe0f]
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/hono@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

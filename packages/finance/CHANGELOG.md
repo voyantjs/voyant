@@ -1,5 +1,76 @@
 # @voyantjs/finance
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Add built-in PDF document adapters for legal and finance workflows.
+
+  `@voyantjs/utils` now exports `renderPdfDocument()` as a shared basic PDF
+  renderer for rendered text content. `@voyantjs/legal` and `@voyantjs/finance`
+  now expose bundled PDF serializers and generator helpers on top of their
+  storage-backed document workflows, so apps can generate readable PDF artifacts
+  without wiring a custom browser renderer for the common case.
+
+- e84fe0f: Add a first-class invoice and proforma document generation workflow.
+
+  - add configurable admin routes for `generate-document` and
+    `regenerate-document`
+  - add `createFinanceHonoModule()` so apps can mount finance with an invoice
+    document generator
+  - generate ready `invoice_renditions` and mark prior renditions of the same
+    format as `stale`
+  - expose the new document-generation schemas and route factories from the
+    package entrypoint
+
+- e84fe0f: Add first-class invoice settlement polling and reconciliation.
+
+  - add `POST /v1/admin/finance/invoices/:id/poll-settlement` with typed polling
+    and reconciliation results
+  - sync provider settlement state back onto `invoice_external_refs`
+  - reconcile newly observed paid amounts into completed Voyant payments without
+    over-applying across multiple provider refs
+  - add `createSmartbillInvoiceSettlementPoller()` in
+    `@voyantjs/plugin-smartbill`
+
+- e84fe0f: Add a public booking payment-history route and matching React helpers so
+  storefronts can read booking-scoped payments with invoice context from
+  `/v1/public/finance/bookings/:bookingId/payments`.
+- e84fe0f: Upgrade legal and finance template rendering to support Liquid-style control
+  flow.
+
+  - add a shared structured template renderer in `@voyantjs/utils`
+  - keep simple `{{path}}` interpolation compatibility for existing templates
+  - support Liquid loops, conditionals, and filters in legal and finance
+    html/markdown templates
+  - support Liquid rendering inside lexical text nodes for legal and finance
+    template bodies
+
+- e84fe0f: Add storage-backed document generator helpers for legal and finance workflows.
+
+  `@voyantjs/legal` now exports `createStorageBackedContractDocumentGenerator()`
+  and `defaultStorageBackedContractDocumentSerializer()` so rendered contract
+  artifacts can be uploaded through Voyant storage providers without custom
+  generator plumbing.
+
+  `@voyantjs/finance` now exports
+  `createStorageBackedInvoiceDocumentGenerator()` and
+  `defaultStorageBackedInvoiceDocumentSerializer()` for the same workflow on
+  invoice/proforma renditions, with built-in support for html/json/xml artifact
+  uploads and explicit opt-in for custom PDF serializers.
+
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [2d5f323]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/bookings@0.4.0
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/voyant-storage@0.4.0
+  - @voyantjs/utils@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

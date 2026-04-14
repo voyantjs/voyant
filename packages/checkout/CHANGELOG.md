@@ -1,5 +1,35 @@
 # @voyantjs/checkout
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Add a fuller storefront payment bootstrap surface to checkout.
+
+  - allow exact-amount collection overrides in checkout plans and initiation
+  - return customer-safe bank transfer instructions from checkout when configured
+  - support combined provider startup in checkout through injected payment
+    starters
+  - add a Netopia checkout starter helper in `@voyantjs/plugin-netopia`
+
+- e84fe0f: Add invoice-targeted reminder rules and runs so unpaid invoice/proforma
+  documents created for bank-transfer checkout flows can use the same first-class
+  reminder engine and checkout reminder visibility as schedule-backed reminders.
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/bookings@0.4.0
+  - @voyantjs/core@0.4.0
+  - @voyantjs/finance@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/notifications@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

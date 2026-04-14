@@ -1,5 +1,25 @@
 # @voyantjs/transactions
 
+## 0.4.0
+
+### Minor Changes
+
+- e84fe0f: Add shared storefront promotional offer helpers backed by transactions offers.
+
+  Published offers can now carry `storefrontPromotionalOffer` metadata and be
+  resolved through reusable helpers for product/departure applicability and
+  slug-based storefront lookup.
+
+### Patch Changes
+
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/utils@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

@@ -109,8 +109,13 @@ jobs:
       - name: Verify package exports
         run: pnpm verify:package-exports
 
+      - name: Detect pending npm publication
+        id: pending_publish
+        run: node scripts/detect-pending-publication.cjs
+
       - name: Create Release PR or Publish
         id: changesets
+        if: steps.pending_publish.outputs.pending != 'true'
         uses: changesets/action@v1
         with:
           createGithubReleases: false
@@ -121,8 +126,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish pending release train
+        id: publish_pending
+        if: steps.pending_publish.outputs.pending == 'true'
+        run: |
+          pnpm release
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
       - name: Determine release version
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.published == 'true' || steps.publish_pending.outputs.published == 'true'
         id: version
         run: |
           VERSION=$(node -p "require('./packages/cli/package.json').version")
@@ -130,11 +142,11 @@ jobs:
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Package starter archives
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.published == 'true' || steps.publish_pending.outputs.published == 'true'
         run: pnpm package:starters -- --version ${{ steps.version.outputs.value }} --out-dir .release/starters
 
       - name: Ensure repo tag exists
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.published == 'true' || steps.publish_pending.outputs.published == 'true'
         run: |
           if git rev-parse -q --verify refs/tags/v${{ steps.version.outputs.value }} >/dev/null; then
             echo "Tag v${{ steps.version.outputs.value }} already exists"
@@ -144,7 +156,7 @@ jobs:
           fi
 
       - name: Create GitHub release
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.published == 'true' || steps.publish_pending.outputs.published == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.value }}

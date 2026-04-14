@@ -1,5 +1,21 @@
 # @voyantjs/finance-react
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Add a public booking payment-history route and matching React helpers so
+  storefronts can read booking-scoped payments with invoice context from
+  `/v1/public/finance/bookings/:bookingId/payments`.
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/finance@0.4.0
+  - @voyantjs/react@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,61 @@
 # @voyantjs/products
 
+## 0.4.0
+
+### Minor Changes
+
+- e84fe0f: Add code-authored brochure templates and pluggable brochure printers. Products now export Liquid-compatible brochure template helpers, a bundled basic PDF printer, and a Cloudflare Browser printer adapter so apps can generate canonical brochure versions without carrying their own rendering glue.
+- e84fe0f: Add first-class brochure version history for products.
+
+  Each brochure upsert now creates a new version, products keep one current
+  brochure, admins can list brochure versions, promote an older version, and
+  delete individual brochure versions without losing the rest of the history.
+
+- e84fe0f: Add a lightweight destination taxonomy with translations and product links. Products now expose admin destination CRUD/link routes plus public catalog destination filters and destination list responses so storefronts can route and filter on shared destination semantics instead of raw product locations alone.
+
+### Patch Changes
+
+- e84fe0f: Add a first-class product brochure workflow.
+
+  Products now support canonical brochure persistence via `GET/PUT/DELETE
+/v1/products/:id/brochure` and `GET /v1/public/products/:id/brochure`, with
+  public catalog detail exposing `brochure` separately from the normal media
+  gallery. The package also exports `generateAndStoreProductBrochure()` so apps
+  can generate a PDF brochure, upload it through a Voyant storage provider, and
+  register it as the canonical brochure without keeping an app-local convention.
+
+- e84fe0f: Add a reusable internal catalog hydration and search-document helper to the
+  products package.
+
+  Changes:
+
+  - add `catalogProductsService.hydrateProducts()` for shared localized product
+    hydration outside the public route module
+  - add `catalogProductsService.listSearchDocuments()` and
+    `getSearchDocumentByProductId()` for locale-aware indexing/search jobs
+  - export catalog search-document schemas and localized catalog product schemas
+  - switch `publicProductsService` to use the shared catalog hydrator so
+    translation/category/tag/media joins stay aligned between public routes and
+    internal indexing workflows
+
+- e84fe0f: Add location-aware public catalog listing support.
+
+  Public catalog product list queries now support filtering by `locationTitle`,
+  `locationCity`, `locationCountryCode`, and `locationType`, and public catalog
+  product summaries now include typed `locations` so storefront list pages do not
+  need to hydrate full product detail just to render basic destination/location
+  metadata.
+
+- Updated dependencies [e84fe0f]
+- Updated dependencies [e84fe0f]
+- Updated dependencies [2d5f323]
+- Updated dependencies [e84fe0f]
+  - @voyantjs/core@0.4.0
+  - @voyantjs/db@0.4.0
+  - @voyantjs/hono@0.4.0
+  - @voyantjs/voyant-storage@0.4.0
+  - @voyantjs/utils@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

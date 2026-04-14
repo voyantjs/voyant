@@ -1,0 +1,17 @@
+# @voyantjs/storefront-react
+
+## 0.4.0
+
+### Minor Changes
+
+- e84fe0f: Add a React client package for the public storefront contract.
+
+  The package includes typed operations, TanStack Query helpers, and hooks for
+  storefront settings, departures, pricing preview, extensions, itinerary, and
+  promotional offers.
+
+### Patch Changes
+
+- Updated dependencies [e84fe0f]
+  - @voyantjs/react@0.4.0
+  - @voyantjs/storefront@0.4.0

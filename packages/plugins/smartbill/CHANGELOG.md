@@ -1,5 +1,20 @@
 # @voyantjs/plugin-smartbill
 
+## 0.4.0
+
+### Patch Changes
+
+- e84fe0f: Add first-class invoice settlement polling and reconciliation.
+
+  - add `POST /v1/admin/finance/invoices/:id/poll-settlement` with typed polling
+    and reconciliation results
+  - sync provider settlement state back onto `invoice_external_refs`
+  - reconcile newly observed paid amounts into completed Voyant payments without
+    over-applying across multiple provider refs
+  - add `createSmartbillInvoiceSettlementPoller()` in
+    `@voyantjs/plugin-smartbill`
+  - @voyantjs/core@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,7 @@
 # @voyantjs/voyant-storage
 
+## 0.4.5
+
 ## 0.4.4
 
 ## 0.4.3

@@ -1,5 +1,18 @@
 # @voyantjs/notifications
 
+## 0.4.4
+
+### Patch Changes
+
+- 9349604: Enrich notification reminder run reads with linked rule, delivery, and entity
+  context, and add direct reminder-run lookup for admin workflows.
+  - @voyantjs/bookings@0.4.4
+  - @voyantjs/core@0.4.4
+  - @voyantjs/db@0.4.4
+  - @voyantjs/finance@0.4.4
+  - @voyantjs/hono@0.4.4
+  - @voyantjs/legal@0.4.4
+
 ## 0.4.3
 
 ### Patch Changes

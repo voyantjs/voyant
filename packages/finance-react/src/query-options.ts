@@ -3,6 +3,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
 import { type FetchWithValidationOptions, fetchWithValidation } from "./client.js"
+import type { UseBookingPaymentSchedulesOptions } from "./hooks/use-booking-payment-schedules.js"
 import type { UseInvoiceOptions } from "./hooks/use-invoice.js"
 import type { UseInvoiceCreditNotesOptions } from "./hooks/use-invoice-credit-notes.js"
 import type { UseInvoiceLineItemsOptions } from "./hooks/use-invoice-line-items.js"
@@ -24,6 +25,7 @@ import {
 } from "./operations.js"
 import { financeQueryKeys } from "./query-keys.js"
 import {
+  bookingPaymentSchedulesResponse,
   invoiceCreditNotesResponse,
   invoiceLineItemsResponse,
   invoiceListResponse,
@@ -32,6 +34,24 @@ import {
   invoiceSingleResponse,
   supplierPaymentListResponse,
 } from "./schemas.js"
+
+export function getBookingPaymentSchedulesQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseBookingPaymentSchedulesOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.bookingPaymentSchedules(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/finance/bookings/${bookingId}/payment-schedules`,
+        bookingPaymentSchedulesResponse,
+        client,
+      ),
+  })
+}
 
 export function getInvoicesQueryOptions(
   client: FetchWithValidationOptions,

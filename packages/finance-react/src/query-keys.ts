@@ -34,6 +34,9 @@ export const financeQueryKeys = {
     [...financeQueryKeys.invoice(invoiceId), "credit-notes"] as const,
   notes: (invoiceId: string) => [...financeQueryKeys.invoice(invoiceId), "notes"] as const,
 
+  bookingPaymentSchedules: (bookingId: string) =>
+    [...financeQueryKeys.all, "booking-payment-schedules", bookingId] as const,
+
   supplierPayments: () => [...financeQueryKeys.all, "supplier-payments"] as const,
   supplierPaymentsList: (filters: FinanceSupplierPaymentListFilters) =>
     [...financeQueryKeys.supplierPayments(), "list", filters] as const,

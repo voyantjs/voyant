@@ -16,6 +16,8 @@
     "voyant-bookings-booking-item-list",
     "voyant-bookings-booking-item-participants",
     "voyant-bookings-booking-list",
+    "voyant-bookings-booking-payment-schedule-dialog",
+    "voyant-bookings-booking-payment-schedule-list",
     "voyant-bookings-notes",
     "voyant-bookings-passenger-dialog",
     "voyant-bookings-passenger-list",

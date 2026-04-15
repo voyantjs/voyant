@@ -782,6 +782,41 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-payment-schedule-dialog",
+      "type": "registry:component",
+      "title": "Booking Payment Schedule Dialog",
+      "description": "Create/edit payment schedule dialog wired to finance-react schedule mutations.",
+      "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-payment-schedule-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-payment-schedule-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-payment-schedule-list",
+      "type": "registry:component",
+      "title": "Booking Payment Schedule List",
+      "description": "Payment schedule section for booking detail page with inline CRUD.",
+      "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-bookings-booking-payment-schedule-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-payment-schedule-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-payment-schedule-list.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",

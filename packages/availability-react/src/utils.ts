@@ -24,7 +24,12 @@ export function formatDateTime(value: string | null) {
   return value ? value.replace("T", " ").slice(0, 16) : "-"
 }
 
-export function productNameById(products: ProductOption[], productId: string) {
+export function productNameById(
+  products: ProductOption[],
+  productId: string,
+  productName?: string | null,
+) {
+  if (productName) return productName
   return products.find((product) => product.id === productId)?.name ?? productId
 }
 

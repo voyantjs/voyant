@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
+import { productsRef } from "./products-ref.js"
 import {
   availabilityPickupPoints,
   availabilitySlotPickups,
@@ -47,8 +48,9 @@ export async function listPickupPoints(
 
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(availabilityPickupPoints), productName: productsRef.name })
       .from(availabilityPickupPoints)
+      .leftJoin(productsRef, eq(availabilityPickupPoints.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)
@@ -174,8 +176,9 @@ export async function listMeetingConfigs(
 
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(productMeetingConfigs), productName: productsRef.name })
       .from(productMeetingConfigs)
+      .leftJoin(productsRef, eq(productMeetingConfigs.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)

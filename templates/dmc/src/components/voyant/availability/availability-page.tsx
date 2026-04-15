@@ -92,13 +92,17 @@ export function AvailabilityPage() {
   const filteredRules = rules.filter(
     (rule) =>
       matchesProduct(rule.productId) &&
-      matchesSearch(productNameById(products, rule.productId), rule.timezone, rule.recurrenceRule),
+      matchesSearch(
+        productNameById(products, rule.productId, rule.productName),
+        rule.timezone,
+        rule.recurrenceRule,
+      ),
   )
   const filteredStartTimes = startTimes.filter(
     (startTime) =>
       matchesProduct(startTime.productId) &&
       matchesSearch(
-        productNameById(products, startTime.productId),
+        productNameById(products, startTime.productId, startTime.productName),
         startTime.label,
         startTime.startTimeLocal,
       ),
@@ -107,7 +111,7 @@ export function AvailabilityPage() {
     (slot) =>
       matchesProduct(slot.productId) &&
       matchesSearch(
-        productNameById(products, slot.productId),
+        productNameById(products, slot.productId, slot.productName),
         slot.dateLocal,
         slot.startsAt,
         slot.status,
@@ -118,7 +122,7 @@ export function AvailabilityPage() {
     (closeout) =>
       matchesProduct(closeout.productId) &&
       matchesSearch(
-        productNameById(products, closeout.productId),
+        productNameById(products, closeout.productId, closeout.productName),
         closeout.dateLocal,
         closeout.slotId,
         closeout.reason,
@@ -129,7 +133,7 @@ export function AvailabilityPage() {
     (pickupPoint) =>
       matchesProduct(pickupPoint.productId) &&
       matchesSearch(
-        productNameById(products, pickupPoint.productId),
+        productNameById(products, pickupPoint.productId, pickupPoint.productName),
         pickupPoint.name,
         pickupPoint.locationText,
         pickupPoint.description,

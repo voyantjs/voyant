@@ -1,5 +1,13 @@
 # @voyantjs/finance-react
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [8de4602]
+  - @voyantjs/finance@0.4.2
+  - @voyantjs/react@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

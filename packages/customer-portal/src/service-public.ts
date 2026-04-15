@@ -8,8 +8,12 @@ import {
   bookings,
 } from "@voyantjs/bookings/schema"
 import { crmService, people } from "@voyantjs/crm"
-import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
-import { type TravelDocument, travelDocumentSchema } from "@voyantjs/db/schema/iam/kms"
+import {
+  authUser,
+  type TravelDocument,
+  travelDocumentSchema,
+  userProfilesTable,
+} from "@voyantjs/db/schema/iam"
 import { invoiceRenditions, invoices, payments } from "@voyantjs/finance/schema"
 import { identityContactPoints } from "@voyantjs/identity/schema"
 import { identityService } from "@voyantjs/identity/service"

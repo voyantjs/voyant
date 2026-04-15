@@ -113,6 +113,11 @@ export function createNotificationsRoutes(options?: {
       )
       return c.json(await notificationsService.listReminderRuns(c.get("db"), query))
     })
+    .get("/reminder-runs/:id", async (c) => {
+      const row = await notificationsService.getReminderRunById(c.get("db"), c.req.param("id"))
+      if (!row) return c.json({ error: "Notification reminder run not found" }, 404)
+      return c.json({ data: row })
+    })
     .post("/reminders/run-due", async (c) => {
       try {
         const dispatcher = createNotificationService(

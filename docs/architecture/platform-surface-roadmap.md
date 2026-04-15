@@ -188,6 +188,10 @@ Partially resolved:
 - booking-scoped public finance payment history now exists at
   `/v1/public/finance/bookings/:bookingId/payments` with invoice context
 - admin checkout reminder tracking is now exposed as a first-class surface
+- notifications now expose enriched admin reminder-run reads with rule, delivery,
+  and entity-linkage context plus direct run lookup, so apps do not need
+  custom SQL joins just to render reminder state for bookings, invoices, or
+  schedules
 
 Still missing:
 

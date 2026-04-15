@@ -20,6 +20,7 @@ import type {
   notificationDeliveryListQuerySchema,
   notificationReminderRuleListQuerySchema,
   notificationReminderRunListQuerySchema,
+  notificationReminderRunRecordSchema,
   notificationTemplateListQuerySchema,
   runDueRemindersSchema,
   sendBookingDocumentsNotificationSchema,
@@ -41,6 +42,7 @@ export type NotificationReminderRuleListQuery = z.infer<
 export type NotificationReminderRunListQuery = z.infer<
   typeof notificationReminderRunListQuerySchema
 >
+export type NotificationReminderRunRecord = z.infer<typeof notificationReminderRunRecordSchema>
 export type CreateNotificationReminderRuleInput = z.infer<
   typeof insertNotificationReminderRuleSchema
 >

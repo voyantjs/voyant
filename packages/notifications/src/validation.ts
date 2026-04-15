@@ -119,8 +119,76 @@ export const notificationReminderRunListQuerySchema = paginationSchema.extend({
   reminderRuleId: z.string().optional(),
   targetType: notificationReminderTargetTypeSchema.optional(),
   targetId: z.string().optional(),
+  scheduleId: z.string().optional(),
+  invoiceId: z.string().optional(),
   bookingId: z.string().optional(),
+  paymentSessionId: z.string().optional(),
+  notificationDeliveryId: z.string().optional(),
+  personId: z.string().optional(),
+  organizationId: z.string().optional(),
+  recipient: z.string().optional(),
   status: notificationReminderRunStatusSchema.optional(),
+})
+
+export const notificationReminderRunRuleSummarySchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  status: notificationReminderStatusSchema,
+  targetType: notificationReminderTargetTypeSchema,
+  channel: notificationChannelSchema,
+  provider: z.string().nullable(),
+  templateId: z.string().nullable(),
+  templateSlug: z.string().nullable(),
+  relativeDaysFromDueDate: z.number().int(),
+})
+
+export const notificationReminderRunDeliverySummarySchema = z.object({
+  id: z.string(),
+  status: notificationDeliveryStatusSchema,
+  channel: notificationChannelSchema,
+  provider: z.string(),
+  toAddress: z.string(),
+  subject: z.string().nullable(),
+  sentAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+})
+
+export const notificationReminderRunLinksSchema = z.object({
+  bookingId: z.string().nullable(),
+  bookingPaymentScheduleId: z.string().nullable(),
+  invoiceId: z.string().nullable(),
+  paymentSessionId: z.string().nullable(),
+  personId: z.string().nullable(),
+  organizationId: z.string().nullable(),
+  notificationDeliveryId: z.string().nullable(),
+})
+
+export const notificationReminderRunRecordSchema = z.object({
+  id: z.string(),
+  reminderRuleId: z.string(),
+  targetType: notificationReminderTargetTypeSchema,
+  targetId: z.string(),
+  dedupeKey: z.string(),
+  status: notificationReminderRunStatusSchema,
+  recipient: z.string().nullable(),
+  scheduledFor: z.string(),
+  processedAt: z.string(),
+  errorMessage: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  links: notificationReminderRunLinksSchema,
+  reminderRule: notificationReminderRunRuleSummarySchema,
+  delivery: notificationReminderRunDeliverySummarySchema.nullable(),
+})
+
+export const notificationReminderRunListResponseSchema = z.object({
+  data: z.array(notificationReminderRunRecordSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
 })
 
 export const runDueRemindersSchema = z.object({

@@ -80,6 +80,17 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder routes", () => {
     const runsBody = await runsRes.json()
     expect(runsBody.total).toBe(1)
     expect(runsBody.data[0].status).toBe("sent")
+    expect(runsBody.data[0].links.bookingPaymentScheduleId).toBe("bkpy_test")
+    expect(runsBody.data[0].reminderRule.slug).toBe("balance-due-2-days-before")
+    expect(runsBody.data[0].delivery.status).toBe("sent")
+
+    const runDetailRes = await ctx.request(`/reminder-runs/${runsBody.data[0].id}`)
+    expect(runDetailRes.status).toBe(200)
+    const runDetailBody = await runDetailRes.json()
+    expect(runDetailBody.data.links.bookingId).toBe("book_test")
+    expect(runDetailBody.data.links.bookingPaymentScheduleId).toBe("bkpy_test")
+    expect(runDetailBody.data.reminderRule.relativeDaysFromDueDate).toBe(-2)
+    expect(runDetailBody.data.delivery.toAddress).toBe("ana@example.com")
 
     const secondRunRes = await ctx.request("/reminders/run-due", {
       method: "POST",
@@ -189,6 +200,14 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder routes", () => {
     const runsBody = await runsRes.json()
     expect(runsBody.total).toBe(1)
     expect(runsBody.data[0].targetType).toBe("invoice")
+    expect(runsBody.data[0].links.invoiceId).toBe("inv_test")
+    expect(runsBody.data[0].reminderRule.slug).toBe("invoice-due-2-days-before")
+
+    const invoiceRunsRes = await ctx.request("/reminder-runs?invoiceId=inv_test")
+    expect(invoiceRunsRes.status).toBe(200)
+    const invoiceRunsBody = await invoiceRunsRes.json()
+    expect(invoiceRunsBody.total).toBe(1)
+    expect(invoiceRunsBody.data[0].links.invoiceId).toBe("inv_test")
 
     const deliveriesRes = await ctx.request("/deliveries?targetType=invoice&targetId=inv_test")
     expect(deliveriesRes.status).toBe(200)

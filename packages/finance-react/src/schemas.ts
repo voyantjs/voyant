@@ -129,6 +129,41 @@ export const supplierPaymentRecordSchema = z.object({
 
 export type SupplierPaymentRecord = z.infer<typeof supplierPaymentRecordSchema>
 
+export const paymentScheduleTypeSchema = z.enum([
+  "deposit",
+  "installment",
+  "balance",
+  "hold",
+  "other",
+])
+
+export const paymentScheduleStatusSchema = z.enum([
+  "pending",
+  "due",
+  "paid",
+  "waived",
+  "cancelled",
+  "expired",
+])
+
+export const bookingPaymentScheduleRecordSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  bookingItemId: z.string().nullable(),
+  scheduleType: paymentScheduleTypeSchema,
+  status: paymentScheduleStatusSchema,
+  dueDate: z.string(),
+  currency: z.string(),
+  amountCents: z.number().int(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type BookingPaymentScheduleRecord = z.infer<typeof bookingPaymentScheduleRecordSchema>
+
+export const bookingPaymentSchedulesResponse = arrayEnvelope(bookingPaymentScheduleRecordSchema)
+
 export const invoiceListResponse = paginatedEnvelope(invoiceRecordSchema)
 export const supplierPaymentListResponse = paginatedEnvelope(supplierPaymentRecordSchema)
 export const invoiceSingleResponse = singleEnvelope(invoiceRecordSchema)

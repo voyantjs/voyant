@@ -24,6 +24,7 @@ export {
 } from "./provider.js"
 export { financeQueryKeys } from "./query-keys.js"
 export {
+  getBookingPaymentSchedulesQueryOptions,
   getInvoiceCreditNotesQueryOptions,
   getInvoiceLineItemsQueryOptions,
   getInvoiceNotesQueryOptions,

@@ -9,6 +9,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/compo
 
 import { BookingActivityTimeline } from "./booking-activity-timeline"
 import { BookingDialog } from "./booking-dialog"
+import { BookingItemList } from "./booking-item-list"
 import { BookingNotes } from "./booking-notes"
 import { PassengerList } from "./passenger-list"
 import { StatusChangeDialog } from "./status-change-dialog"
@@ -190,6 +191,7 @@ export function BookingDetailPage({ id }: { id: string }) {
       </div>
 
       <PassengerList bookingId={id} />
+      <BookingItemList bookingId={id} />
       <SupplierStatusList bookingId={id} />
       <BookingActivityTimeline bookingId={id} />
       <BookingNotes bookingId={id} />

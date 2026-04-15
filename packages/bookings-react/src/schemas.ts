@@ -108,8 +108,59 @@ export const bookingNoteRecordSchema = z.object({
 
 export type BookingNoteRecord = z.infer<typeof bookingNoteRecordSchema>
 
+export const bookingItemTypeSchema = z.enum([
+  "unit",
+  "extra",
+  "service",
+  "fee",
+  "tax",
+  "discount",
+  "adjustment",
+  "accommodation",
+  "transport",
+  "other",
+])
+
+export const bookingItemStatusSchema = z.enum([
+  "draft",
+  "on_hold",
+  "confirmed",
+  "cancelled",
+  "expired",
+  "fulfilled",
+])
+
+export const bookingItemRecordSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  itemType: bookingItemTypeSchema,
+  status: bookingItemStatusSchema,
+  serviceDate: z.string().nullable(),
+  startsAt: z.string().nullable(),
+  endsAt: z.string().nullable(),
+  quantity: z.number().int(),
+  sellCurrency: z.string(),
+  unitSellAmountCents: z.number().int().nullable(),
+  totalSellAmountCents: z.number().int().nullable(),
+  costCurrency: z.string().nullable(),
+  unitCostAmountCents: z.number().int().nullable(),
+  totalCostAmountCents: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  productId: z.string().nullable(),
+  optionId: z.string().nullable(),
+  optionUnitId: z.string().nullable(),
+  pricingCategoryId: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type BookingItemRecord = z.infer<typeof bookingItemRecordSchema>
+
 export const bookingListResponse = paginatedEnvelope(bookingRecordSchema)
 export const bookingSingleResponse = singleEnvelope(bookingRecordSchema)
+export const bookingItemsResponse = arrayEnvelope(bookingItemRecordSchema)
 export const bookingPassengersResponse = arrayEnvelope(bookingPassengerRecordSchema)
 export const bookingSupplierStatusesResponse = arrayEnvelope(bookingSupplierStatusRecordSchema)
 export const bookingActivityResponse = arrayEnvelope(bookingActivityRecordSchema)

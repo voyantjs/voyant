@@ -18,6 +18,7 @@ export const bookingsQueryKeys = {
   publicSessionState: (sessionId: string) =>
     [...bookingsQueryKeys.publicSession(sessionId), "state"] as const,
 
+  items: (bookingId: string) => [...bookingsQueryKeys.booking(bookingId), "items"] as const,
   passengers: (bookingId: string) =>
     [...bookingsQueryKeys.booking(bookingId), "passengers"] as const,
   supplierStatuses: (bookingId: string) =>

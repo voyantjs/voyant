@@ -12,6 +12,8 @@
     "voyant-booking-requirements-questions-tab",
     "voyant-bookings-activity-timeline",
     "voyant-bookings-booking-dialog",
+    "voyant-bookings-booking-item-dialog",
+    "voyant-bookings-booking-item-list",
     "voyant-bookings-booking-list",
     "voyant-bookings-notes",
     "voyant-bookings-passenger-dialog",

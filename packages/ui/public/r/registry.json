@@ -731,6 +731,36 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-item-dialog",
+      "type": "registry:component",
+      "title": "Booking Item Dialog",
+      "description": "Create/edit booking item dialog wired to bookings-react item mutations.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-item-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-item-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-item-list",
+      "type": "registry:component",
+      "title": "Booking Item List",
+      "description": "Booking items section for a booking detail page, including create, edit, and delete actions.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "card", "voyant-bookings-booking-item-dialog"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-item-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-item-list.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",

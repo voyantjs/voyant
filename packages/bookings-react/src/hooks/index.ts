@@ -1,6 +1,12 @@
 export { type UseBookingOptions, useBooking } from "./use-booking.js"
 export { type UseBookingActivityOptions, useBookingActivity } from "./use-booking-activity.js"
 export {
+  type CreateBookingItemInput,
+  type UpdateBookingItemInput,
+  useBookingItemMutation,
+} from "./use-booking-item-mutation.js"
+export { type UseBookingItemsOptions, useBookingItems } from "./use-booking-items.js"
+export {
   type CreateBookingInput,
   type UpdateBookingInput,
   useBookingMutation,

@@ -3,8 +3,18 @@
   "name": "voyant-crm-organization-detail-sections",
   "title": "Organization Detail Sections",
   "description": "Reusable organization detail layout sections for CRM organization pages.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["avatar", "badge", "button", "card", "separator", "tabs"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "avatar",
+    "badge",
+    "button",
+    "card",
+    "separator",
+    "tabs"
+  ],
   "files": [
     {
       "path": "registry/crm/organization-detail-sections.tsx",

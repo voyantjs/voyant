@@ -3,8 +3,16 @@
   "name": "voyant-bookings-supplier-status-list",
   "title": "Supplier Status List",
   "description": "Supplier confirmation section for booking detail pages.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["badge", "button", "card", "voyant-bookings-supplier-status-dialog"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "card",
+    "voyant-bookings-supplier-status-dialog"
+  ],
   "files": [
     {
       "path": "registry/bookings/supplier-status-list.tsx",

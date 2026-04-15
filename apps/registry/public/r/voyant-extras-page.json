@@ -3,7 +3,11 @@
   "name": "voyant-extras-page",
   "title": "Extras Page",
   "description": "Server-paginated manager for product extras with product selection, search, and CRUD actions.",
-  "dependencies": ["lucide-react", "@voyantjs/extras-react", "@voyantjs/products-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/extras-react",
+    "@voyantjs/products-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

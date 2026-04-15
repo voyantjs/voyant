@@ -3,8 +3,13 @@
   "name": "voyant-crm-organization-dialog",
   "title": "Organization Dialog",
   "description": "Modal wrapper around Organization Form with create/edit modes.",
-  "dependencies": ["@voyantjs/crm-react"],
-  "registryDependencies": ["dialog", "voyant-crm-organization-form"],
+  "dependencies": [
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "voyant-crm-organization-form"
+  ],
   "files": [
     {
       "path": "registry/crm/organization-dialog.tsx",

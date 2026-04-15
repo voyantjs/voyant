@@ -3,8 +3,19 @@
   "name": "voyant-products-product-form",
   "title": "Product Form",
   "description": "Create/edit form for a product, wired to products-react mutations and product type lookups.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react", "@voyantjs/utils"],
-  "registryDependencies": ["badge", "button", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react",
+    "@voyantjs/utils"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/product-form.tsx",

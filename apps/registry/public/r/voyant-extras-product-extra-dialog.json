@@ -3,8 +3,19 @@
   "name": "voyant-extras-product-extra-dialog",
   "title": "Product Extra Dialog",
   "description": "Create/edit dialog for optional product extras wired to extras-react mutations.",
-  "dependencies": ["lucide-react", "@voyantjs/extras-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/extras-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/extras/product-extra-dialog.tsx",

@@ -3,8 +3,17 @@
   "name": "voyant-products-product-day-service-form",
   "title": "Product Day Service Form",
   "description": "Create/edit form for itinerary day services.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
-  "registryDependencies": ["button", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/product-day-service-form.tsx",

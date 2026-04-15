@@ -3,7 +3,11 @@
   "name": "voyant-legal-templates-page",
   "title": "Contract Templates Page",
   "description": "Contract templates management page with expandable version history.",
-  "dependencies": ["lucide-react", "@tanstack/react-query", "@voyantjs/legal-react"],
+  "dependencies": [
+    "lucide-react",
+    "@tanstack/react-query",
+    "@voyantjs/legal-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

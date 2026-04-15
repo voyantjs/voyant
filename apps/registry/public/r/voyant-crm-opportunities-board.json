@@ -3,8 +3,14 @@
   "name": "voyant-crm-opportunities-board",
   "title": "Opportunities Board",
   "description": "Kanban board layout for opportunity stages and cards.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["card", "scroll-area"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "card",
+    "scroll-area"
+  ],
   "files": [
     {
       "path": "registry/crm/opportunities-board.tsx",

@@ -3,8 +3,18 @@
   "name": "voyant-pricing-price-schedule-dialog",
   "title": "Price Schedule Dialog",
   "description": "Create/edit dialog for RRULE-based price schedules.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["button", "date-picker", "dialog", "input", "label", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "date-picker",
+    "dialog",
+    "input",
+    "label",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/pricing/price-schedule-dialog.tsx",

@@ -3,8 +3,18 @@
   "name": "voyant-products-option-unit-form",
   "title": "Option Unit Form",
   "description": "Create/edit form for option units, including quantity, age, occupancy, and visibility constraints.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/option-unit-form.tsx",

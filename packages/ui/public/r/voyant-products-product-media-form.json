@@ -3,8 +3,18 @@
   "name": "voyant-products-product-media-form",
   "title": "Product Media Form",
   "description": "Create/edit form for product and day-level media items.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/product-media-form.tsx",

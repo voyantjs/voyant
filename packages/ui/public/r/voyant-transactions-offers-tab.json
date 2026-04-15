@@ -3,8 +3,16 @@
   "name": "voyant-transactions-offers-tab",
   "title": "Offers Tab",
   "description": "Server-paginated offers table with create, edit, and delete actions.",
-  "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
-  "registryDependencies": ["badge", "button", "table", "voyant-transactions-offer-dialog"],
+  "dependencies": [
+    "@voyantjs/transactions-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "table",
+    "voyant-transactions-offer-dialog"
+  ],
   "files": [
     {
       "path": "registry/transactions/offers-tab.tsx",

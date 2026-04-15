@@ -3,8 +3,18 @@
   "name": "voyant-legal-number-series-dialog",
   "title": "Number Series Dialog",
   "description": "Create and edit dialog for contract number series.",
-  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/legal-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch"
+  ],
   "files": [
     {
       "path": "registry/legal/number-series-dialog.tsx",

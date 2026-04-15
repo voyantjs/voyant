@@ -3,8 +3,15 @@
   "name": "voyant-hospitality-room-types-tab",
   "title": "Room Types Tab",
   "description": "CRUD table for hospitality room types with built-in dialog integration.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-room-type-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-room-type-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/room-types-tab.tsx",

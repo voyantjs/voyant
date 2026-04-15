@@ -3,8 +3,16 @@
   "name": "voyant-bookings-passenger-dialog",
   "title": "Passenger Dialog",
   "description": "Create/edit passenger dialog wired to bookings-react passenger mutations.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "textarea"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/bookings/passenger-dialog.tsx",

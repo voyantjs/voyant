@@ -3,7 +3,11 @@
   "name": "voyant-pricing-option-start-time-rules-page",
   "title": "Option Start Time Rules Page",
   "description": "Server-paginated CRUD table for option start time pricing adjustments and overrides.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react",
+    "@voyantjs/products-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

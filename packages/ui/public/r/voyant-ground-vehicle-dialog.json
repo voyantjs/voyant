@@ -3,8 +3,19 @@
   "name": "voyant-ground-vehicle-dialog",
   "title": "Ground Vehicle Dialog",
   "description": "Modal form for creating and editing ground vehicles.",
-  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/ground-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/ground/vehicle-dialog.tsx",

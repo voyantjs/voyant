@@ -3,8 +3,17 @@
   "name": "voyant-crm-create-activity-dialog",
   "title": "Create Activity Dialog",
   "description": "Create dialog for CRM activities with optional entity linking.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["button", "dialog", "input", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/crm/create-activity-dialog.tsx",

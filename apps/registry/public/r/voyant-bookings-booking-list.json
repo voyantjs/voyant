@@ -3,8 +3,17 @@
   "name": "voyant-bookings-booking-list",
   "title": "Booking List",
   "description": "Searchable booking table with create/edit dialog wiring.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["badge", "button", "input", "table", "voyant-bookings-booking-dialog"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "input",
+    "table",
+    "voyant-bookings-booking-dialog"
+  ],
   "files": [
     {
       "path": "registry/bookings/booking-list.tsx",

@@ -3,8 +3,13 @@
   "name": "voyant-products-product-media-dialog",
   "title": "Product Media Dialog",
   "description": "Modal wrapper around Product Media Form with create/edit modes.",
-  "dependencies": ["@voyantjs/products-react"],
-  "registryDependencies": ["dialog", "voyant-products-product-media-form"],
+  "dependencies": [
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "voyant-products-product-media-form"
+  ],
   "files": [
     {
       "path": "registry/products/product-media-dialog.tsx",

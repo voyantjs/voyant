@@ -3,8 +3,16 @@
   "name": "voyant-pricing-option-unit-tiers-page",
   "title": "Option Unit Tiers Page",
   "description": "Server-paginated CRUD table for quantity-based tier pricing attached to option unit price rules.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["badge", "button", "table", "voyant-pricing-option-unit-tier-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "table",
+    "voyant-pricing-option-unit-tier-dialog"
+  ],
   "files": [
     {
       "path": "registry/pricing/option-unit-tiers-page.tsx",

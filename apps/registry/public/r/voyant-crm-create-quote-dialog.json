@@ -3,8 +3,18 @@
   "name": "voyant-crm-create-quote-dialog",
   "title": "Create Quote Dialog",
   "description": "Dialog for creating a quote from an existing CRM opportunity.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react", "@voyantjs/utils"],
-  "registryDependencies": ["button", "combobox", "date-picker", "dialog", "label"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react",
+    "@voyantjs/utils"
+  ],
+  "registryDependencies": [
+    "button",
+    "combobox",
+    "date-picker",
+    "dialog",
+    "label"
+  ],
   "files": [
     {
       "path": "registry/crm/create-quote-dialog.tsx",

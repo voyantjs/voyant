@@ -3,8 +3,19 @@
   "name": "voyant-external-refs-external-ref-dialog",
   "title": "External Ref Dialog",
   "description": "Modal form for creating and editing external reference mappings.",
-  "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/external-refs-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/external-refs/external-ref-dialog.tsx",

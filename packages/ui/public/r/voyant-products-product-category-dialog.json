@@ -3,8 +3,13 @@
   "name": "voyant-products-product-category-dialog",
   "title": "Product Category Dialog",
   "description": "Modal wrapper around Product Category Form with create/edit modes.",
-  "dependencies": ["@voyantjs/products-react"],
-  "registryDependencies": ["dialog", "voyant-products-product-category-form"],
+  "dependencies": [
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "voyant-products-product-category-form"
+  ],
   "files": [
     {
       "path": "registry/products/product-category-dialog.tsx",

@@ -3,8 +3,18 @@
   "name": "voyant-hospitality-room-block-dialog",
   "title": "Room Block Dialog",
   "description": "Modal form for creating and editing hospitality room blocks.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/hospitality/room-block-dialog.tsx",

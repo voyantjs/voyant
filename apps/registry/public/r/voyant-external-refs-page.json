@@ -3,8 +3,15 @@
   "name": "voyant-external-refs-page",
   "title": "External Refs Page",
   "description": "External reference management shell for arbitrary entities.",
-  "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
-  "registryDependencies": ["input", "label", "voyant-external-refs-tab"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/external-refs-react"
+  ],
+  "registryDependencies": [
+    "input",
+    "label",
+    "voyant-external-refs-tab"
+  ],
   "files": [
     {
       "path": "registry/external-refs/external-refs-page.tsx",

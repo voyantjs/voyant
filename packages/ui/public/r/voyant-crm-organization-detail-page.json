@@ -3,8 +3,14 @@
   "name": "voyant-crm-organization-detail-page",
   "title": "Organization Detail Page",
   "description": "CRM organization detail page container with related people, opportunities, and activities.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["button", "voyant-crm-organization-detail-sections"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "voyant-crm-organization-detail-sections"
+  ],
   "files": [
     {
       "path": "registry/crm/organization-detail-page.tsx",

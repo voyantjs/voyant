@@ -3,8 +3,18 @@
   "name": "voyant-hospitality-maintenance-block-dialog",
   "title": "Maintenance Block Dialog",
   "description": "Modal form for creating and editing hospitality maintenance blocks.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/hospitality/maintenance-block-dialog.tsx",

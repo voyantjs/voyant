@@ -3,7 +3,11 @@
   "name": "voyant-pricing-price-catalogs-page",
   "title": "Price Catalogs Page",
   "description": "Server-paginated CRUD table for price catalogs with search and dialog actions.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/utils"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react",
+    "@voyantjs/utils"
+  ],
   "registryDependencies": [
     "badge",
     "button",

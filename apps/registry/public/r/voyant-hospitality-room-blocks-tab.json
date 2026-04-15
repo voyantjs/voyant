@@ -3,8 +3,15 @@
   "name": "voyant-hospitality-room-blocks-tab",
   "title": "Room Blocks Tab",
   "description": "CRUD table for hospitality room blocks with built-in dialog integration.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-room-block-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-room-block-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/room-blocks-tab.tsx",

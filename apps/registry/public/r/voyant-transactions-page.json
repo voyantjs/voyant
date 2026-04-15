@@ -3,7 +3,10 @@
   "name": "voyant-transactions-page",
   "title": "Transactions Page",
   "description": "Transactions management page shell with offers and orders tabs.",
-  "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
+  "dependencies": [
+    "@voyantjs/transactions-react",
+    "lucide-react"
+  ],
   "registryDependencies": [
     "tabs",
     "voyant-transactions-offers-tab",

@@ -3,8 +3,12 @@
   "name": "voyant-sellability-product-combobox",
   "title": "Sellability Product Combobox",
   "description": "Remote-search product picker for sellability scoping.",
-  "dependencies": ["@voyantjs/products-react"],
-  "registryDependencies": ["combobox"],
+  "dependencies": [
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "combobox"
+  ],
   "files": [
     {
       "path": "registry/sellability/product-combobox.tsx",

@@ -3,8 +3,18 @@
   "name": "voyant-booking-requirements-booking-question-dialog",
   "title": "Booking Question Dialog",
   "description": "Create/edit dialog for custom booking questions on a product.",
-  "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/booking-requirements-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/booking-requirements/booking-question-dialog.tsx",

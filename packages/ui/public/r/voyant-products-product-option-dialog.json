@@ -3,8 +3,13 @@
   "name": "voyant-products-product-option-dialog",
   "title": "Product Option Dialog",
   "description": "Modal wrapper around Product Option Form with create/edit modes.",
-  "dependencies": ["@voyantjs/products-react"],
-  "registryDependencies": ["dialog", "voyant-products-product-option-form"],
+  "dependencies": [
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "voyant-products-product-option-form"
+  ],
   "files": [
     {
       "path": "registry/products/product-option-dialog.tsx",

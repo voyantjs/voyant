@@ -3,8 +3,16 @@
   "name": "voyant-hospitality-rate-plans-tab",
   "title": "Rate Plans Tab",
   "description": "CRUD table for hospitality rate plans with pricing and cancellation lookups.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-rate-plan-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-rate-plan-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/rate-plans-tab.tsx",

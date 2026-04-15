@@ -3,8 +3,16 @@
   "name": "voyant-ground-drivers-tab",
   "title": "Ground Drivers Tab",
   "description": "Server-paginated CRUD table for ground drivers.",
-  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
-  "registryDependencies": ["badge", "button", "data-table", "voyant-ground-driver-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/ground-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "data-table",
+    "voyant-ground-driver-dialog"
+  ],
   "files": [
     {
       "path": "registry/ground/drivers-tab.tsx",

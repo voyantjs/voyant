@@ -3,7 +3,10 @@
   "name": "voyant-ground-page",
   "title": "Ground Page",
   "description": "Ground operations shell with operators, vehicles and drivers tabs.",
-  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/ground-react"
+  ],
   "registryDependencies": [
     "tabs",
     "voyant-ground-operators-tab",

@@ -164,6 +164,49 @@ export type BookingPaymentScheduleRecord = z.infer<typeof bookingPaymentSchedule
 
 export const bookingPaymentSchedulesResponse = arrayEnvelope(bookingPaymentScheduleRecordSchema)
 
+export const guaranteeTypeSchema = z.enum([
+  "deposit",
+  "credit_card",
+  "preauth",
+  "card_on_file",
+  "bank_transfer",
+  "voucher",
+  "agency_letter",
+  "other",
+])
+
+export const guaranteeStatusSchema = z.enum([
+  "pending",
+  "active",
+  "released",
+  "failed",
+  "cancelled",
+  "expired",
+])
+
+export const bookingGuaranteeRecordSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  bookingPaymentScheduleId: z.string().nullable(),
+  bookingItemId: z.string().nullable(),
+  guaranteeType: guaranteeTypeSchema,
+  status: guaranteeStatusSchema,
+  currency: z.string().nullable(),
+  amountCents: z.number().int().nullable(),
+  provider: z.string().nullable(),
+  referenceNumber: z.string().nullable(),
+  guaranteedAt: z.string().nullable(),
+  expiresAt: z.string().nullable(),
+  releasedAt: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type BookingGuaranteeRecord = z.infer<typeof bookingGuaranteeRecordSchema>
+
+export const bookingGuaranteesResponse = arrayEnvelope(bookingGuaranteeRecordSchema)
+
 export const invoiceListResponse = paginatedEnvelope(invoiceRecordSchema)
 export const supplierPaymentListResponse = paginatedEnvelope(supplierPaymentRecordSchema)
 export const invoiceSingleResponse = singleEnvelope(invoiceRecordSchema)

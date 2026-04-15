@@ -1,5 +1,30 @@
 # @voyantjs/notifications
 
+## 0.4.2
+
+### Patch Changes
+
+- 8de4602: Add optional event-bus hooks around document primitives.
+
+  - `@voyantjs/legal` contract document generation routes/services can now emit
+    `contract.document.generated`
+  - `@voyantjs/finance` invoice document generation can emit
+    `invoice.document.generated`, and settlement reconciliation can emit
+    `invoice.settled`
+  - `@voyantjs/notifications` booking document sends can emit
+    `booking.documents.sent`
+
+  These stay at the primitive layer so apps can orchestrate their own document
+  policies without Voyant owning the full workflow.
+
+- Updated dependencies [8de4602]
+  - @voyantjs/bookings@0.4.2
+  - @voyantjs/core@0.4.2
+  - @voyantjs/db@0.4.2
+  - @voyantjs/finance@0.4.2
+  - @voyantjs/hono@0.4.2
+  - @voyantjs/legal@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

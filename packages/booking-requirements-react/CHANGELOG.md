@@ -1,5 +1,12 @@
 # @voyantjs/booking-requirements-react
 
+## 0.4.2
+
+### Patch Changes
+
+- @voyantjs/booking-requirements@0.4.2
+- @voyantjs/react@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

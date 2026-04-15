@@ -1,5 +1,13 @@
 # @voyantjs/auth
 
+## 0.4.5
+
+### Patch Changes
+
+- Updated dependencies [e3f6e72]
+  - @voyantjs/db@0.4.5
+  - @voyantjs/utils@0.4.5
+
 ## 0.4.4
 
 ### Patch Changes

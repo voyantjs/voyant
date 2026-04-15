@@ -1,5 +1,12 @@
 # @voyantjs/availability-react
 
+## 0.4.5
+
+### Patch Changes
+
+- @voyantjs/availability@0.4.5
+- @voyantjs/react@0.4.5
+
 ## 0.4.4
 
 ### Patch Changes

@@ -5,6 +5,12 @@ export {
   type UpdateBookingItemInput,
   useBookingItemMutation,
 } from "./use-booking-item-mutation.js"
+export {
+  type AddItemParticipantInput,
+  type UseBookingItemParticipantsOptions,
+  useBookingItemParticipantMutation,
+  useBookingItemParticipants,
+} from "./use-booking-item-participants.js"
 export { type UseBookingItemsOptions, useBookingItems } from "./use-booking-items.js"
 export {
   type CreateBookingInput,

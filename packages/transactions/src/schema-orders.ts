@@ -1,5 +1,5 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import type { KmsEnvelope } from "@voyantjs/db/schema/iam/kms"
+import type { KmsEnvelope } from "@voyantjs/db/schema/iam"
 import {
   boolean,
   date,

@@ -1,5 +1,4 @@
-import type { KmsEnvelope } from "@voyantjs/db/schema/iam/kms"
-import { kmsEnvelopeSchema } from "@voyantjs/db/schema/iam/kms"
+import { type KmsEnvelope, kmsEnvelopeSchema } from "@voyantjs/db/schema/iam"
 import { z } from "zod"
 
 export const transactionParticipantIdentitySchema = z.object({

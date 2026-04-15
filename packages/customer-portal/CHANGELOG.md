@@ -1,5 +1,22 @@
 # @voyantjs/customer-portal
 
+## 0.4.1
+
+### Patch Changes
+
+- c3f3ccf: Stop importing the deep `@voyantjs/db/schema/iam/kms` subpath from the published customer portal bundle and use the stable `@voyantjs/db/schema/iam` entrypoint instead. This avoids downstream SSR bundler alias workarounds in setups like Astro/Vite under pnpm.
+- Updated dependencies [4c4ea3c]
+- Updated dependencies [a49630a]
+  - @voyantjs/bookings@0.4.1
+  - @voyantjs/core@0.4.1
+  - @voyantjs/crm@0.4.1
+  - @voyantjs/db@0.4.1
+  - @voyantjs/finance@0.4.1
+  - @voyantjs/hono@0.4.1
+  - @voyantjs/identity@0.4.1
+  - @voyantjs/legal@0.4.1
+  - @voyantjs/utils@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

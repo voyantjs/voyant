@@ -1,5 +1,17 @@
 # @voyantjs/bookings
 
+## 0.4.1
+
+### Patch Changes
+
+- 4c4ea3c: Avoid deep `@voyantjs/db/schema/iam/kms` imports in published bundles by using the stable
+  `@voyantjs/db/schema/iam` entrypoint instead. This reduces downstream SSR bundler resolution issues
+  under pnpm-based builds.
+  - @voyantjs/core@0.4.1
+  - @voyantjs/db@0.4.1
+  - @voyantjs/hono@0.4.1
+  - @voyantjs/utils@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

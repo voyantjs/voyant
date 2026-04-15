@@ -1,5 +1,13 @@
 # @voyantjs/bookings-react
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [4c4ea3c]
+  - @voyantjs/bookings@0.4.1
+  - @voyantjs/react@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @voyantjs/distribution
 
+## 0.4.1
+
+### Patch Changes
+
+- @voyantjs/availability@0.4.1
+- @voyantjs/core@0.4.1
+- @voyantjs/db@0.4.1
+- @voyantjs/hono@0.4.1
+- @voyantjs/identity@0.4.1
+- @voyantjs/products@0.4.1
+- @voyantjs/suppliers@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

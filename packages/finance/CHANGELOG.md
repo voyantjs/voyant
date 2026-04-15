@@ -1,5 +1,20 @@
 # @voyantjs/finance
 
+## 0.4.1
+
+### Patch Changes
+
+- a49630a: Extend the public finance surface with customer-safe document lookup by reference
+  and add typed organization member/invitation exports in `@voyantjs/auth-react`
+  for shared team-management UIs.
+- Updated dependencies [4c4ea3c]
+  - @voyantjs/bookings@0.4.1
+  - @voyantjs/core@0.4.1
+  - @voyantjs/db@0.4.1
+  - @voyantjs/hono@0.4.1
+  - @voyantjs/voyant-storage@0.4.1
+  - @voyantjs/utils@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

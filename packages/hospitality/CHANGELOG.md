@@ -1,5 +1,16 @@
 # @voyantjs/hospitality
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [4c4ea3c]
+  - @voyantjs/bookings@0.4.1
+  - @voyantjs/core@0.4.1
+  - @voyantjs/db@0.4.1
+  - @voyantjs/facilities@0.4.1
+  - @voyantjs/hono@0.4.1
+
 ## 0.4.0
 
 ### Patch Changes

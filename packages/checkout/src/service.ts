@@ -18,6 +18,7 @@ import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import type {
+  BootstrapCheckoutCollectionInput,
   CheckoutBankTransferInstructionsRecord,
   CheckoutProviderStartInput,
   CheckoutReminderRunListQuery,
@@ -115,6 +116,13 @@ export interface InitiatedCheckoutCollection {
   paymentSessionNotification: NotificationDelivery | null
   bankTransferInstructions: CheckoutBankTransferInstructionsRecord | null
   providerStart: CheckoutProviderStartResult | null
+}
+
+export interface BootstrappedCheckoutCollection extends InitiatedCheckoutCollection {
+  bookingId: string
+  sessionId: string
+  sourceType: "booking" | "session"
+  intent: "deposit" | "balance" | "custom"
 }
 
 export interface CheckoutRuntimeOptions {
@@ -233,6 +241,58 @@ function normalizeExactAmountCents(amountCents: number | undefined) {
   return typeof amountCents === "number" && Number.isFinite(amountCents) && amountCents > 0
     ? Math.round(amountCents)
     : null
+}
+
+function resolveCheckoutIntent(
+  input:
+    | Pick<BootstrapCheckoutCollectionInput, "intent" | "stage" | "amountCents">
+    | Pick<InitiateCheckoutCollectionInput, "stage" | "amountCents">,
+) {
+  if ("intent" in input && input.intent) {
+    return input.intent
+  }
+
+  if (
+    typeof input.amountCents === "number" &&
+    Number.isFinite(input.amountCents) &&
+    input.amountCents > 0
+  ) {
+    return "custom" as const
+  }
+
+  if (input.stage === "initial") {
+    return "deposit" as const
+  }
+
+  if (input.stage === "reminder") {
+    return "balance" as const
+  }
+
+  return "custom" as const
+}
+
+function resolveCheckoutSubject(input: BootstrapCheckoutCollectionInput) {
+  if (input.bookingId && input.sessionId && input.bookingId !== input.sessionId) {
+    throw new Error("bookingId and sessionId must refer to the same booking session")
+  }
+
+  if (input.bookingId) {
+    return {
+      bookingId: input.bookingId,
+      sessionId: input.sessionId ?? input.bookingId,
+      sourceType: "booking" as const,
+    }
+  }
+
+  if (input.sessionId) {
+    return {
+      bookingId: input.sessionId,
+      sessionId: input.sessionId,
+      sourceType: "session" as const,
+    }
+  }
+
+  throw new Error("Provide a bookingId or sessionId")
 }
 
 function toInvoiceDueDateTime(value: string | null | undefined) {
@@ -667,6 +727,50 @@ export async function initiateCheckoutCollection(
     paymentSessionNotification,
     bankTransferInstructions,
     providerStart,
+  }
+}
+
+export async function bootstrapCheckoutCollection(
+  db: PostgresJsDatabase,
+  input: BootstrapCheckoutCollectionInput,
+  options: CheckoutPolicyOptions = {},
+  dispatcher?: NotificationService,
+  runtime: CheckoutRuntimeOptions = {},
+): Promise<BootstrappedCheckoutCollection | null> {
+  const subject = resolveCheckoutSubject(input)
+  const initiated = await initiateCheckoutCollection(
+    db,
+    subject.bookingId,
+    {
+      method: input.method,
+      stage: input.stage,
+      scheduleId: input.scheduleId,
+      invoiceId: input.invoiceId,
+      amountCents: input.amountCents,
+      ensureDefaultPaymentPlan: input.ensureDefaultPaymentPlan,
+      paymentSessionTarget: input.paymentSessionTarget,
+      paymentPlan: input.paymentPlan,
+      paymentSession: input.paymentSession,
+      paymentSessionNotification: input.paymentSessionNotification,
+      invoiceNotification: input.invoiceNotification,
+      startProvider: input.startProvider,
+      notes: input.notes,
+    },
+    options,
+    dispatcher,
+    runtime,
+  )
+
+  if (!initiated) {
+    return null
+  }
+
+  return {
+    bookingId: subject.bookingId,
+    sessionId: subject.sessionId,
+    sourceType: subject.sourceType,
+    intent: resolveCheckoutIntent(input),
+    ...initiated,
   }
 }
 

@@ -2,12 +2,14 @@ import { Hono } from "hono"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const serviceMocks = vi.hoisted(() => ({
+  bootstrapCheckoutCollection: vi.fn(),
   initiateCheckoutCollection: vi.fn(),
   listBookingReminderRuns: vi.fn(),
   previewCheckoutCollection: vi.fn(),
 }))
 
 vi.mock("../../src/service.js", () => ({
+  bootstrapCheckoutCollection: serviceMocks.bootstrapCheckoutCollection,
   initiateCheckoutCollection: serviceMocks.initiateCheckoutCollection,
   listBookingReminderRuns: serviceMocks.listBookingReminderRuns,
   previewCheckoutCollection: serviceMocks.previewCheckoutCollection,
@@ -100,5 +102,61 @@ describe("createCheckoutRoutes", () => {
       },
     })
     expect(runtime.paymentStarters.netopia).toBe(paymentStarter)
+  })
+
+  it("bootstraps checkout from a session id with the unified route", async () => {
+    serviceMocks.bootstrapCheckoutCollection.mockResolvedValue({
+      bookingId: "book_123",
+      sessionId: "book_123",
+      sourceType: "session",
+      intent: "custom",
+      plan: {
+        bookingId: "book_123",
+        method: "card",
+        stage: "manual",
+        paymentSessionTarget: "invoice",
+        documentType: "invoice",
+        willCreateDefaultPaymentPlan: false,
+        selectedSchedule: null,
+        selectedInvoice: null,
+        amountCents: 25000,
+        currency: "EUR",
+        recommendedAction: "create_invoice_then_payment_session",
+      },
+      invoice: null,
+      paymentSession: null,
+      invoiceNotification: null,
+      paymentSessionNotification: null,
+      bankTransferInstructions: null,
+      providerStart: null,
+    })
+
+    const routes = createCheckoutRoutes()
+    const app = new Hono()
+    app.use("*", async (c, next) => {
+      c.set("db", {} as never)
+      await next()
+    })
+    app.route("/", routes)
+
+    const res = await app.request("/v1/checkout/collections/bootstrap", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "book_123",
+        method: "card",
+        stage: "manual",
+        amountCents: 25000,
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    expect(serviceMocks.bootstrapCheckoutCollection).toHaveBeenCalledTimes(1)
+    expect(serviceMocks.bootstrapCheckoutCollection.mock.calls[0]?.[1]).toMatchObject({
+      sessionId: "book_123",
+      method: "card",
+      stage: "manual",
+      amountCents: 25000,
+    })
   })
 })

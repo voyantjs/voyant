@@ -159,6 +159,10 @@ Partially resolved:
   session read, state read/write, and repricing flows
 - `@voyantjs/checkout` now exposes a module-based checkout surface with typed
   collection-plan and initiate-collection contracts
+- `@voyantjs/checkout` now also exposes a unified
+  `/v1/checkout/collections/bootstrap` contract that can start exact-amount
+  collection from either a `bookingId` or a `sessionId`, covering booking-
+  backed and session-backed storefront flows through one request shape
 - admin checkout reminder tracking is now backed by first-class notification
   reminder runs instead of app-local booking metadata
 - bookings now expose a first-class admin overview lookup route and service

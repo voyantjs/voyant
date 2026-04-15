@@ -5,6 +5,7 @@ export {
   createCheckoutRoutes,
 } from "./routes.js"
 export type {
+  BootstrappedCheckoutCollection,
   CheckoutBankTransferDetails,
   CheckoutCollectionPlan,
   CheckoutPaymentStarter,
@@ -16,12 +17,15 @@ export type {
   InitiatedCheckoutCollection,
 } from "./service.js"
 export {
+  bootstrapCheckoutCollection,
   initiateCheckoutCollection,
   listBookingReminderRuns,
   previewCheckoutCollection,
   resolvePaymentSessionTarget,
 } from "./service.js"
 export type {
+  BootstrapCheckoutCollectionInput,
+  BootstrappedCheckoutCollectionRecord,
   CheckoutBankTransferInstructionsRecord,
   CheckoutCollectionPlanRecord,
   CheckoutProviderStartInput,
@@ -33,7 +37,10 @@ export type {
   PreviewCheckoutCollectionInput,
 } from "./validation.js"
 export {
+  bootstrapCheckoutCollectionSchema,
+  bootstrappedCheckoutCollectionSchema,
   checkoutBankTransferInstructionsSchema,
+  checkoutCollectionIntentSchema,
   checkoutCollectionInvoiceSchema,
   checkoutCollectionMethodSchema,
   checkoutCollectionPlanSchema,

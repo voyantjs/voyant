@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { resolvePaymentSessionTarget } from "../../src/service.js"
+import { bootstrapCheckoutCollection, resolvePaymentSessionTarget } from "../../src/service.js"
 
 describe("resolvePaymentSessionTarget", () => {
   it("always uses invoice collection for bank transfer", () => {
@@ -20,5 +20,22 @@ describe("resolvePaymentSessionTarget", () => {
   it("honors explicit overrides", () => {
     expect(resolvePaymentSessionTarget("card", "initial", "invoice", {})).toBe("invoice")
     expect(resolvePaymentSessionTarget("card", "reminder", "schedule", {})).toBe("schedule")
+  })
+})
+
+describe("bootstrapCheckoutCollection", () => {
+  it("rejects mismatched booking and session ids", async () => {
+    await expect(
+      bootstrapCheckoutCollection(
+        {} as never,
+        {
+          bookingId: "book_123",
+          sessionId: "book_456",
+          method: "card",
+          stage: "manual",
+        },
+        {},
+      ),
+    ).rejects.toThrow("bookingId and sessionId must refer to the same booking session")
   })
 })

@@ -16,6 +16,7 @@ import { z } from "zod"
 
 export const checkoutCollectionMethodSchema = z.enum(["card", "bank_transfer"])
 export const checkoutCollectionStageSchema = z.enum(["initial", "reminder", "manual"])
+export const checkoutCollectionIntentSchema = z.enum(["deposit", "balance", "custom"])
 export const checkoutPaymentSessionTargetSchema = z.enum(["schedule", "invoice"])
 export const checkoutInvoiceDocumentTypeSchema = z.enum(["proforma", "invoice"])
 export const checkoutProviderStartInputSchema = z.object({
@@ -49,6 +50,17 @@ export const initiateCheckoutCollectionSchema = previewCheckoutCollectionSchema.
   startProvider: checkoutProviderStartInputSchema.optional(),
   notes: z.string().optional().nullable(),
 })
+
+export const bootstrapCheckoutCollectionSchema = initiateCheckoutCollectionSchema
+  .extend({
+    bookingId: z.string().min(1).optional(),
+    sessionId: z.string().min(1).optional(),
+    intent: checkoutCollectionIntentSchema.optional(),
+  })
+  .refine((value) => Boolean(value.bookingId || value.sessionId), {
+    message: "Provide a bookingId or sessionId",
+    path: ["bookingId"],
+  })
 
 export const checkoutCollectionScheduleSchema = z.object({
   id: z.string(),
@@ -147,6 +159,13 @@ export const initiatedCheckoutCollectionSchema = z.object({
   providerStart: checkoutProviderStartResultSchema.nullable(),
 })
 
+export const bootstrappedCheckoutCollectionSchema = initiatedCheckoutCollectionSchema.extend({
+  bookingId: z.string(),
+  sessionId: z.string(),
+  sourceType: z.enum(["booking", "session"]),
+  intent: checkoutCollectionIntentSchema,
+})
+
 export const checkoutReminderRunListQuerySchema = paginationSchema.extend({
   status: notificationReminderRunStatusSchema.optional(),
 })
@@ -182,8 +201,12 @@ export const checkoutReminderRunListResponseSchema = z.object({
 
 export type PreviewCheckoutCollectionInput = z.infer<typeof previewCheckoutCollectionSchema>
 export type InitiateCheckoutCollectionInput = z.infer<typeof initiateCheckoutCollectionSchema>
+export type BootstrapCheckoutCollectionInput = z.infer<typeof bootstrapCheckoutCollectionSchema>
 export type CheckoutCollectionPlanRecord = z.infer<typeof checkoutCollectionPlanSchema>
 export type InitiatedCheckoutCollectionRecord = z.infer<typeof initiatedCheckoutCollectionSchema>
+export type BootstrappedCheckoutCollectionRecord = z.infer<
+  typeof bootstrappedCheckoutCollectionSchema
+>
 export type CheckoutProviderStartInput = z.infer<typeof checkoutProviderStartInputSchema>
 export type CheckoutBankTransferInstructionsRecord = z.infer<
   typeof checkoutBankTransferInstructionsSchema

@@ -6,6 +6,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import {
+  bootstrapCheckoutCollection,
   type CheckoutBankTransferDetails,
   type CheckoutPaymentStarter,
   type CheckoutPolicyOptions,
@@ -14,6 +15,7 @@ import {
   previewCheckoutCollection,
 } from "./service.js"
 import {
+  bootstrapCheckoutCollectionSchema,
   checkoutReminderRunListQuerySchema,
   initiateCheckoutCollectionSchema,
   previewCheckoutCollectionSchema,
@@ -42,6 +44,15 @@ export function createCheckoutRoutes(
     ) => CheckoutBankTransferDetails | null
   } = {},
 ) {
+  function createCheckoutRuntime(bindings: Record<string, unknown>) {
+    return {
+      bindings,
+      paymentStarters: options.resolvePaymentStarters?.(bindings) ?? options.paymentStarters ?? {},
+      bankTransferDetails:
+        options.resolveBankTransferDetails?.(bindings) ?? options.bankTransferDetails ?? null,
+    }
+  }
+
   return new Hono<Env>()
     .post("/v1/checkout/bookings/:bookingId/collection-plan", async (c) => {
       try {
@@ -74,13 +85,7 @@ export function createCheckoutRoutes(
           initiateCheckoutCollectionSchema.parse(await c.req.json()),
           options.policy,
           dispatcher,
-          {
-            bindings: c.env,
-            paymentStarters:
-              options.resolvePaymentStarters?.(c.env) ?? options.paymentStarters ?? {},
-            bankTransferDetails:
-              options.resolveBankTransferDetails?.(c.env) ?? options.bankTransferDetails ?? null,
-          },
+          createCheckoutRuntime(c.env),
         )
 
         if (!result) {
@@ -91,6 +96,33 @@ export function createCheckoutRoutes(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to initiate checkout collection"
+        if (message.includes("Booking not found")) {
+          return c.json({ error: message }, 404)
+        }
+        return c.json({ error: message }, 409)
+      }
+    })
+    .post("/v1/checkout/collections/bootstrap", async (c) => {
+      try {
+        const dispatcher = createNotificationService(
+          options.resolveProviders?.(c.env) ?? options.providers ?? [],
+        )
+        const result = await bootstrapCheckoutCollection(
+          c.get("db"),
+          bootstrapCheckoutCollectionSchema.parse(await c.req.json()),
+          options.policy,
+          dispatcher,
+          createCheckoutRuntime(c.env),
+        )
+
+        if (!result) {
+          return c.json({ error: "Booking session not found" }, 404)
+        }
+
+        return c.json({ data: result }, 201)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to bootstrap checkout collection"
         if (message.includes("Booking not found")) {
           return c.json({ error: message }, 404)
         }

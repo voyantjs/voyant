@@ -56,6 +56,10 @@ export const publicValidateVoucherSchema = z.object({
   amountCents: z.number().int().min(1).optional().nullable(),
 })
 
+export const publicFinanceDocumentLookupQuerySchema = z.object({
+  reference: z.string().min(1).max(255),
+})
+
 export const publicPaymentAccountSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -159,6 +163,10 @@ export const publicBookingFinanceDocumentsSchema = z.object({
   documents: z.array(publicFinanceBookingDocumentSchema),
 })
 
+export const publicFinanceDocumentLookupSchema = publicFinanceBookingDocumentSchema.extend({
+  bookingId: z.string(),
+})
+
 export const publicFinanceBookingPaymentSchema = z.object({
   id: z.string(),
   invoiceId: z.string(),
@@ -210,6 +218,10 @@ export type PublicBookingPaymentOptions = z.infer<typeof publicBookingPaymentOpt
 export type PublicPaymentSession = z.infer<typeof publicPaymentSessionSchema>
 export type PublicFinanceBookingDocument = z.infer<typeof publicFinanceBookingDocumentSchema>
 export type PublicBookingFinanceDocuments = z.infer<typeof publicBookingFinanceDocumentsSchema>
+export type PublicFinanceDocumentLookupQuery = z.infer<
+  typeof publicFinanceDocumentLookupQuerySchema
+>
+export type PublicFinanceDocumentLookup = z.infer<typeof publicFinanceDocumentLookupSchema>
 export type PublicFinanceBookingPayment = z.infer<typeof publicFinanceBookingPaymentSchema>
 export type PublicBookingFinancePayments = z.infer<typeof publicBookingFinancePaymentsSchema>
 export type PublicStartPaymentSessionInput = z.infer<typeof publicStartPaymentSessionSchema>

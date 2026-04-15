@@ -15,11 +15,13 @@ export const workspaceOrganizationSchema = z.object({
   slug: z.string(),
   logo: z.string().nullable().optional(),
 })
+export type WorkspaceOrganization = z.infer<typeof workspaceOrganizationSchema>
 
 export const currentWorkspaceSchema = z.object({
   organizations: z.array(workspaceOrganizationSchema),
   activeOrganization: workspaceOrganizationSchema.nullable(),
 })
+export type CurrentWorkspace = z.infer<typeof currentWorkspaceSchema>
 
 export const currentUserSchema = z.object({
   id: z.string(),
@@ -32,12 +34,14 @@ export const currentUserSchema = z.object({
   profilePictureUrl: z.string().nullable().optional(),
   activeOrganizationId: z.string().nullable().optional(),
 })
+export type CurrentUser = z.infer<typeof currentUserSchema>
 
 export const authStatusSchema = z.object({
   userExists: z.boolean(),
   authenticated: z.boolean(),
   reason: z.string().optional(),
 })
+export type AuthStatus = z.infer<typeof authStatusSchema>
 
 export const organizationMemberUserSchema = z.object({
   id: z.string(),
@@ -45,6 +49,7 @@ export const organizationMemberUserSchema = z.object({
   name: z.string(),
   image: z.string().nullable().optional(),
 })
+export type OrganizationMemberUser = z.infer<typeof organizationMemberUserSchema>
 
 export const organizationMemberSchema = z.object({
   id: z.string(),
@@ -55,15 +60,18 @@ export const organizationMemberSchema = z.object({
   teamId: z.string().optional(),
   user: organizationMemberUserSchema,
 })
+export type OrganizationMember = z.infer<typeof organizationMemberSchema>
 
 export const organizationMembersListSchema = z.object({
   members: z.array(organizationMemberSchema),
   total: z.number(),
 })
+export type OrganizationMembersList = z.infer<typeof organizationMembersListSchema>
 
 export const organizationRemoveMemberSchema = z.object({
   member: organizationMemberSchema,
 })
+export type OrganizationRemoveMemberResult = z.infer<typeof organizationRemoveMemberSchema>
 
 export const organizationInvitationSchema = z.object({
   id: z.string(),
@@ -76,5 +84,7 @@ export const organizationInvitationSchema = z.object({
   createdAt: z.string(),
   teamId: z.string().optional(),
 })
+export type OrganizationInvitation = z.infer<typeof organizationInvitationSchema>
 
 export const organizationInvitationsListSchema = z.array(organizationInvitationSchema)
+export type OrganizationInvitationsList = z.infer<typeof organizationInvitationsListSchema>

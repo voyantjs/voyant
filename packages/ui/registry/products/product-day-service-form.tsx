@@ -7,6 +7,7 @@ import {
 } from "@voyantjs/products-react"
 import {
   getSupplierServicesQueryOptions,
+  type SupplierService,
   useSuppliers,
   useVoyantSuppliersContext,
 } from "@voyantjs/suppliers-react"
@@ -35,7 +36,28 @@ export interface ProductDayServiceFormProps {
   mode: Mode
   onSuccess?: (service: ProductDayServiceRecord) => void
   onCancel?: () => void
+  renderSupplierServicePicker?: ProductDayServiceSupplierPickerRenderer
 }
+
+export interface ProductDayServiceSupplierOption {
+  id: string
+  supplierName: string
+  service: SupplierService
+  label: string
+}
+
+export interface ProductDayServiceSupplierPickerRenderProps {
+  value: string
+  onValueChange: (supplierServiceId: string) => void
+  options: ProductDayServiceSupplierOption[]
+  isLoading: boolean
+  disabled: boolean
+  defaultPicker: React.ReactNode
+}
+
+export type ProductDayServiceSupplierPickerRenderer = (
+  props: ProductDayServiceSupplierPickerRenderProps,
+) => React.ReactNode
 
 interface FormState {
   serviceType: ServiceType
@@ -86,7 +108,12 @@ function initialState(mode: Mode): FormState {
   }
 }
 
-export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayServiceFormProps) {
+export function ProductDayServiceForm({
+  mode,
+  onSuccess,
+  onCancel,
+  renderSupplierServicePicker,
+}: ProductDayServiceFormProps) {
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductDayServiceMutation()
@@ -142,6 +169,32 @@ export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayS
     field("name")(option.service.name)
     field("serviceType")(option.service.serviceType)
   }
+
+  const defaultSupplierServicePicker = isLoadingSupplierServices ? (
+    <div className="flex flex-col gap-1.5 sm:col-span-2">
+      <Label>Supplier service</Label>
+      <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+        Loading supplier services...
+      </div>
+    </div>
+  ) : supplierServiceOptions.length > 0 ? (
+    <div className="flex flex-col gap-1.5 sm:col-span-2">
+      <Label>Supplier service</Label>
+      <Select value={state.supplierServiceId} onValueChange={handleSupplierServiceSelect}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select a supplier service" />
+        </SelectTrigger>
+        <SelectContent>
+          {supplierServiceOptions.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  ) : null
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -208,31 +261,16 @@ export function ProductDayServiceForm({ mode, onSuccess, onCancel }: ProductDayS
       className="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {isLoadingSupplierServices ? (
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label>Supplier service</Label>
-            <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
-              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-              Loading supplier services...
-            </div>
-          </div>
-        ) : supplierServiceOptions.length > 0 ? (
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label>Supplier service</Label>
-            <Select value={state.supplierServiceId} onValueChange={handleSupplierServiceSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a supplier service" />
-              </SelectTrigger>
-              <SelectContent>
-                {supplierServiceOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
+        {renderSupplierServicePicker
+          ? renderSupplierServicePicker({
+              value: state.supplierServiceId,
+              onValueChange: handleSupplierServiceSelect,
+              options: supplierServiceOptions,
+              isLoading: isLoadingSupplierServices,
+              disabled: isSubmitting,
+              defaultPicker: defaultSupplierServicePicker,
+            })
+          : defaultSupplierServicePicker}
         <div className="flex flex-col gap-1.5">
           <Label>Service type</Label>
           <Select

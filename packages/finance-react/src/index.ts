@@ -10,6 +10,7 @@ export {
   getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
   getPublicBookingPayments,
+  getPublicFinanceDocumentByReference,
   getPublicPaymentSession,
   startPublicBookingGuaranteePaymentSession,
   startPublicBookingSchedulePaymentSession,
@@ -32,6 +33,7 @@ export {
   getPublicBookingDocumentsQueryOptions,
   getPublicBookingPaymentOptionsQueryOptions,
   getPublicBookingPaymentsQueryOptions,
+  getPublicFinanceDocumentByReferenceQueryOptions,
   getPublicPaymentSessionQueryOptions,
   getSupplierPaymentsQueryOptions,
 } from "./query-options.js"

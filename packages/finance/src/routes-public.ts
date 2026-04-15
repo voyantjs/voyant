@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import { type Env, notFound } from "./routes-shared.js"
 import { publicFinanceService } from "./service-public.js"
 import {
+  publicFinanceDocumentLookupQuerySchema,
   publicPaymentOptionsQuerySchema,
   publicStartPaymentSessionSchema,
   publicValidateVoucherSchema,
@@ -24,6 +25,16 @@ export const publicFinanceRoutes = new Hono<Env>()
     )
 
     return c.json({ data: result })
+  })
+  .get("/documents/by-reference", async (c) => {
+    const document = await publicFinanceService.getDocumentByReference(
+      c.get("db"),
+      publicFinanceDocumentLookupQuerySchema.parse(
+        Object.fromEntries(new URL(c.req.url).searchParams),
+      ).reference,
+    )
+
+    return document ? c.json({ data: document }) : notFound(c, "Finance document not found")
   })
   .get("/bookings/:bookingId/documents", async (c) => {
     const documents = await publicFinanceService.getBookingDocuments(

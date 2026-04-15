@@ -10,7 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-import { ProductDayServiceForm } from "./product-day-service-form"
+import {
+  ProductDayServiceForm,
+  type ProductDayServiceSupplierPickerRenderer,
+} from "./product-day-service-form"
 
 export interface ProductDayServiceDialogProps {
   open: boolean
@@ -19,6 +22,7 @@ export interface ProductDayServiceDialogProps {
   dayId: string
   service?: ProductDayServiceRecord
   onSuccess?: (service: ProductDayServiceRecord) => void
+  renderSupplierServicePicker?: ProductDayServiceSupplierPickerRenderer
 }
 
 export function ProductDayServiceDialog({
@@ -28,6 +32,7 @@ export function ProductDayServiceDialog({
   dayId,
   service,
   onSuccess,
+  renderSupplierServicePicker,
 }: ProductDayServiceDialogProps) {
   const isEdit = Boolean(service)
 
@@ -48,6 +53,7 @@ export function ProductDayServiceDialog({
               ? { kind: "edit", productId, dayId, service }
               : { kind: "create", productId, dayId }
           }
+          renderSupplierServicePicker={renderSupplierServicePicker}
           onSuccess={(savedService) => {
             onSuccess?.(savedService)
             onOpenChange(false)

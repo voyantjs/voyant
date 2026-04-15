@@ -3,6 +3,7 @@
   "description": "Voyant shadcn registry index",
   "items": [
     "registry",
+    "voyant-auth-organization-member-management",
     "voyant-booking-requirements-booking-question-dialog",
     "voyant-booking-requirements-contact-requirement-dialog",
     "voyant-booking-requirements-contact-tab",

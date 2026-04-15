@@ -298,6 +298,55 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
     })
   })
 
+  it("looks up a public finance document by payment or invoice reference", async () => {
+    const booking = await seedBooking()
+    const invoice = await seedInvoice(booking.id, {
+      invoiceNumber: "PF-REF-1001",
+      invoiceType: "proforma",
+      totalCents: 64000,
+      balanceDueCents: 64000,
+    })
+
+    await db.insert(invoiceRenditions).values({
+      invoiceId: invoice.id,
+      format: "pdf",
+      status: "ready",
+      generatedAt: new Date("2025-06-04T08:00:00.000Z"),
+      metadata: { downloadUrl: "https://example.com/proforma-by-reference.pdf" },
+    })
+
+    await db.insert(payments).values({
+      invoiceId: invoice.id,
+      amountCents: 64000,
+      currency: "USD",
+      paymentMethod: "bank_transfer",
+      status: "pending",
+      paymentDate: "2025-06-04",
+      referenceNumber: "PAY-REF-1001",
+    })
+
+    const paymentReferenceRes = await app.request("/documents/by-reference?reference=PAY-REF-1001")
+
+    expect(paymentReferenceRes.status).toBe(200)
+    expect((await paymentReferenceRes.json()).data).toMatchObject({
+      bookingId: booking.id,
+      invoiceId: invoice.id,
+      invoiceNumber: "PF-REF-1001",
+      invoiceType: "proforma",
+      documentStatus: "ready",
+      downloadUrl: "https://example.com/proforma-by-reference.pdf",
+    })
+
+    const invoiceReferenceRes = await app.request("/documents/by-reference?reference=PF-REF-1001")
+
+    expect(invoiceReferenceRes.status).toBe(200)
+    expect((await invoiceReferenceRes.json()).data).toMatchObject({
+      bookingId: booking.id,
+      invoiceId: invoice.id,
+      invoiceNumber: "PF-REF-1001",
+    })
+  })
+
   it("lists booking-scoped public finance payments with invoice context", async () => {
     const booking = await seedBooking()
     const invoice = await seedInvoice(booking.id, {

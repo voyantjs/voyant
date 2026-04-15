@@ -145,6 +145,21 @@
       ]
     },
     {
+      "name": "voyant-auth-organization-member-management",
+      "type": "registry:component",
+      "title": "Organization Member Management",
+      "description": "Manage organization members and invitations with the shared auth-react organization hooks.",
+      "dependencies": ["lucide-react", "@voyantjs/auth-react"],
+      "registryDependencies": ["badge", "button", "card", "input", "label", "select", "table"],
+      "files": [
+        {
+          "path": "registry/auth/organization-member-management.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/auth/organization-member-management.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-products-product-form",
       "type": "registry:component",
       "title": "Product Form",

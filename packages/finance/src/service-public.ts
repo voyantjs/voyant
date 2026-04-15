@@ -14,6 +14,8 @@ import { financeService } from "./service.js"
 import type {
   PublicBookingFinanceDocuments,
   PublicBookingFinancePayments,
+  PublicFinanceBookingDocument,
+  PublicFinanceDocumentLookup,
   PublicPaymentOptionsQuery,
   PublicStartPaymentSessionInput,
   PublicValidateVoucherInput,
@@ -141,6 +143,38 @@ function toPublicPaymentSession(
   }
 }
 
+function mapInvoiceDocument(
+  invoice: typeof invoices.$inferSelect,
+  renditions: Array<typeof invoiceRenditions.$inferSelect>,
+): PublicFinanceBookingDocument {
+  const selectedRendition =
+    renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
+  const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
+  const downloadUrl =
+    getMetadataDownloadUrl(metadata) ?? maybeUrl(selectedRendition?.storageKey ?? null)
+
+  return {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    invoiceType: invoice.invoiceType,
+    invoiceStatus: invoice.status,
+    currency: invoice.currency,
+    totalCents: invoice.totalCents,
+    paidCents: invoice.paidCents,
+    balanceDueCents: invoice.balanceDueCents,
+    issueDate: invoice.issueDate,
+    dueDate: invoice.dueDate,
+    renditionId: selectedRendition?.id ?? null,
+    documentStatus: selectedRendition?.status ?? "missing",
+    format: selectedRendition?.format ?? null,
+    language: selectedRendition?.language ?? null,
+    generatedAt: normalizeDateTime(selectedRendition?.generatedAt),
+    fileSize: selectedRendition?.fileSize ?? null,
+    checksum: selectedRendition?.checksum ?? null,
+    downloadUrl,
+  }
+}
+
 export const publicFinanceService = {
   async getBookingDocuments(
     db: PostgresJsDatabase,
@@ -181,35 +215,53 @@ export const publicFinanceService = {
 
     return {
       bookingId,
-      documents: invoiceRows.map((invoice) => {
-        const renditions = renditionByInvoiceId.get(invoice.id) ?? []
-        const selectedRendition =
-          renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
-        const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
-        const downloadUrl =
-          getMetadataDownloadUrl(metadata) ?? maybeUrl(selectedRendition?.storageKey ?? null)
+      documents: invoiceRows.map((invoice) =>
+        mapInvoiceDocument(invoice, renditionByInvoiceId.get(invoice.id) ?? []),
+      ),
+    }
+  },
 
-        return {
-          invoiceId: invoice.id,
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceType: invoice.invoiceType,
-          invoiceStatus: invoice.status,
-          currency: invoice.currency,
-          totalCents: invoice.totalCents,
-          paidCents: invoice.paidCents,
-          balanceDueCents: invoice.balanceDueCents,
-          issueDate: invoice.issueDate,
-          dueDate: invoice.dueDate,
-          renditionId: selectedRendition?.id ?? null,
-          documentStatus: selectedRendition?.status ?? "missing",
-          format: selectedRendition?.format ?? null,
-          language: selectedRendition?.language ?? null,
-          generatedAt: normalizeDateTime(selectedRendition?.generatedAt),
-          fileSize: selectedRendition?.fileSize ?? null,
-          checksum: selectedRendition?.checksum ?? null,
-          downloadUrl,
-        }
-      }),
+  async getDocumentByReference(
+    db: PostgresJsDatabase,
+    reference: string,
+  ): Promise<PublicFinanceDocumentLookup | null> {
+    const [invoiceMatch, paymentMatch] = await Promise.all([
+      db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.invoiceNumber, reference))
+        .orderBy(desc(invoices.createdAt))
+        .limit(1),
+      db
+        .select({
+          invoiceId: payments.invoiceId,
+        })
+        .from(payments)
+        .where(eq(payments.referenceNumber, reference))
+        .orderBy(desc(payments.createdAt))
+        .limit(1),
+    ])
+
+    const invoiceId = invoiceMatch[0]?.id ?? paymentMatch[0]?.invoiceId ?? null
+    if (!invoiceId) {
+      return null
+    }
+
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1)
+
+    if (!invoice?.bookingId) {
+      return null
+    }
+
+    const renditions = await db
+      .select()
+      .from(invoiceRenditions)
+      .where(eq(invoiceRenditions.invoiceId, invoice.id))
+      .orderBy(desc(invoiceRenditions.createdAt))
+
+    return {
+      bookingId: invoice.bookingId,
+      ...mapInvoiceDocument(invoice, renditions),
     }
   },
 

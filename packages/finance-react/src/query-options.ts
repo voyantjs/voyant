@@ -12,12 +12,14 @@ import type { UseInvoicesOptions } from "./hooks/use-invoices.js"
 import type { UsePublicBookingDocumentsOptions } from "./hooks/use-public-booking-documents.js"
 import type { UsePublicBookingPaymentOptionsOptions } from "./hooks/use-public-booking-payment-options.js"
 import type { UsePublicBookingPaymentsOptions } from "./hooks/use-public-booking-payments.js"
+import type { UsePublicFinanceDocumentByReferenceOptions } from "./hooks/use-public-finance-document-by-reference.js"
 import type { UsePublicPaymentSessionOptions } from "./hooks/use-public-payment-session.js"
 import type { UseSupplierPaymentsOptions } from "./hooks/use-supplier-payments.js"
 import {
   getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
   getPublicBookingPayments,
+  getPublicFinanceDocumentByReference,
   getPublicPaymentSession,
 } from "./operations.js"
 import { financeQueryKeys } from "./query-keys.js"
@@ -208,6 +210,25 @@ export function getPublicBookingDocumentsQueryOptions(
       }
 
       return getPublicBookingDocuments(client, bookingId)
+    },
+  })
+}
+
+export function getPublicFinanceDocumentByReferenceQueryOptions(
+  client: FetchWithValidationOptions,
+  reference: string | null | undefined,
+  options: UsePublicFinanceDocumentByReferenceOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.publicFinanceDocumentLookup({ reference: reference ?? undefined }),
+    queryFn: async () => {
+      if (!reference) {
+        throw new Error("getPublicFinanceDocumentByReferenceQueryOptions requires a reference")
+      }
+
+      return getPublicFinanceDocumentByReference(client, { reference })
     },
   })
 }

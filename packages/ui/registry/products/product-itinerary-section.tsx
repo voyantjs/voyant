@@ -25,6 +25,7 @@ import {
 
 import { ProductDayDialog } from "./product-day-dialog"
 import { ProductDayServiceDialog } from "./product-day-service-dialog"
+import type { ProductDayServiceSupplierPickerRenderer } from "./product-day-service-form"
 import { ProductMediaSection, type ProductMediaUploadHandler } from "./product-media-section"
 
 const serviceTypeLabels: Record<ProductDayServiceRecord["serviceType"], string> = {
@@ -41,6 +42,12 @@ export interface ProductItinerarySectionProps {
   title?: string
   description?: string
   uploadMedia?: ProductMediaUploadHandler
+  renderSupplierServicePicker?: ProductDayServiceSupplierPickerRenderer
+  renderDayMediaSection?: (args: {
+    productId: string
+    day: ProductDayRecord
+    defaultSection: React.ReactNode
+  }) => React.ReactNode
 }
 
 export function ProductItinerarySection({
@@ -48,6 +55,8 @@ export function ProductItinerarySection({
   title = "Itinerary",
   description = "Manage day-by-day structure and attached services for this product.",
   uploadMedia,
+  renderSupplierServicePicker,
+  renderDayMediaSection,
 }: ProductItinerarySectionProps) {
   const [expandedDayId, setExpandedDayId] = React.useState<string | null>(null)
   const [dayDialogOpen, setDayDialogOpen] = React.useState(false)
@@ -118,6 +127,7 @@ export function ProductItinerarySection({
                 setServiceDialogOpen(true)
               }}
               uploadMedia={uploadMedia}
+              renderDayMediaSection={renderDayMediaSection}
             />
           ))
         )}
@@ -136,6 +146,7 @@ export function ProductItinerarySection({
           productId={productId}
           dayId={serviceDayId}
           service={editingService}
+          renderSupplierServicePicker={renderSupplierServicePicker}
           onSuccess={() => setEditingService(undefined)}
         />
       </CardContent>
@@ -153,6 +164,7 @@ function DayRow({
   onAddService,
   onEditService,
   uploadMedia,
+  renderDayMediaSection,
 }: {
   productId: string
   day: ProductDayRecord
@@ -163,10 +175,25 @@ function DayRow({
   onAddService: () => void
   onEditService: (service: ProductDayServiceRecord) => void
   uploadMedia?: ProductMediaUploadHandler
+  renderDayMediaSection?: (args: {
+    productId: string
+    day: ProductDayRecord
+    defaultSection: React.ReactNode
+  }) => React.ReactNode
 }) {
   const { data, isPending, isError } = useProductDayServices(productId, day.id, {
     enabled: expanded,
   })
+  const defaultDayMediaSection = (
+    <ProductMediaSection
+      productId={productId}
+      dayId={day.id}
+      title="Media"
+      description="Manage media attached to this itinerary day."
+      compact
+      uploadMedia={uploadMedia}
+    />
+  )
 
   return (
     <div className="rounded-md border">
@@ -233,14 +260,13 @@ function DayRow({
             />
           )}
 
-          <ProductMediaSection
-            productId={productId}
-            dayId={day.id}
-            title="Media"
-            description="Manage media attached to this itinerary day."
-            compact
-            uploadMedia={uploadMedia}
-          />
+          {renderDayMediaSection
+            ? renderDayMediaSection({
+                productId,
+                day,
+                defaultSection: defaultDayMediaSection,
+              })
+            : defaultDayMediaSection}
         </div>
       ) : null}
     </div>

@@ -2,14 +2,27 @@
 
 import { type FetchWithValidationOptions, fetchWithValidation, withQueryParams } from "./client.js"
 import {
+  type PublicFinanceDocumentLookupQuery,
   type PublicStartPaymentSessionInput,
   type PublicValidateVoucherInput,
   publicBookingFinanceDocumentsResponse,
   publicBookingFinancePaymentsResponse,
   publicBookingPaymentOptionsResponse,
+  publicFinanceDocumentLookupResponse,
   publicPaymentSessionResponse,
   publicVoucherValidationResponse,
 } from "./schemas.js"
+
+export function getPublicFinanceDocumentByReference(
+  client: FetchWithValidationOptions,
+  query: PublicFinanceDocumentLookupQuery,
+) {
+  return fetchWithValidation(
+    withQueryParams("/v1/public/finance/documents/by-reference", query),
+    publicFinanceDocumentLookupResponse,
+    client,
+  )
+}
 
 export function getPublicBookingDocuments(client: FetchWithValidationOptions, bookingId: string) {
   return fetchWithValidation(

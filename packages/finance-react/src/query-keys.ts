@@ -17,6 +17,10 @@ export interface PublicBookingPaymentOptionsFilters {
   includeInactive?: boolean | undefined
 }
 
+export interface PublicFinanceDocumentLookupFilters {
+  reference?: string | undefined
+}
+
 export const financeQueryKeys = {
   all: ["voyant", "finance"] as const,
 
@@ -35,6 +39,8 @@ export const financeQueryKeys = {
     [...financeQueryKeys.supplierPayments(), "list", filters] as const,
 
   publicCheckout: () => [...financeQueryKeys.all, "public-checkout"] as const,
+  publicFinanceDocumentLookup: (filters: PublicFinanceDocumentLookupFilters) =>
+    [...financeQueryKeys.publicCheckout(), "document-lookup", filters] as const,
   publicBookingDocuments: (bookingId: string) =>
     [...financeQueryKeys.publicCheckout(), "booking-documents", bookingId] as const,
   publicBookingPayments: (bookingId: string) =>

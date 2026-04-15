@@ -4,6 +4,8 @@ import {
   publicBookingPaymentOptionsSchema,
   publicFinanceBookingDocumentSchema,
   publicFinanceBookingPaymentSchema,
+  publicFinanceDocumentLookupQuerySchema,
+  publicFinanceDocumentLookupSchema,
   publicPaymentOptionsQuerySchema,
   publicPaymentSessionSchema,
   publicStartPaymentSessionSchema,
@@ -141,6 +143,8 @@ export {
   publicBookingPaymentOptionsSchema,
   publicFinanceBookingDocumentSchema,
   publicFinanceBookingPaymentSchema,
+  publicFinanceDocumentLookupQuerySchema,
+  publicFinanceDocumentLookupSchema,
   publicPaymentOptionsQuerySchema,
   publicPaymentSessionSchema,
   publicStartPaymentSessionSchema,
@@ -152,6 +156,7 @@ export const publicBookingPaymentOptionsResponse = singleEnvelope(publicBookingP
 export const publicBookingFinanceDocumentsResponse = singleEnvelope(
   publicBookingFinanceDocumentsSchema,
 )
+export const publicFinanceDocumentLookupResponse = singleEnvelope(publicFinanceDocumentLookupSchema)
 export const publicBookingFinancePaymentsResponse = singleEnvelope(
   publicBookingFinancePaymentsSchema,
 )
@@ -162,6 +167,10 @@ export type PublicBookingPaymentOptionsRecord = z.infer<typeof publicBookingPaym
 export type PublicBookingFinanceDocumentsRecord = z.infer<
   typeof publicBookingFinanceDocumentsSchema
 >
+export type PublicFinanceDocumentLookupQuery = z.input<
+  typeof publicFinanceDocumentLookupQuerySchema
+>
+export type PublicFinanceDocumentLookupRecord = z.infer<typeof publicFinanceDocumentLookupSchema>
 export type PublicBookingFinancePaymentsRecord = z.infer<typeof publicBookingFinancePaymentsSchema>
 export type PublicFinanceBookingDocumentRecord = z.infer<typeof publicFinanceBookingDocumentSchema>
 export type PublicFinanceBookingPaymentRecord = z.infer<typeof publicFinanceBookingPaymentSchema>

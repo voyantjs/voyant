@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -37,6 +38,8 @@ export function createNotificationsRoutes(options?: {
   resolveDocumentAttachmentResolver?: (
     bindings: Record<string, unknown>,
   ) => BookingDocumentAttachmentResolver | undefined
+  eventBus?: EventBus
+  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }) {
   return new Hono<Env>()
     .get("/templates", async (c) => {
@@ -185,6 +188,7 @@ export function createNotificationsRoutes(options?: {
             attachmentResolver:
               options?.resolveDocumentAttachmentResolver?.(c.env) ??
               options?.documentAttachmentResolver,
+            eventBus: options?.resolveEventBus?.(c.env) ?? options?.eventBus,
           },
         )
         if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)

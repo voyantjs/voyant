@@ -1,4 +1,5 @@
 import { bookings } from "@voyantjs/bookings/schema"
+import { createEventBus } from "@voyantjs/core"
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -22,6 +23,7 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
   let app: Hono
   let db: PostgresJsDatabase
   let generatedKeys: string[]
+  let documentEvents: Array<Record<string, unknown>>
 
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
@@ -33,9 +35,15 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
       c.set("db" as never, db)
       await next()
     })
+    const eventBus = createEventBus()
+    documentEvents = []
+    eventBus.subscribe("invoice.document.generated", (event) => {
+      documentEvents.push(event as Record<string, unknown>)
+    })
     app.route(
       "/",
       createFinanceAdminDocumentRoutes({
+        eventBus,
         invoiceDocumentGenerator: async ({ invoice }) => {
           const storageKey = `invoices/${invoice.id}/rendition-${generatedKeys.length + 1}.pdf`
           generatedKeys.push(storageKey)
@@ -58,6 +66,7 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
     const { cleanupTestDb } = await import("@voyantjs/db/test-utils")
     await cleanupTestDb(db)
     generatedKeys = []
+    documentEvents = []
   })
 
   it("generates and then regenerates a ready invoice rendition", async () => {
@@ -139,5 +148,19 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
     expect(renditions).toHaveLength(2)
     expect(renditions.filter((entry) => entry.status === "ready")).toHaveLength(1)
     expect(renditions.filter((entry) => entry.status === "stale")).toHaveLength(1)
+    expect(documentEvents).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        invoiceType: "invoice",
+        format: "pdf",
+        regenerated: false,
+      }),
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        invoiceType: "invoice",
+        format: "pdf",
+        regenerated: true,
+      }),
+    ])
   })
 })

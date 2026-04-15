@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -21,6 +22,8 @@ export interface FinanceDocumentRouteOptions {
   resolveInvoiceDocumentGenerator?: (
     bindings: Record<string, unknown>,
   ) => InvoiceDocumentGenerator | undefined
+  eventBus?: EventBus
+  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }
 
 function resolveInvoiceDocumentGenerator(
@@ -28,6 +31,13 @@ function resolveInvoiceDocumentGenerator(
   bindings: Record<string, unknown>,
 ) {
   return options?.resolveInvoiceDocumentGenerator?.(bindings) ?? options?.invoiceDocumentGenerator
+}
+
+function resolveEventBus(
+  options: FinanceDocumentRouteOptions | undefined,
+  bindings: Record<string, unknown>,
+) {
+  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
 }
 
 export function createFinanceAdminDocumentRoutes(options: FinanceDocumentRouteOptions = {}) {
@@ -42,7 +52,7 @@ export function createFinanceAdminDocumentRoutes(options: FinanceDocumentRouteOp
         c.get("db"),
         c.req.param("id"),
         generateInvoiceDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env },
+        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
       )
 
       if (result.status === "not_found") return c.json({ error: "Invoice not found" }, 404)
@@ -62,7 +72,7 @@ export function createFinanceAdminDocumentRoutes(options: FinanceDocumentRouteOp
         c.get("db"),
         c.req.param("id"),
         generateInvoiceDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env },
+        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
       )
 
       if (result.status === "not_found") return c.json({ error: "Invoice not found" }, 404)

@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import { sql } from "drizzle-orm"
 import { Hono } from "hono"
 import { afterAll, beforeAll, beforeEach, vi } from "vitest"
@@ -34,7 +35,7 @@ async function cleanupNotificationsTestData(
   `)
 }
 
-export function createNotificationsTestContext() {
+export function createNotificationsTestContext(options?: { eventBus?: EventBus }) {
   let app!: Hono
   let db!: ReturnType<typeof import("@voyantjs/db/test-utils").createTestDb>
   const sink = vi.fn()
@@ -348,6 +349,7 @@ export function createNotificationsTestContext() {
       "/",
       createNotificationsRoutes({
         providers: [createLocalProvider({ sink, channels: ["email"] })],
+        eventBus: options?.eventBus,
       }),
     )
   })

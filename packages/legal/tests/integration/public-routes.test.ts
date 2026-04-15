@@ -1,3 +1,4 @@
+import { createEventBus } from "@voyantjs/core"
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -23,6 +24,7 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
   let publicApp: Hono
   let db: PostgresJsDatabase
   let generatedNames: string[]
+  let documentEvents: Array<Record<string, unknown>>
 
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
@@ -34,9 +36,15 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       c.set("db" as never, db)
       await next()
     })
+    const eventBus = createEventBus()
+    documentEvents = []
+    eventBus.subscribe("contract.document.generated", (event) => {
+      documentEvents.push(event as Record<string, unknown>)
+    })
     adminApp.route(
       "/",
       createContractsAdminRoutes({
+        eventBus,
         documentGenerator: async ({ contract }) => {
           const name = `contract-${generatedNames.length + 1}.pdf`
           generatedNames.push(name)
@@ -67,6 +75,7 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
     const { cleanupTestDb } = await import("@voyantjs/db/test-utils")
     await cleanupTestDb(db)
     generatedNames = []
+    documentEvents = []
   })
 
   it("selects the default active template using language fallback order", async () => {
@@ -211,5 +220,19 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
     expect(attachments).toHaveLength(1)
     expect(attachments[0]?.name).toBe("contract-2.pdf")
     expect(attachments[0]?.storageKey).toContain("contract-2.pdf")
+    expect(documentEvents).toEqual([
+      expect.objectContaining({
+        contractId: contract.id,
+        attachmentKind: "document",
+        attachmentName: "contract-1.pdf",
+        regenerated: false,
+      }),
+      expect.objectContaining({
+        contractId: contract.id,
+        attachmentKind: "document",
+        attachmentName: "contract-2.pdf",
+        regenerated: true,
+      }),
+    ])
   })
 })

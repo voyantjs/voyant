@@ -1,4 +1,5 @@
 import { bookings } from "@voyantjs/bookings/schema"
+import type { EventBus } from "@voyantjs/core"
 import { invoiceRenditions, invoices } from "@voyantjs/finance/schema"
 import { contractAttachments, contracts } from "@voyantjs/legal/contracts"
 import { and, desc, eq, ne, or } from "drizzle-orm"
@@ -19,6 +20,15 @@ export type BookingDocumentAttachmentResolver = (
 
 export interface SendBookingDocumentsRuntimeOptions {
   attachmentResolver?: BookingDocumentAttachmentResolver
+  eventBus?: EventBus
+}
+
+export interface BookingDocumentsSentEvent {
+  bookingId: string
+  recipient: string
+  deliveryId: string
+  provider: string | null
+  documentKeys: string[]
 }
 
 function getMetadataRecord(value: unknown): Record<string, unknown> | null {
@@ -349,6 +359,14 @@ export const bookingDocumentNotificationsService = {
     if (!delivery) {
       return { status: "send_failed" as const }
     }
+
+    await runtime.eventBus?.emit("booking.documents.sent", {
+      bookingId: booking.id,
+      recipient: to,
+      deliveryId: delivery.id,
+      provider: delivery.provider ?? null,
+      documentKeys: documents.map((document) => document.key),
+    } satisfies BookingDocumentsSentEvent)
 
     return {
       status: "sent" as const,

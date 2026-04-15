@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import type { Invoice as FinanceInvoice, InvoiceExternalRef } from "./schema.js"
@@ -35,6 +36,16 @@ export type InvoiceSettlementPoller = (
 export interface FinanceSettlementRuntimeOptions {
   bindings?: Record<string, unknown>
   invoiceSettlementPollers?: Record<string, InvoiceSettlementPoller>
+  eventBus?: EventBus
+}
+
+export interface InvoiceSettledEvent {
+  invoiceId: string
+  paymentId: string
+  provider: string
+  newlyAppliedAmountCents: number
+  paidCents: number
+  balanceDueCents: number
 }
 
 function coerceRecord(value: unknown): Record<string, unknown> | null {
@@ -198,6 +209,17 @@ export const financeSettlementService = {
 
             createdPaymentId = payment?.id ?? null
             invoice = (await financeService.getInvoiceById(db, invoice.id)) ?? invoice
+
+            if (createdPaymentId) {
+              await runtime.eventBus?.emit("invoice.settled", {
+                invoiceId: invoice.id,
+                paymentId: createdPaymentId,
+                provider: externalRef.provider,
+                newlyAppliedAmountCents,
+                paidCents: invoice.paidCents,
+                balanceDueCents: invoice.balanceDueCents,
+              } satisfies InvoiceSettledEvent)
+            }
           }
         }
 

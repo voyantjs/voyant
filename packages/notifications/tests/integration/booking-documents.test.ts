@@ -1,13 +1,24 @@
 import { bookingParticipants, bookings } from "@voyantjs/bookings/schema"
+import { createEventBus } from "@voyantjs/core"
 import { invoiceRenditions, invoices } from "@voyantjs/finance/schema"
 import { contractAttachments, contracts } from "@voyantjs/legal/contracts/schema"
 import { eq } from "drizzle-orm"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import { notificationDeliveries } from "../../src/schema.js"
 import { createNotificationsTestContext, DB_AVAILABLE, json } from "./test-helpers"
 
 describe.skipIf(!DB_AVAILABLE)("Booking document notification routes", () => {
-  const ctx = createNotificationsTestContext()
+  const eventBus = createEventBus()
+  const ctx = createNotificationsTestContext({ eventBus })
+  const sentEvents: Array<Record<string, unknown>> = []
+
+  eventBus.subscribe("booking.documents.sent", (event) => {
+    sentEvents.push(event as Record<string, unknown>)
+  })
+
+  beforeEach(() => {
+    sentEvents.length = 0
+  })
 
   it("lists and sends a booking document bundle using default attachment URLs", async () => {
     await ctx.db.insert(bookings).values({
@@ -133,5 +144,13 @@ describe.skipIf(!DB_AVAILABLE)("Booking document notification routes", () => {
         },
       ],
     })
+    expect(sentEvents).toEqual([
+      expect.objectContaining({
+        bookingId: "book_docs_1",
+        recipient: "ana@example.com",
+        provider: "local",
+        documentKeys: ["legal:ctat_docs_1", "finance:invr_docs_1"],
+      }),
+    ])
   })
 })

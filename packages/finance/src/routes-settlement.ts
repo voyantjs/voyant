@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import { Hono } from "hono"
 
 import { financeSettlementService, type InvoiceSettlementPoller } from "./service-settlement.js"
@@ -16,6 +17,8 @@ export interface FinanceSettlementRouteOptions {
   resolveInvoiceSettlementPollers?: (
     bindings: Record<string, unknown>,
   ) => Record<string, InvoiceSettlementPoller> | undefined
+  eventBus?: EventBus
+  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }
 
 function resolveInvoiceSettlementPollers(
@@ -27,6 +30,13 @@ function resolveInvoiceSettlementPollers(
   )
 }
 
+function resolveEventBus(
+  options: FinanceSettlementRouteOptions | undefined,
+  bindings: Record<string, unknown>,
+) {
+  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
+}
+
 export function createFinanceAdminSettlementRoutes(options: FinanceSettlementRouteOptions = {}) {
   return new Hono<Env>().post("/invoices/:id/poll-settlement", async (c) => {
     const result = await financeSettlementService.pollInvoiceSettlement(
@@ -36,6 +46,7 @@ export function createFinanceAdminSettlementRoutes(options: FinanceSettlementRou
       {
         bindings: c.env,
         invoiceSettlementPollers: resolveInvoiceSettlementPollers(options, c.env),
+        eventBus: resolveEventBus(options, c.env),
       },
     )
 

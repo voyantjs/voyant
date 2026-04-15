@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import { renderPdfDocument } from "@voyantjs/utils/pdf-renderer"
 import type { StorageProvider, StorageUploadBody } from "@voyantjs/voyant-storage"
 import { desc, eq } from "drizzle-orm"
@@ -36,6 +37,7 @@ export type ContractDocumentGenerator = (
 export interface ContractDocumentRuntimeOptions {
   bindings?: Record<string, unknown>
   generator: ContractDocumentGenerator
+  eventBus?: EventBus
 }
 
 export interface StorageBackedContractDocumentUpload {
@@ -64,6 +66,16 @@ export interface GeneratedContractDocumentRecord {
   renderedBodyFormat: "markdown" | "html" | "lexical_json"
   renderedBody: string
   attachment: typeof contractAttachments.$inferSelect
+}
+
+export interface ContractDocumentGeneratedEvent {
+  contractId: string
+  contractStatus: (typeof contracts.$inferSelect)["status"]
+  attachmentId: string
+  attachmentKind: string
+  attachmentName: string
+  renderedBodyFormat: "markdown" | "html" | "lexical_json"
+  regenerated: boolean
 }
 
 type EnsureRenderedContractResult =
@@ -313,6 +325,7 @@ export const contractDocumentsService = {
     contractId: string,
     input: GenerateContractDocumentInput,
     runtime: ContractDocumentRuntimeOptions,
+    options: { regenerated?: boolean } = {},
   ): Promise<
     | { status: "not_found" | "not_draft" | "render_unavailable" | "generator_failed" }
     | ({ status: "generated" } & GeneratedContractDocumentRecord)
@@ -375,6 +388,16 @@ export const contractDocumentsService = {
       return { status: "not_found" }
     }
 
+    await runtime.eventBus?.emit("contract.document.generated", {
+      contractId: prepared.contract.id,
+      contractStatus: prepared.contract.status,
+      attachmentId: attachment.id,
+      attachmentKind: attachment.kind,
+      attachmentName: attachment.name,
+      renderedBodyFormat: prepared.renderedBodyFormat,
+      regenerated: options.regenerated ?? false,
+    } satisfies ContractDocumentGeneratedEvent)
+
     return {
       status: "generated",
       contractId: prepared.contract.id,
@@ -399,6 +422,7 @@ export const contractDocumentsService = {
         issueIfDraft: input.issueIfDraft,
       },
       runtime,
+      { regenerated: true },
     )
   },
 }

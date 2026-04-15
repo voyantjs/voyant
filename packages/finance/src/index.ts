@@ -149,6 +149,7 @@ export { financeService, renderInvoiceBody } from "./service.js"
 export type {
   GeneratedInvoiceDocumentRecord,
   GeneratedInvoiceRenditionArtifact,
+  InvoiceDocumentGeneratedEvent,
   InvoiceDocumentGeneratorContext,
   InvoiceDocumentRuntimeOptions,
   StorageBackedInvoiceDocumentGeneratorOptions,
@@ -164,6 +165,7 @@ export {
 } from "./service-documents.js"
 export type {
   FinanceSettlementRuntimeOptions,
+  InvoiceSettledEvent,
   InvoiceSettlementPollerContext,
   InvoiceSettlementPollerResult,
 } from "./service-settlement.js"

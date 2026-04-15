@@ -1,4 +1,5 @@
 import { bookings } from "@voyantjs/bookings/schema"
+import { createEventBus } from "@voyantjs/core"
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -17,6 +18,7 @@ const json = (body: Record<string, unknown>) => ({
 describe.skipIf(!DB_AVAILABLE)("Finance settlement routes", () => {
   let app: Hono
   let db: PostgresJsDatabase
+  let settlementEvents: Array<Record<string, unknown>>
 
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
@@ -28,9 +30,15 @@ describe.skipIf(!DB_AVAILABLE)("Finance settlement routes", () => {
       c.set("db" as never, db)
       await next()
     })
+    const eventBus = createEventBus()
+    settlementEvents = []
+    eventBus.subscribe("invoice.settled", (event) => {
+      settlementEvents.push(event as Record<string, unknown>)
+    })
     app.route(
       "/",
       createFinanceAdminSettlementRoutes({
+        eventBus,
         invoiceSettlementPollers: {
           smartbill: async ({ externalRef }) => ({
             externalNumber: externalRef.externalNumber ?? "1001",
@@ -47,6 +55,7 @@ describe.skipIf(!DB_AVAILABLE)("Finance settlement routes", () => {
   beforeEach(async () => {
     const { cleanupTestDb } = await import("@voyantjs/db/test-utils")
     await cleanupTestDb(db)
+    settlementEvents = []
   })
 
   it("reconciles newly observed paid amounts into completed payments", async () => {
@@ -139,5 +148,14 @@ describe.skipIf(!DB_AVAILABLE)("Finance settlement routes", () => {
       .limit(1)
     expect(syncedRef?.status).toBe("paid")
     expect(syncedRef?.syncError).toBeNull()
+    expect(settlementEvents).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        provider: "smartbill",
+        newlyAppliedAmountCents: 30000,
+        paidCents: 60000,
+        balanceDueCents: 40000,
+      }),
+    ])
   })
 })

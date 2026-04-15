@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import { renderPdfDocument } from "@voyantjs/utils/pdf-renderer"
 import type { StorageProvider, StorageUploadBody } from "@voyantjs/voyant-storage"
 import { and, desc, eq } from "drizzle-orm"
@@ -43,6 +44,7 @@ export type InvoiceDocumentGenerator = (
 export interface InvoiceDocumentRuntimeOptions {
   bindings?: Record<string, unknown>
   generator: InvoiceDocumentGenerator
+  eventBus?: EventBus
 }
 
 export interface StorageBackedInvoiceDocumentUpload {
@@ -69,6 +71,16 @@ export interface GeneratedInvoiceDocumentRecord {
   renderedBodyFormat: "html" | "markdown" | "lexical_json"
   renderedBody: string
   rendition: typeof invoiceRenditions.$inferSelect
+}
+
+export interface InvoiceDocumentGeneratedEvent {
+  invoiceId: string
+  invoiceStatus: (typeof invoices.$inferSelect)["status"]
+  invoiceType: (typeof invoices.$inferSelect)["invoiceType"]
+  renditionId: string
+  format: (typeof invoiceRenditions.$inferSelect)["format"]
+  renderedBodyFormat: "html" | "markdown" | "lexical_json"
+  regenerated: boolean
 }
 
 type PreparedInvoiceDocument =
@@ -284,6 +296,7 @@ export const financeDocumentsService = {
     invoiceId: string,
     input: GenerateInvoiceDocumentInput,
     runtime: InvoiceDocumentRuntimeOptions,
+    options: { regenerated?: boolean } = {},
   ): Promise<
     | { status: "not_found" | "generator_failed" }
     | ({ status: "generated" } & GeneratedInvoiceDocumentRecord)
@@ -343,6 +356,16 @@ export const financeDocumentsService = {
       return { status: "not_found" }
     }
 
+    await runtime.eventBus?.emit("invoice.document.generated", {
+      invoiceId: prepared.invoice.id,
+      invoiceStatus: prepared.invoice.status,
+      invoiceType: prepared.invoice.invoiceType,
+      renditionId: rendition.id,
+      format: rendition.format,
+      renderedBodyFormat: prepared.renderedBodyFormat,
+      regenerated: options.regenerated ?? false,
+    } satisfies InvoiceDocumentGeneratedEvent)
+
     return {
       status: "generated",
       invoiceId: prepared.invoice.id,
@@ -358,6 +381,6 @@ export const financeDocumentsService = {
     input: GenerateInvoiceDocumentInput,
     runtime: InvoiceDocumentRuntimeOptions,
   ) {
-    return this.generateInvoiceDocument(db, invoiceId, input, runtime)
+    return this.generateInvoiceDocument(db, invoiceId, input, runtime, { regenerated: true })
   },
 }

@@ -56,6 +56,7 @@ export {
   validateTemplateVariables,
 } from "./service.js"
 export type {
+  ContractDocumentGeneratedEvent,
   ContractDocumentGeneratorContext,
   ContractDocumentRuntimeOptions,
   GeneratedContractDocumentArtifact,

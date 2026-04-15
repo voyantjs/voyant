@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -38,6 +39,8 @@ export interface ContractsRouteOptions {
   resolveDocumentGenerator?: (
     bindings: Record<string, unknown>,
   ) => ContractDocumentGenerator | undefined
+  eventBus?: EventBus
+  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }
 
 function resolveDocumentGenerator(
@@ -45,6 +48,13 @@ function resolveDocumentGenerator(
   bindings: Record<string, unknown>,
 ) {
   return options?.resolveDocumentGenerator?.(bindings) ?? options?.documentGenerator
+}
+
+function resolveEventBus(
+  options: ContractsRouteOptions | undefined,
+  bindings: Record<string, unknown>,
+) {
+  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
 }
 
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {
@@ -239,7 +249,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
         c.get("db"),
         c.req.param("id"),
         generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env },
+        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
@@ -268,7 +278,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
         c.get("db"),
         c.req.param("id"),
         generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env },
+        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)

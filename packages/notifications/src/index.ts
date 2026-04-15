@@ -56,6 +56,7 @@ export {
 } from "./service.js"
 export type {
   BookingDocumentAttachmentResolver,
+  BookingDocumentsSentEvent,
   SendBookingDocumentsRuntimeOptions,
 } from "./service-booking-documents.js"
 export { bookingDocumentNotificationsService } from "./service-booking-documents.js"

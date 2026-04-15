@@ -140,7 +140,7 @@ function unique<T>(xs: T[]): T[] {
  *   pagination: { take: 50 },
  * })
  * // data[0].product === [{ id: "prod_...", ... }, ...]
- * // data[0].organization === { id: "orgn_...", name: "..." } | null
+ * // data[0].organization === { id: "org_...", name: "..." } | null
  * ```
  */
 export async function queryGraph(

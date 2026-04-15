@@ -308,7 +308,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
   describe("Offers", () => {
     it("POST /offers → 201", async () => {
       const offer = await seedOffer()
-      expect(offer.id).toMatch(/^offr_/)
+      expect(offer.id).toMatch(/^ofr_/)
       expect(offer.offerNumber).toMatch(/^OFF-\d{13}-0001$/)
       expect(offer.title).toBe("Offer 0001")
       expect(offer.currency).toBe("USD")
@@ -324,7 +324,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("GET /offers/:id → 404 for missing", async () => {
-      const res = await app.request("/offers/offr_nonexistent")
+      const res = await app.request("/offers/ofr_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -342,7 +342,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("PATCH /offers/:id → 404 for missing", async () => {
-      const res = await app.request("/offers/offr_nonexistent", {
+      const res = await app.request("/offers/ofr_nonexistent", {
         method: "PATCH",
         ...json({ title: "Nope" }),
       })
@@ -358,7 +358,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("DELETE /offers/:id → 404 for missing", async () => {
-      const res = await app.request("/offers/offr_nonexistent", { method: "DELETE" })
+      const res = await app.request("/offers/ofr_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -710,7 +710,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
   describe("Orders", () => {
     it("POST /orders → 201", async () => {
       const order = await seedOrder()
-      expect(order.id).toMatch(/^ordr_/)
+      expect(order.id).toMatch(/^ord_/)
       expect(order.orderNumber).toMatch(/^ORD-\d{13}-0001$/)
       expect(order.title).toBe("Order 0001")
       expect(order.currency).toBe("USD")
@@ -726,7 +726,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("GET /orders/:id → 404 for missing", async () => {
-      const res = await app.request("/orders/ordr_nonexistent")
+      const res = await app.request("/orders/ord_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -744,7 +744,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("PATCH /orders/:id → 404 for missing", async () => {
-      const res = await app.request("/orders/ordr_nonexistent", {
+      const res = await app.request("/orders/ord_nonexistent", {
         method: "PATCH",
         ...json({ title: "Nope" }),
       })
@@ -760,7 +760,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
     })
 
     it("DELETE /orders/:id → 404 for missing", async () => {
-      const res = await app.request("/orders/ordr_nonexistent", { method: "DELETE" })
+      const res = await app.request("/orders/ord_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 

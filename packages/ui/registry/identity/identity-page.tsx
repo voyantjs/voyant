@@ -60,7 +60,7 @@ export function IdentityPage({ entityType, entityId, tab = "contact-points" }: I
                 search: (prev) => ({ ...prev, entityId: value || undefined }),
               })
             }}
-            placeholder="prsn_... / orgn_... / supp_..."
+            placeholder="pers_... / org_... / supp_..."
             className="font-mono text-xs"
           />
         </div>

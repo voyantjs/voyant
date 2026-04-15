@@ -8,7 +8,7 @@ describe.skipIf(!DB_AVAILABLE)("Facilities routes", () => {
   describe("Facilities", () => {
     it("creates a facility with defaults", async () => {
       const facility = await ctx.seedFacility()
-      expect(facility.id).toMatch(/^faci_/)
+      expect(facility.id).toMatch(/^fac_/)
       expect(facility.kind).toBe("hotel")
       expect(facility.status).toBe("active")
     })
@@ -38,7 +38,7 @@ describe.skipIf(!DB_AVAILABLE)("Facilities routes", () => {
     })
 
     it("returns 404 for non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000", {
         method: "GET",
       })
       expect(res.status).toBe(404)
@@ -68,7 +68,7 @@ describe.skipIf(!DB_AVAILABLE)("Facilities routes", () => {
     })
 
     it("returns 404 when updating non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000", {
         method: "PATCH",
         ...json({ name: "x" }),
       })
@@ -85,7 +85,7 @@ describe.skipIf(!DB_AVAILABLE)("Facilities routes", () => {
     })
 
     it("returns 404 when deleting non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000", {
         method: "DELETE",
       })
       expect(res.status).toBe(404)

@@ -17,14 +17,14 @@ export const orderLinkable: LinkableDefinition = {
   module: "transactions",
   entity: "order",
   table: "orders",
-  idPrefix: "ordr",
+  idPrefix: "ord",
 }
 
 export const offerLinkable: LinkableDefinition = {
   module: "transactions",
   entity: "offer",
   table: "offers",
-  idPrefix: "offr",
+  idPrefix: "ofr",
 }
 
 export const transactionsLinkable = {

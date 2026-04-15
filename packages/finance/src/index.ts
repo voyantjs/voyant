@@ -36,7 +36,7 @@ export const creditNoteLinkable: LinkableDefinition = {
   module: "finance",
   entity: "creditNote",
   table: "credit_notes",
-  idPrefix: "crnt",
+  idPrefix: "crn",
 }
 
 export const financeLinkable = {

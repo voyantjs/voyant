@@ -26,7 +26,7 @@ describe.skipIf(!DB_AVAILABLE)("Facility identity attachment routes", () => {
     })
 
     it("returns 404 when creating contact point for non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000/contact-points", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000/contact-points", {
         method: "POST",
         ...json({ kind: "email", value: "test@example.com" }),
       })
@@ -84,7 +84,7 @@ describe.skipIf(!DB_AVAILABLE)("Facility identity attachment routes", () => {
     })
 
     it("returns 404 when creating address for non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000/addresses", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000/addresses", {
         method: "POST",
         ...json({ label: "primary", line1: "x" }),
       })
@@ -136,7 +136,7 @@ describe.skipIf(!DB_AVAILABLE)("Facility identity attachment routes", () => {
     })
 
     it("returns 404 for non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000/contacts", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000/contacts", {
         method: "POST",
         ...json({ name: "Nobody", role: "general" }),
       })

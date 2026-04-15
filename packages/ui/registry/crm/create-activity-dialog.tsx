@@ -180,7 +180,7 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
                 value={entityId}
                 onChange={(event) => setEntityId(event.target.value)}
                 disabled={entityType === "none"}
-                placeholder="prsn_…"
+                placeholder="pers_…"
               />
             </div>
           </div>

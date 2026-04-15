@@ -21,8 +21,8 @@ describe("PREFIXES", () => {
     expect(PREFIXES.suppliers).toBe("supp")
     expect(PREFIXES.products).toBe("prod")
     expect(PREFIXES.bookings).toBe("book")
-    expect(PREFIXES.organizations).toBe("orgn")
-    expect(PREFIXES.people).toBe("prsn")
+    expect(PREFIXES.organizations).toBe("org")
+    expect(PREFIXES.people).toBe("pers")
   })
 
   it("has no duplicate prefix values", () => {

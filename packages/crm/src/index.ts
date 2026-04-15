@@ -10,14 +10,14 @@ export const personLinkable: LinkableDefinition = {
   module: "crm",
   entity: "person",
   table: "people",
-  idPrefix: "prsn",
+  idPrefix: "pers",
 }
 
 export const organizationLinkable: LinkableDefinition = {
   module: "crm",
   entity: "organization",
   table: "organizations",
-  idPrefix: "orgn",
+  idPrefix: "org",
 }
 
 export const crmModule: Module = {

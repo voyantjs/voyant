@@ -581,7 +581,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
               productId: slot.productId,
               optionId: slot.optionId,
               sourceSnapshotId: "sels_test_001",
-              sourceOfferId: "offr_test_001",
+              sourceOfferId: "ofr_test_001",
               availabilitySlotId: slot.id,
               quantity: 2,
             },
@@ -603,7 +603,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const itemsRes = await app.request(`/${body.data.id}/items`, { method: "GET" })
       const itemsBody = await itemsRes.json()
       expect(itemsBody.data[0]?.sourceSnapshotId).toBe("sels_test_001")
-      expect(itemsBody.data[0]?.sourceOfferId).toBe("offr_test_001")
+      expect(itemsBody.data[0]?.sourceOfferId).toBe("ofr_test_001")
 
       const [updatedSlot] = await db
         .select()

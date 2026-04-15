@@ -6,7 +6,7 @@ export const policyLinkable: LinkableDefinition = {
   module: "legal",
   entity: "policy",
   table: "policies",
-  idPrefix: "poli",
+  idPrefix: "pol",
 }
 
 export const policyVersionLinkable: LinkableDefinition = {

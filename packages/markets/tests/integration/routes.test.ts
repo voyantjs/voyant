@@ -198,7 +198,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
   describe("Markets", () => {
     it("POST /markets → 201", async () => {
       const market = await seedMarket()
-      expect(market.id).toMatch(/^mrkt_/)
+      expect(market.id).toMatch(/^mkt_/)
       expect(market.code).toBe("MKT-0001")
       expect(market.name).toBe("Market 0001")
       expect(market.defaultLanguageTag).toBe("en")
@@ -215,7 +215,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     })
 
     it("GET /markets/:id → 404 for missing", async () => {
-      const res = await app.request("/markets/mrkt_nonexistent")
+      const res = await app.request("/markets/mkt_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -232,7 +232,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     })
 
     it("PATCH /markets/:id → 404 for missing", async () => {
-      const res = await app.request("/markets/mrkt_nonexistent", {
+      const res = await app.request("/markets/mkt_nonexistent", {
         method: "PATCH",
         ...json({ name: "Nope" }),
       })
@@ -248,7 +248,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     })
 
     it("DELETE /markets/:id → 404 for missing", async () => {
-      const res = await app.request("/markets/mrkt_nonexistent", { method: "DELETE" })
+      const res = await app.request("/markets/mkt_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -308,7 +308,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     })
 
     it("POST /markets/:id/locales → 404 for missing market", async () => {
-      const res = await app.request("/markets/mrkt_nonexistent/locales", {
+      const res = await app.request("/markets/mkt_nonexistent/locales", {
         method: "POST",
         ...json({ languageTag: "fr" }),
       })
@@ -400,7 +400,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     })
 
     it("POST /markets/:id/currencies → 404 for missing market", async () => {
-      const res = await app.request("/markets/mrkt_nonexistent/currencies", {
+      const res = await app.request("/markets/mkt_nonexistent/currencies", {
         method: "POST",
         ...json({ currencyCode: "EUR" }),
       })
@@ -717,7 +717,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
     it("POST /price-catalogs → 404 for missing market", async () => {
       const res = await app.request("/price-catalogs", {
         method: "POST",
-        ...json({ marketId: "mrkt_nonexistent", priceCatalogId: "prca_fake_9999" }),
+        ...json({ marketId: "mkt_nonexistent", priceCatalogId: "prca_fake_9999" }),
       })
       expect(res.status).toBe(404)
     })
@@ -817,7 +817,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
       const product = await seedProductDirect()
       const res = await app.request("/product-rules", {
         method: "POST",
-        ...json({ marketId: "mrkt_nonexistent", productId: product.id }),
+        ...json({ marketId: "mkt_nonexistent", productId: product.id }),
       })
       expect(res.status).toBe(404)
     })
@@ -954,7 +954,7 @@ describe.skipIf(!DB_AVAILABLE)("Markets routes (integration)", () => {
       const channel = await seedChannelDirect()
       const res = await app.request("/channel-rules", {
         method: "POST",
-        ...json({ marketId: "mrkt_nonexistent", channelId: channel.id }),
+        ...json({ marketId: "mkt_nonexistent", channelId: channel.id }),
       })
       expect(res.status).toBe(404)
     })

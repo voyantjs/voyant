@@ -166,7 +166,7 @@ export function DropoffPriceRuleDialog({ open, onOpenChange, rule, onSuccess }: 
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Facility ID (optional)</Label>
-                <Input {...form.register("facilityId")} placeholder="faci_…" />
+                <Input {...form.register("facilityId")} placeholder="fac_…" />
               </div>
             </div>
 

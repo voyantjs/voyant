@@ -22,7 +22,7 @@ if (TEST_DATABASE_URL) {
 export const ENTITY_TYPE = "supplier"
 export const ENTITY_ID = "supp_test123"
 export const ENTITY_TYPE_2 = "person"
-export const ENTITY_ID_2 = "prsn_test456"
+export const ENTITY_ID_2 = "pers_test456"
 
 export { newId }
 

@@ -35,7 +35,7 @@ describe.skipIf(!DB_AVAILABLE)("Property routes", () => {
     it("returns 404 when creating property for non-existent facility", async () => {
       const res = await ctx.request("/properties", {
         method: "POST",
-        ...json({ facilityId: "faci_00000000000000000000000000" }),
+        ...json({ facilityId: "fac_00000000000000000000000000" }),
       })
       expect(res.status).toBe(404)
     })

@@ -33,7 +33,7 @@ const app = createApp({
 
 ### Policies
 
-- **Policies** (`poli`) — policy definitions by kind (cancellation, payment, T&C, etc.)
+- **Policies** (`pol`) — policy definitions by kind (cancellation, payment, T&C, etc.)
 - **Policy versions** (`plvr`) — immutable version snapshots with publish/retire lifecycle
 - **Policy rules** (`plrl`) — structured rules per version (cancellation windows, percentages)
 - **Policy assignments** (`plas`) — scope-based assignment to products, channels, markets

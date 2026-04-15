@@ -22,16 +22,16 @@ const app = createApp({
 
 ## Entities
 
-- **People** (`prsn`) — canonical person record; syncs inline contact fields (email, phone, address) to `identity` module
-- **Organizations** (`orgn`) — canonical company record
-- **Pipelines** + **Stages** (`pipe`, `stge`) — sales funnels
-- **Opportunities** (`oppt`, `oppp`) — deals attached to people/orgs
+- **People** (`pers`) — canonical person record; syncs inline contact fields (email, phone, address) to `identity` module
+- **Organizations** (`org`) — canonical company record
+- **Pipelines** + **Stages** (`pipe`, `stg`) — sales funnels
+- **Opportunities** (`opp`, `oppp`) — deals attached to people/orgs
 - **Quotes** + **Quote lines** (`quot`, `qtln`)
-- **Activities** (`actv`, `actl`, `actp`) — tasks, calls, meetings, emails
+- **Activities** (`act`, `actl`, `actp`) — tasks, calls, meetings, emails
 - **Custom fields** (`cfdf`, `cfvl`)
 - **Notes** — person (`pnot`), organization (`onot`)
 - **Communication log** (`clog`)
-- **Segments** + **segment members** (`cseg`, `csgm`)
+- **Segments** + **segment members** (`seg`, `segm`)
 
 ## Exports
 

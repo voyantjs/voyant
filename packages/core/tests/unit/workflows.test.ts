@@ -131,7 +131,7 @@ describe("createWorkflow", () => {
     const observed: unknown[] = []
     const wf = createWorkflow("comp-output", [
       step("a")
-        .run(() => ({ id: "prsn_1" }))
+        .run(() => ({ id: "pers_1" }))
         .compensate((output) => {
           observed.push(output)
         }),
@@ -140,7 +140,7 @@ describe("createWorkflow", () => {
       }),
     ])
     await expect(wf.run()).rejects.toThrow("fail")
-    expect(observed).toEqual([{ id: "prsn_1" }])
+    expect(observed).toEqual([{ id: "pers_1" }])
   })
 
   it("skips steps that have no compensation when rolling back", async () => {

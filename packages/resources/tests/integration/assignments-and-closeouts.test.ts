@@ -10,7 +10,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
       const product = await ctx.seedProductDirect()
       const slot = await ctx.seedAvailabilitySlotDirect(product.id)
       const assignment = await ctx.seedSlotAssignment(slot.id)
-      expect(assignment.id).toMatch(/^rssa_/)
+      expect(assignment.id).toMatch(/^resa_/)
       expect(assignment.slotId).toBe(slot.id)
       expect(assignment.status).toBe("reserved")
     })
@@ -26,7 +26,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("GET /slot-assignments/:id → 404 for missing", async () => {
-      const res = await ctx.request("/slot-assignments/rssa_nonexistent")
+      const res = await ctx.request("/slot-assignments/resa_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -45,7 +45,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("PATCH /slot-assignments/:id → 404 for missing", async () => {
-      const res = await ctx.request("/slot-assignments/rssa_nonexistent", {
+      const res = await ctx.request("/slot-assignments/resa_nonexistent", {
         method: "PATCH",
         ...json({ status: "assigned" }),
       })
@@ -61,7 +61,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("DELETE /slot-assignments/:id → 404 for missing", async () => {
-      const res = await ctx.request("/slot-assignments/rssa_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/slot-assignments/resa_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -124,7 +124,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     it("POST /closeouts → 201", async () => {
       const resource = await ctx.seedResource()
       const closeout = await ctx.seedCloseout(resource.id)
-      expect(closeout.id).toMatch(/^rscl_/)
+      expect(closeout.id).toMatch(/^recl_/)
       expect(closeout.resourceId).toBe(resource.id)
       expect(closeout.dateLocal).toBe("2025-07-01")
     })
@@ -139,7 +139,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("GET /closeouts/:id → 404 for missing", async () => {
-      const res = await ctx.request("/closeouts/rscl_nonexistent")
+      const res = await ctx.request("/closeouts/recl_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -156,7 +156,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("PATCH /closeouts/:id → 404 for missing", async () => {
-      const res = await ctx.request("/closeouts/rscl_nonexistent", {
+      const res = await ctx.request("/closeouts/recl_nonexistent", {
         method: "PATCH",
         ...json({ reason: "Nope" }),
       })
@@ -171,7 +171,7 @@ describe.skipIf(!DB_AVAILABLE)("Slot assignment and closeout routes", () => {
     })
 
     it("DELETE /closeouts/:id → 404 for missing", async () => {
-      const res = await ctx.request("/closeouts/rscl_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/closeouts/recl_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 

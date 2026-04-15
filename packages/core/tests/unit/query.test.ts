@@ -20,7 +20,7 @@ const person: LinkableDefinition = {
   module: "crm",
   entity: "person",
   table: "people",
-  idPrefix: "prsn",
+  idPrefix: "pers",
 }
 
 const product: LinkableDefinition = {
@@ -34,7 +34,7 @@ const organization: LinkableDefinition = {
   module: "crm",
   entity: "organization",
   table: "organizations",
-  idPrefix: "orgn",
+  idPrefix: "org",
 }
 
 // -- Test helpers ----------------------------------------------------------
@@ -109,8 +109,8 @@ describe("createQueryContext", () => {
 describe("queryGraph — base fetch", () => {
   it("returns records from the base entity with no relations", async () => {
     const fetcher = makeFetcher([
-      { id: "prsn_a", name: "Alice" },
-      { id: "prsn_b", name: "Bob" },
+      { id: "pers_a", name: "Alice" },
+      { id: "pers_b", name: "Bob" },
     ])
     const ctx = createQueryContext({ person: fetcher }, [], makeLinkService({}))
 
@@ -128,9 +128,9 @@ describe("queryGraph — base fetch", () => {
 
   it("passes filters and pagination through to the fetcher", async () => {
     const fetcher = makeFetcher([
-      { id: "prsn_a", name: "Alice" },
-      { id: "prsn_b", name: "Bob" },
-      { id: "prsn_c", name: "Carol" },
+      { id: "pers_a", name: "Alice" },
+      { id: "pers_b", name: "Bob" },
+      { id: "pers_c", name: "Carol" },
     ])
     const ctx = createQueryContext({ person: fetcher }, [], makeLinkService({}))
 
@@ -141,7 +141,7 @@ describe("queryGraph — base fetch", () => {
       pagination: { skip: 1, take: 1 },
     })
     expect(data).toHaveLength(1)
-    expect(data[0]?.id).toBe("prsn_b")
+    expect(data[0]?.id).toBe("pers_b")
     expect(fetcher.list).toHaveBeenCalledWith({
       filters: { country: "FR" },
       pagination: { skip: 1, take: 1 },
@@ -173,8 +173,8 @@ describe("queryGraph — relation traversal", () => {
 
   it("attaches a list relation (one-to-many)", async () => {
     const personFetcher = makeFetcher([
-      { id: "prsn_a", name: "Alice" },
-      { id: "prsn_b", name: "Bob" },
+      { id: "pers_a", name: "Alice" },
+      { id: "pers_b", name: "Bob" },
     ])
     const productFetcher = makeFetcher([
       { id: "prod_1", title: "Safari" },
@@ -183,9 +183,9 @@ describe("queryGraph — relation traversal", () => {
     ])
     const linkService = makeLinkService({
       [personProductLink.tableName]: [
-        makeRow("lnk_1", "prsn_a", "prod_1"),
-        makeRow("lnk_2", "prsn_a", "prod_2"),
-        makeRow("lnk_3", "prsn_b", "prod_3"),
+        makeRow("lnk_1", "pers_a", "prod_1"),
+        makeRow("lnk_2", "pers_a", "prod_2"),
+        makeRow("lnk_3", "pers_b", "prod_3"),
       ],
     })
 
@@ -201,8 +201,8 @@ describe("queryGraph — relation traversal", () => {
     })
 
     expect(data).toHaveLength(2)
-    const alice = data.find((r) => r.id === "prsn_a")
-    const bob = data.find((r) => r.id === "prsn_b")
+    const alice = data.find((r) => r.id === "pers_a")
+    const bob = data.find((r) => r.id === "pers_b")
     expect(Array.isArray(alice?.product)).toBe(true)
     expect((alice?.product as EntityRecord[]).map((p) => p.id).sort()).toEqual(["prod_1", "prod_2"])
     expect(bob?.product as EntityRecord[]).toHaveLength(1)
@@ -210,7 +210,7 @@ describe("queryGraph — relation traversal", () => {
   })
 
   it("attaches an empty list when no links exist for a record", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a", name: "Alice" }])
+    const personFetcher = makeFetcher([{ id: "pers_a", name: "Alice" }])
     const productFetcher = makeFetcher([])
     const linkService = makeLinkService({ [personProductLink.tableName]: [] })
 
@@ -231,19 +231,19 @@ describe("queryGraph — relation traversal", () => {
     const personOrgLink = defineLink({ linkable: person, isList: true }, organization)
     // person (many) ↔ organization (one) — each person belongs to exactly one org
     const personFetcher = makeFetcher([
-      { id: "prsn_a", name: "Alice" },
-      { id: "prsn_b", name: "Bob" },
-      { id: "prsn_c", name: "Carol" },
+      { id: "pers_a", name: "Alice" },
+      { id: "pers_b", name: "Bob" },
+      { id: "pers_c", name: "Carol" },
     ])
     const orgFetcher = makeFetcher([
-      { id: "orgn_x", name: "Acme" },
-      { id: "orgn_y", name: "Globex" },
+      { id: "org_x", name: "Acme" },
+      { id: "org_y", name: "Globex" },
     ])
     const linkService = makeLinkService({
       [personOrgLink.tableName]: [
-        makeRow("lnk_1", "prsn_a", "orgn_x"),
-        makeRow("lnk_2", "prsn_b", "orgn_x"),
-        makeRow("lnk_3", "prsn_c", "orgn_y"),
+        makeRow("lnk_1", "pers_a", "org_x"),
+        makeRow("lnk_2", "pers_b", "org_x"),
+        makeRow("lnk_3", "pers_c", "org_y"),
       ],
     })
 
@@ -258,15 +258,15 @@ describe("queryGraph — relation traversal", () => {
       fields: ["id", "organization.name"],
     })
 
-    const alice = data.find((r) => r.id === "prsn_a")
-    const carol = data.find((r) => r.id === "prsn_c")
-    expect(alice?.organization).toEqual({ id: "orgn_x", name: "Acme" })
-    expect(carol?.organization).toEqual({ id: "orgn_y", name: "Globex" })
+    const alice = data.find((r) => r.id === "pers_a")
+    const carol = data.find((r) => r.id === "pers_c")
+    expect(alice?.organization).toEqual({ id: "org_x", name: "Acme" })
+    expect(carol?.organization).toEqual({ id: "org_y", name: "Globex" })
   })
 
   it("returns null for a missing single relation", async () => {
     const personOrgLink = defineLink({ linkable: person, isList: true }, organization)
-    const personFetcher = makeFetcher([{ id: "prsn_a", name: "Alice" }])
+    const personFetcher = makeFetcher([{ id: "pers_a", name: "Alice" }])
     const orgFetcher = makeFetcher([])
     const linkService = makeLinkService({ [personOrgLink.tableName]: [] })
 
@@ -285,15 +285,15 @@ describe("queryGraph — relation traversal", () => {
 
   it("traverses a link from the right side (reversed)", async () => {
     // Query product → person (person is on the left of the link)
-    const personFetcher = makeFetcher([{ id: "prsn_a", name: "Alice" }])
+    const personFetcher = makeFetcher([{ id: "pers_a", name: "Alice" }])
     const productFetcher = makeFetcher([
       { id: "prod_1", title: "Safari" },
       { id: "prod_2", title: "Cruise" },
     ])
     const linkService = makeLinkService({
       [personProductLink.tableName]: [
-        makeRow("lnk_1", "prsn_a", "prod_1"),
-        makeRow("lnk_2", "prsn_a", "prod_2"),
+        makeRow("lnk_1", "pers_a", "prod_1"),
+        makeRow("lnk_2", "pers_a", "prod_2"),
       ],
     })
 
@@ -310,11 +310,11 @@ describe("queryGraph — relation traversal", () => {
 
     // product.person is single (person is not a list on the link)
     const p1 = data.find((r) => r.id === "prod_1")
-    expect(p1?.person).toEqual({ id: "prsn_a", name: "Alice" })
+    expect(p1?.person).toEqual({ id: "pers_a", name: "Alice" })
   })
 
   it("throws when a dotted field has no matching link definition", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a" }])
+    const personFetcher = makeFetcher([{ id: "pers_a" }])
     const ctx = createQueryContext({ person: personFetcher }, [], makeLinkService({}))
 
     await expect(
@@ -326,7 +326,7 @@ describe("queryGraph — relation traversal", () => {
   })
 
   it("throws when the target entity has no registered fetcher", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a" }])
+    const personFetcher = makeFetcher([{ id: "pers_a" }])
     const linkService = makeLinkService({ [personProductLink.tableName]: [] })
     const ctx = createQueryContext({ person: personFetcher }, [personProductLink], linkService)
 
@@ -336,13 +336,13 @@ describe("queryGraph — relation traversal", () => {
   })
 
   it("dedupes target fetches across base records", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a" }, { id: "prsn_b" }, { id: "prsn_c" }])
+    const personFetcher = makeFetcher([{ id: "pers_a" }, { id: "pers_b" }, { id: "pers_c" }])
     const productFetcher = makeFetcher([{ id: "prod_1", title: "Safari" }])
     const linkService = makeLinkService({
       [personProductLink.tableName]: [
-        makeRow("lnk_1", "prsn_a", "prod_1"),
-        makeRow("lnk_2", "prsn_b", "prod_1"),
-        makeRow("lnk_3", "prsn_c", "prod_1"),
+        makeRow("lnk_1", "pers_a", "prod_1"),
+        makeRow("lnk_2", "pers_b", "prod_1"),
+        makeRow("lnk_3", "pers_c", "prod_1"),
       ],
     })
 
@@ -362,7 +362,7 @@ describe("queryGraph — relation traversal", () => {
   })
 
   it("skips target hydration when no links match", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a" }])
+    const personFetcher = makeFetcher([{ id: "pers_a" }])
     const productFetcher = makeFetcher([])
     const linkService = makeLinkService({ [personProductLink.tableName]: [] })
 
@@ -377,10 +377,10 @@ describe("queryGraph — relation traversal", () => {
   })
 
   it("groups multiple subfields under a single relation (one traversal)", async () => {
-    const personFetcher = makeFetcher([{ id: "prsn_a" }])
+    const personFetcher = makeFetcher([{ id: "pers_a" }])
     const productFetcher = makeFetcher([{ id: "prod_1", title: "Safari", price: 100 }])
     const linkService = makeLinkService({
-      [personProductLink.tableName]: [makeRow("lnk_1", "prsn_a", "prod_1")],
+      [personProductLink.tableName]: [makeRow("lnk_1", "pers_a", "prod_1")],
     })
 
     const ctx = createQueryContext(

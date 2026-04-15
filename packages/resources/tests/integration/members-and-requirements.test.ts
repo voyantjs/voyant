@@ -10,7 +10,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
       const resource = await ctx.seedResource()
       const pool = await ctx.seedPool()
       const member = await ctx.seedPoolMember(pool.id, resource.id)
-      expect(member.id).toMatch(/^rspm_/)
+      expect(member.id).toMatch(/^repm_/)
       expect(member.poolId).toBe(pool.id)
       expect(member.resourceId).toBe(resource.id)
     })
@@ -24,7 +24,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
     })
 
     it("DELETE /pool-members/:id → 404 for missing", async () => {
-      const res = await ctx.request("/pool-members/rspm_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/pool-members/repm_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -62,7 +62,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
       const product = await ctx.seedProductDirect()
       const pool = await ctx.seedPool()
       const requirement = await ctx.seedRequirement(pool.id, product.id)
-      expect(requirement.id).toMatch(/^rsrq_/)
+      expect(requirement.id).toMatch(/^rerq_/)
       expect(requirement.poolId).toBe(pool.id)
       expect(requirement.productId).toBe(product.id)
       expect(requirement.quantityRequired).toBe(1)
@@ -80,7 +80,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
     })
 
     it("GET /requirements/:id → 404 for missing", async () => {
-      const res = await ctx.request("/requirements/rsrq_nonexistent")
+      const res = await ctx.request("/requirements/rerq_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -100,7 +100,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
     })
 
     it("PATCH /requirements/:id → 404 for missing", async () => {
-      const res = await ctx.request("/requirements/rsrq_nonexistent", {
+      const res = await ctx.request("/requirements/rerq_nonexistent", {
         method: "PATCH",
         ...json({ quantityRequired: 5 }),
       })
@@ -116,7 +116,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
     })
 
     it("DELETE /requirements/:id → 404 for missing", async () => {
-      const res = await ctx.request("/requirements/rsrq_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/requirements/rerq_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -186,7 +186,7 @@ describe.skipIf(!DB_AVAILABLE)("Pool membership and requirement routes", () => {
       })
       expect(res.status).toBe(201)
       const body = await res.json()
-      expect(body.data.id).toMatch(/^rsrq_/)
+      expect(body.data.id).toMatch(/^rerq_/)
     })
 
     it("GET /allocations/:id → 200", async () => {

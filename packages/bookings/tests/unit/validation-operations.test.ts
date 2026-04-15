@@ -25,7 +25,7 @@ describe("Reservation schemas", () => {
           title: "Adult ticket",
           availabilitySlotId: "avs_123",
           sourceSnapshotId: "sels_123",
-          sourceOfferId: "offr_123",
+          sourceOfferId: "ofr_123",
         },
       ],
     })
@@ -35,7 +35,7 @@ describe("Reservation schemas", () => {
     expect(result.items[0]?.itemType).toBe("unit")
     expect(result.items[0]?.allocationType).toBe("unit")
     expect(result.items[0]?.sourceSnapshotId).toBe("sels_123")
-    expect(result.items[0]?.sourceOfferId).toBe("offr_123")
+    expect(result.items[0]?.sourceOfferId).toBe("ofr_123")
   })
 
   it("requires at least one reservation item", () => {

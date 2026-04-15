@@ -20,7 +20,7 @@ describe.skipIf(!DB_AVAILABLE)("Facility operations routes", () => {
     })
 
     it("returns 404 for non-existent facility", async () => {
-      const res = await ctx.request("/facilities/faci_00000000000000000000000000/features", {
+      const res = await ctx.request("/facilities/fac_00000000000000000000000000/features", {
         method: "POST",
         ...json({ name: "Pool", category: "amenity" }),
       })
@@ -123,7 +123,7 @@ describe.skipIf(!DB_AVAILABLE)("Facility operations routes", () => {
 
     it("returns 404 for non-existent facility", async () => {
       const res = await ctx.request(
-        "/facilities/faci_00000000000000000000000000/operation-schedules",
+        "/facilities/fac_00000000000000000000000000/operation-schedules",
         {
           method: "POST",
           ...json({ dayOfWeek: "monday", opensAt: "09:00", closesAt: "17:00" }),

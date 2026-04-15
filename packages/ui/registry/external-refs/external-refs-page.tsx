@@ -55,7 +55,7 @@ export function ExternalRefsPage({ entityType, entityId }: ExternalRefsPageProps
                 search: (prev) => ({ ...prev, entityId: value || undefined }),
               })
             }}
-            placeholder="prsn_... / book_... / prod_..."
+            placeholder="pers_... / book_... / prod_..."
             className="font-mono text-xs"
           />
         </div>

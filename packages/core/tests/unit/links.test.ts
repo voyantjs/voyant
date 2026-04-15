@@ -12,7 +12,7 @@ const person: LinkableDefinition = {
   module: "crm",
   entity: "person",
   table: "people",
-  idPrefix: "prsn",
+  idPrefix: "pers",
 }
 
 const product: LinkableDefinition = {
@@ -185,13 +185,13 @@ describe("resolveLinkFromSpec", () => {
   it("matches spec where module keys are in definition order", () => {
     const resolved = resolveLinkFromSpec(
       {
-        crm: { person_id: "prsn_abc" },
+        crm: { person_id: "pers_abc" },
         products: { product_id: "prod_xyz" },
       },
       defs,
     )
     expect(resolved.definition.tableName).toBe("crm_person_products_product")
-    expect(resolved.leftId).toBe("prsn_abc")
+    expect(resolved.leftId).toBe("pers_abc")
     expect(resolved.rightId).toBe("prod_xyz")
   })
 
@@ -199,19 +199,19 @@ describe("resolveLinkFromSpec", () => {
     const resolved = resolveLinkFromSpec(
       {
         products: { product_id: "prod_xyz" },
-        crm: { person_id: "prsn_abc" },
+        crm: { person_id: "pers_abc" },
       },
       defs,
     )
     expect(resolved.definition.tableName).toBe("crm_person_products_product")
-    expect(resolved.leftId).toBe("prsn_abc")
+    expect(resolved.leftId).toBe("pers_abc")
     expect(resolved.rightId).toBe("prod_xyz")
   })
 
   it("disambiguates between multiple definitions sharing a module", () => {
     const resolved = resolveLinkFromSpec(
       {
-        crm: { person_id: "prsn_abc" },
+        crm: { person_id: "pers_abc" },
         blog: { post_id: "blpo_xyz" },
       },
       defs,
@@ -224,7 +224,7 @@ describe("resolveLinkFromSpec", () => {
     expect(() =>
       resolveLinkFromSpec(
         {
-          crm: { person_id: "prsn_abc" },
+          crm: { person_id: "pers_abc" },
           products: { product_id: "prod_xyz" },
           blog: { post_id: "blpo_xyz" },
         },
@@ -238,7 +238,7 @@ describe("resolveLinkFromSpec", () => {
       resolveLinkFromSpec(
         {
           finance: { invoice_id: "inv_1" },
-          crm: { person_id: "prsn_1" },
+          crm: { person_id: "pers_1" },
         },
         defs,
       ),
@@ -249,7 +249,7 @@ describe("resolveLinkFromSpec", () => {
     expect(() =>
       resolveLinkFromSpec(
         {
-          crm: { person_id: "prsn_abc" },
+          crm: { person_id: "pers_abc" },
           products: { wrong_key: "prod_xyz" },
         },
         defs,

@@ -1,6 +1,13 @@
 /**
  * All entity prefixes for the Voyant platform.
- * Prefixes are 2-4 characters, lowercase alphanumeric.
+ *
+ * Convention:
+ *   - Root entities: first N chars of the entity name, shortest unambiguous (2-4 chars).
+ *     Examples: prod (product), book (booking), inv (invoice), pers (person), org (organization).
+ *   - Child entities: 2-char module code + 2-char child suffix from the child entity's first chars.
+ *     Examples: bk+it = bkit (booking_item), ch+co = chco (channel_contract).
+ *   - All lowercase alphanumeric, max 4 chars.
+ *   - Prefer guessable over clever — a developer should be able to guess the prefix from the entity name.
  */
 export const PREFIXES = {
   // --- IAM ---
@@ -21,8 +28,8 @@ export const PREFIXES = {
   notification_reminder_runs: "ntrn",
   person_notes: "pnot",
   organization_notes: "onot",
-  segments: "cseg",
-  segment_members: "csgm",
+  segments: "seg",
+  segment_members: "segm",
   suppliers: "supp",
   supplier_services: "ssvc",
   supplier_rates: "srat",
@@ -69,16 +76,16 @@ export const PREFIXES = {
   pickup_locations: "pklo",
   location_pickup_times: "lpkt",
   custom_pickup_areas: "cpka",
-  organizations: "orgn",
-  people: "prsn",
+  organizations: "org",
+  people: "pers",
   pipelines: "pipe",
-  stages: "stge",
-  opportunities: "oppt",
+  stages: "stg",
+  opportunities: "opp",
   opportunity_participants: "oppp",
   opportunity_products: "oppr",
   quotes: "quot",
   quote_lines: "qtln",
-  activities: "actv",
+  activities: "act",
   activity_links: "actl",
   activity_participants: "actp",
   custom_field_definitions: "cfdf",
@@ -94,16 +101,16 @@ export const PREFIXES = {
   booking_item_commissions: "bcom",
   invoice_line_items: "inli",
   payments: "pay",
-  credit_notes: "crnt",
+  credit_notes: "crn",
   credit_note_line_items: "cnli",
   supplier_payments: "spay",
   finance_notes: "fnot",
-  resources: "resc",
-  resource_pools: "rspl",
-  resource_pool_members: "rspm",
-  resource_requirements: "rsrq",
-  resource_slot_assignments: "rssa",
-  resource_closeouts: "rscl",
+  resources: "res",
+  resource_pools: "repl",
+  resource_pool_members: "repm",
+  resource_requirements: "rerq",
+  resource_slot_assignments: "resa",
+  resource_closeouts: "recl",
   ground_operators: "gopr",
   ground_vehicles: "gveh",
   ground_drivers: "gdrv",
@@ -135,7 +142,7 @@ export const PREFIXES = {
   channel_release_schedules: "chrs",
   channel_remittance_exceptions: "chre",
   channel_settlement_approvals: "chap",
-  facilities: "faci",
+  facilities: "fac",
   facility_contacts: "fcon",
   facility_features: "ffea",
   facility_operation_schedules: "fops",
@@ -166,7 +173,7 @@ export const PREFIXES = {
   identity_contact_points: "idcp",
   identity_addresses: "idad",
   identity_named_contacts: "idnc",
-  markets: "mrkt",
+  markets: "mkt",
   market_locales: "mklo",
   market_currencies: "mkcu",
   fx_rate_sets: "fxrs",
@@ -196,11 +203,11 @@ export const PREFIXES = {
   booking_question_extra_triggers: "bqet",
   booking_answers: "bqan",
   storefront_verification_challenges: "svch",
-  offers: "offr",
+  offers: "ofr",
   offer_participants: "ofpt",
   offer_items: "ofit",
   offer_item_participants: "ofip",
-  orders: "ordr",
+  orders: "ord",
   order_participants: "orpt",
   order_items: "orit",
   order_item_participants: "orip",
@@ -227,7 +234,7 @@ export const PREFIXES = {
   contract_attachments: "ctat",
 
   // --- POLICIES ---
-  policies: "poli",
+  policies: "pol",
   policy_versions: "plvr",
   policy_rules: "plrl",
   policy_assignments: "plas",

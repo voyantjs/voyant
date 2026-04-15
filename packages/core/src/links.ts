@@ -219,7 +219,7 @@ export function generateLinkTableSql(def: LinkDefinition): LinkTableSql {
  * @example
  * ```ts
  * {
- *   crm: { person_id: "prsn_abc" },
+ *   crm: { person_id: "pers_abc" },
  *   products: { product_id: "prod_xyz" },
  * }
  * ```

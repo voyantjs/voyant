@@ -22,7 +22,7 @@ const app = createApp({
 
 ## Entities
 
-- **Facilities** (`faci`)
+- **Facilities** (`fac`)
 - **Facility features** (`ffea`)
 - **Facility operations** (`fops`)
 - **Properties** (`prop`) + **property groups** (`pgrp`, `pgpm`)

@@ -1274,7 +1274,7 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
       })
       expect(res.status).toBe(201)
       const { data } = await res.json()
-      expect(data.id).toMatch(/^crnt_/)
+      expect(data.id).toMatch(/^crn_/)
       expect(data.invoiceId).toBe(inv.id)
       expect(data.status).toBe("draft")
       expect(data.amountCents).toBe(5000)
@@ -1385,7 +1385,7 @@ describe.skipIf(!DB_AVAILABLE)("Finance routes", () => {
       const inv = await seedInvoice(booking.id)
 
       const res = await app.request(
-        `/invoices/${inv.id}/credit-notes/crnt_00000000000000000000000000/line-items`,
+        `/invoices/${inv.id}/credit-notes/crn_00000000000000000000000000/line-items`,
         {
           method: "POST",
           ...json({

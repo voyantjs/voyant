@@ -8,7 +8,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
   describe("Resources", () => {
     it("POST /resources → 201", async () => {
       const resource = await ctx.seedResource()
-      expect(resource.id).toMatch(/^resc_/)
+      expect(resource.id).toMatch(/^res_/)
       expect(resource.kind).toBe("guide")
       expect(resource.name).toBe("Resource 0001")
       expect(resource.active).toBe(true)
@@ -23,7 +23,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("GET /resources/:id → 404 for missing", async () => {
-      const res = await ctx.request("/resources/resc_nonexistent")
+      const res = await ctx.request("/resources/res_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -41,7 +41,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("PATCH /resources/:id → 404 for missing", async () => {
-      const res = await ctx.request("/resources/resc_nonexistent", {
+      const res = await ctx.request("/resources/res_nonexistent", {
         method: "PATCH",
         ...json({ name: "Nope" }),
       })
@@ -57,7 +57,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("DELETE /resources/:id → 404 for missing", async () => {
-      const res = await ctx.request("/resources/resc_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/resources/res_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 
@@ -111,13 +111,13 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
       const resource = await ctx.seedResource()
       const res = await ctx.request("/resources/batch-update", {
         method: "POST",
-        ...json({ ids: [resource.id, "resc_nonexistent"], patch: { active: false } }),
+        ...json({ ids: [resource.id, "res_nonexistent"], patch: { active: false } }),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.succeeded).toBe(1)
       expect(body.failed).toHaveLength(1)
-      expect(body.failed[0].id).toBe("resc_nonexistent")
+      expect(body.failed[0].id).toBe("res_nonexistent")
     })
 
     it("POST /resources/batch-delete → 200", async () => {
@@ -137,7 +137,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
       const resource = await ctx.seedResource()
       const res = await ctx.request("/resources/batch-delete", {
         method: "POST",
-        ...json({ ids: [resource.id, "resc_nonexistent"] }),
+        ...json({ ids: [resource.id, "res_nonexistent"] }),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -149,7 +149,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
   describe("Resource Pools", () => {
     it("POST /pools → 201", async () => {
       const pool = await ctx.seedPool()
-      expect(pool.id).toMatch(/^rspl_/)
+      expect(pool.id).toMatch(/^repl_/)
       expect(pool.kind).toBe("guide")
       expect(pool.name).toBe("Pool 0001")
       expect(pool.active).toBe(true)
@@ -164,7 +164,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("GET /pools/:id → 404 for missing", async () => {
-      const res = await ctx.request("/pools/rspl_nonexistent")
+      const res = await ctx.request("/pools/repl_nonexistent")
       expect(res.status).toBe(404)
     })
 
@@ -181,7 +181,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("PATCH /pools/:id → 404 for missing", async () => {
-      const res = await ctx.request("/pools/rspl_nonexistent", {
+      const res = await ctx.request("/pools/repl_nonexistent", {
         method: "PATCH",
         ...json({ name: "Nope" }),
       })
@@ -197,7 +197,7 @@ describe.skipIf(!DB_AVAILABLE)("Resources and pools routes", () => {
     })
 
     it("DELETE /pools/:id → 404 for missing", async () => {
-      const res = await ctx.request("/pools/rspl_nonexistent", { method: "DELETE" })
+      const res = await ctx.request("/pools/repl_nonexistent", { method: "DELETE" })
       expect(res.status).toBe(404)
     })
 

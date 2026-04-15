@@ -23,7 +23,7 @@ const person: LinkableDefinition = {
   module: "linktest_crm",
   entity: "person",
   table: "linktest_people",
-  idPrefix: "prsn",
+  idPrefix: "pers",
 }
 
 const product: LinkableDefinition = {
@@ -116,9 +116,9 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("createLinkService.create", () => {
     it("inserts a new link row via positional API", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      const row = await svc.create(personProductOneToMany.tableName, "prsn_alice", "prod_xyz")
+      const row = await svc.create(personProductOneToMany.tableName, "pers_alice", "prod_xyz")
       expect(row.id).toMatch(/^lnk_/)
-      expect(row.leftId).toBe("prsn_alice")
+      expect(row.leftId).toBe("pers_alice")
       expect(row.rightId).toBe("prod_xyz")
       expect(row.deletedAt).toBeNull()
     })
@@ -126,10 +126,10 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
     it("inserts a new link row via spec API", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
       const row = await svc.create({
-        linktest_crm: { person_id: "prsn_alice" },
+        linktest_crm: { person_id: "pers_alice" },
         linktest_products: { product_id: "prod_xyz" },
       })
-      expect(row.leftId).toBe("prsn_alice")
+      expect(row.leftId).toBe("pers_alice")
       expect(row.rightId).toBe("prod_xyz")
     })
 
@@ -137,16 +137,16 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
       const row = await svc.create({
         linktest_products: { product_id: "prod_xyz" },
-        linktest_crm: { person_id: "prsn_alice" },
+        linktest_crm: { person_id: "pers_alice" },
       })
-      expect(row.leftId).toBe("prsn_alice")
+      expect(row.leftId).toBe("pers_alice")
       expect(row.rightId).toBe("prod_xyz")
     })
 
     it("is idempotent — repeating create returns the same row", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      const first = await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      const second = await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      const first = await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      const second = await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
       expect(second.id).toBe(first.id)
 
       const rows = await svc.list(personProductOneToMany.tableName)
@@ -155,10 +155,10 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
 
     it("resurrects a soft-deleted pair on re-create", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      const created = await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.dismiss(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      const created = await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.dismiss(personProductOneToMany.tableName, "pers_a", "prod_1")
 
-      const recreated = await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      const recreated = await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
       expect(recreated.id).toBe(created.id)
       expect(recreated.deletedAt).toBeNull()
 
@@ -168,7 +168,7 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
 
     it("throws when linkKey is unknown", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await expect(svc.create("nonexistent_table", "prsn_a", "prod_1")).rejects.toThrow(
+      await expect(svc.create("nonexistent_table", "pers_a", "prod_1")).rejects.toThrow(
         /unknown link key/,
       )
     })
@@ -177,12 +177,12 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("createLinkService.list", () => {
     it("lists links filtered by left ID", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_2")
-      await svc.create(personProductOneToMany.tableName, "prsn_b", "prod_3")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_2")
+      await svc.create(personProductOneToMany.tableName, "pers_b", "prod_3")
 
       const rows = await svc.list(personProductOneToMany.tableName, {
-        leftId: "prsn_a",
+        leftId: "pers_a",
       })
       expect(rows).toHaveLength(2)
       expect(rows.map((r) => r.rightId).sort()).toEqual(["prod_1", "prod_2"])
@@ -190,25 +190,25 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
 
     it("lists links filtered by right ID", async () => {
       const svc = createLinkService(() => db, [personPostManyToMany])
-      await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_1")
-      await svc.create(personPostManyToMany.tableName, "prsn_b", "blpo_1")
-      await svc.create(personPostManyToMany.tableName, "prsn_c", "blpo_2")
+      await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_1")
+      await svc.create(personPostManyToMany.tableName, "pers_b", "blpo_1")
+      await svc.create(personPostManyToMany.tableName, "pers_c", "blpo_2")
 
       const rows = await svc.list(personPostManyToMany.tableName, {
         rightId: "blpo_1",
       })
       expect(rows).toHaveLength(2)
-      expect(rows.map((r) => r.leftId).sort()).toEqual(["prsn_a", "prsn_b"])
+      expect(rows.map((r) => r.leftId).sort()).toEqual(["pers_a", "pers_b"])
     })
 
     it("excludes soft-deleted rows from list results", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_2")
-      await svc.dismiss(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_2")
+      await svc.dismiss(personProductOneToMany.tableName, "pers_a", "prod_1")
 
       const rows = await svc.list(personProductOneToMany.tableName, {
-        leftId: "prsn_a",
+        leftId: "pers_a",
       })
       expect(rows).toHaveLength(1)
       expect(rows[0]?.rightId).toBe("prod_2")
@@ -216,8 +216,8 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
 
     it("returns all rows when no filter is provided", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.create(personProductOneToMany.tableName, "prsn_b", "prod_2")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_b", "prod_2")
       const rows = await svc.list(personProductOneToMany.tableName)
       expect(rows).toHaveLength(2)
     })
@@ -226,8 +226,8 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("createLinkService.dismiss", () => {
     it("marks a link as soft-deleted", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.dismiss(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.dismiss(personProductOneToMany.tableName, "pers_a", "prod_1")
 
       const rows = await svc.list(personProductOneToMany.tableName)
       expect(rows).toHaveLength(0)
@@ -244,7 +244,7 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
     it("is a no-op when pair does not exist", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
       await expect(
-        svc.dismiss(personProductOneToMany.tableName, "prsn_x", "prod_x"),
+        svc.dismiss(personProductOneToMany.tableName, "pers_x", "prod_x"),
       ).resolves.toBeUndefined()
     })
   })
@@ -252,8 +252,8 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("createLinkService.delete", () => {
     it("hard-deletes the link row", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
-      await svc.delete(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
+      await svc.delete(personProductOneToMany.tableName, "pers_a", "prod_1")
 
       const dbRows = (await db.execute(
         sql.raw(`SELECT * FROM "${personProductOneToMany.tableName}"`),
@@ -265,15 +265,15 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("one-to-many enforcement", () => {
     it("allows multiple rights per left", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
       await expect(
-        svc.create(personProductOneToMany.tableName, "prsn_a", "prod_2"),
+        svc.create(personProductOneToMany.tableName, "pers_a", "prod_2"),
       ).resolves.toBeDefined()
     })
 
     it("rejects a second parent for the same right (UNIQUE on right_id)", async () => {
       const svc = createLinkService(() => db, [personProductOneToMany])
-      await svc.create(personProductOneToMany.tableName, "prsn_a", "prod_1")
+      await svc.create(personProductOneToMany.tableName, "pers_a", "prod_1")
       // Since product.isList=false here isn't the case — flip assumption:
       // personProductOneToMany is person:(product, isList=true) → each product
       // is owned by exactly one person. A second person claiming prod_1 must
@@ -281,7 +281,7 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
       // ON CONFLICT DO NOTHING returns no row, then we fetch the active
       // pair (which won't match a different left), and throw.
       await expect(
-        svc.create(personProductOneToMany.tableName, "prsn_b", "prod_1"),
+        svc.create(personProductOneToMany.tableName, "pers_b", "prod_1"),
       ).rejects.toThrow()
     })
   })
@@ -289,18 +289,18 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
   describe("many-to-many enforcement", () => {
     it("allows the same left across multiple rights", async () => {
       const svc = createLinkService(() => db, [personPostManyToMany])
-      await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_1")
-      await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_2")
+      await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_1")
+      await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_2")
       const rows = await svc.list(personPostManyToMany.tableName, {
-        leftId: "prsn_a",
+        leftId: "pers_a",
       })
       expect(rows).toHaveLength(2)
     })
 
     it("allows the same right across multiple lefts", async () => {
       const svc = createLinkService(() => db, [personPostManyToMany])
-      await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_1")
-      await svc.create(personPostManyToMany.tableName, "prsn_b", "blpo_1")
+      await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_1")
+      await svc.create(personPostManyToMany.tableName, "pers_b", "blpo_1")
       const rows = await svc.list(personPostManyToMany.tableName, {
         rightId: "blpo_1",
       })
@@ -309,8 +309,8 @@ describe.skipIf(!DB_AVAILABLE)("link service integration", () => {
 
     it("dedupes duplicate pairs (pair unique index)", async () => {
       const svc = createLinkService(() => db, [personPostManyToMany])
-      const a = await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_1")
-      const b = await svc.create(personPostManyToMany.tableName, "prsn_a", "blpo_1")
+      const a = await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_1")
+      const b = await svc.create(personPostManyToMany.tableName, "pers_a", "blpo_1")
       expect(a.id).toBe(b.id)
     })
   })

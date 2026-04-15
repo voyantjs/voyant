@@ -24,7 +24,7 @@ const app = createApp({
 
 - **Invoices** + **Invoice lines** (`inv`, `inli`)
 - **Payments** (`pay`)
-- **Credit notes** + **Credit note lines** (`crnt`, `cnli`)
+- **Credit notes** + **Credit note lines** (`crn`, `cnli`)
 - **Supplier payments** (`spay`)
 - **Finance notes** (`fnot`)
 - **Invoice number series** (`invs`)

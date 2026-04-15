@@ -14,6 +14,7 @@ export {
 export { bookingsQueryKeys } from "./query-keys.js"
 export {
   getBookingActivityQueryOptions,
+  getBookingItemParticipantsQueryOptions,
   getBookingItemsQueryOptions,
   getBookingNotesQueryOptions,
   getBookingQueryOptions,

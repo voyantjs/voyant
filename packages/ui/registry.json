@@ -731,6 +731,21 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-item-participants",
+      "type": "registry:component",
+      "title": "Booking Item Participants",
+      "description": "Inline participant assignment panel for booking items. Assign passengers to items with roles.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "select"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-item-participants.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-item-participants.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-booking-item-dialog",
       "type": "registry:component",
       "title": "Booking Item Dialog",
@@ -751,7 +766,13 @@
       "title": "Booking Item List",
       "description": "Booking items section for a booking detail page, including create, edit, and delete actions.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-      "registryDependencies": ["badge", "button", "card", "voyant-bookings-booking-item-dialog"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-bookings-booking-item-dialog",
+        "voyant-bookings-booking-item-participants"
+      ],
       "files": [
         {
           "path": "registry/bookings/booking-item-list.tsx",

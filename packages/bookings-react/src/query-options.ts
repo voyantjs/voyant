@@ -5,6 +5,7 @@ import { queryOptions } from "@tanstack/react-query"
 import { type FetchWithValidationOptions, fetchWithValidation } from "./client.js"
 import type { UseBookingOptions } from "./hooks/use-booking.js"
 import type { UseBookingActivityOptions } from "./hooks/use-booking-activity.js"
+import type { UseBookingItemParticipantsOptions } from "./hooks/use-booking-item-participants.js"
 import type { UseBookingItemsOptions } from "./hooks/use-booking-items.js"
 import type { UseBookingNotesOptions } from "./hooks/use-booking-notes.js"
 import type { UseBookingsOptions } from "./hooks/use-bookings.js"
@@ -13,6 +14,7 @@ import type { UseSupplierStatusesOptions } from "./hooks/use-supplier-statuses.j
 import { bookingsQueryKeys } from "./query-keys.js"
 import {
   bookingActivityResponse,
+  bookingItemParticipantsResponse,
   bookingItemsResponse,
   bookingListResponse,
   bookingNotesResponse,
@@ -68,6 +70,25 @@ export function getBookingItemsQueryOptions(
     queryKey: bookingsQueryKeys.items(bookingId ?? ""),
     queryFn: () =>
       fetchWithValidation(`/v1/bookings/${bookingId}/items`, bookingItemsResponse, client),
+  })
+}
+
+export function getBookingItemParticipantsQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  itemId: string | null | undefined,
+  options: UseBookingItemParticipantsOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.itemParticipants(bookingId ?? "", itemId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/bookings/${bookingId}/items/${itemId}/participants`,
+        bookingItemParticipantsResponse,
+        client,
+      ),
   })
 }
 

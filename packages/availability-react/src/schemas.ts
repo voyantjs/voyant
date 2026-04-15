@@ -29,6 +29,7 @@ export type ProductOption = z.infer<typeof productOptionSchema>
 export const availabilityRuleRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  productName: z.string().nullable().optional(),
   optionId: z.string().nullable(),
   facilityId: z.string().nullable(),
   timezone: z.string(),
@@ -47,6 +48,7 @@ export type AvailabilityRuleRow = AvailabilityRuleRecord
 export const availabilityStartTimeRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  productName: z.string().nullable().optional(),
   optionId: z.string().nullable(),
   facilityId: z.string().nullable(),
   label: z.string().nullable(),
@@ -62,6 +64,7 @@ export type AvailabilityStartTimeRow = AvailabilityStartTimeRecord
 export const availabilitySlotRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  productName: z.string().nullable().optional(),
   optionId: z.string().nullable(),
   facilityId: z.string().nullable(),
   availabilityRuleId: z.string().nullable(),
@@ -97,6 +100,7 @@ export type AvailabilitySlotDetail = z.infer<typeof availabilitySlotDetailSchema
 export const availabilityCloseoutRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  productName: z.string().nullable().optional(),
   slotId: z.string().nullable(),
   dateLocal: z.string(),
   reason: z.string().nullable(),
@@ -118,6 +122,7 @@ export type AvailabilitySlotPickupRow = z.infer<typeof availabilitySlotPickupRec
 export const availabilityPickupPointRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  productName: z.string().nullable().optional(),
   name: z.string(),
   description: z.string().nullable(),
   locationText: z.string().nullable(),

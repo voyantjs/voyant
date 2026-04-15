@@ -66,7 +66,7 @@ export const ruleColumns = (
   {
     accessorKey: "productId",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-    cell: ({ row }) => productNameById(products, row.original.productId),
+    cell: ({ row }) => productNameById(products, row.original.productId, row.original.productName),
   },
   {
     accessorKey: "timezone",
@@ -120,7 +120,7 @@ export const startTimeColumns = (
   {
     accessorKey: "productId",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-    cell: ({ row }) => productNameById(products, row.original.productId),
+    cell: ({ row }) => productNameById(products, row.original.productId, row.original.productName),
   },
   {
     accessorKey: "label",
@@ -172,7 +172,7 @@ export const slotColumns = (
   {
     accessorKey: "productId",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-    cell: ({ row }) => productNameById(products, row.original.productId),
+    cell: ({ row }) => productNameById(products, row.original.productId, row.original.productName),
   },
   {
     accessorKey: "dateLocal",
@@ -222,7 +222,7 @@ export const closeoutColumns = (
   {
     accessorKey: "productId",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-    cell: ({ row }) => productNameById(products, row.original.productId),
+    cell: ({ row }) => productNameById(products, row.original.productId, row.original.productName),
   },
   {
     accessorKey: "dateLocal",
@@ -246,7 +246,7 @@ export const pickupPointColumns = (
   {
     accessorKey: "productId",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-    cell: ({ row }) => productNameById(products, row.original.productId),
+    cell: ({ row }) => productNameById(products, row.original.productId, row.original.productName),
   },
   {
     accessorKey: "name",

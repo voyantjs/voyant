@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
+import { productsRef } from "./products-ref.js"
 import {
   availabilityCloseouts,
   availabilityRules,
@@ -33,8 +34,9 @@ export async function listRules(db: PostgresJsDatabase, query: AvailabilityRuleL
   const where = conditions.length ? and(...conditions) : undefined
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(availabilityRules), productName: productsRef.name })
       .from(availabilityRules)
+      .leftJoin(productsRef, eq(availabilityRules.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)
@@ -93,8 +95,9 @@ export async function listStartTimes(
 
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(availabilityStartTimes), productName: productsRef.name })
       .from(availabilityStartTimes)
+      .leftJoin(productsRef, eq(availabilityStartTimes.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)
@@ -158,8 +161,9 @@ export async function listSlots(db: PostgresJsDatabase, query: AvailabilitySlotL
 
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(availabilitySlots), productName: productsRef.name })
       .from(availabilitySlots)
+      .leftJoin(productsRef, eq(availabilitySlots.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)
@@ -228,8 +232,9 @@ export async function listCloseouts(db: PostgresJsDatabase, query: AvailabilityC
 
   return paginate(
     db
-      .select()
+      .select({ ...getTableColumns(availabilityCloseouts), productName: productsRef.name })
       .from(availabilityCloseouts)
+      .leftJoin(productsRef, eq(availabilityCloseouts.productId, productsRef.id))
       .where(where)
       .limit(query.limit)
       .offset(query.offset)

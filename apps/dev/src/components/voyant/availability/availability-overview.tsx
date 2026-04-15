@@ -102,7 +102,7 @@ export function AvailabilityOverview({
                   onClick={() => onOpenSlot(slot.id)}
                 >
                   <div className="font-medium">
-                    {productNameById(products, slot.productId)} · {slot.dateLocal}
+                    {productNameById(products, slot.productId, slot.productName)} · {slot.dateLocal}
                   </div>
                   <div className="text-muted-foreground">
                     {formatDateTime(slot.startsAt)} · {slot.status.replace("_", " ")} · Remaining

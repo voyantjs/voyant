@@ -2738,6 +2738,9 @@ importers:
       '@voyantjs/products':
         specifier: workspace:*
         version: link:../../packages/products
+      '@voyantjs/products-react':
+        specifier: workspace:*
+        version: link:../../packages/products-react
       '@voyantjs/react':
         specifier: workspace:*
         version: link:../../packages/react

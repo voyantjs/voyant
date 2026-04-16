@@ -683,20 +683,41 @@
       "name": "voyant-bookings-booking-list",
       "type": "registry:component",
       "title": "Booking List",
-      "description": "Searchable booking table with create/edit dialog wiring.",
+      "description": "Searchable booking table with create/edit dialog and operator quick-book CTA.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
       "registryDependencies": [
         "badge",
         "button",
         "input",
         "table",
-        "voyant-bookings-booking-dialog"
+        "voyant-bookings-booking-dialog",
+        "voyant-bookings-quick-book-dialog"
       ],
       "files": [
         {
           "path": "registry/bookings/booking-list.tsx",
           "type": "registry:component",
           "target": "components/voyant/bookings/booking-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-quick-book-dialog",
+      "type": "registry:component",
+      "title": "Quick Book Dialog",
+      "description": "Operator quick-book workflow: pick a product, select or create a person, and create a draft booking via the convert-from-product endpoint.",
+      "dependencies": [
+        "@voyantjs/bookings-react",
+        "@voyantjs/crm-react",
+        "@voyantjs/products-react",
+        "lucide-react"
+      ],
+      "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/quick-book-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/quick-book-dialog.tsx"
         }
       ]
     },

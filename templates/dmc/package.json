@@ -54,6 +54,7 @@
     "@voyantjs/notifications": "workspace:*",
     "@voyantjs/pricing": "workspace:*",
     "@voyantjs/products": "workspace:*",
+    "@voyantjs/products-react": "workspace:*",
     "@voyantjs/react": "workspace:*",
     "@voyantjs/resources": "workspace:*",
     "@voyantjs/resources-react": "workspace:*",

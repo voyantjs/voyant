@@ -1,6 +1,11 @@
 "use client"
 
-import { type BookingRecord, useBookingStatusMutation } from "@voyantjs/bookings-react"
+import {
+  type BookingRecord,
+  bookingStatusOptions,
+  bookingStatusSchema,
+  useBookingStatusMutation,
+} from "@voyantjs/bookings-react"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -25,15 +30,7 @@ import {
 import { zodResolver } from "@/lib/zod-resolver"
 
 const statusChangeFormSchema = z.object({
-  status: z.enum([
-    "draft",
-    "on_hold",
-    "confirmed",
-    "in_progress",
-    "completed",
-    "expired",
-    "cancelled",
-  ]),
+  status: bookingStatusSchema,
   note: z.string().optional().nullable(),
 })
 
@@ -47,16 +44,6 @@ export interface StatusChangeDialogProps {
   currentStatus: BookingRecord["status"]
   onSuccess?: () => void
 }
-
-const BOOKING_STATUSES = [
-  { value: "draft", label: "Draft" },
-  { value: "on_hold", label: "On Hold" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "expired", label: "Expired" },
-  { value: "cancelled", label: "Cancelled" },
-] as const
 
 export function StatusChangeDialog({
   open,
@@ -111,13 +98,13 @@ export function StatusChangeDialog({
                 onValueChange={(value) =>
                   form.setValue("status", value as StatusChangeFormValues["status"])
                 }
-                items={BOOKING_STATUSES}
+                items={bookingStatusOptions}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BOOKING_STATUSES.map((status) => (
+                  {bookingStatusOptions.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
                     </SelectItem>
@@ -136,7 +123,7 @@ export function StatusChangeDialog({
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={mutation.isPending}>
-              {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Status
             </Button>
           </DialogFooter>

@@ -1,7 +1,12 @@
 "use client"
 
 import { useNavigate } from "@tanstack/react-router"
-import { useBooking, useBookingMutation } from "@voyantjs/bookings-react"
+import {
+  bookingStatusBadgeVariant,
+  formatBookingStatus,
+  useBooking,
+  useBookingMutation,
+} from "@voyantjs/bookings-react"
 import { ArrowLeft, Ban, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 
@@ -21,16 +26,6 @@ import { PassengerList } from "./passenger-list"
 import { StatusChangeDialog } from "./status-change-dialog"
 import { SupplierStatusList } from "./supplier-status-list"
 
-const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  draft: "outline",
-  on_hold: "secondary",
-  confirmed: "default",
-  in_progress: "secondary",
-  completed: "default",
-  expired: "secondary",
-  cancelled: "destructive",
-}
-
 function formatAmount(cents: number | null, currency: string): string {
   if (cents == null) return "-"
   return `${(cents / 100).toFixed(2)} ${currency}`
@@ -39,10 +34,6 @@ function formatAmount(cents: number | null, currency: string): string {
 function formatMargin(percent: number | null): string {
   if (percent == null) return "-"
   return `${(percent / 100).toFixed(2)}%`
-}
-
-function formatStatus(status: string): string {
-  return status.replace("_", " ")
 }
 
 export function BookingDetailPage({ id }: { id: string }) {
@@ -82,8 +73,8 @@ export function BookingDetailPage({ id }: { id: string }) {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{booking.bookingNumber}</h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge variant={statusVariant[booking.status] ?? "secondary"} className="capitalize">
-              {formatStatus(booking.status)}
+            <Badge variant={bookingStatusBadgeVariant[booking.status]}>
+              {formatBookingStatus(booking.status)}
             </Badge>
           </div>
         </div>

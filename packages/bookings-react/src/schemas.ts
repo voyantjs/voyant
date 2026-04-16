@@ -27,6 +27,8 @@ export const bookingStatusSchema = z.enum([
   "cancelled",
 ])
 
+export type BookingStatus = z.infer<typeof bookingStatusSchema>
+
 export const supplierConfirmationStatusSchema = z.enum([
   "pending",
   "confirmed",

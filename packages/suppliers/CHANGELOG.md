@@ -1,5 +1,16 @@
 # @voyantjs/suppliers
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [ce72e29]
+  - @voyantjs/core@0.5.0
+  - @voyantjs/db@0.5.0
+  - @voyantjs/facilities@0.5.0
+  - @voyantjs/hono@0.5.0
+  - @voyantjs/identity@0.5.0
+
 ## 0.4.5
 
 ### Patch Changes

@@ -1,13 +1,14 @@
 "use client"
 
 import { useNavigate } from "@tanstack/react-router"
-import { useBooking, useBookingMutation } from "@voyantjs/bookings-react"
-import { ArrowLeft, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
+import { useBooking, useBookingItems, useBookingMutation } from "@voyantjs/bookings-react"
+import { ArrowLeft, Ban, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 
 import { BookingActivityTimeline } from "./booking-activity-timeline"
+import { BookingCancellationDialog } from "./booking-cancellation-dialog"
 import { BookingDialog } from "./booking-dialog"
 import { BookingDocumentList } from "./booking-document-list"
 import { BookingGuaranteeList } from "./booking-guarantee-list"
@@ -47,7 +48,9 @@ export function BookingDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const { data: bookingData, isPending } = useBooking(id)
+  const { data: itemsData } = useBookingItems(id)
   const { remove } = useBookingMutation()
 
   if (isPending) {
@@ -89,6 +92,12 @@ export function BookingDetailPage({ id }: { id: string }) {
             <RefreshCw className="mr-2 h-4 w-4" />
             Change Status
           </Button>
+          {["draft", "on_hold", "confirmed", "in_progress"].includes(booking.status) && (
+            <Button variant="outline" onClick={() => setCancelDialogOpen(true)}>
+              <Ban className="mr-2 h-4 w-4" />
+              Cancel Booking
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
@@ -211,6 +220,13 @@ export function BookingDetailPage({ id }: { id: string }) {
         onOpenChange={setStatusDialogOpen}
         bookingId={id}
         currentStatus={booking.status}
+      />
+
+      <BookingCancellationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        booking={booking}
+        productId={itemsData?.data?.[0]?.productId}
       />
     </div>
   )

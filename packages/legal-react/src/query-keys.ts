@@ -40,6 +40,16 @@ export interface LegalPolicyAssignmentsListFilters {
   offset?: number | undefined
 }
 
+export interface ResolvePolicyFilters {
+  kind: string
+  productId?: string | undefined
+  channelId?: string | undefined
+  supplierId?: string | undefined
+  marketId?: string | undefined
+  organizationId?: string | undefined
+  at?: string | undefined
+}
+
 export interface LegalPolicyAcceptancesListFilters {
   policyVersionId?: string | undefined
   personId?: string | undefined
@@ -76,4 +86,6 @@ export const legalQueryKeys = {
     [...legalQueryKeys.policies(), "assignments", filters] as const,
   policyAcceptances: (filters: LegalPolicyAcceptancesListFilters) =>
     [...legalQueryKeys.policies(), "acceptances", filters] as const,
+  resolvePolicy: (filters: ResolvePolicyFilters) =>
+    [...legalQueryKeys.policies(), "resolve", filters] as const,
 }

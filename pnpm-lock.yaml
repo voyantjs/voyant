@@ -2723,6 +2723,9 @@ importers:
       '@voyantjs/legal':
         specifier: workspace:*
         version: link:../../packages/legal
+      '@voyantjs/legal-react':
+        specifier: workspace:*
+        version: link:../../packages/legal-react
       '@voyantjs/markets':
         specifier: workspace:*
         version: link:../../packages/markets
@@ -2991,6 +2994,9 @@ importers:
       '@voyantjs/legal':
         specifier: workspace:*
         version: link:../../packages/legal
+      '@voyantjs/legal-react':
+        specifier: workspace:*
+        version: link:../../packages/legal-react
       '@voyantjs/markets':
         specifier: workspace:*
         version: link:../../packages/markets

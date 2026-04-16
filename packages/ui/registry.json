@@ -924,6 +924,21 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-cancellation-dialog",
+      "type": "registry:component",
+      "title": "Booking Cancellation Dialog",
+      "description": "Structured booking cancellation workflow: resolves applicable cancellation policy, previews refund/penalty, captures reason, and cancels.",
+      "dependencies": ["@voyantjs/bookings-react", "@voyantjs/legal-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "dialog", "label", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-cancellation-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-cancellation-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",

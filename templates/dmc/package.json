@@ -49,6 +49,7 @@
     "@voyantjs/identity": "workspace:*",
     "@voyantjs/voyant-storage": "workspace:*",
     "@voyantjs/legal": "workspace:*",
+    "@voyantjs/legal-react": "workspace:*",
     "@voyantjs/markets": "workspace:*",
     "@voyantjs/notifications": "workspace:*",
     "@voyantjs/pricing": "workspace:*",

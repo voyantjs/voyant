@@ -4,6 +4,7 @@ import {
   useBookingGroup,
   useBookingGroupForBooking,
   useBookingGroupMemberMutation,
+  useBookingPrimaryProduct,
 } from "@voyantjs/bookings-react"
 import { Link2, Unlink, Users } from "lucide-react"
 import * as React from "react"
@@ -14,7 +15,17 @@ import { BookingGroupLinkDialog } from "./booking-group-link-dialog"
 
 export interface BookingGroupSectionProps {
   bookingId: string
+  /**
+   * Product ID used to scope shared-room group context. Leave unset to
+   * auto-resolve from the booking's items; pass an explicit string or `null`
+   * to override.
+   */
   productId?: string | null
+  /**
+   * Option unit ID used to scope shared-room group context. Leave unset to
+   * auto-resolve from the booking's items; pass an explicit string or `null`
+   * to override.
+   */
   optionUnitId?: string | null
 }
 
@@ -24,6 +35,14 @@ export function BookingGroupSection({
   optionUnitId,
 }: BookingGroupSectionProps) {
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false)
+
+  // Auto-resolve product/option-unit from items when the caller hasn't
+  // supplied them. Explicit `null` is respected as an override.
+  const shouldAutoResolve = productId === undefined || optionUnitId === undefined
+  const autoResolved = useBookingPrimaryProduct(bookingId, { enabled: shouldAutoResolve })
+  const effectiveProductId = productId === undefined ? autoResolved.productId : productId
+  const effectiveOptionUnitId =
+    optionUnitId === undefined ? autoResolved.optionUnitId : optionUnitId
 
   const { data: groupForBookingData } = useBookingGroupForBooking(bookingId)
   const group = groupForBookingData?.data ?? null
@@ -127,8 +146,8 @@ export function BookingGroupSection({
         open={linkDialogOpen}
         onOpenChange={setLinkDialogOpen}
         bookingId={bookingId}
-        productId={productId}
-        optionUnitId={optionUnitId}
+        productId={effectiveProductId}
+        optionUnitId={effectiveOptionUnitId}
       />
     </Card>
   )

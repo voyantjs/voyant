@@ -1,7 +1,7 @@
 "use client"
 
 import { useNavigate } from "@tanstack/react-router"
-import { useBooking, useBookingItems, useBookingMutation } from "@voyantjs/bookings-react"
+import { useBooking, useBookingMutation } from "@voyantjs/bookings-react"
 import { ArrowLeft, Ban, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 
@@ -51,7 +51,6 @@ export function BookingDetailPage({ id }: { id: string }) {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const { data: bookingData, isPending } = useBooking(id)
-  const { data: itemsData } = useBookingItems(id)
   const { remove } = useBookingMutation()
 
   if (isPending) {
@@ -206,11 +205,7 @@ export function BookingDetailPage({ id }: { id: string }) {
 
       <PassengerList bookingId={id} />
       <BookingItemList bookingId={id} />
-      <BookingGroupSection
-        bookingId={id}
-        productId={itemsData?.data?.[0]?.productId}
-        optionUnitId={itemsData?.data?.[0]?.optionUnitId}
-      />
+      <BookingGroupSection bookingId={id} />
       <BookingPaymentScheduleList bookingId={id} />
       <BookingGuaranteeList bookingId={id} />
       <BookingPaymentsSummary bookingId={id} />
@@ -232,7 +227,6 @@ export function BookingDetailPage({ id }: { id: string }) {
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
         booking={booking}
-        productId={itemsData?.data?.[0]?.productId}
       />
     </div>
   )

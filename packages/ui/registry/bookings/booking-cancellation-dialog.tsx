@@ -1,6 +1,10 @@
 "use client"
 
-import { type BookingRecord, useBookingCancelMutation } from "@voyantjs/bookings-react"
+import {
+  type BookingRecord,
+  useBookingCancelMutation,
+  useBookingPrimaryProduct,
+} from "@voyantjs/bookings-react"
 import { useEvaluateCancellation, useResolvePolicy } from "@voyantjs/legal-react"
 import { AlertTriangle, Loader2 } from "lucide-react"
 import * as React from "react"
@@ -49,7 +53,14 @@ export interface BookingCancellationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   booking: BookingRecord
-  /** Optional product ID used to resolve the applicable cancellation policy. */
+  /**
+   * Product ID used to resolve the applicable cancellation policy.
+   *
+   * Leave unset (or pass `undefined`) to auto-resolve from the booking's items
+   * — this is what you want for single-product bookings. Pass an explicit
+   * string or `null` to override (e.g. for multi-product bookings or to force
+   * the default non-product-scoped policy).
+   */
   productId?: string | null
   onSuccess?: () => void
 }
@@ -68,8 +79,17 @@ export function BookingCancellationDialog({
     return daysBetween(new Date(), new Date(booking.startDate))
   }, [booking.startDate])
 
+  // When the caller didn't specify a productId, derive one from the booking's
+  // items so the consumer doesn't have to wire up `useBookingItems` just for
+  // this. Explicit `null` is respected as an override.
+  const shouldAutoResolveProduct = productId === undefined
+  const autoResolved = useBookingPrimaryProduct(booking.id, {
+    enabled: open && shouldAutoResolveProduct,
+  })
+  const effectiveProductId = shouldAutoResolveProduct ? autoResolved.productId : productId
+
   const { data: resolved, isLoading: resolveLoading } = useResolvePolicy(
-    { kind: "cancellation", productId: productId ?? undefined },
+    { kind: "cancellation", productId: effectiveProductId ?? undefined },
     { enabled: open },
   )
 

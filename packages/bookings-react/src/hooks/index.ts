@@ -52,6 +52,11 @@ export {
 } from "./use-booking-note-mutation.js"
 export { type UseBookingNotesOptions, useBookingNotes } from "./use-booking-notes.js"
 export {
+  type UseBookingPrimaryProductOptions,
+  type UseBookingPrimaryProductResult,
+  useBookingPrimaryProduct,
+} from "./use-booking-primary-product.js"
+export {
   type UpdateBookingStatusInput,
   useBookingStatusMutation,
 } from "./use-booking-status-mutation.js"

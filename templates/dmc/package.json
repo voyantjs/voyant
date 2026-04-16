@@ -47,6 +47,7 @@
     "@voyantjs/hospitality": "workspace:*",
     "@voyantjs/hono": "workspace:*",
     "@voyantjs/identity": "workspace:*",
+    "@voyantjs/voyant-storage": "workspace:*",
     "@voyantjs/legal": "workspace:*",
     "@voyantjs/markets": "workspace:*",
     "@voyantjs/notifications": "workspace:*",

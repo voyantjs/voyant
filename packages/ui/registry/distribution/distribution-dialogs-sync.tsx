@@ -115,7 +115,7 @@ export function ChannelProductMappingDialog({
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select channel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -133,7 +133,7 @@ export function ChannelProductMappingDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
@@ -276,7 +276,7 @@ export function ChannelBookingLinkDialog({
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select channel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -294,7 +294,7 @@ export function ChannelBookingLinkDialog({
                 value={form.watch("bookingId")}
                 onValueChange={(value) => form.setValue("bookingId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select booking" />
                 </SelectTrigger>
                 <SelectContent>

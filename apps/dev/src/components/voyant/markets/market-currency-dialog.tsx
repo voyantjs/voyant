@@ -1,3 +1,5 @@
+"use client"
+
 import {
   type CreateMarketCurrencyInput,
   type MarketCurrencyRecord,
@@ -8,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -20,6 +23,7 @@ import {
   Label,
   Switch,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const formSchema = z.object({
@@ -33,17 +37,22 @@ const formSchema = z.object({
 
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
-type MarketCurrencyData = MarketCurrencyRecord
 
-type Props = {
+export interface MarketCurrencyDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   marketId: string
-  currency?: MarketCurrencyData
-  onSuccess: () => void
+  currency?: MarketCurrencyRecord
+  onSuccess?: (currency: MarketCurrencyRecord) => void
 }
 
-export function MarketCurrencyDialog({ open, onOpenChange, marketId, currency, onSuccess }: Props) {
+export function MarketCurrencyDialog({
+  open,
+  onOpenChange,
+  marketId,
+  currency,
+  onSuccess,
+}: MarketCurrencyDialogProps) {
   const isEditing = Boolean(currency)
   const { create, update } = useMarketCurrencyMutation()
 
@@ -93,12 +102,12 @@ export function MarketCurrencyDialog({ open, onOpenChange, marketId, currency, o
       active: values.active,
     }
 
-    if (isEditing) {
-      await update.mutateAsync({ id: currency!.id, input: payload })
-    } else {
-      await create.mutateAsync({ marketId, input: payload as CreateMarketCurrencyInput })
-    }
-    onSuccess()
+    const saved = isEditing
+      ? await update.mutateAsync({ id: currency!.id, input: payload })
+      : await create.mutateAsync({ marketId, input: payload as CreateMarketCurrencyInput })
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -114,12 +123,15 @@ export function MarketCurrencyDialog({ open, onOpenChange, marketId, currency, o
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency code</Label>
-                <Input {...form.register("currencyCode")} placeholder="EUR" maxLength={3} />
-                {form.formState.errors.currencyCode && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.currencyCode.message}
-                  </p>
-                )}
+                <CurrencyCombobox
+                  value={form.watch("currencyCode") || null}
+                  onChange={(next) =>
+                    form.setValue("currencyCode", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Sort order</Label>

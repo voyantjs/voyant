@@ -120,7 +120,7 @@ export function ServiceDialog({
                   form.setValue("serviceType", v as ServiceFormValues["serviceType"])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

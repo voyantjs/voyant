@@ -240,7 +240,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
                 setOptionId(NONE)
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a product..." />
               </SelectTrigger>
               <SelectContent>
@@ -258,7 +258,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
             <div className="flex flex-col gap-2">
               <Label>Option</Label>
               <Select value={optionId} onValueChange={(v) => setOptionId(v ?? NONE)}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -305,7 +305,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
                   onChange={(e) => setPersonSearch(e.target.value)}
                 />
                 <Select value={personId} onValueChange={(v) => setPersonId(v ?? "")}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a person..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -366,7 +366,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
               onChange={(e) => setOrgSearch(e.target.value)}
             />
             <Select value={organizationId} onValueChange={(v) => setOrganizationId(v ?? NONE)}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="No organization" />
               </SelectTrigger>
               <SelectContent>
@@ -420,7 +420,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
                     value={sharedRoomGroupId || NONE}
                     onValueChange={(v) => setSharedRoomGroupId(v === NONE ? "" : (v ?? ""))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a group..." />
                     </SelectTrigger>
                     <SelectContent>

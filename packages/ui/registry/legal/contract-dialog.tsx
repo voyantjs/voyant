@@ -137,7 +137,7 @@ export function ContractDialog({ open, onOpenChange, contract, onSuccess }: Cont
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -3534,6 +3534,21 @@
           "target": "components/voyant/legal/number-series-dialog.tsx"
         }
       ]
+    },
+    {
+      "name": "voyant-currency-combobox",
+      "type": "registry:ui",
+      "title": "Currency Combobox",
+      "description": "Searchable currency picker backed by the canonical `currencies` list from @voyantjs/utils. Trigger shows `CODE (symbol)`; items show `CODE — Name (symbol)`.",
+      "dependencies": ["@voyantjs/utils"],
+      "registryDependencies": ["combobox"],
+      "files": [
+        {
+          "path": "registry/ui/currency-combobox.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/currency-combobox.tsx"
+        }
+      ]
     }
   ]
 }

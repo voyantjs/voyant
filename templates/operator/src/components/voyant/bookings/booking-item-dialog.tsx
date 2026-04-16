@@ -23,6 +23,8 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const itemTypes = [
@@ -173,7 +175,7 @@ export function BookingItemDialog({
                   value={form.watch("itemType")}
                   onValueChange={(v) => form.setValue("itemType", v as (typeof itemTypes)[number])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,7 +193,7 @@ export function BookingItemDialog({
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as (typeof itemStatuses)[number])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -212,7 +214,15 @@ export function BookingItemDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Sell Currency</Label>
-                <Input {...form.register("sellCurrency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("sellCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("sellCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Unit Sell (cents)</Label>
@@ -227,7 +237,15 @@ export function BookingItemDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Cost Currency</Label>
-                <Input {...form.register("costCurrency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("costCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("costCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Unit Cost (cents)</Label>
@@ -241,7 +259,17 @@ export function BookingItemDialog({
 
             <div className="flex flex-col gap-2">
               <Label>Service Date</Label>
-              <Input {...form.register("serviceDate")} type="date" />
+              <DatePicker
+                value={form.watch("serviceDate") || null}
+                onChange={(next) =>
+                  form.setValue("serviceDate", next ?? "", {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                placeholder="Select service date"
+                className="w-full"
+              />
             </div>
 
             <div className="flex flex-col gap-2">

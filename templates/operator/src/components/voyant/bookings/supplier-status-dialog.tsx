@@ -26,6 +26,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const supplierStatusFormSchema = z.object({
@@ -149,7 +150,7 @@ export function SupplierStatusDialog({
                   }
                   items={CONFIRMATION_STATUSES}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -166,11 +167,14 @@ export function SupplierStatusDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Cost Currency</Label>
-                <Input
-                  {...form.register("costCurrency")}
-                  placeholder="EUR"
-                  maxLength={3}
-                  className="uppercase"
+                <CurrencyCombobox
+                  value={form.watch("costCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("costCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
                 />
               </div>
               <div className="flex flex-col gap-2">

@@ -117,7 +117,7 @@ export function ResourceDialog({
                 value={form.watch("supplierId")}
                 onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -137,7 +137,7 @@ export function ResourceDialog({
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourceRow["kind"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -280,7 +280,7 @@ export function ResourcePoolDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -300,7 +300,7 @@ export function ResourcePoolDialog({
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourcePoolRow["kind"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

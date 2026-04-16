@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const ruleFormSchema = z.object({
@@ -136,7 +137,7 @@ export function PolicyRuleDialog({
                   value={form.watch("ruleType")}
                   onValueChange={(v) => form.setValue("ruleType", v as FormValues["ruleType"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -187,7 +188,7 @@ export function PolicyRuleDialog({
                     form.setValue("refundType", (v || undefined) as FormValues["refundType"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,7 +202,15 @@ export function PolicyRuleDialog({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={10} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
             </div>
 

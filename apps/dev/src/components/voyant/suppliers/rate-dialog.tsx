@@ -163,7 +163,7 @@ export function RateDialog({
                   value={form.watch("unit")}
                   onValueChange={(v) => form.setValue("unit", v as RateFormValues["unit"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

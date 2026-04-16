@@ -1,5 +1,8 @@
+"use client"
+
 import {
   type CreateOfferInput,
+  type OfferRecord,
   type UpdateOfferInput,
   useOfferMutation,
 } from "@voyantjs/transactions-react"
@@ -7,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -22,11 +26,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
-import type { OfferData } from "./transactions-shared"
 
 type PersonRef = {
   id: string
@@ -57,6 +63,22 @@ const OFFER_STATUSES = [
 type OfferStatus = (typeof OFFER_STATUSES)[number]
 
 const moneyEuros = z.coerce.number().min(0)
+const storefrontDiscountTypes = ["percentage", "fixed_amount"] as const
+
+function parseIdList(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+function formatIdList(values: string[] | null | undefined) {
+  return (values ?? []).join("\n")
+}
 
 const formSchema = z.object({
   offerNumber: z.string().min(1, "Offer number is required").max(50),
@@ -73,19 +95,34 @@ const formSchema = z.object({
   validFrom: z.string().optional().nullable(),
   validUntil: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  storefrontPromotionalOfferEnabled: z.boolean().default(false),
+  storefrontPromotionalOfferLocale: z.string().optional().nullable(),
+  storefrontPromotionalOfferSlug: z.string().optional().nullable(),
+  storefrontPromotionalOfferDescription: z.string().optional().nullable(),
+  storefrontPromotionalOfferDiscountType: z.enum(storefrontDiscountTypes).default("percentage"),
+  storefrontPromotionalOfferDiscountValue: z.string().optional().nullable(),
+  storefrontPromotionalOfferCurrency: z.string().optional().nullable(),
+  storefrontPromotionalOfferValidFrom: z.string().optional().nullable(),
+  storefrontPromotionalOfferValidTo: z.string().optional().nullable(),
+  storefrontPromotionalOfferMinPassengers: z.coerce.number().int().min(1).optional().nullable(),
+  storefrontPromotionalOfferImageMobileUrl: z.string().optional().nullable(),
+  storefrontPromotionalOfferImageDesktopUrl: z.string().optional().nullable(),
+  storefrontPromotionalOfferStackable: z.boolean().default(false),
+  storefrontPromotionalOfferApplicableProductIds: z.string().optional().nullable(),
+  storefrontPromotionalOfferApplicableDepartureIds: z.string().optional().nullable(),
 })
 
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-type Props = {
+export interface OfferDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  offer?: OfferData
-  onSuccess: () => void
+  offer?: OfferRecord
+  onSuccess?: (offer: OfferRecord) => void
 }
 
-export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
+export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialogProps) {
   const isEditing = Boolean(offer)
   const { create, update } = useOfferMutation()
 
@@ -106,11 +143,27 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
       validFrom: "",
       validUntil: "",
       notes: "",
+      storefrontPromotionalOfferEnabled: false,
+      storefrontPromotionalOfferLocale: "",
+      storefrontPromotionalOfferSlug: "",
+      storefrontPromotionalOfferDescription: "",
+      storefrontPromotionalOfferDiscountType: "percentage",
+      storefrontPromotionalOfferDiscountValue: "",
+      storefrontPromotionalOfferCurrency: "",
+      storefrontPromotionalOfferValidFrom: "",
+      storefrontPromotionalOfferValidTo: "",
+      storefrontPromotionalOfferMinPassengers: null,
+      storefrontPromotionalOfferImageMobileUrl: "",
+      storefrontPromotionalOfferImageDesktopUrl: "",
+      storefrontPromotionalOfferStackable: false,
+      storefrontPromotionalOfferApplicableProductIds: "",
+      storefrontPromotionalOfferApplicableDepartureIds: "",
     },
   })
 
   useEffect(() => {
     if (open && offer) {
+      const storefrontPromotionalOffer = offer.metadata?.storefrontPromotionalOffer
       form.reset({
         offerNumber: offer.offerNumber,
         title: offer.title,
@@ -126,6 +179,27 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
         validFrom: offer.validFrom ? offer.validFrom.slice(0, 10) : "",
         validUntil: offer.validUntil ? offer.validUntil.slice(0, 10) : "",
         notes: offer.notes ?? "",
+        storefrontPromotionalOfferEnabled: Boolean(storefrontPromotionalOffer),
+        storefrontPromotionalOfferLocale: storefrontPromotionalOffer?.locale ?? "",
+        storefrontPromotionalOfferSlug: storefrontPromotionalOffer?.slug ?? "",
+        storefrontPromotionalOfferDescription: storefrontPromotionalOffer?.description ?? "",
+        storefrontPromotionalOfferDiscountType:
+          storefrontPromotionalOffer?.discountType ?? "percentage",
+        storefrontPromotionalOfferDiscountValue: storefrontPromotionalOffer?.discountValue ?? "",
+        storefrontPromotionalOfferCurrency: storefrontPromotionalOffer?.currency ?? "",
+        storefrontPromotionalOfferValidFrom: storefrontPromotionalOffer?.validFrom ?? "",
+        storefrontPromotionalOfferValidTo: storefrontPromotionalOffer?.validTo ?? "",
+        storefrontPromotionalOfferMinPassengers: storefrontPromotionalOffer?.minPassengers ?? null,
+        storefrontPromotionalOfferImageMobileUrl: storefrontPromotionalOffer?.imageMobileUrl ?? "",
+        storefrontPromotionalOfferImageDesktopUrl:
+          storefrontPromotionalOffer?.imageDesktopUrl ?? "",
+        storefrontPromotionalOfferStackable: storefrontPromotionalOffer?.stackable ?? false,
+        storefrontPromotionalOfferApplicableProductIds: formatIdList(
+          storefrontPromotionalOffer?.applicableProductIds,
+        ),
+        storefrontPromotionalOfferApplicableDepartureIds: formatIdList(
+          storefrontPromotionalOffer?.applicableDepartureIds,
+        ),
       })
       return
     }
@@ -145,11 +219,50 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
         validFrom: "",
         validUntil: "",
         notes: "",
+        storefrontPromotionalOfferEnabled: false,
+        storefrontPromotionalOfferLocale: "",
+        storefrontPromotionalOfferSlug: "",
+        storefrontPromotionalOfferDescription: "",
+        storefrontPromotionalOfferDiscountType: "percentage",
+        storefrontPromotionalOfferDiscountValue: "",
+        storefrontPromotionalOfferCurrency: "",
+        storefrontPromotionalOfferValidFrom: "",
+        storefrontPromotionalOfferValidTo: "",
+        storefrontPromotionalOfferMinPassengers: null,
+        storefrontPromotionalOfferImageMobileUrl: "",
+        storefrontPromotionalOfferImageDesktopUrl: "",
+        storefrontPromotionalOfferStackable: false,
+        storefrontPromotionalOfferApplicableProductIds: "",
+        storefrontPromotionalOfferApplicableDepartureIds: "",
       })
     }
   }, [form, offer, open])
 
   const onSubmit = async (values: FormOutput) => {
+    const promotionalOfferMetadata = values.storefrontPromotionalOfferEnabled
+      ? {
+          enabled: true,
+          locale: values.storefrontPromotionalOfferLocale || null,
+          slug: values.storefrontPromotionalOfferSlug || null,
+          description: values.storefrontPromotionalOfferDescription || null,
+          discountType: values.storefrontPromotionalOfferDiscountType,
+          discountValue: values.storefrontPromotionalOfferDiscountValue || "0",
+          currency: values.storefrontPromotionalOfferCurrency
+            ? values.storefrontPromotionalOfferCurrency.toUpperCase()
+            : null,
+          applicableProductIds: parseIdList(values.storefrontPromotionalOfferApplicableProductIds),
+          applicableDepartureIds: parseIdList(
+            values.storefrontPromotionalOfferApplicableDepartureIds,
+          ),
+          validFrom: values.storefrontPromotionalOfferValidFrom || null,
+          validTo: values.storefrontPromotionalOfferValidTo || null,
+          minPassengers: values.storefrontPromotionalOfferMinPassengers ?? null,
+          imageMobileUrl: values.storefrontPromotionalOfferImageMobileUrl || null,
+          imageDesktopUrl: values.storefrontPromotionalOfferImageDesktopUrl || null,
+          stackable: values.storefrontPromotionalOfferStackable,
+        }
+      : undefined
+
     const payload: CreateOfferInput | UpdateOfferInput = {
       offerNumber: values.offerNumber,
       title: values.title,
@@ -165,17 +278,29 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
       validFrom: values.validFrom || null,
       validUntil: values.validUntil || null,
       notes: values.notes || null,
+      metadata: promotionalOfferMetadata
+        ? {
+            ...(offer?.metadata ?? {}),
+            storefrontPromotionalOffer: promotionalOfferMetadata,
+          }
+        : offer?.metadata
+          ? {
+              ...offer.metadata,
+              storefrontPromotionalOffer: undefined,
+            }
+          : null,
     }
 
-    if (isEditing) {
-      await update.mutateAsync({ id: offer!.id, input: payload })
-    } else {
-      await create.mutateAsync(payload as CreateOfferInput)
-    }
-    onSuccess()
+    const saved = isEditing
+      ? await update.mutateAsync({ id: offer!.id, input: payload })
+      : await create.mutateAsync(payload as CreateOfferInput)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
+  const storefrontPromoEnabled = form.watch("storefrontPromotionalOfferEnabled")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,7 +342,15 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Market</Label>
@@ -290,17 +423,205 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Valid from</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Valid until</Label>
-                <Input {...form.register("validUntil")} type="date" />
+                <DatePicker
+                  value={form.watch("validUntil") || null}
+                  onChange={(next) =>
+                    form.setValue("validUntil", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <Label>Notes</Label>
               <Textarea {...form.register("notes")} />
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <Label>Storefront promotional offer</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Publish editorial promo fields on this offer for storefront pages.
+                  </p>
+                </div>
+                <Switch
+                  checked={storefrontPromoEnabled}
+                  onCheckedChange={(value) =>
+                    form.setValue("storefrontPromotionalOfferEnabled", value)
+                  }
+                />
+              </div>
+
+              {storefrontPromoEnabled ? (
+                <div className="mt-4 grid gap-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Locale</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferLocale")}
+                        placeholder="ro"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Slug</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferSlug")}
+                        placeholder="early-booking-budapest"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Minimum passengers</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferMinPassengers")}
+                        type="number"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Discount type</Label>
+                      <Select
+                        value={form.watch("storefrontPromotionalOfferDiscountType")}
+                        onValueChange={(value) =>
+                          form.setValue(
+                            "storefrontPromotionalOfferDiscountType",
+                            value as (typeof storefrontDiscountTypes)[number],
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Percentage</SelectItem>
+                          <SelectItem value="fixed_amount">Fixed amount</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Discount value</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferDiscountValue")}
+                        placeholder="15"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Promo currency</Label>
+                      <CurrencyCombobox
+                        value={form.watch("storefrontPromotionalOfferCurrency") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferCurrency", next ?? "EUR", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Promo valid from</Label>
+                      <DatePicker
+                        value={form.watch("storefrontPromotionalOfferValidFrom") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferValidFrom", next ?? "", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                        placeholder="Select promo start"
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Promo valid to</Label>
+                      <DatePicker
+                        value={form.watch("storefrontPromotionalOfferValidTo") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferValidTo", next ?? "", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                        placeholder="Select promo end"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={form.watch("storefrontPromotionalOfferStackable")}
+                      onCheckedChange={(value) =>
+                        form.setValue("storefrontPromotionalOfferStackable", value)
+                      }
+                    />
+                    <Label>Stackable with other storefront promos</Label>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label>Description</Label>
+                    <Textarea {...form.register("storefrontPromotionalOfferDescription")} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Mobile image URL</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferImageMobileUrl")}
+                        placeholder="https://cdn.example.com/offers/mobile.jpg"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Desktop image URL</Label>
+                      <Input
+                        {...form.register("storefrontPromotionalOfferImageDesktopUrl")}
+                        placeholder="https://cdn.example.com/offers/desktop.jpg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Applicable product IDs</Label>
+                      <Textarea
+                        {...form.register("storefrontPromotionalOfferApplicableProductIds")}
+                        placeholder={"prod_123\nprod_456"}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Applicable departure IDs</Label>
+                      <Textarea
+                        {...form.register("storefrontPromotionalOfferApplicableDepartureIds")}
+                        placeholder={"dep_123\ndep_456"}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </DialogBody>
           <DialogFooter>

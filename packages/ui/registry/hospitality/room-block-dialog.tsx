@@ -21,9 +21,12 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RoomTypeCombobox } from "./room-type-combobox"
 import { RoomUnitCombobox } from "./room-unit-combobox"
+
+export type RoomBlockData = RoomBlockRecord
 
 const STATUSES = ["draft", "held", "confirmed", "released", "cancelled"] as const
 type Status = RoomBlockRecord["status"]
@@ -157,11 +160,31 @@ export function RoomBlockDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Starts on</Label>
-                <Input {...form.register("startsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("startsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("startsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Ends on</Label>
-                <Input {...form.register("endsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("endsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("endsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 

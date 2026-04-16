@@ -181,7 +181,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
               }))
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

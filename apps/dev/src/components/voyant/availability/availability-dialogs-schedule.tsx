@@ -129,7 +129,7 @@ export function AvailabilityRuleDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
@@ -300,7 +300,7 @@ export function AvailabilityStartTimeDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>

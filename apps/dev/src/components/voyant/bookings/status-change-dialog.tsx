@@ -100,7 +100,7 @@ export function StatusChangeDialog({
                 }
                 items={bookingStatusOptions}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

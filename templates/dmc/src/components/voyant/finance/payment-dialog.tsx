@@ -149,7 +149,7 @@ export function PaymentDialog({
                     form.setValue("paymentMethod", value as PaymentFormValues["paymentMethod"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,7 +169,7 @@ export function PaymentDialog({
                     form.setValue("status", value as PaymentFormValues["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

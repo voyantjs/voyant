@@ -26,6 +26,8 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const scheduleTypes = ["deposit", "installment", "balance", "hold", "other"] as const
@@ -133,7 +135,7 @@ export function BookingPaymentScheduleDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -153,7 +155,7 @@ export function BookingPaymentScheduleDialog({
                     form.setValue("status", (v ?? "pending") as (typeof scheduleStatuses)[number])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,7 +171,17 @@ export function BookingPaymentScheduleDialog({
 
             <div className="flex flex-col gap-2">
               <Label>Due Date</Label>
-              <Input {...form.register("dueDate")} type="date" />
+              <DatePicker
+                value={form.watch("dueDate") || null}
+                onChange={(next) =>
+                  form.setValue("dueDate", next ?? "", {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                placeholder="Select due date"
+                className="w-full"
+              />
               {form.formState.errors.dueDate && (
                 <p className="text-xs text-destructive">{form.formState.errors.dueDate.message}</p>
               )}
@@ -178,7 +190,15 @@ export function BookingPaymentScheduleDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Amount (cents)</Label>

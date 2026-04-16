@@ -195,7 +195,7 @@ export function ServiceDialog({
                   value={form.watch("supplierServiceId") ?? ""}
                   onValueChange={handleSupplierServiceSelect}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a supplier service..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,7 +218,7 @@ export function ServiceDialog({
                     form.setValue("serviceType", v as ServiceFormValues["serviceType"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

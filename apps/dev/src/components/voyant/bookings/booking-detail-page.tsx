@@ -9,6 +9,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/compo
 
 import { BookingActivityTimeline } from "./booking-activity-timeline"
 import { BookingDialog } from "./booking-dialog"
+import { BookingDocumentList } from "./booking-document-list"
 import { BookingGuaranteeList } from "./booking-guarantee-list"
 import { BookingItemList } from "./booking-item-list"
 import { BookingNotes } from "./booking-notes"
@@ -198,6 +199,7 @@ export function BookingDetailPage({ id }: { id: string }) {
       <BookingPaymentScheduleList bookingId={id} />
       <BookingGuaranteeList bookingId={id} />
       <BookingPaymentsSummary bookingId={id} />
+      <BookingDocumentList bookingId={id} />
       <SupplierStatusList bookingId={id} />
       <BookingActivityTimeline bookingId={id} />
       <BookingNotes bookingId={id} />

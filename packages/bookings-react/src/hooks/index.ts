@@ -5,6 +5,10 @@ export {
   useBookingCancelMutation,
 } from "./use-booking-cancel-mutation.js"
 export {
+  type ConvertProductToBookingInput,
+  useBookingConvertMutation,
+} from "./use-booking-convert-mutation.js"
+export {
   type CreateBookingDocumentInput,
   type UseBookingDocumentsOptions,
   useBookingDocumentMutation,

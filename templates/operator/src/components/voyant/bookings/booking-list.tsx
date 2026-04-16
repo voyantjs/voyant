@@ -1,6 +1,11 @@
 "use client"
 
-import { type BookingRecord, useBookings } from "@voyantjs/bookings-react"
+import {
+  type BookingRecord,
+  bookingStatusBadgeVariant,
+  formatBookingStatus,
+  useBookings,
+} from "@voyantjs/bookings-react"
 import { Loader2, Plus, Search, Zap } from "lucide-react"
 import * as React from "react"
 
@@ -24,23 +29,9 @@ export interface BookingListProps {
   onSelectBooking?: (booking: BookingRecord) => void
 }
 
-const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  draft: "outline",
-  on_hold: "secondary",
-  confirmed: "default",
-  in_progress: "secondary",
-  completed: "default",
-  expired: "secondary",
-  cancelled: "destructive",
-}
-
 function formatAmount(cents: number | null, currency: string): string {
   if (cents == null) return "—"
   return `${(cents / 100).toFixed(2)} ${currency}`
-}
-
-function formatStatus(status: string): string {
-  return status.replace("_", " ")
 }
 
 export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps = {}) {
@@ -141,11 +132,8 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
                 >
                   <TableCell className="font-medium">{booking.bookingNumber}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={statusVariant[booking.status] ?? "secondary"}
-                      className="capitalize"
-                    >
-                      {formatStatus(booking.status)}
+                    <Badge variant={bookingStatusBadgeVariant[booking.status]}>
+                      {formatBookingStatus(booking.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>

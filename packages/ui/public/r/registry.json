@@ -987,9 +987,9 @@
       "name": "voyant-bookings-activity-timeline",
       "type": "registry:component",
       "title": "Booking Activity Timeline",
-      "description": "Activity feed for booking lifecycle events and operator actions.",
-      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-      "registryDependencies": ["card"],
+      "description": "Unified timeline for booking lifecycle events, document uploads, and payment events with source filtering.",
+      "dependencies": ["@voyantjs/bookings-react", "@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": ["badge", "button", "card"],
       "files": [
         {
           "path": "registry/bookings/booking-activity-timeline.tsx",

@@ -20,6 +20,7 @@ export {
   type LegalPolicyAcceptancesListFilters,
   type LegalPolicyAssignmentsListFilters,
   legalQueryKeys,
+  type ResolvePolicyFilters,
 } from "./query-keys.js"
 export {
   getLegalContractAttachmentsQueryOptions,
@@ -38,5 +39,6 @@ export {
   getLegalPolicyRulesQueryOptions,
   getLegalPolicyVersionQueryOptions,
   getLegalPolicyVersionsQueryOptions,
+  getResolvePolicyQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

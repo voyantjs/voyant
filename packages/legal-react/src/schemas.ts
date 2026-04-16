@@ -233,3 +233,38 @@ export const legalPolicyAssignmentSingleResponse = singleEnvelope(legalPolicyAss
 export const legalPolicyAcceptanceListResponse = singleEnvelope(
   z.array(legalPolicyAcceptanceRecordSchema),
 )
+
+// Resolved policy returned by GET /v1/admin/legal/policies/resolve
+export const resolvedPolicySchema = z.object({
+  policy: legalPolicyRecordSchema,
+  assignment: legalPolicyAssignmentRecordSchema,
+  version: legalPolicyVersionRecordSchema.nullable(),
+  rules: z.array(legalPolicyRuleRecordSchema),
+})
+
+export type ResolvedPolicy = z.infer<typeof resolvedPolicySchema>
+
+export const resolvedPolicyResponse = z.object({
+  data: resolvedPolicySchema.nullable(),
+})
+
+// Cancellation evaluation result from POST /v1/admin/legal/policies/:id/evaluate
+export const cancellationRuleSchema = z.object({
+  id: z.string().optional(),
+  daysBeforeDeparture: z.number().int().nullable(),
+  refundPercent: z.number().int().nullable(),
+  refundType: z.enum(["cash", "credit", "cash_or_credit", "none"]).nullable(),
+  flatAmountCents: z.number().int().nullable(),
+  label: z.string().nullable(),
+})
+
+export const cancellationResultSchema = z.object({
+  refundPercent: z.number().int(),
+  refundCents: z.number().int(),
+  refundType: z.enum(["cash", "credit", "cash_or_credit", "none"]),
+  appliedRule: cancellationRuleSchema.nullable(),
+})
+
+export type CancellationResult = z.infer<typeof cancellationResultSchema>
+
+export const cancellationResultResponse = singleEnvelope(cancellationResultSchema)

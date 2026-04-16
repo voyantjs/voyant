@@ -17,7 +17,7 @@ import type { UseLegalPolicyAcceptancesOptions } from "./hooks/use-policy-accept
 import type { UseLegalPolicyAssignmentsOptions } from "./hooks/use-policy-assignments.js"
 import type { UseLegalPolicyRulesOptions } from "./hooks/use-policy-rules.js"
 import type { UseLegalPolicyVersionsOptions } from "./hooks/use-policy-versions.js"
-import { legalQueryKeys } from "./query-keys.js"
+import { legalQueryKeys, type ResolvePolicyFilters } from "./query-keys.js"
 import {
   legalContractAttachmentListResponse,
   legalContractListResponse,
@@ -35,6 +35,7 @@ import {
   legalPolicySingleResponse,
   legalPolicyVersionListResponse,
   legalPolicyVersionSingleResponse,
+  resolvedPolicyResponse,
 } from "./schemas.js"
 
 function toQueryString(filters: Record<string, string | number | boolean | null | undefined>) {
@@ -313,6 +314,21 @@ export function getLegalPolicyAcceptancesQueryOptions(
       fetchWithValidation(
         `/v1/admin/legal/policies/acceptances${toQueryString(filters)}`,
         legalPolicyAcceptanceListResponse,
+        client,
+      ),
+  })
+}
+
+export function getResolvePolicyQueryOptions(
+  client: FetchWithValidationOptions,
+  filters: ResolvePolicyFilters,
+) {
+  return queryOptions({
+    queryKey: legalQueryKeys.resolvePolicy(filters),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/admin/legal/policies/resolve${toQueryString({ ...filters })}`,
+        resolvedPolicyResponse,
         client,
       ),
   })

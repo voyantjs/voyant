@@ -7,6 +7,7 @@ import type { publicBookingRoutes } from "./routes-public.js"
 import { type Env, getRuntimeEnv } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
 import { bookingsService } from "./service.js"
+import { bookingGroupsService } from "./service-groups.js"
 import { publicBookingsService } from "./service-public.js"
 import {
   bookingListQuerySchema,
@@ -1002,6 +1003,15 @@ export const bookingRoutes = new Hono<Env>()
   // 26. GET /:id/activity — List activity log
   .get("/:id/activity", async (c) => {
     return c.json({ data: await bookingsService.listActivity(c.get("db"), c.req.param("id")) })
+  })
+
+  // 26a. GET /:id/group — Shared-room group membership for this booking (or null)
+  .get("/:id/group", async (c) => {
+    const result = await bookingGroupsService.getBookingGroupForBooking(
+      c.get("db"),
+      c.req.param("id"),
+    )
+    return c.json({ data: result ?? null })
   })
 
   // ==========================================================================

@@ -1,6 +1,12 @@
 "use client"
 
-import { type BookingRecord, useBookingConvertMutation } from "@voyantjs/bookings-react"
+import {
+  type BookingRecord,
+  useBookingConvertMutation,
+  useBookingGroupMemberMutation,
+  useBookingGroupMutation,
+  useBookingGroups,
+} from "@voyantjs/bookings-react"
 import { useOrganizations, usePeople, usePersonMutation } from "@voyantjs/crm-react"
 import { useProductOptions, useProducts } from "@voyantjs/products-react"
 import { Loader2, UserPlus } from "lucide-react"
@@ -62,6 +68,11 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
 
   const [error, setError] = React.useState<string | null>(null)
 
+  // Shared-room state
+  const [sharedRoomEnabled, setSharedRoomEnabled] = React.useState(false)
+  const [sharedRoomMode, setSharedRoomMode] = React.useState<"create" | "join">("create")
+  const [sharedRoomGroupId, setSharedRoomGroupId] = React.useState("")
+
   React.useEffect(() => {
     if (!open) {
       setProductId("")
@@ -74,6 +85,9 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
       setPersonId("")
       setPersonSearch("")
       setNewPerson({ firstName: "", lastName: "", email: "", phone: "" })
+      setSharedRoomEnabled(false)
+      setSharedRoomMode("create")
+      setSharedRoomGroupId("")
       setError(null)
     }
   }, [open])
@@ -108,6 +122,16 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
 
   const { create: createPerson } = usePersonMutation()
   const convertMutation = useBookingConvertMutation()
+  const { create: createGroup } = useBookingGroupMutation()
+  const { add: addGroupMember } = useBookingGroupMemberMutation()
+
+  // Only load groups when shared-room+join is selected and we have a product
+  const { data: groupsData } = useBookingGroups({
+    productId: productId || undefined,
+    limit: 50,
+    enabled: open && sharedRoomEnabled && sharedRoomMode === "join" && Boolean(productId),
+  })
+  const existingGroups = groupsData?.data ?? []
 
   const handleSubmit = async () => {
     setError(null)
@@ -139,6 +163,13 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
         resolvedPersonId = person.id
       }
 
+      // Validate shared-room selection before creating the booking so we don't
+      // create an orphan booking if the user picked "join" without a group.
+      if (sharedRoomEnabled && sharedRoomMode === "join" && !sharedRoomGroupId) {
+        setError("Select a shared-room group to join")
+        return
+      }
+
       const booking = await convertMutation.mutateAsync({
         productId,
         bookingNumber: generateBookingNumber(),
@@ -148,6 +179,30 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
         internalNotes: notes.trim() || null,
       })
 
+      // Shared-room group linkage happens after booking creation.
+      if (sharedRoomEnabled) {
+        let targetGroupId = sharedRoomGroupId
+        let role: "primary" | "shared" = "shared"
+
+        if (sharedRoomMode === "create") {
+          const group = await createGroup.mutateAsync({
+            kind: "shared_room",
+            label: `Shared room — ${booking.bookingNumber}`,
+            productId: productId || null,
+            optionUnitId: optionId === NONE ? null : optionId,
+            primaryBookingId: booking.id,
+          })
+          targetGroupId = group.id
+          role = "primary"
+        }
+
+        await addGroupMember.mutateAsync({
+          groupId: targetGroupId,
+          bookingId: booking.id,
+          role,
+        })
+      }
+
       onOpenChange(false)
       onCreated?.(booking)
     } catch (err) {
@@ -155,7 +210,11 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
     }
   }
 
-  const isSubmitting = convertMutation.isPending || createPerson.isPending
+  const isSubmitting =
+    convertMutation.isPending ||
+    createPerson.isPending ||
+    createGroup.isPending ||
+    addGroupMember.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -319,6 +378,73 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Shared room */}
+          <div className="flex flex-col gap-2 rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <input
+                id="quick-book-shared-room"
+                type="checkbox"
+                checked={sharedRoomEnabled}
+                onChange={(e) => setSharedRoomEnabled(e.target.checked)}
+              />
+              <Label htmlFor="quick-book-shared-room" className="text-sm">
+                Link to a shared-room group
+              </Label>
+            </div>
+
+            {sharedRoomEnabled && (
+              <div className="flex flex-col gap-2 pl-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={sharedRoomMode === "create" ? "default" : "ghost"}
+                    onClick={() => setSharedRoomMode("create")}
+                  >
+                    Create new group
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={sharedRoomMode === "join" ? "default" : "ghost"}
+                    onClick={() => setSharedRoomMode("join")}
+                  >
+                    Join existing
+                  </Button>
+                </div>
+
+                {sharedRoomMode === "join" && (
+                  <Select
+                    value={sharedRoomGroupId || NONE}
+                    onValueChange={(v) => setSharedRoomGroupId(v === NONE ? "" : (v ?? ""))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a group..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {existingGroups.length === 0 ? (
+                        <SelectItem value={NONE} disabled>
+                          No existing groups for this product
+                        </SelectItem>
+                      ) : (
+                        existingGroups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+                {sharedRoomMode === "create" && (
+                  <p className="text-xs text-muted-foreground">
+                    A new group will be created with this booking as the primary member.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notes */}

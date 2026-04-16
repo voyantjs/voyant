@@ -255,7 +255,7 @@ export function getBookingGroupForBookingQueryOptions(
     queryKey: bookingsQueryKeys.groupForBooking(bookingId ?? ""),
     queryFn: () =>
       fetchWithValidation(
-        `/v1/bookings/groups/by-booking/${bookingId}`,
+        `/v1/bookings/${bookingId}/group`,
         bookingGroupForBookingResponse,
         client,
       ),

@@ -16,14 +16,6 @@ type Env = {
 }
 
 export const bookingGroupRoutes = new Hono<Env>()
-  .get("/by-booking/:bookingId", async (c) => {
-    const result = await bookingGroupsService.getBookingGroupForBooking(
-      c.get("db"),
-      c.req.param("bookingId"),
-    )
-    if (!result) return c.json({ data: null })
-    return c.json({ data: result })
-  })
   .get("/", async (c) => {
     const query = bookingGroupListQuerySchema.parse(
       Object.fromEntries(new URL(c.req.url).searchParams),

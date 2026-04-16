@@ -32,12 +32,12 @@ export function BookingGroupSection({
   const { data: groupDetail } = useBookingGroup(groupId, { enabled: Boolean(groupId) })
   const members = groupDetail?.data?.members ?? []
 
-  const { remove: removeMember } = useBookingGroupMemberMutation(groupId ?? "")
+  const { remove: removeMember } = useBookingGroupMemberMutation()
 
   const handleRemove = async () => {
     if (!groupId) return
     if (!confirm("Remove this booking from the shared-room group?")) return
-    await removeMember.mutateAsync(bookingId)
+    await removeMember.mutateAsync({ groupId, bookingId })
   }
 
   const siblings = members.filter((m) => m.bookingId !== bookingId)

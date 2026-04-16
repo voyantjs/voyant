@@ -1,6 +1,10 @@
 "use client"
 
-import { useBookingGroupMutation, useBookingGroups } from "@voyantjs/bookings-react"
+import {
+  useBookingGroupMemberMutation,
+  useBookingGroupMutation,
+  useBookingGroups,
+} from "@voyantjs/bookings-react"
 import { Loader2 } from "lucide-react"
 import * as React from "react"
 
@@ -32,6 +36,8 @@ export interface BookingGroupLinkDialogProps {
 
 type Mode = "join" | "create"
 
+const JOIN_PLACEHOLDER = "__none__"
+
 export function BookingGroupLinkDialog({
   open,
   onOpenChange,
@@ -54,7 +60,6 @@ export function BookingGroupLinkDialog({
     }
   }, [open])
 
-  // List existing groups scoped by productId/optionUnitId if provided
   const { data } = useBookingGroups({
     productId: productId ?? undefined,
     optionUnitId: optionUnitId ?? undefined,
@@ -64,12 +69,14 @@ export function BookingGroupLinkDialog({
   const groups = data?.data ?? []
 
   const { create: createGroup } = useBookingGroupMutation()
-  // Member mutation needs a groupId up front; we'll construct it per-action below.
+  const { add: addMember } = useBookingGroupMemberMutation()
 
   const handleSubmit = async () => {
     setError(null)
+
     try {
       let targetGroupId = selectedGroupId
+      let role: "primary" | "shared" = "shared"
 
       if (mode === "create") {
         const label = newGroupLabel.trim() || `Shared room — ${new Date().toLocaleDateString()}`
@@ -81,34 +88,29 @@ export function BookingGroupLinkDialog({
           primaryBookingId: bookingId,
         })
         targetGroupId = group.id
+        role = "primary"
       }
 
-      if (!targetGroupId) {
+      if (!targetGroupId || targetGroupId === JOIN_PLACEHOLDER) {
         setError("Select a group to join")
         return
       }
 
-      // Add this booking as a member
-      const res = await fetch(`/api/v1/bookings/groups/${targetGroupId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ bookingId, role: mode === "create" ? "primary" : "shared" }),
+      await addMember.mutateAsync({
+        groupId: targetGroupId,
+        bookingId,
+        role,
       })
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? "Failed to add booking to group")
-        return
-      }
 
       onOpenChange(false)
       onLinked?.(targetGroupId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to link booking")
+      const message = err instanceof Error ? err.message : "Failed to link booking"
+      setError(message)
     }
   }
 
-  const isSubmitting = createGroup.isPending
+  const isSubmitting = createGroup.isPending || addMember.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,13 +141,16 @@ export function BookingGroupLinkDialog({
           {mode === "join" ? (
             <div className="flex flex-col gap-2">
               <Label>Existing groups</Label>
-              <Select value={selectedGroupId} onValueChange={(v) => setSelectedGroupId(v ?? "")}>
+              <Select
+                value={selectedGroupId || JOIN_PLACEHOLDER}
+                onValueChange={(v) => setSelectedGroupId(v === JOIN_PLACEHOLDER ? "" : (v ?? ""))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a group..." />
                 </SelectTrigger>
                 <SelectContent>
                   {groups.length === 0 ? (
-                    <SelectItem value="__none__" disabled>
+                    <SelectItem value={JOIN_PLACEHOLDER} disabled>
                       No existing groups
                     </SelectItem>
                   ) : (
@@ -157,6 +162,11 @@ export function BookingGroupLinkDialog({
                   )}
                 </SelectContent>
               </Select>
+              {productId && (
+                <p className="text-xs text-muted-foreground">
+                  Filtered to groups for the booking's product.
+                </p>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-2">

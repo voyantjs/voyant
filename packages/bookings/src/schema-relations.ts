@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
 import { bookingParticipants, bookings } from "./schema-core"
+import { bookingGroupMembers, bookingGroups } from "./schema-groups"
 import {
   bookingAllocations,
   bookingFulfillments,
@@ -28,6 +29,22 @@ export const bookingsRelations = relations(bookings, ({ many }) => ({
   redemptionEvents: many(bookingRedemptionEvents),
   items: many(bookingItems),
   allocations: many(bookingAllocations),
+  groupMemberships: many(bookingGroupMembers),
+}))
+
+export const bookingGroupsRelations = relations(bookingGroups, ({ many }) => ({
+  members: many(bookingGroupMembers),
+}))
+
+export const bookingGroupMembersRelations = relations(bookingGroupMembers, ({ one }) => ({
+  group: one(bookingGroups, {
+    fields: [bookingGroupMembers.groupId],
+    references: [bookingGroups.id],
+  }),
+  booking: one(bookings, {
+    fields: [bookingGroupMembers.bookingId],
+    references: [bookings.id],
+  }),
 }))
 
 export const bookingParticipantsRelations = relations(bookingParticipants, ({ one, many }) => ({

@@ -25,6 +25,8 @@ import {
 } from "@/components/ui"
 import { zodResolver } from "@/lib/zod-resolver"
 
+import { FileDropzone } from "./file-dropzone"
+
 const documentTypes = ["visa", "insurance", "health", "passport_copy", "other"] as const
 
 const UNASSIGNED = "__unassigned__"
@@ -145,16 +147,16 @@ export function BookingDocumentDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>File Name</Label>
-              <Input {...form.register("fileName")} placeholder="passport.pdf" />
-              {form.formState.errors.fileName && (
-                <p className="text-xs text-destructive">{form.formState.errors.fileName.message}</p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>File URL</Label>
-              <Input {...form.register("fileUrl")} type="url" placeholder="https://..." />
+              <Label>File</Label>
+              <FileDropzone
+                accept="application/pdf,image/*"
+                maxSize={10 * 1024 * 1024}
+                onUploaded={(upload) => {
+                  form.setValue("fileUrl", upload.url, { shouldValidate: true })
+                  form.setValue("fileName", upload.name, { shouldValidate: true })
+                }}
+                helperText="Drop passport, visa, or insurance document (PDF or image)"
+              />
               {form.formState.errors.fileUrl && (
                 <p className="text-xs text-destructive">{form.formState.errors.fileUrl.message}</p>
               )}

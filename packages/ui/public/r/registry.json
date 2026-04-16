@@ -702,6 +702,41 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-group-link-dialog",
+      "type": "registry:component",
+      "title": "Booking Group Link Dialog",
+      "description": "Link a booking to a shared-room group — either create a new group or join an existing one.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": ["button", "dialog", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-group-link-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-group-link-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-group-section",
+      "type": "registry:component",
+      "title": "Booking Group Section",
+      "description": "Shared-room group section for the booking detail: shows sibling bookings, link/unlink actions.",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-bookings-booking-group-link-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-group-section.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-group-section.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-quick-book-dialog",
       "type": "registry:component",
       "title": "Quick Book Dialog",

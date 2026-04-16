@@ -26,6 +26,7 @@ import {
   bookingSupplierStatuses,
   bookings,
 } from "./schema.js"
+import { cleanupGroupOnBookingCancelled } from "./service-groups.js"
 import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
@@ -2071,6 +2072,9 @@ export const bookingsService = {
             content: data.note,
           })
         }
+
+        // Clean up any booking-group membership (dissolve if ≤1 active members remain).
+        await cleanupGroupOnBookingCancelled(tx as PostgresJsDatabase, id)
 
         return { status: "ok" as const, booking: row ?? null }
       })

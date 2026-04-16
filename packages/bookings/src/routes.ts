@@ -2,6 +2,7 @@ import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
+import { bookingGroupRoutes } from "./routes-groups.js"
 import type { publicBookingRoutes } from "./routes-public.js"
 import { type Env, getRuntimeEnv } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
@@ -1067,6 +1068,11 @@ export const bookingRoutes = new Hono<Env>()
 
     return c.json({ success: true }, 200)
   })
+
+  // ==========================================================================
+  // Booking Groups (shared-room / split-booking model)
+  // ==========================================================================
+  .route("/groups", bookingGroupRoutes)
 
 export type BookingRoutes = typeof bookingRoutes
 export type PublicBookingRoutes = typeof publicBookingRoutes

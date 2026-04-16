@@ -1,4 +1,5 @@
 export * from "./schema-core"
+export * from "./schema-groups"
 export * from "./schema-items"
 export * from "./schema-operations"
 export * from "./schema-relations"

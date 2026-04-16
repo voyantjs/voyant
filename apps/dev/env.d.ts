@@ -2,6 +2,9 @@ interface CloudflareBindings {
   // Hyperdrive (prod only; dev uses DATABASE_URL directly)
   HYPERDRIVE?: Hyperdrive
 
+  // R2 (file storage, optional — when configured, /v1/uploads + /v1/media/* are served)
+  MEDIA_BUCKET?: R2Bucket
+
   // Secrets (from .dev.vars)
   DATABASE_URL: string
   INTERNAL_API_KEY: string

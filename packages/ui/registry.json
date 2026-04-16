@@ -867,6 +867,63 @@
       ]
     },
     {
+      "name": "voyant-bookings-file-dropzone",
+      "type": "registry:component",
+      "title": "File Dropzone",
+      "description": "Reusable drag-and-drop file uploader that posts to /v1/uploads.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/bookings/file-dropzone.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/file-dropzone.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-document-dialog",
+      "type": "registry:component",
+      "title": "Booking Document Dialog",
+      "description": "Add booking document attachment (passport, visa, insurance, etc).",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": [
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "textarea",
+        "voyant-bookings-file-dropzone"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-document-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-document-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-document-list",
+      "type": "registry:component",
+      "title": "Booking Document List",
+      "description": "Document attachments section for booking detail (passport, visa, insurance, health docs).",
+      "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-bookings-booking-document-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-document-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-document-list.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",

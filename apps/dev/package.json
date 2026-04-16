@@ -54,6 +54,7 @@
     "@voyantjs/ground-react": "workspace:*",
     "@voyantjs/hono": "workspace:*",
     "@voyantjs/hospitality": "workspace:*",
+    "@voyantjs/voyant-storage": "workspace:*",
     "@voyantjs/hospitality-react": "workspace:*",
     "@voyantjs/identity": "workspace:*",
     "@voyantjs/identity-react": "workspace:*",

@@ -28,6 +28,7 @@ import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/
 
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { getDbFromHyperdrive } from "./lib/db"
+import { createMediaStorage, guessMimeType } from "./lib/storage"
 
 const resolveNotificationProviders = (env: Record<string, unknown>) =>
   createDefaultNotificationProviders(env, { emailProvider: "resend" })
@@ -82,5 +83,61 @@ export const app = createApp<CloudflareBindings>({
     resolve: async ({ request, env }) => resolveAuthRequest(request, env),
     hasPermission: async ({ request, env, permission }) =>
       hasAuthPermission(request, env, permission),
+  },
+  additionalRoutes: (hono) => {
+    // POST /v1/uploads — upload file via the configured StorageProvider
+    // (swap the provider in src/lib/storage.ts to use S3, GCS, etc.)
+    hono.post("/v1/uploads", async (c) => {
+      const storage = createMediaStorage(c.env)
+      if (!storage) {
+        return c.json({ error: "Storage not configured" }, 503)
+      }
+
+      const body = await c.req.parseBody()
+      const file = body.file
+      if (!(file instanceof File)) {
+        return c.json({ error: "Missing file field in multipart body" }, 400)
+      }
+
+      const ext = file.name.split(".").pop() ?? "bin"
+      const key = `uploads/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
+
+      const result = await storage.upload(await file.arrayBuffer(), {
+        key,
+        contentType: file.type,
+      })
+
+      return c.json({
+        key: result.key,
+        url: result.url,
+        mimeType: file.type,
+        size: file.size,
+      })
+    })
+
+    // GET /v1/media/* — serve files via the configured StorageProvider
+    hono.get("/v1/media/*", async (c) => {
+      const storage = createMediaStorage(c.env)
+      if (!storage) {
+        return c.json({ error: "Storage not configured" }, 503)
+      }
+
+      const key = c.req.path.replace("/v1/media/", "")
+      if (!key) {
+        return c.json({ error: "Missing key" }, 400)
+      }
+
+      const buffer = await storage.get(key)
+      if (!buffer) {
+        return c.json({ error: "Not found" }, 404)
+      }
+
+      const headers = new Headers()
+      headers.set("Content-Type", guessMimeType(key))
+      headers.set("Cache-Control", "public, max-age=31536000, immutable")
+      headers.set("Content-Length", String(buffer.byteLength))
+
+      return new Response(buffer, { headers })
+    })
   },
 })

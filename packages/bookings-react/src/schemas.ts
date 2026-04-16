@@ -178,10 +178,33 @@ export const bookingItemParticipantRecordSchema = z.object({
 
 export type BookingItemParticipantRecord = z.infer<typeof bookingItemParticipantRecordSchema>
 
+export const bookingDocumentTypeSchema = z.enum([
+  "visa",
+  "insurance",
+  "health",
+  "passport_copy",
+  "other",
+])
+
+export const bookingDocumentRecordSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  participantId: z.string().nullable(),
+  type: bookingDocumentTypeSchema,
+  fileName: z.string(),
+  fileUrl: z.string(),
+  expiresAt: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export type BookingDocumentRecord = z.infer<typeof bookingDocumentRecordSchema>
+
 export const bookingListResponse = paginatedEnvelope(bookingRecordSchema)
 export const bookingSingleResponse = singleEnvelope(bookingRecordSchema)
 export const bookingItemsResponse = arrayEnvelope(bookingItemRecordSchema)
 export const bookingItemParticipantsResponse = arrayEnvelope(bookingItemParticipantRecordSchema)
+export const bookingDocumentsResponse = arrayEnvelope(bookingDocumentRecordSchema)
 export const bookingPassengersResponse = arrayEnvelope(bookingPassengerRecordSchema)
 export const bookingSupplierStatusesResponse = arrayEnvelope(bookingSupplierStatusRecordSchema)
 export const bookingActivityResponse = arrayEnvelope(bookingActivityRecordSchema)

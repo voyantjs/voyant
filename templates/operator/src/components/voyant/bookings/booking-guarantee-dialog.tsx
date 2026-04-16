@@ -24,6 +24,7 @@ import {
   Textarea,
 } from "@/components/ui"
 import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const guaranteeTypes = [
@@ -222,7 +223,17 @@ export function BookingGuaranteeDialog({
 
             <div className="flex flex-col gap-2">
               <Label>Expires At</Label>
-              <Input {...form.register("expiresAt")} type="datetime-local" />
+              <DateTimePicker
+                value={form.watch("expiresAt") || null}
+                onChange={(next) =>
+                  form.setValue("expiresAt", next ?? "", {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                placeholder="Select expiry date & time"
+                className="w-full"
+              />
             </div>
 
             <div className="flex flex-col gap-2">

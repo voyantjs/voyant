@@ -19,6 +19,7 @@ import {
   SelectValue,
   Switch,
 } from "@/components/ui"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type {
@@ -321,11 +322,31 @@ export function ChannelBookingLinkDialog({
               </div>
               <div className="grid gap-2">
                 <Label>Booked At External</Label>
-                <Input {...form.register("bookedAtExternal")} type="datetime-local" />
+                <DateTimePicker
+                  value={form.watch("bookedAtExternal") || null}
+                  onChange={(next) =>
+                    form.setValue("bookedAtExternal", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select booking date & time"
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Last Synced At</Label>
-                <Input {...form.register("lastSyncedAt")} type="datetime-local" />
+                <DateTimePicker
+                  value={form.watch("lastSyncedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("lastSyncedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select last sync date & time"
+                  className="w-full"
+                />
               </div>
             </div>
           </DialogBody>

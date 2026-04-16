@@ -124,7 +124,7 @@ export function ChannelWebhookEventDialog({
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select channel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -153,7 +153,7 @@ export function ChannelWebhookEventDialog({
                     form.setValue("status", value as ChannelWebhookEventRow["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

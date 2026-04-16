@@ -157,7 +157,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -179,7 +179,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
                   value={form.watch("bodyFormat")}
                   onValueChange={(v) => form.setValue("bodyFormat", v as FormValues["bodyFormat"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

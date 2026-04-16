@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -16,8 +17,11 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RoomTypeCombobox } from "./room-type-combobox"
+
+export type RoomInventoryData = RoomInventoryRecord
 
 const intOrEmpty = z.coerce.number().int().optional().or(z.literal("")).nullable()
 
@@ -37,14 +41,12 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-export type RoomInventoryData = RoomInventoryRecord
-
-type Props = {
+export interface RoomInventoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   propertyId: string
-  inventory?: RoomInventoryData
-  onSuccess: () => void
+  inventory?: RoomInventoryRecord
+  onSuccess?: (inventory: RoomInventoryRecord) => void
 }
 
 export function RoomInventoryDialog({
@@ -53,8 +55,8 @@ export function RoomInventoryDialog({
   propertyId,
   inventory,
   onSuccess,
-}: Props) {
-  const isEditing = !!inventory
+}: RoomInventoryDialogProps) {
+  const isEditing = Boolean(inventory)
   const { create, update } = useRoomInventoryMutation()
 
   const form = useForm<FormValues, unknown, FormOutput>({
@@ -104,7 +106,9 @@ export function RoomInventoryDialog({
   }, [open, inventory, form])
 
   const onSubmit = async (values: FormOutput) => {
-    const toInt = (v: number | string | null | undefined) => (typeof v === "number" ? v : null)
+    const toInt = (value: number | string | null | undefined) =>
+      typeof value === "number" ? value : null
+
     const payload = {
       propertyId,
       roomTypeId: values.roomTypeId,
@@ -118,12 +122,13 @@ export function RoomInventoryDialog({
       stopSell: values.stopSell,
       notes: values.notes || null,
     }
-    if (isEditing) {
-      await update.mutateAsync({ id: inventory.id, input: payload })
-    } else {
-      await create.mutateAsync(payload)
-    }
-    onSuccess()
+
+    const saved = isEditing
+      ? await update.mutateAsync({ id: inventory!.id, input: payload })
+      : await create.mutateAsync(payload)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -146,18 +151,21 @@ export function RoomInventoryDialog({
                   placeholder="Select a room type…"
                   disabled={isEditing}
                 />
-                {form.formState.errors.roomTypeId && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.roomTypeId.message}
-                  </p>
-                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Date</Label>
-                <Input {...form.register("date")} type="date" disabled={isEditing} />
-                {form.formState.errors.date && (
-                  <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
-                )}
+                <DatePicker
+                  value={form.watch("date") || null}
+                  onChange={(next) =>
+                    form.setValue("date", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select date"
+                  className="w-full"
+                  disabled={isEditing}
+                />
               </div>
             </div>
 
@@ -191,7 +199,7 @@ export function RoomInventoryDialog({
             <div className="flex items-center gap-2">
               <Switch
                 checked={form.watch("stopSell")}
-                onCheckedChange={(v) => form.setValue("stopSell", v)}
+                onCheckedChange={(checked) => form.setValue("stopSell", checked)}
               />
               <Label>Stop sell</Label>
             </div>
@@ -206,7 +214,7 @@ export function RoomInventoryDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isEditing ? "Save Changes" : "Add Inventory"}
             </Button>
           </DialogFooter>

@@ -18,20 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
+import { api } from "@/lib/api-client"
+import { zodResolver } from "@/lib/zod-resolver"
 import type {
   ChannelCommissionRuleRow,
   ChannelContractRow,
   ProductOption,
-} from "@/components/voyant/distribution/distribution-shared"
+} from "./distribution-shared"
 import {
   commissionScopeOptions,
   commissionTypeOptions,
   NONE_VALUE,
   nullableNumber,
   nullableString,
-} from "@/components/voyant/distribution/distribution-shared"
-import { api } from "@/lib/api-client"
-import { zodResolver } from "@/lib/zod-resolver"
+} from "./distribution-shared"
 
 const commissionFormSchema = z.object({
   contractId: z.string().min(1, "Contract is required"),
@@ -135,7 +136,7 @@ export function ChannelCommissionRuleDialog({
                   value={form.watch("contractId")}
                   onValueChange={(value) => form.setValue("contractId", value ?? "")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select contract" />
                   </SelectTrigger>
                   <SelectContent>
@@ -155,7 +156,7 @@ export function ChannelCommissionRuleDialog({
                     form.setValue("scope", value as ChannelCommissionRuleRow["scope"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -173,7 +174,7 @@ export function ChannelCommissionRuleDialog({
                   value={form.watch("productId")}
                   onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,7 +198,7 @@ export function ChannelCommissionRuleDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -227,11 +228,31 @@ export function ChannelCommissionRuleDialog({
               </div>
               <div className="grid gap-2">
                 <Label>Valid From</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Valid To</Label>
-                <Input {...form.register("validTo")} type="date" />
+                <DatePicker
+                  value={form.watch("validTo") || null}
+                  onChange={(next) =>
+                    form.setValue("validTo", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
           </DialogBody>

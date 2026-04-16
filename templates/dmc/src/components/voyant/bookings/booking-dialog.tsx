@@ -23,6 +23,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DateRangePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -156,11 +157,11 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
               <div className="flex flex-col gap-2">
                 <Label>Booking Number</Label>
                 <Input {...form.register("bookingNumber")} placeholder="BK-2501-1234" />
-                {form.formState.errors.bookingNumber ? (
+                {form.formState.errors.bookingNumber && (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.bookingNumber.message}
                   </p>
-                ) : null}
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -172,7 +173,7 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
                   }
                   items={BOOKING_STATUSES}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -189,11 +190,14 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Sell Currency</Label>
-                <Input
-                  {...form.register("sellCurrency")}
-                  placeholder="EUR"
-                  maxLength={3}
-                  className="uppercase"
+                <CurrencyCombobox
+                  value={form.watch("sellCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("sellCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -241,7 +245,7 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Save Changes" : "Create Booking"}
             </Button>
           </DialogFooter>

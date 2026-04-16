@@ -178,7 +178,7 @@ export function AvailabilitySlotDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
@@ -200,7 +200,7 @@ export function AvailabilitySlotDialog({
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Optional rule" />
                   </SelectTrigger>
                   <SelectContent>
@@ -219,7 +219,7 @@ export function AvailabilitySlotDialog({
                   value={form.watch("startTimeId") ?? NONE_VALUE}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Optional start time" />
                   </SelectTrigger>
                   <SelectContent>
@@ -262,7 +262,7 @@ export function AvailabilitySlotDialog({
                     form.setValue("status", value as SlotFormOutput["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -280,7 +280,7 @@ export function AvailabilitySlotDialog({
                   value={String(form.watch("unlimited"))}
                   onValueChange={(value) => form.setValue("unlimited", value === "true")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

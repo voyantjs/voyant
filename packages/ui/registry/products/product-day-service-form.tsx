@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -182,7 +183,7 @@ export function ProductDayServiceForm({
     <div className="flex flex-col gap-1.5 sm:col-span-2">
       <Label>Supplier service</Label>
       <Select value={state.supplierServiceId} onValueChange={handleSupplierServiceSelect}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder="Select a supplier service" />
         </SelectTrigger>
         <SelectContent>
@@ -277,7 +278,7 @@ export function ProductDayServiceForm({
             value={state.serviceType}
             onValueChange={(value) => field("serviceType")(value as ServiceType)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -336,12 +337,9 @@ export function ProductDayServiceForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="product-day-service-cost-currency">Currency</Label>
-          <Input
-            id="product-day-service-cost-currency"
-            value={state.costCurrency}
-            onChange={(event) => field("costCurrency")(event.target.value)}
-            maxLength={3}
-            placeholder="EUR"
+          <CurrencyCombobox
+            value={state.costCurrency || null}
+            onChange={(next) => field("costCurrency")(next ?? "EUR")}
           />
         </div>
         <div className="flex flex-col gap-1.5">

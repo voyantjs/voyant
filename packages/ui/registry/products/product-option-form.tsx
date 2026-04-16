@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -169,7 +170,7 @@ export function ProductOptionForm({ mode, onSuccess, onCancel }: ProductOptionFo
         <div className="flex flex-col gap-1.5">
           <Label>Status</Label>
           <Select value={state.status} onValueChange={(value) => value && field("status")(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -195,20 +196,20 @@ export function ProductOptionForm({ mode, onSuccess, onCancel }: ProductOptionFo
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="product-option-available-from">Available from</Label>
-          <Input
-            id="product-option-available-from"
-            type="date"
-            value={state.availableFrom}
-            onChange={(event) => field("availableFrom")(event.target.value)}
+          <DatePicker
+            value={state.availableFrom || null}
+            onChange={(next) => field("availableFrom")(next ?? "")}
+            placeholder="Select start date"
+            className="w-full"
           />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="product-option-available-to">Available to</Label>
-          <Input
-            id="product-option-available-to"
-            type="date"
-            value={state.availableTo}
-            onChange={(event) => field("availableTo")(event.target.value)}
+          <DatePicker
+            value={state.availableTo || null}
+            onChange={(next) => field("availableTo")(next ?? "")}
+            placeholder="Select end date"
+            className="w-full"
           />
         </div>
       </div>

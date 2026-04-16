@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const assignmentFormSchema = z.object({
@@ -143,7 +144,7 @@ export function PolicyAssignmentDialog({
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -195,11 +196,31 @@ export function PolicyAssignmentDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Valid From</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Valid To</Label>
-                <Input {...form.register("validTo")} type="date" />
+                <DatePicker
+                  value={form.watch("validTo") || null}
+                  onChange={(next) =>
+                    form.setValue("validTo", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
           </DialogBody>

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -181,13 +182,11 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="product-departure-start-date">Start date</Label>
-          <Input
-            id="product-departure-start-date"
-            type="date"
-            required
-            autoFocus
-            value={state.startDate}
-            onChange={(event) => field("startDate")(event.target.value)}
+          <DatePicker
+            value={state.startDate || null}
+            onChange={(next) => field("startDate")(next ?? "")}
+            placeholder="Select start date"
+            className="w-full"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -205,11 +204,11 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="product-departure-end-date">End date</Label>
-          <Input
-            id="product-departure-end-date"
-            type="date"
-            value={state.endDate}
-            onChange={(event) => field("endDate")(event.target.value)}
+          <DatePicker
+            value={state.endDate || null}
+            onChange={(next) => field("endDate")(next ?? "")}
+            placeholder="Select end date"
+            className="w-full"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -234,7 +233,7 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
         <div className="flex flex-col gap-1.5">
           <Label>Timezone</Label>
           <Select value={state.timezone} onValueChange={(value) => field("timezone")(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-80">
@@ -252,7 +251,7 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
             value={state.status}
             onValueChange={(value) => field("status")(value as AvailabilitySlotRecord["status"])}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -123,7 +123,7 @@ export function PolicyDialog({ open, onOpenChange, policy, onSuccess }: PolicyDi
                 value={form.watch("kind")}
                 onValueChange={(v) => form.setValue("kind", v as FormValues["kind"])}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

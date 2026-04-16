@@ -29,6 +29,8 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -340,7 +342,15 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Market</Label>
@@ -413,11 +423,31 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Valid from</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Valid until</Label>
-                <Input {...form.register("validUntil")} type="date" />
+                <DatePicker
+                  value={form.watch("validUntil") || null}
+                  onChange={(next) =>
+                    form.setValue("validUntil", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -499,10 +529,14 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label>Promo currency</Label>
-                      <Input
-                        {...form.register("storefrontPromotionalOfferCurrency")}
-                        placeholder="EUR"
-                        maxLength={3}
+                      <CurrencyCombobox
+                        value={form.watch("storefrontPromotionalOfferCurrency") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferCurrency", next ?? "EUR", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -510,14 +544,31 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <Label>Promo valid from</Label>
-                      <Input
-                        {...form.register("storefrontPromotionalOfferValidFrom")}
-                        type="date"
+                      <DatePicker
+                        value={form.watch("storefrontPromotionalOfferValidFrom") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferValidFrom", next ?? "", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                        placeholder="Select promo start"
+                        className="w-full"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label>Promo valid to</Label>
-                      <Input {...form.register("storefrontPromotionalOfferValidTo")} type="date" />
+                      <DatePicker
+                        value={form.watch("storefrontPromotionalOfferValidTo") || null}
+                        onChange={(next) =>
+                          form.setValue("storefrontPromotionalOfferValidTo", next ?? "", {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                        placeholder="Select promo end"
+                        className="w-full"
+                      />
                     </div>
                   </div>
 

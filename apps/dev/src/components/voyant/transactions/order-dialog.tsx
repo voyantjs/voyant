@@ -1,5 +1,8 @@
+"use client"
+
 import {
   type CreateOrderInput,
+  type OrderRecord,
   type UpdateOrderInput,
   useOrderMutation,
 } from "@voyantjs/transactions-react"
@@ -7,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -24,9 +28,10 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
-import type { OrderData } from "./transactions-shared"
 
 type PersonRef = {
   id: string
@@ -56,8 +61,6 @@ const ORDER_STATUSES = [
 
 type OrderStatus = (typeof ORDER_STATUSES)[number]
 
-const moneyEuros = z.coerce.number().min(0)
-
 const formSchema = z.object({
   orderNumber: z.string().min(1, "Order number is required").max(50),
   offerId: z.string().optional().nullable(),
@@ -67,10 +70,10 @@ const formSchema = z.object({
   personId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   marketId: z.string().optional().nullable(),
-  subtotalEuros: moneyEuros,
-  taxEuros: moneyEuros,
-  feeEuros: moneyEuros,
-  totalEuros: moneyEuros,
+  subtotalEuros: z.coerce.number().min(0),
+  taxEuros: z.coerce.number().min(0),
+  feeEuros: z.coerce.number().min(0),
+  totalEuros: z.coerce.number().min(0),
   orderedAt: z.string().optional().nullable(),
   confirmedAt: z.string().optional().nullable(),
   expiresAt: z.string().optional().nullable(),
@@ -80,14 +83,14 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-type Props = {
+export interface OrderDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  order?: OrderData
-  onSuccess: () => void
+  order?: OrderRecord
+  onSuccess?: (order: OrderRecord) => void
 }
 
-export function OrderDialog({ open, onOpenChange, order, onSuccess }: Props) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
   const isEditing = Boolean(order)
   const { create, update } = useOrderMutation()
 
@@ -177,12 +180,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: Props) {
       notes: values.notes || null,
     }
 
-    if (isEditing) {
-      await update.mutateAsync({ id: order!.id, input: payload })
-    } else {
-      await create.mutateAsync(payload as CreateOrderInput)
-    }
-    onSuccess()
+    const saved = isEditing
+      ? await update.mutateAsync({ id: order!.id, input: payload })
+      : await create.mutateAsync(payload as CreateOrderInput)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -227,7 +230,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: Props) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Market</Label>
@@ -255,8 +266,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: Props) {
                 endpoint="/v1/transactions/offers"
                 detailEndpoint="/v1/transactions/offers/:id"
                 queryKey={["transactions", "offers", "picker"]}
-                getLabel={(offerRef) => `${offerRef.offerNumber} — ${offerRef.title}`}
-                getSecondary={(offerRef) => offerRef.status ?? undefined}
+                getLabel={(offer) => `${offer.offerNumber} — ${offer.title}`}
+                getSecondary={(offer) => offer.status ?? undefined}
                 placeholder="Search offers..."
                 emptyText="No offers found."
               />
@@ -315,15 +326,45 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: Props) {
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Ordered at</Label>
-                <Input {...form.register("orderedAt")} type="date" />
+                <DatePicker
+                  value={form.watch("orderedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("orderedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select order date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Confirmed at</Label>
-                <Input {...form.register("confirmedAt")} type="date" />
+                <DatePicker
+                  value={form.watch("confirmedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("confirmedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select confirm date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Expires at</Label>
-                <Input {...form.register("expiresAt")} type="date" />
+                <DatePicker
+                  value={form.watch("expiresAt") || null}
+                  onChange={(next) =>
+                    form.setValue("expiresAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select expiry"
+                  className="w-full"
+                />
               </div>
             </div>
 

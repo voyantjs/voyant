@@ -135,7 +135,7 @@ export function ResourceSlotAssignmentDialog({
                 value={form.watch("slotId")}
                 onValueChange={(value) => form.setValue("slotId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select slot" />
                 </SelectTrigger>
                 <SelectContent>
@@ -154,7 +154,7 @@ export function ResourceSlotAssignmentDialog({
                   value={form.watch("poolId")}
                   onValueChange={(value) => form.setValue("poolId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -173,7 +173,7 @@ export function ResourceSlotAssignmentDialog({
                   value={form.watch("resourceId")}
                   onValueChange={(value) => form.setValue("resourceId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -192,7 +192,7 @@ export function ResourceSlotAssignmentDialog({
                   value={form.watch("bookingId")}
                   onValueChange={(value) => form.setValue("bookingId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -213,7 +213,7 @@ export function ResourceSlotAssignmentDialog({
                     form.setValue("status", value as ResourceSlotAssignmentRow["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,7 +340,7 @@ export function ResourceCloseoutDialog({
                 value={form.watch("resourceId")}
                 onValueChange={(value) => form.setValue("resourceId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select resource" />
                 </SelectTrigger>
                 <SelectContent>

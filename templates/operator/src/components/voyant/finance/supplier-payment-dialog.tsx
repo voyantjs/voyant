@@ -21,6 +21,8 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const supplierPaymentFormSchema = z.object({
@@ -151,16 +153,29 @@ export function SupplierPaymentDialog({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input
-                  {...form.register("currency")}
-                  placeholder="EUR"
-                  maxLength={3}
-                  className="uppercase"
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Payment Date</Label>
-                <Input {...form.register("paymentDate")} type="date" />
+                <DatePicker
+                  value={form.watch("paymentDate") || null}
+                  onChange={(next) =>
+                    form.setValue("paymentDate", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select payment date"
+                  className="w-full"
+                />
                 {form.formState.errors.paymentDate ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.paymentDate.message}
@@ -181,7 +196,7 @@ export function SupplierPaymentDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,7 +216,7 @@ export function SupplierPaymentDialog({
                     form.setValue("status", value as SupplierPaymentFormValues["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

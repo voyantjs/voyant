@@ -171,7 +171,7 @@ export function NumberSeriesDialog({
                     form.setValue("resetStrategy", v as FormValues["resetStrategy"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -189,7 +189,7 @@ export function NumberSeriesDialog({
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

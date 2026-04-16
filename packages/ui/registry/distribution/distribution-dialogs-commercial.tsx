@@ -19,6 +19,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { ChannelContractRow, ChannelRow, SupplierOption } from "./distribution-shared"
@@ -123,7 +124,7 @@ export function ChannelDialog({
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ChannelRow["kind"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -141,7 +142,7 @@ export function ChannelDialog({
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as ChannelRow["status"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -292,7 +293,7 @@ export function ChannelContractDialog({
                   value={form.watch("channelId")}
                   onValueChange={(value) => form.setValue("channelId", value ?? "")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select channel" />
                   </SelectTrigger>
                   <SelectContent>
@@ -310,7 +311,7 @@ export function ChannelContractDialog({
                   value={form.watch("supplierId")}
                   onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -331,7 +332,7 @@ export function ChannelContractDialog({
                     form.setValue("status", value as ChannelContractRow["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -345,11 +346,31 @@ export function ChannelContractDialog({
               </div>
               <div className="grid gap-2">
                 <Label>Starts At</Label>
-                <Input {...form.register("startsAt")} type="date" />
+                <DatePicker
+                  value={form.watch("startsAt") || null}
+                  onChange={(next) =>
+                    form.setValue("startsAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Ends At</Label>
-                <Input {...form.register("endsAt")} type="date" />
+                <DatePicker
+                  value={form.watch("endsAt") || null}
+                  onChange={(next) =>
+                    form.setValue("endsAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Payment Owner</Label>
@@ -359,7 +380,7 @@ export function ChannelContractDialog({
                     form.setValue("paymentOwner", value as ChannelContractRow["paymentOwner"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -382,7 +403,7 @@ export function ChannelContractDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

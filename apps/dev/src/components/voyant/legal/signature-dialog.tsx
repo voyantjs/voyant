@@ -126,7 +126,7 @@ export function SignatureDialog({
                 value={form.watch("method")}
                 onValueChange={(v) => form.setValue("method", v as FormValues["method"])}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

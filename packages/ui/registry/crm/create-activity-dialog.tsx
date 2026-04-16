@@ -116,7 +116,7 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
             <div>
               <span className="text-xs font-medium text-muted-foreground">Type</span>
               <Select value={type} onValueChange={(value) => setType(value ?? "note")}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -131,7 +131,7 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
             <div>
               <span className="text-xs font-medium text-muted-foreground">Status</span>
               <Select value={status} onValueChange={(value) => setStatus(value ?? "planned")}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,7 +159,7 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
             <div>
               <span className="text-xs font-medium text-muted-foreground">Link to</span>
               <Select value={entityType} onValueChange={(value) => setEntityType(value ?? "none")}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

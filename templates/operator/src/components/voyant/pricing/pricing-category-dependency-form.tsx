@@ -166,7 +166,7 @@ export function PricingCategoryDependencyForm({
             }))
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

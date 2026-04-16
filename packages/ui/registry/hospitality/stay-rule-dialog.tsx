@@ -17,9 +17,12 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RatePlanCombobox } from "./rate-plan-combobox"
 import { RoomTypeCombobox } from "./room-type-combobox"
+
+export type StayRuleData = StayRuleRecord
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
 type Weekday = (typeof WEEKDAYS)[number]
@@ -210,11 +213,31 @@ export function StayRuleDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Valid from</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Valid to</Label>
-                <Input {...form.register("validTo")} type="date" />
+                <DatePicker
+                  value={form.watch("validTo") || null}
+                  onChange={(next) =>
+                    form.setValue("validTo", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 

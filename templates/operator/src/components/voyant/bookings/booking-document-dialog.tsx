@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
   Label,
   Select,
   SelectContent,
@@ -23,6 +22,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
 import { FileDropzone } from "./file-dropzone"
@@ -113,7 +113,7 @@ export function BookingDocumentDialog({
                     form.setValue("type", (v ?? "other") as (typeof documentTypes)[number])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -131,7 +131,7 @@ export function BookingDocumentDialog({
                   value={form.watch("participantId") ?? UNASSIGNED}
                   onValueChange={(v) => form.setValue("participantId", v ?? UNASSIGNED)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -164,7 +164,17 @@ export function BookingDocumentDialog({
 
             <div className="flex flex-col gap-2">
               <Label>Expires At (optional)</Label>
-              <Input {...form.register("expiresAt")} type="date" />
+              <DatePicker
+                value={form.watch("expiresAt") || null}
+                onChange={(next) =>
+                  form.setValue("expiresAt", next ?? "", {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                placeholder="Select expiry date"
+                className="w-full"
+              />
             </div>
 
             <div className="flex flex-col gap-2">

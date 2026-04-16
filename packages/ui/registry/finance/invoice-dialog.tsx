@@ -21,6 +21,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -180,7 +181,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                     form.setValue("status", value as InvoiceFormValues["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -206,11 +207,14 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input
-                  {...form.register("currency")}
-                  placeholder="EUR"
-                  maxLength={3}
-                  className="uppercase"
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
                 />
               </div>
             </div>

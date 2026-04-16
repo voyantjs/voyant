@@ -22,10 +22,13 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 import { CancellationPolicyCombobox } from "./cancellation-policy-combobox"
 import { MealPlanCombobox } from "./meal-plan-combobox"
 import { PriceCatalogCombobox } from "./price-catalog-combobox"
+
+export type RatePlanData = RatePlanRecord
 
 const CHARGE_FREQUENCIES = [
   "per_night",
@@ -185,7 +188,15 @@ export function RatePlanDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currencyCode")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currencyCode") || null}
+                  onChange={(next) =>
+                    form.setValue("currencyCode", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Charge frequency</Label>

@@ -23,6 +23,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const guaranteeTypes = [
@@ -155,7 +156,7 @@ export function BookingGuaranteeDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -175,7 +176,7 @@ export function BookingGuaranteeDialog({
                     form.setValue("status", (v ?? "pending") as (typeof guaranteeStatuses)[number])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -192,7 +193,15 @@ export function BookingGuaranteeDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Amount (cents)</Label>

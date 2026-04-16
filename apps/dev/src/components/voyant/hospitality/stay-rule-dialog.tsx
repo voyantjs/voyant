@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -16,9 +17,12 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RatePlanCombobox } from "./rate-plan-combobox"
 import { RoomTypeCombobox } from "./room-type-combobox"
+
+export type StayRuleData = StayRuleRecord
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
 type Weekday = (typeof WEEKDAYS)[number]
@@ -47,18 +51,22 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-export type StayRuleData = StayRuleRecord
-
-type Props = {
+export interface StayRuleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   propertyId: string
-  rule?: StayRuleData
-  onSuccess: () => void
+  rule?: StayRuleRecord
+  onSuccess?: (rule: StayRuleRecord) => void
 }
 
-export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess }: Props) {
-  const isEditing = !!rule
+export function StayRuleDialog({
+  open,
+  onOpenChange,
+  propertyId,
+  rule,
+  onSuccess,
+}: StayRuleDialogProps) {
+  const isEditing = Boolean(rule)
   const { create, update } = useStayRuleMutation()
 
   const form = useForm<FormValues, unknown, FormOutput>({
@@ -123,7 +131,7 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
         notes: "",
       })
     }
-  }, [open, rule, form])
+  }, [form, open, rule])
 
   const toggleWeekday = (
     field: "arrivalWeekdays" | "departureWeekdays",
@@ -131,12 +139,14 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
     checked: boolean,
   ) => {
     const current = form.watch(field) ?? []
-    const next = checked ? [...current, day] : current.filter((d) => d !== day)
+    const next = checked ? [...current, day] : current.filter((value) => value !== day)
     form.setValue(field, next)
   }
 
   const onSubmit = async (values: FormOutput) => {
-    const toInt = (v: number | string | null | undefined) => (typeof v === "number" ? v : null)
+    const toInt = (value: number | string | null | undefined) =>
+      typeof value === "number" ? value : null
+
     const payload = {
       propertyId,
       ratePlanId: values.ratePlanId || null,
@@ -156,12 +166,13 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
       priority: values.priority,
       notes: values.notes || null,
     }
-    if (isEditing) {
-      await update.mutateAsync({ id: rule.id, input: payload })
-    } else {
-      await create.mutateAsync(payload)
-    }
-    onSuccess()
+
+    const saved = isEditing
+      ? await update.mutateAsync({ id: rule!.id, input: payload })
+      : await create.mutateAsync(payload)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const arrivalWeekdays = form.watch("arrivalWeekdays") ?? []
@@ -202,11 +213,31 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Valid from</Label>
-                <Input {...form.register("validFrom")} type="date" />
+                <DatePicker
+                  value={form.watch("validFrom") || null}
+                  onChange={(next) =>
+                    form.setValue("validFrom", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Valid to</Label>
-                <Input {...form.register("validTo")} type="date" />
+                <DatePicker
+                  value={form.watch("validTo") || null}
+                  onChange={(next) =>
+                    form.setValue("validTo", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -248,7 +279,9 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
                     <input
                       type="checkbox"
                       checked={arrivalWeekdays.includes(day)}
-                      onChange={(e) => toggleWeekday("arrivalWeekdays", day, e.target.checked)}
+                      onChange={(event) =>
+                        toggleWeekday("arrivalWeekdays", day, event.target.checked)
+                      }
                     />
                     {day}
                   </label>
@@ -264,7 +297,9 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
                     <input
                       type="checkbox"
                       checked={departureWeekdays.includes(day)}
-                      onChange={(e) => toggleWeekday("departureWeekdays", day, e.target.checked)}
+                      onChange={(event) =>
+                        toggleWeekday("departureWeekdays", day, event.target.checked)
+                      }
                     />
                     {day}
                   </label>
@@ -272,25 +307,25 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-6">
+            <div className="flex gap-6">
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("closedToArrival")}
-                  onCheckedChange={(v) => form.setValue("closedToArrival", v)}
+                  onCheckedChange={(checked) => form.setValue("closedToArrival", checked)}
                 />
                 <Label>Closed to arrival</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("closedToDeparture")}
-                  onCheckedChange={(v) => form.setValue("closedToDeparture", v)}
+                  onCheckedChange={(checked) => form.setValue("closedToDeparture", checked)}
                 />
                 <Label>Closed to departure</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("active")}
-                  onCheckedChange={(v) => form.setValue("active", v)}
+                  onCheckedChange={(checked) => form.setValue("active", checked)}
                 />
                 <Label>Active</Label>
               </div>
@@ -306,7 +341,7 @@ export function StayRuleDialog({ open, onOpenChange, propertyId, rule, onSuccess
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isEditing ? "Save Changes" : "Add Stay Rule"}
             </Button>
           </DialogFooter>

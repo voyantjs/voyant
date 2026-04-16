@@ -3,8 +3,12 @@
   "name": "voyant-sellability-market-combobox",
   "title": "Sellability Market Combobox",
   "description": "Remote-search market picker for market-scoped sellability policies.",
-  "dependencies": ["@voyantjs/markets-react"],
-  "registryDependencies": ["combobox"],
+  "dependencies": [
+    "@voyantjs/markets-react"
+  ],
+  "registryDependencies": [
+    "combobox"
+  ],
   "files": [
     {
       "path": "registry/sellability/market-combobox.tsx",

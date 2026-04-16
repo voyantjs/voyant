@@ -3,8 +3,17 @@
   "name": "voyant-bookings-supplier-status-dialog",
   "title": "Supplier Status Dialog",
   "description": "Create/edit dialog for booking supplier confirmation records.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/bookings/supplier-status-dialog.tsx",

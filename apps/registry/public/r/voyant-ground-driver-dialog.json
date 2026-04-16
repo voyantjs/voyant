@@ -3,8 +3,18 @@
   "name": "voyant-ground-driver-dialog",
   "title": "Ground Driver Dialog",
   "description": "Modal form for creating and editing ground drivers.",
-  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/ground-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/ground/driver-dialog.tsx",

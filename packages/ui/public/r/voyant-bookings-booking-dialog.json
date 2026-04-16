@@ -3,8 +3,17 @@
   "name": "voyant-bookings-booking-dialog",
   "title": "Booking Dialog",
   "description": "Modal wrapper around the core booking create/edit form.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/bookings/booking-dialog.tsx",

@@ -3,7 +3,10 @@
   "name": "voyant-products-product-media-section",
   "title": "Product Media Section",
   "description": "List and manage product or day-level media, including cover selection.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

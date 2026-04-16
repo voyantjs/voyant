@@ -3,7 +3,11 @@
   "name": "voyant-pricing-option-unit-price-rules-page",
   "title": "Option Unit Price Rules Page",
   "description": "Server-paginated CRUD table for per-unit option pricing rules with hydrated option rule and pricing category labels.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react",
+    "@voyantjs/products-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

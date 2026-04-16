@@ -3,8 +3,20 @@
   "name": "voyant-hospitality-rate-plan-dialog",
   "title": "Rate Plan Dialog",
   "description": "Modal form for creating and editing hospitality rate plans with shared pricing lookups.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/hospitality/rate-plan-dialog.tsx",

@@ -3,8 +3,16 @@
   "name": "voyant-markets-market-currencies-tab",
   "title": "Market Currencies Tab",
   "description": "Server-paginated CRUD table for market currencies.",
-  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
-  "registryDependencies": ["badge", "button", "table", "voyant-markets-market-currency-dialog"],
+  "dependencies": [
+    "@voyantjs/markets-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "table",
+    "voyant-markets-market-currency-dialog"
+  ],
   "files": [
     {
       "path": "registry/markets/market-currencies-tab.tsx",

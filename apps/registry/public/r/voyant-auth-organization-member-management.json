@@ -3,8 +3,19 @@
   "name": "voyant-auth-organization-member-management",
   "title": "Organization Member Management",
   "description": "Manage organization members and invitations with the shared auth-react organization hooks.",
-  "dependencies": ["lucide-react", "@voyantjs/auth-react"],
-  "registryDependencies": ["badge", "button", "card", "input", "label", "select", "table"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/auth-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "card",
+    "input",
+    "label",
+    "select",
+    "table"
+  ],
   "files": [
     {
       "path": "registry/auth/organization-member-management.tsx",

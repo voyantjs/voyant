@@ -3,8 +3,13 @@
   "name": "voyant-crm-person-dialog",
   "title": "Person Dialog",
   "description": "Modal wrapper around Person Form with create/edit modes.",
-  "dependencies": ["@voyantjs/crm-react"],
-  "registryDependencies": ["dialog", "voyant-crm-person-form"],
+  "dependencies": [
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "voyant-crm-person-form"
+  ],
   "files": [
     {
       "path": "registry/crm/person-dialog.tsx",

@@ -3,7 +3,10 @@
   "name": "voyant-pricing-pricing-category-list",
   "title": "Pricing Category List",
   "description": "Searchable CRUD table for reusable pricing categories.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

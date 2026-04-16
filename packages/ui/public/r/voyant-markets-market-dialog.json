@@ -3,8 +3,16 @@
   "name": "voyant-markets-market-dialog",
   "title": "Market Dialog",
   "description": "Create/edit dialog for market records wired to markets-react mutations.",
-  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select"],
+  "dependencies": [
+    "@voyantjs/markets-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select"
+  ],
   "files": [
     {
       "path": "registry/markets/market-dialog.tsx",

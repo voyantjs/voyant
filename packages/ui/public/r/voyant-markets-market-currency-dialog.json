@@ -3,8 +3,16 @@
   "name": "voyant-markets-market-currency-dialog",
   "title": "Market Currency Dialog",
   "description": "Create/edit dialog for market currency records.",
-  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "switch"],
+  "dependencies": [
+    "@voyantjs/markets-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "switch"
+  ],
   "files": [
     {
       "path": "registry/markets/market-currency-dialog.tsx",

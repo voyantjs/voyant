@@ -3,8 +3,15 @@
   "name": "voyant-legal-number-series-page",
   "title": "Number Series Page",
   "description": "Management page for legal contract number series.",
-  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
-  "registryDependencies": ["badge", "button", "voyant-legal-number-series-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/legal-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-legal-number-series-dialog"
+  ],
   "files": [
     {
       "path": "registry/legal/number-series-page.tsx",

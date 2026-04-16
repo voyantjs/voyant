@@ -3,8 +3,19 @@
   "name": "voyant-products-product-schedule-form",
   "title": "Product Schedule Form",
   "description": "Create/edit form for recurring availability schedules, including RRULE cadence and booking controls.",
-  "dependencies": ["lucide-react", "@voyantjs/availability", "@voyantjs/availability-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "toggle-group"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/availability",
+    "@voyantjs/availability-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "toggle-group"
+  ],
   "files": [
     {
       "path": "registry/products/product-schedule-form.tsx",

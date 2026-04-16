@@ -3,8 +3,14 @@
   "name": "voyant-crm-person-card-connected",
   "title": "Person Card (connected)",
   "description": "Loads a CRM person by id and renders the Person Card.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["card", "voyant-crm-person-card"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "card",
+    "voyant-crm-person-card"
+  ],
   "files": [
     {
       "path": "registry/crm/person-card-connected.tsx",

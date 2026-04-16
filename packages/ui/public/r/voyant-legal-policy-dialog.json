@@ -3,8 +3,18 @@
   "name": "voyant-legal-policy-dialog",
   "title": "Policy Dialog",
   "description": "Create and edit dialog for legal policies.",
-  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/legal-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/legal/policy-dialog.tsx",

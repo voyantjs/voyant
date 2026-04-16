@@ -3,7 +3,10 @@
   "name": "voyant-identity-page",
   "title": "Identity Page",
   "description": "Identity management shell with contact points, addresses and named contacts tabs.",
-  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/identity-react"
+  ],
   "registryDependencies": [
     "input",
     "label",

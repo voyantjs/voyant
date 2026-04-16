@@ -3,8 +3,17 @@
   "name": "voyant-bookings-booking-item-dialog",
   "title": "Booking Item Dialog",
   "description": "Create/edit booking item dialog wired to bookings-react item mutations.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/bookings/booking-item-dialog.tsx",

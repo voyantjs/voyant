@@ -3,8 +3,16 @@
   "name": "voyant-markets-market-locales-tab",
   "title": "Market Locales Tab",
   "description": "Server-paginated CRUD table for market locales.",
-  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
-  "registryDependencies": ["badge", "button", "table", "voyant-markets-market-locale-dialog"],
+  "dependencies": [
+    "@voyantjs/markets-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "table",
+    "voyant-markets-market-locale-dialog"
+  ],
   "files": [
     {
       "path": "registry/markets/market-locales-tab.tsx",

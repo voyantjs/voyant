@@ -3,8 +3,18 @@
   "name": "voyant-legal-contract-dialog",
   "title": "Contract Dialog",
   "description": "Create and edit dialog for legal contracts backed by legal-react mutations.",
-  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/legal-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/legal/contract-dialog.tsx",

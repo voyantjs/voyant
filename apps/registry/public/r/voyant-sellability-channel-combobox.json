@@ -3,8 +3,12 @@
   "name": "voyant-sellability-channel-combobox",
   "title": "Sellability Channel Combobox",
   "description": "Channel picker for channel-scoped sellability policies with by-id hydration.",
-  "dependencies": ["@voyantjs/distribution-react"],
-  "registryDependencies": ["combobox"],
+  "dependencies": [
+    "@voyantjs/distribution-react"
+  ],
+  "registryDependencies": [
+    "combobox"
+  ],
   "files": [
     {
       "path": "registry/sellability/channel-combobox.tsx",

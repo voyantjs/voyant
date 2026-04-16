@@ -3,8 +3,18 @@
   "name": "voyant-crm-quotes-page",
   "title": "Quotes Page",
   "description": "Quotes list page shell with status filtering and create action.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react", "@voyantjs/utils"],
-  "registryDependencies": ["badge", "button", "select", "table", "voyant-crm-create-quote-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react",
+    "@voyantjs/utils"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "select",
+    "table",
+    "voyant-crm-create-quote-dialog"
+  ],
   "files": [
     {
       "path": "registry/crm/quotes-page.tsx",

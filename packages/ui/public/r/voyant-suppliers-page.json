@@ -3,8 +3,16 @@
   "name": "voyant-suppliers-page",
   "title": "Suppliers Page",
   "description": "Searchable suppliers management page shell with data table and create action.",
-  "dependencies": ["lucide-react", "@voyantjs/suppliers-react"],
-  "registryDependencies": ["badge", "button", "input", "table"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/suppliers-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "input",
+    "table"
+  ],
   "files": [
     {
       "path": "registry/suppliers/suppliers-page.tsx",

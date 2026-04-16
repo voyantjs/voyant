@@ -3,8 +3,15 @@
   "name": "voyant-hospitality-maintenance-blocks-tab",
   "title": "Maintenance Blocks Tab",
   "description": "CRUD table for hospitality maintenance blocks with built-in dialog integration.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-maintenance-block-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-maintenance-block-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/maintenance-blocks-tab.tsx",

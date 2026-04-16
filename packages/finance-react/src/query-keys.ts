@@ -36,6 +36,8 @@ export const financeQueryKeys = {
 
   bookingPaymentSchedules: (bookingId: string) =>
     [...financeQueryKeys.all, "booking-payment-schedules", bookingId] as const,
+  bookingGuarantees: (bookingId: string) =>
+    [...financeQueryKeys.all, "booking-guarantees", bookingId] as const,
 
   supplierPayments: () => [...financeQueryKeys.all, "supplier-payments"] as const,
   supplierPaymentsList: (filters: FinanceSupplierPaymentListFilters) =>

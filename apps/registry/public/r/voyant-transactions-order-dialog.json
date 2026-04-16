@@ -3,8 +3,17 @@
   "name": "voyant-transactions-order-dialog",
   "title": "Order Dialog",
   "description": "Create/edit dialog for commercial orders backed by transactions-react mutations.",
-  "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/transactions-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/transactions/order-dialog.tsx",

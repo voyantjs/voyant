@@ -3,8 +3,17 @@
   "name": "voyant-crm-create-opportunity-dialog",
   "title": "Create Opportunity Dialog",
   "description": "Dialog for creating an opportunity within a selected pipeline and stage.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select"
+  ],
   "files": [
     {
       "path": "registry/crm/create-opportunity-dialog.tsx",

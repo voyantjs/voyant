@@ -3,8 +3,18 @@
   "name": "voyant-hospitality-room-inventory-dialog",
   "title": "Room Inventory Dialog",
   "description": "Modal form for creating and editing hospitality room inventory rows.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/hospitality/room-inventory-dialog.tsx",

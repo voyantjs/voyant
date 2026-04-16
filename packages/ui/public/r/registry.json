@@ -817,6 +817,56 @@
       ]
     },
     {
+      "name": "voyant-bookings-booking-guarantee-dialog",
+      "type": "registry:component",
+      "title": "Booking Guarantee Dialog",
+      "description": "Create/edit guarantee dialog wired to finance-react guarantee mutations.",
+      "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-guarantee-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-guarantee-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-guarantee-list",
+      "type": "registry:component",
+      "title": "Booking Guarantee List",
+      "description": "Guarantee section for booking detail page with inline CRUD.",
+      "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "card",
+        "voyant-bookings-booking-guarantee-dialog"
+      ],
+      "files": [
+        {
+          "path": "registry/bookings/booking-guarantee-list.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-guarantee-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-bookings-booking-payments-summary",
+      "type": "registry:component",
+      "title": "Booking Payments Summary",
+      "description": "Read-only payments summary card showing all payments linked to a booking.",
+      "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+      "registryDependencies": ["badge", "card"],
+      "files": [
+        {
+          "path": "registry/bookings/booking-payments-summary.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/booking-payments-summary.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-status-change-dialog",
       "type": "registry:component",
       "title": "Status Change Dialog",

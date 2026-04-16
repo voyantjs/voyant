@@ -3,8 +3,15 @@
   "name": "voyant-hospitality-meal-plans-tab",
   "title": "Meal Plans Tab",
   "description": "CRUD table for hospitality meal plans with built-in dialog integration.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-meal-plan-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-meal-plan-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/meal-plans-tab.tsx",

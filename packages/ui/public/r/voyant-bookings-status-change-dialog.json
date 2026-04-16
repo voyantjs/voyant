@@ -3,8 +3,16 @@
   "name": "voyant-bookings-status-change-dialog",
   "title": "Status Change Dialog",
   "description": "Booking status update dialog wired to bookings-react status mutations.",
-  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-  "registryDependencies": ["dialog", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/bookings-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/bookings/status-change-dialog.tsx",

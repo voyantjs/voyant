@@ -3,7 +3,10 @@
   "name": "voyant-markets-page",
   "title": "Markets Page",
   "description": "Markets management page shell with server-paginated list and embedded locale/currency configuration tabs.",
-  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+  "dependencies": [
+    "@voyantjs/markets-react",
+    "lucide-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

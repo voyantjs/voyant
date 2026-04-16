@@ -3,8 +3,19 @@
   "name": "voyant-identity-named-contact-dialog",
   "title": "Identity Named Contact Dialog",
   "description": "Modal form for creating and editing identity named contacts.",
-  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/identity-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/identity/named-contact-dialog.tsx",

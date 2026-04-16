@@ -3,8 +3,17 @@
   "name": "voyant-products-product-list",
   "title": "Product List",
   "description": "Paginated table of products with search, row actions, and create/edit dialog.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
-  "registryDependencies": ["badge", "button", "input", "table", "voyant-products-product-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "input",
+    "table",
+    "voyant-products-product-dialog"
+  ],
   "files": [
     {
       "path": "registry/products/product-list.tsx",

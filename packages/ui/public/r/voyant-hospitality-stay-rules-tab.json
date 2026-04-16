@@ -3,8 +3,15 @@
   "name": "voyant-hospitality-stay-rules-tab",
   "title": "Stay Rules Tab",
   "description": "CRUD table for hospitality stay rules with built-in dialog integration.",
-  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
-  "registryDependencies": ["badge", "button", "voyant-hospitality-stay-rule-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/hospitality-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "voyant-hospitality-stay-rule-dialog"
+  ],
   "files": [
     {
       "path": "registry/hospitality/stay-rules-tab.tsx",

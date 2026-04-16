@@ -3,8 +3,15 @@
   "name": "voyant-crm-quote-line-items-card",
   "title": "Quote Line Items Card",
   "description": "Editable quote line items card with inline quantity and price updates.",
-  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
-  "registryDependencies": ["button", "card", "input"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/crm-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "card",
+    "input"
+  ],
   "files": [
     {
       "path": "registry/crm/quote-detail-sections.tsx",

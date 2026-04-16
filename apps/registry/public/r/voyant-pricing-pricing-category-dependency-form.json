@@ -3,8 +3,18 @@
   "name": "voyant-pricing-pricing-category-dependency-form",
   "title": "Pricing Category Dependency Form",
   "description": "Create/edit form for pricing category dependencies and quantity limits.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/pricing/pricing-category-dependency-form.tsx",

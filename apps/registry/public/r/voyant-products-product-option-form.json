@@ -3,8 +3,18 @@
   "name": "voyant-products-product-option-form",
   "title": "Product Option Form",
   "description": "Create/edit form for product options, including status, default state, availability dates, and ordering.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/product-option-form.tsx",

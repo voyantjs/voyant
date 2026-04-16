@@ -3,8 +3,16 @@
   "name": "voyant-identity-named-contacts-tab",
   "title": "Identity Named Contacts Tab",
   "description": "Server-paginated CRUD table for entity named contacts.",
-  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
-  "registryDependencies": ["badge", "button", "data-table", "voyant-identity-named-contact-dialog"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/identity-react"
+  ],
+  "registryDependencies": [
+    "badge",
+    "button",
+    "data-table",
+    "voyant-identity-named-contact-dialog"
+  ],
   "files": [
     {
       "path": "registry/identity/named-contacts-tab.tsx",

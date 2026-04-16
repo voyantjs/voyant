@@ -3,8 +3,19 @@
   "name": "voyant-pricing-cancellation-policy-dialog",
   "title": "Cancellation Fee Policy Dialog",
   "description": "Create/edit dialog for pricing-side cancellation fee policies.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/pricing/cancellation-policy-dialog.tsx",

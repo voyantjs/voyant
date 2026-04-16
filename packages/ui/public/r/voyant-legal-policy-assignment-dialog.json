@@ -3,8 +3,17 @@
   "name": "voyant-legal-policy-assignment-dialog",
   "title": "Policy Assignment Dialog",
   "description": "Create and edit dialog for legal policy assignments.",
-  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/legal-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select"
+  ],
   "files": [
     {
       "path": "registry/legal/policy-assignment-dialog.tsx",

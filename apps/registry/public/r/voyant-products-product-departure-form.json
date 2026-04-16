@@ -3,8 +3,18 @@
   "name": "voyant-products-product-departure-form",
   "title": "Product Departure Form",
   "description": "Create/edit form for one-off departures, including dates, capacity, and status.",
-  "dependencies": ["lucide-react", "@voyantjs/availability-react"],
-  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/availability-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/products/product-departure-form.tsx",

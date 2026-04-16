@@ -3,8 +3,17 @@
   "name": "voyant-transactions-offer-dialog",
   "title": "Offer Dialog",
   "description": "Create/edit dialog for commercial offers backed by transactions-react mutations.",
-  "dependencies": ["@voyantjs/transactions-react", "lucide-react"],
-  "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "@voyantjs/transactions-react",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/transactions/offer-dialog.tsx",

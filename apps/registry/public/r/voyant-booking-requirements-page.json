@@ -3,7 +3,10 @@
   "name": "voyant-booking-requirements-page",
   "title": "Booking Requirements Page",
   "description": "Page shell for product selection and contact requirement or custom question tabs.",
-  "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/booking-requirements-react"
+  ],
   "registryDependencies": [
     "label",
     "select",

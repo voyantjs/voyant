@@ -3,8 +3,18 @@
   "name": "voyant-booking-requirements-contact-requirement-dialog",
   "title": "Contact Requirement Dialog",
   "description": "Create/edit dialog for product booking contact requirements.",
-  "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/booking-requirements-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/booking-requirements/contact-requirement-dialog.tsx",

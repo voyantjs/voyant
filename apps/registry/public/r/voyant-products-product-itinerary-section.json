@@ -3,7 +3,10 @@
   "name": "voyant-products-product-itinerary-section",
   "title": "Product Itinerary Section",
   "description": "Expandable day and service management surface for a single product.",
-  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/products-react"
+  ],
   "registryDependencies": [
     "badge",
     "button",

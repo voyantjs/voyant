@@ -3,8 +3,20 @@
   "name": "voyant-pricing-option-price-rule-dialog",
   "title": "Option Price Rule Dialog",
   "description": "Create/edit dialog for option price rules with pricing and product lookups.",
-  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
-  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
+  "dependencies": [
+    "lucide-react",
+    "@voyantjs/pricing-react",
+    "@voyantjs/products-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "dialog",
+    "input",
+    "label",
+    "select",
+    "switch",
+    "textarea"
+  ],
   "files": [
     {
       "path": "registry/pricing/option-price-rule-dialog.tsx",

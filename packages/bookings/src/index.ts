@@ -14,6 +14,14 @@ export {
 export type { ConvertProductData } from "./service.js"
 export { bookingsService } from "./service.js"
 export {
+  type AddBookingGroupMemberInput,
+  type BookingGroupListQuery,
+  type BookingGroupMemberWithBooking,
+  bookingGroupsService,
+  type CreateBookingGroupInput,
+  type UpdateBookingGroupInput,
+} from "./service-groups.js"
+export {
   type ExpireStaleBookingHoldsInput,
   type ExpireStaleBookingHoldsResult,
   expireStaleBookingHolds,
@@ -67,6 +75,8 @@ export type {
   BookingAllocation,
   BookingDocument,
   BookingFulfillment,
+  BookingGroup,
+  BookingGroupMember,
   BookingItem,
   BookingItemParticipant,
   BookingNote,
@@ -81,6 +91,8 @@ export type {
   NewBookingAllocation,
   NewBookingDocument,
   NewBookingFulfillment,
+  NewBookingGroup,
+  NewBookingGroupMember,
   NewBookingItem,
   NewBookingItemParticipant,
   NewBookingNote,
@@ -96,6 +108,10 @@ export {
   bookingAllocations,
   bookingDocuments,
   bookingFulfillments,
+  bookingGroupKindEnum,
+  bookingGroupMemberRoleEnum,
+  bookingGroupMembers,
+  bookingGroups,
   bookingItemParticipants,
   bookingItems,
   bookingNotes,
@@ -109,6 +125,10 @@ export {
 } from "./schema.js"
 export { publicBookingsService } from "./service-public.js"
 export {
+  addBookingGroupMemberSchema,
+  bookingGroupKindSchema,
+  bookingGroupListQuerySchema,
+  bookingGroupMemberRoleSchema,
   bookingListQuerySchema,
   cancelBookingSchema,
   confirmBookingSchema,
@@ -120,6 +140,7 @@ export {
   insertBookingAllocationSchema,
   insertBookingDocumentSchema,
   insertBookingFulfillmentSchema,
+  insertBookingGroupSchema,
   insertBookingItemParticipantSchema,
   insertBookingItemSchema,
   insertBookingNoteSchema,
@@ -143,6 +164,7 @@ export {
   reserveBookingSchema,
   updateBookingAllocationSchema,
   updateBookingFulfillmentSchema,
+  updateBookingGroupSchema,
   updateBookingItemSchema,
   updateBookingSchema,
   updateBookingStatusSchema,

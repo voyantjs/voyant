@@ -200,11 +200,64 @@ export const bookingDocumentRecordSchema = z.object({
 
 export type BookingDocumentRecord = z.infer<typeof bookingDocumentRecordSchema>
 
+export const bookingGroupKindSchema = z.enum(["shared_room", "other"])
+export const bookingGroupMemberRoleSchema = z.enum(["primary", "shared"])
+
+export const bookingGroupRecordSchema = z.object({
+  id: z.string(),
+  kind: bookingGroupKindSchema,
+  label: z.string(),
+  primaryBookingId: z.string().nullable(),
+  productId: z.string().nullable(),
+  optionUnitId: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type BookingGroupRecord = z.infer<typeof bookingGroupRecordSchema>
+
+export const bookingGroupMemberRecordSchema = z.object({
+  id: z.string(),
+  groupId: z.string(),
+  bookingId: z.string(),
+  role: bookingGroupMemberRoleSchema,
+  createdAt: z.string(),
+})
+
+export type BookingGroupMemberRecord = z.infer<typeof bookingGroupMemberRecordSchema>
+
+export const bookingGroupMemberWithBookingSchema = bookingGroupMemberRecordSchema.extend({
+  booking: bookingRecordSchema.nullable(),
+})
+
+export type BookingGroupMemberWithBookingRecord = z.infer<
+  typeof bookingGroupMemberWithBookingSchema
+>
+
+export const bookingGroupDetailSchema = bookingGroupRecordSchema.extend({
+  members: z.array(bookingGroupMemberWithBookingSchema),
+})
+
+export type BookingGroupDetailRecord = z.infer<typeof bookingGroupDetailSchema>
+
 export const bookingListResponse = paginatedEnvelope(bookingRecordSchema)
 export const bookingSingleResponse = singleEnvelope(bookingRecordSchema)
 export const bookingItemsResponse = arrayEnvelope(bookingItemRecordSchema)
 export const bookingItemParticipantsResponse = arrayEnvelope(bookingItemParticipantRecordSchema)
 export const bookingDocumentsResponse = arrayEnvelope(bookingDocumentRecordSchema)
+export const bookingGroupListResponse = paginatedEnvelope(bookingGroupRecordSchema)
+export const bookingGroupSingleResponse = singleEnvelope(bookingGroupRecordSchema)
+export const bookingGroupDetailResponse = singleEnvelope(bookingGroupDetailSchema)
+export const bookingGroupMembersResponse = arrayEnvelope(bookingGroupMemberWithBookingSchema)
+export const bookingGroupMemberSingleResponse = singleEnvelope(bookingGroupMemberRecordSchema)
+export const bookingGroupForBookingSchema = bookingGroupRecordSchema.extend({
+  membership: bookingGroupMemberRecordSchema,
+})
+export const bookingGroupForBookingResponse = z.object({
+  data: bookingGroupForBookingSchema.nullable(),
+})
+export type BookingGroupForBookingRecord = z.infer<typeof bookingGroupForBookingSchema>
 export const bookingPassengersResponse = arrayEnvelope(bookingPassengerRecordSchema)
 export const bookingSupplierStatusesResponse = arrayEnvelope(bookingSupplierStatusRecordSchema)
 export const bookingActivityResponse = arrayEnvelope(bookingActivityRecordSchema)

@@ -11,6 +11,7 @@ import { BookingActivityTimeline } from "./booking-activity-timeline"
 import { BookingCancellationDialog } from "./booking-cancellation-dialog"
 import { BookingDialog } from "./booking-dialog"
 import { BookingDocumentList } from "./booking-document-list"
+import { BookingGroupSection } from "./booking-group-section"
 import { BookingGuaranteeList } from "./booking-guarantee-list"
 import { BookingItemList } from "./booking-item-list"
 import { BookingNotes } from "./booking-notes"
@@ -205,6 +206,11 @@ export function BookingDetailPage({ id }: { id: string }) {
 
       <PassengerList bookingId={id} />
       <BookingItemList bookingId={id} />
+      <BookingGroupSection
+        bookingId={id}
+        productId={itemsData?.data?.[0]?.productId}
+        optionUnitId={itemsData?.data?.[0]?.optionUnitId}
+      />
       <BookingPaymentScheduleList bookingId={id} />
       <BookingGuaranteeList bookingId={id} />
       <BookingPaymentsSummary bookingId={id} />

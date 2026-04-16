@@ -5,6 +5,14 @@ export interface BookingsListFilters {
   offset?: number | undefined
 }
 
+export interface BookingGroupsListFilters {
+  kind?: string | undefined
+  productId?: string | undefined
+  optionUnitId?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
 export const bookingsQueryKeys = {
   all: ["voyant", "bookings"] as const,
 
@@ -28,4 +36,12 @@ export const bookingsQueryKeys = {
     [...bookingsQueryKeys.booking(bookingId), "supplier-statuses"] as const,
   activity: (bookingId: string) => [...bookingsQueryKeys.booking(bookingId), "activity"] as const,
   notes: (bookingId: string) => [...bookingsQueryKeys.booking(bookingId), "notes"] as const,
+
+  groups: () => [...bookingsQueryKeys.all, "groups"] as const,
+  groupsList: (filters: BookingGroupsListFilters) =>
+    [...bookingsQueryKeys.groups(), "list", filters] as const,
+  group: (id: string) => [...bookingsQueryKeys.groups(), "detail", id] as const,
+  groupMembers: (id: string) => [...bookingsQueryKeys.group(id), "members"] as const,
+  groupForBooking: (bookingId: string) =>
+    [...bookingsQueryKeys.booking(bookingId), "group"] as const,
 } as const

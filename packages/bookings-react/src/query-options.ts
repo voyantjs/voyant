@@ -6,6 +6,9 @@ import { type FetchWithValidationOptions, fetchWithValidation } from "./client.j
 import type { UseBookingOptions } from "./hooks/use-booking.js"
 import type { UseBookingActivityOptions } from "./hooks/use-booking-activity.js"
 import type { UseBookingDocumentsOptions } from "./hooks/use-booking-documents.js"
+import type { UseBookingGroupOptions } from "./hooks/use-booking-group.js"
+import type { UseBookingGroupForBookingOptions } from "./hooks/use-booking-group-for-booking.js"
+import type { UseBookingGroupsOptions } from "./hooks/use-booking-groups.js"
 import type { UseBookingItemParticipantsOptions } from "./hooks/use-booking-item-participants.js"
 import type { UseBookingItemsOptions } from "./hooks/use-booking-items.js"
 import type { UseBookingNotesOptions } from "./hooks/use-booking-notes.js"
@@ -16,6 +19,9 @@ import { bookingsQueryKeys } from "./query-keys.js"
 import {
   bookingActivityResponse,
   bookingDocumentsResponse,
+  bookingGroupDetailResponse,
+  bookingGroupForBookingResponse,
+  bookingGroupListResponse,
   bookingItemParticipantsResponse,
   bookingItemsResponse,
   bookingListResponse,
@@ -197,6 +203,60 @@ export function getPublicBookingSessionStateQueryOptions(
       fetchWithValidation(
         `/v1/public/bookings/sessions/${sessionId}/state`,
         publicBookingSessionStateResponse,
+        client,
+      ),
+  })
+}
+
+export function getBookingGroupsQueryOptions(
+  client: FetchWithValidationOptions,
+  options: UseBookingGroupsOptions = {},
+) {
+  const { enabled: _enabled = true, ...filters } = options
+  return queryOptions({
+    queryKey: bookingsQueryKeys.groupsList(filters),
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filters.kind) params.set("kind", filters.kind)
+      if (filters.productId) params.set("productId", filters.productId)
+      if (filters.optionUnitId) params.set("optionUnitId", filters.optionUnitId)
+      if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+      if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+      const qs = params.toString()
+      return fetchWithValidation(
+        `/v1/bookings/groups${qs ? `?${qs}` : ""}`,
+        bookingGroupListResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getBookingGroupQueryOptions(
+  client: FetchWithValidationOptions,
+  id: string | null | undefined,
+  options: UseBookingGroupOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+  return queryOptions({
+    queryKey: bookingsQueryKeys.group(id ?? ""),
+    queryFn: () =>
+      fetchWithValidation(`/v1/bookings/groups/${id}`, bookingGroupDetailResponse, client),
+  })
+}
+
+export function getBookingGroupForBookingQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseBookingGroupForBookingOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+  return queryOptions({
+    queryKey: bookingsQueryKeys.groupForBooking(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(
+        `/v1/bookings/${bookingId}/group`,
+        bookingGroupForBookingResponse,
         client,
       ),
   })

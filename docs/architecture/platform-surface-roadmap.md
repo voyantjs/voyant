@@ -21,6 +21,9 @@ For runtime cache backend guidance and cache-semantics rules, see
 For public-media and private-document storage rules, see
 [Voyant Storage Architecture](./storage-architecture.md).
 
+For canonical notification delivery and provider-resolution rules, see
+[Voyant Notifications Architecture](./notifications-architecture.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

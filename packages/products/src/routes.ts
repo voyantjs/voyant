@@ -1,6 +1,7 @@
 import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
+import { z } from "zod"
 
 import { productsService } from "./service.js"
 import {
@@ -961,9 +962,7 @@ export const productRoutes = new Hono<Env>()
   // ==========================================================================
 
   .get("/product-types", async (c) => {
-    const query = productTypeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productTypeListQuerySchema)
     return c.json(await productsService.listProductTypes(c.get("db"), query))
   })
 
@@ -980,7 +979,7 @@ export const productRoutes = new Hono<Env>()
       {
         data: await productsService.createProductType(
           c.get("db"),
-          insertProductTypeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductTypeSchema),
         ),
       },
       201,
@@ -991,7 +990,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateProductType(
       c.get("db"),
       c.req.param("typeId"),
-      updateProductTypeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductTypeSchema),
     )
     if (!row) {
       return c.json({ error: "Product type not found" }, 404)
@@ -1012,9 +1011,7 @@ export const productRoutes = new Hono<Env>()
   // ==========================================================================
 
   .get("/product-categories", async (c) => {
-    const query = productCategoryListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productCategoryListQuerySchema)
     return c.json(await productsService.listProductCategories(c.get("db"), query))
   })
 
@@ -1031,7 +1028,7 @@ export const productRoutes = new Hono<Env>()
       {
         data: await productsService.createProductCategory(
           c.get("db"),
-          insertProductCategorySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductCategorySchema),
         ),
       },
       201,
@@ -1042,7 +1039,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateProductCategory(
       c.get("db"),
       c.req.param("categoryId"),
-      updateProductCategorySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductCategorySchema),
     )
     if (!row) {
       return c.json({ error: "Product category not found" }, 404)
@@ -1063,9 +1060,7 @@ export const productRoutes = new Hono<Env>()
   // ==========================================================================
 
   .get("/product-tags", async (c) => {
-    const query = productTagListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productTagListQuerySchema)
     return c.json(await productsService.listProductTags(c.get("db"), query))
   })
 
@@ -1082,7 +1077,7 @@ export const productRoutes = new Hono<Env>()
       {
         data: await productsService.createProductTag(
           c.get("db"),
-          insertProductTagSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductTagSchema),
         ),
       },
       201,
@@ -1093,7 +1088,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateProductTag(
       c.get("db"),
       c.req.param("tagId"),
-      updateProductTagSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductTagSchema),
     )
     if (!row) {
       return c.json({ error: "Product tag not found" }, 404)
@@ -1127,7 +1122,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateMedia(
       c.get("db"),
       c.req.param("mediaId"),
-      updateProductMediaSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductMediaSchema),
     )
     if (!row) {
       return c.json({ error: "Media not found" }, 404)
@@ -1181,7 +1176,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.upsertBrochure(
       c.get("db"),
       c.req.param("id"),
-      upsertProductBrochureSchema.parse(await c.req.json()),
+      await parseJsonBody(c, upsertProductBrochureSchema),
     )
     if (!row) {
       return c.json({ error: "Product not found" }, 404)
@@ -1240,7 +1235,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateProduct(
       c.get("db"),
       c.req.param("id"),
-      updateProductSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductSchema),
     )
 
     if (!row) {
@@ -1275,7 +1270,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.createDay(
       c.get("db"),
       c.req.param("id"),
-      insertDaySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertDaySchema),
     )
 
     if (!row) {
@@ -1290,7 +1285,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.updateDay(
       c.get("db"),
       c.req.param("dayId"),
-      updateDaySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateDaySchema),
     )
 
     if (!row) {
@@ -1328,7 +1323,7 @@ export const productRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("dayId"),
-      insertDayServiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertDayServiceSchema),
     )
 
     if (!row) {
@@ -1344,7 +1339,7 @@ export const productRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("serviceId"),
-      updateDayServiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateDayServiceSchema),
     )
 
     if (!row) {
@@ -1419,7 +1414,7 @@ export const productRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertProductNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertProductNoteSchema),
     )
 
     if (!row) {
@@ -1440,10 +1435,13 @@ export const productRoutes = new Hono<Env>()
   })
 
   .post("/:id/categories", async (c) => {
-    const { categoryId, sortOrder } = (await c.req.json()) as {
-      categoryId: string
-      sortOrder?: number
-    }
+    const { categoryId, sortOrder } = await parseJsonBody(
+      c,
+      z.object({
+        categoryId: z.string().uuid(),
+        sortOrder: z.number().int().optional(),
+      }),
+    )
     const row = await productsService.addProductToCategory(
       c.get("db"),
       c.req.param("id"),
@@ -1479,7 +1477,12 @@ export const productRoutes = new Hono<Env>()
   })
 
   .post("/:id/tags", async (c) => {
-    const { tagId } = (await c.req.json()) as { tagId: string }
+    const { tagId } = await parseJsonBody(
+      c,
+      z.object({
+        tagId: z.string().uuid(),
+      }),
+    )
     const row = await productsService.addProductTag(c.get("db"), c.req.param("id"), tagId)
     if (!row) {
       return c.json({ error: "Already assigned or not found" }, 409)
@@ -1505,9 +1508,7 @@ export const productRoutes = new Hono<Env>()
 
   // GET /:id/media — List product-level media
   .get("/:id/media", async (c) => {
-    const query = productMediaListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productMediaListQuerySchema)
     return c.json(
       await productsService.listProductLevelMedia(c.get("db"), c.req.param("id"), query),
     )
@@ -1518,7 +1519,7 @@ export const productRoutes = new Hono<Env>()
     const row = await productsService.createMedia(
       c.get("db"),
       c.req.param("id"),
-      insertProductMediaSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertProductMediaSchema),
     )
     if (!row) {
       return c.json({ error: "Product not found or invalid dayId" }, 404)
@@ -1528,16 +1529,14 @@ export const productRoutes = new Hono<Env>()
 
   // POST /:id/media/reorder — Batch reorder media
   .post("/:id/media/reorder", async (c) => {
-    const data = reorderProductMediaSchema.parse(await c.req.json())
+    const data = await parseJsonBody(c, reorderProductMediaSchema)
     const results = await productsService.reorderMedia(c.get("db"), data)
     return c.json({ data: results })
   })
 
   // GET /:id/days/:dayId/media — List day media
   .get("/:id/days/:dayId/media", async (c) => {
-    const query = productMediaListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productMediaListQuerySchema)
     return c.json(
       await productsService.listMedia(c.get("db"), c.req.param("id"), {
         ...query,
@@ -1548,7 +1547,7 @@ export const productRoutes = new Hono<Env>()
 
   // POST /:id/days/:dayId/media — Create day media
   .post("/:id/days/:dayId/media", async (c) => {
-    const body = insertProductMediaSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, insertProductMediaSchema)
     const row = await productsService.createMedia(c.get("db"), c.req.param("id"), {
       ...body,
       dayId: c.req.param("dayId"),

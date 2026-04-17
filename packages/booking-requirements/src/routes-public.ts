@@ -15,7 +15,7 @@ type Env = {
 export const publicBookingRequirementsRoutes = new Hono<Env>().get(
   "/products/:productId/transport-requirements",
   async (c) => {
-    const query = parseQuery(c, publicTransportRequirementsQuerySchema)
+    const query = await parseQuery(c, publicTransportRequirementsQuerySchema)
 
     const result = await bookingRequirementsService.getPublicTransportRequirements(
       c.get("db"),

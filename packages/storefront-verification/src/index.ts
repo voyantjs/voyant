@@ -1,13 +1,22 @@
+import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
-
-import { createStorefrontVerificationPublicRoutes } from "./routes-public.js"
+import {
+  buildStorefrontVerificationSenders,
+  createStorefrontVerificationPublicRoutes,
+  STOREFRONT_VERIFICATION_SENDERS_CONTAINER_KEY,
+  type StorefrontVerificationRoutesOptions,
+} from "./routes-public.js"
 import { storefrontVerificationModule } from "./schema.js"
 
 export type {
   StorefrontVerificationPublicRoutes,
   StorefrontVerificationRoutesOptions,
 } from "./routes-public.js"
-export { createStorefrontVerificationPublicRoutes } from "./routes-public.js"
+export {
+  buildStorefrontVerificationSenders,
+  createStorefrontVerificationPublicRoutes,
+  STOREFRONT_VERIFICATION_SENDERS_CONTAINER_KEY,
+} from "./routes-public.js"
 export type {
   NewStorefrontVerificationChallenge,
   StorefrontVerificationChallenge,
@@ -56,10 +65,20 @@ export {
 } from "./validation.js"
 
 export function createStorefrontVerificationHonoModule(
-  options?: Parameters<typeof createStorefrontVerificationPublicRoutes>[0],
+  options?: StorefrontVerificationRoutesOptions,
 ): HonoModule {
+  const module: Module = {
+    ...storefrontVerificationModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        STOREFRONT_VERIFICATION_SENDERS_CONTAINER_KEY,
+        buildStorefrontVerificationSenders(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
   return {
-    module: storefrontVerificationModule,
+    module,
     publicRoutes: createStorefrontVerificationPublicRoutes(options),
   }
 }

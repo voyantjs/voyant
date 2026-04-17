@@ -1,3 +1,4 @@
+import type { ModuleContainer } from "@voyantjs/core"
 import { parseJsonBody } from "@voyantjs/hono"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -20,6 +21,7 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
@@ -34,7 +36,10 @@ export interface StorefrontVerificationRoutesOptions
   resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
 }
 
-function getSenders(
+export const STOREFRONT_VERIFICATION_SENDERS_CONTAINER_KEY =
+  "providers.storefrontVerification.senders"
+
+export function buildStorefrontVerificationSenders(
   bindings: Record<string, unknown>,
   options?: StorefrontVerificationRoutesOptions,
 ): StorefrontVerificationSenders {
@@ -53,6 +58,24 @@ function getSenders(
   }
 
   return senders
+}
+
+function getSenders(
+  bindings: Record<string, unknown>,
+  options: StorefrontVerificationRoutesOptions | undefined,
+  resolveFromContainer?: <T>(key: string) => T,
+): StorefrontVerificationSenders {
+  if (resolveFromContainer) {
+    try {
+      return resolveFromContainer<StorefrontVerificationSenders>(
+        STOREFRONT_VERIFICATION_SENDERS_CONTAINER_KEY,
+      )
+    } catch {
+      // Fall back to per-request sender construction when bootstrap has not run.
+    }
+  }
+
+  return buildStorefrontVerificationSenders(bindings, options)
 }
 
 function errorResponse(error: unknown) {
@@ -89,7 +112,7 @@ export function createStorefrontVerificationPublicRoutes(
         const result = await service.startEmailChallenge(
           c.get("db"),
           await parseJsonBody(c, startEmailVerificationChallengeSchema),
-          getSenders(c.env, options),
+          getSenders(c.env, options, (key) => c.var.container.resolve(key)),
         )
         return c.json({ data: result }, 201)
       } catch (error) {
@@ -114,7 +137,7 @@ export function createStorefrontVerificationPublicRoutes(
         const result = await service.startSmsChallenge(
           c.get("db"),
           await parseJsonBody(c, startSmsVerificationChallengeSchema),
-          getSenders(c.env, options),
+          getSenders(c.env, options, (key) => c.var.container.resolve(key)),
         )
         return c.json({ data: result }, 201)
       } catch (error) {

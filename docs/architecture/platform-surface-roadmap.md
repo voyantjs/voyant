@@ -6,6 +6,9 @@ API plan for Voyant itself.
 For schema and migration conventions across modules, see
 [Voyant Data Model And Schema Authoring](./data-model-schema-authoring.md).
 
+For HTTP route conventions across the admin and public API surfaces, see
+[Voyant API Route Authoring](./api-route-authoring.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

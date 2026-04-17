@@ -9,10 +9,23 @@
  *   resolution and persistence.
  * - Query client factory: `makeQueryClient()` with Voyant's admin defaults.
  * - `AdminProvider` composing QueryClient + ThemeProvider + LocaleProvider.
+ * - Admin extension helpers for navigation contributions and widget slots.
  * - User utilities: `getInitials`, `getDisplayName`.
  * - Types: `AdminUser`, `NavItem`, `NavSubItem`, `AuthActions`, `ThemeMode`.
  */
 
+export {
+  type AdminExtension,
+  type AdminNavigationContribution,
+  type AdminUiRouteContribution,
+  type AdminWidgetContribution,
+  type AdminWidgetSlot,
+  defineAdminExtension,
+  type ResolveAdminNavigationOptions,
+  type ResolveAdminWidgetsOptions,
+  resolveAdminNavigation,
+  resolveAdminWidgets,
+} from "./extensions.js"
 export { getDisplayName, getInitials } from "./lib/initials.js"
 export { AdminProvider, type AdminProviderProps } from "./providers/admin-provider.js"
 export {

@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
+import { type NavItem, resolveAdminNavigation } from "@voyantjs/voyant-admin"
 import {
   Building,
   Building2,
@@ -30,10 +31,8 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui"
+import { adminExtensions } from "@/lib/admin-extensions"
 import { useAdminMessages } from "@/lib/admin-i18n"
-
-export const COMING_SOON = "COMING_SOON" as const
-export const BETA = "BETA" as const
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user?: {
@@ -103,59 +102,75 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
     email: user?.email ?? "",
     avatar: user?.avatar ?? "",
   }
-  const navMain = [
+  const baseNavMain: ReadonlyArray<NavItem> = [
     {
+      id: "dashboard",
       title: messages.nav.dashboard,
       url: "/",
       icon: LayoutDashboard,
     },
     {
+      id: "products",
       title: messages.nav.products,
       url: "/products",
       icon: Package,
-      items: [{ title: messages.nav.categories, url: "/products/categories" }],
+      items: [
+        { id: "product-categories", title: messages.nav.categories, url: "/products/categories" },
+      ],
     },
     {
+      id: "bookings",
       title: messages.nav.bookings,
       url: "/bookings",
       icon: CalendarCheck,
     },
     {
+      id: "suppliers",
       title: messages.nav.suppliers,
       url: "/suppliers",
       icon: Building2,
     },
     {
+      id: "people",
       title: messages.nav.people,
       url: "/people",
       icon: Users,
     },
     {
+      id: "organizations",
       title: messages.nav.organizations,
       url: "/organizations",
       icon: Building,
     },
     {
+      id: "availability",
       title: messages.nav.availability,
       url: "/availability",
       icon: CalendarDays,
     },
     {
+      id: "resources",
       title: messages.nav.resources,
       url: "/resources",
       icon: Wrench,
     },
     {
+      id: "finance",
       title: messages.nav.finance,
       url: "/finance",
       icon: DollarSign,
     },
     {
+      id: "settings",
       title: messages.nav.settings,
       url: "/settings",
       icon: Settings,
     },
-  ] as const
+  ]
+  const navMain = resolveAdminNavigation({
+    baseItems: baseNavMain,
+    extensions: adminExtensions,
+  })
 
   return (
     <Sidebar collapsible="icon" {...props}>

@@ -30,6 +30,9 @@ For shared authentication, identity, and actor-context rules, see
 For the shared admin runtime, extension surface, and localization model, see
 [Voyant Admin Architecture](./admin-architecture.md).
 
+For customer-facing storefront and public-contract rules, see
+[Voyant Storefront And Public Contract Architecture](./storefront-architecture.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

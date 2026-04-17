@@ -3,6 +3,10 @@
 This roadmap turns downstream integration friction into an upstream package and
 API plan for Voyant itself.
 
+For the umbrella architecture doctrine and the remaining cleanup backlog, see
+[Voyant Extensibility Rubric](./extensibility-rubric.md) and
+[Voyant Extensibility Gap Analysis](./extensibility-gap-analysis.md).
+
 For schema and migration conventions across modules, see
 [Voyant Data Model And Schema Authoring](./data-model-schema-authoring.md).
 

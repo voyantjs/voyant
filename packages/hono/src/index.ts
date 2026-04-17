@@ -37,6 +37,7 @@ export type {
   VoyantBindings,
   VoyantDb,
   VoyantExecutionContext,
+  VoyantQueryRuntime,
   VoyantRequestAuthContext,
   VoyantVariables,
 } from "./types.js"

@@ -62,8 +62,9 @@ export type {
   QueryGraphContext,
   QueryGraphResult,
   QueryPagination,
+  QueryRunner,
 } from "./query.js"
-export { createQueryContext, queryGraph } from "./query.js"
+export { createQueryContext, createQueryRunner, queryGraph } from "./query.js"
 export type { RegistryOptions } from "./registry.js"
 export { createRegistry } from "./registry.js"
 export type {

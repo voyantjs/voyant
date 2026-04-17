@@ -1,4 +1,4 @@
-import { createContainer, createEventBus } from "@voyantjs/core"
+import { createContainer, createEventBus, createQueryRunner } from "@voyantjs/core"
 import { Hono } from "hono"
 
 import { requireAuth } from "./middleware/auth.js"
@@ -38,6 +38,12 @@ export function createApp<TBindings extends VoyantBindings>(
   const allModules = [...(config.modules ?? []), ...(expanded?.modules ?? [])]
   const allExtensions = [...(config.extensions ?? []), ...(expanded?.extensions ?? [])]
   const eventBus = config.eventBus ?? createEventBus()
+  const query =
+    typeof config.query === "function"
+      ? config.query
+      : config.query
+        ? createQueryRunner(config.query)
+        : undefined
 
   // Module container — registered services are resolvable from routes
   const container = createContainer()
@@ -74,6 +80,12 @@ export function createApp<TBindings extends VoyantBindings>(
   app.use("*", async (c, next) => {
     c.set("container", container)
     c.set("eventBus", eventBus)
+    if (config.link) {
+      c.set("link", config.link)
+    }
+    if (query) {
+      c.set("query", query)
+    }
     await ensureRuntimeBootstrapped(c.env)
     return next()
   })

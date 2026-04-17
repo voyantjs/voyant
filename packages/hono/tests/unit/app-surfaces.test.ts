@@ -1,6 +1,12 @@
-import type { Actor } from "@voyantjs/core"
+import {
+  type Actor,
+  createQueryContext,
+  defineLink,
+  type EntityFetcher,
+  type LinkService,
+} from "@voyantjs/core"
 import { Hono } from "hono"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { createApp } from "../../src/app.js"
 import type { HonoModule } from "../../src/module.js"
@@ -149,5 +155,54 @@ describe("createApp surface mounting", () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as { status: string }
     expect(body.status).toBe("ok")
+  })
+
+  it("exposes caller-supplied link and query runtimes on the request context", async () => {
+    const person = { module: "crm", entity: "person", table: "people" }
+    const product = { module: "catalog", entity: "product", table: "products" }
+    const link = defineLink(person, { linkable: product, isList: true })
+    const linkService: LinkService = {
+      create: vi.fn(),
+      dismiss: vi.fn(),
+      delete: vi.fn(),
+      list: vi.fn(async () => []),
+      // biome-ignore lint/suspicious/noExplicitAny: LinkService has overloaded signatures
+    } as any
+    const fetcher: EntityFetcher = {
+      list: vi.fn(async () => [{ id: "pers_1", name: "Alice" }]),
+    }
+    const query = createQueryContext({ person: fetcher }, [link], linkService)
+
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      link: linkService,
+      query,
+      modules: [
+        {
+          module: { name: "runtime" },
+          adminRoutes: new Hono().get("/inspect", async (c) => {
+            const rows = await c.var.link?.list(link.tableName, { leftId: "pers_1" })
+            const result = await c.var.query?.({ entity: "person", fields: ["id", "name"] })
+            return c.json({
+              hasLink: c.var.link === linkService,
+              rowCount: rows?.length ?? -1,
+              resultCount: result?.data.length ?? -1,
+            })
+          }),
+        },
+      ],
+      auth: { resolve: () => ({ userId: "u1", actor: "staff" }) },
+    })
+
+    const res = await app.request("/v1/admin/runtime/inspect", {}, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      hasLink: true,
+      rowCount: 0,
+      resultCount: 1,
+    })
+    expect(linkService.list).toHaveBeenCalledWith(link.tableName, { leftId: "pers_1" })
+    expect(fetcher.list).toHaveBeenCalledWith({ filters: undefined, pagination: undefined })
   })
 })

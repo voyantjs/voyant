@@ -67,6 +67,14 @@ export interface QueryGraphResult {
   data: EntityRecord[]
 }
 
+/**
+ * Callable query runtime exposed to routes and workflows.
+ *
+ * It wraps a fixed {@link QueryGraphContext} so callers only supply the
+ * per-request graph config.
+ */
+export type QueryRunner = (config: QueryGraphConfig) => Promise<QueryGraphResult>
+
 export interface QueryGraphContext {
   /** Entity name → fetcher. */
   fetchers: Map<string, EntityFetcher>
@@ -85,6 +93,13 @@ export function createQueryContext(
   linkService: LinkService,
 ): QueryGraphContext {
   return { fetchers: new Map(Object.entries(fetchers)), links, linkService }
+}
+
+/**
+ * Wrap a fixed {@link QueryGraphContext} in a callable runtime.
+ */
+export function createQueryRunner(ctx: QueryGraphContext): QueryRunner {
+  return (config) => queryGraph(ctx, config)
 }
 
 interface RelationPlan {

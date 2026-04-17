@@ -1,5 +1,6 @@
 import type { Module, ModuleContainer } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import { createNotificationService } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -94,7 +95,7 @@ export function createCheckoutRoutes(
         const result = await initiateCheckoutCollection(
           c.get("db"),
           c.req.param("bookingId"),
-          initiateCheckoutCollectionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, initiateCheckoutCollectionSchema),
           options.policy,
           dispatcher,
           runtime,
@@ -120,7 +121,7 @@ export function createCheckoutRoutes(
         const dispatcher = createNotificationService(runtime.providers)
         const result = await bootstrapCheckoutCollection(
           c.get("db"),
-          bootstrapCheckoutCollectionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, bootstrapCheckoutCollectionSchema),
           options.policy,
           dispatcher,
           runtime,
@@ -144,9 +145,7 @@ export function createCheckoutRoutes(
 
 export function createCheckoutAdminRoutes() {
   return new Hono<Env>().get("/bookings/:bookingId/reminder-runs", async (c) => {
-    const query = checkoutReminderRunListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, checkoutReminderRunListQuerySchema)
 
     return c.json(await listBookingReminderRuns(c.get("db"), c.req.param("bookingId"), query))
   })

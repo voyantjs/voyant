@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 
 import { type Env, notFound } from "./routes-shared.js"
 import { publicBookingsService } from "./service-public.js"
@@ -42,7 +43,7 @@ export const publicBookingRoutes = new Hono<Env>()
   .post("/sessions", async (c) => {
     const result = await publicBookingsService.createSession(
       c.get("db"),
-      publicCreateBookingSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicCreateBookingSessionSchema),
       c.get("userId"),
     )
 
@@ -68,7 +69,7 @@ export const publicBookingRoutes = new Hono<Env>()
     const result = await publicBookingsService.updateSession(
       c.get("db"),
       c.req.param("sessionId"),
-      publicUpdateBookingSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicUpdateBookingSessionSchema),
       c.get("userId"),
     )
 
@@ -91,7 +92,7 @@ export const publicBookingRoutes = new Hono<Env>()
     const result = await publicBookingsService.updateSessionState(
       c.get("db"),
       c.req.param("sessionId"),
-      publicUpsertBookingSessionStateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicUpsertBookingSessionStateSchema),
     )
 
     if (result.status === "not_found") {
@@ -104,7 +105,7 @@ export const publicBookingRoutes = new Hono<Env>()
     const result = await publicBookingsService.repriceSession(
       c.get("db"),
       c.req.param("sessionId"),
-      publicRepriceBookingSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicRepriceBookingSessionSchema),
     )
 
     if (result.status === "not_found") {
@@ -130,7 +131,7 @@ export const publicBookingRoutes = new Hono<Env>()
     const result = await publicBookingsService.confirmSession(
       c.get("db"),
       c.req.param("sessionId"),
-      publicBookingSessionMutationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicBookingSessionMutationSchema),
       c.get("userId"),
     )
 
@@ -148,7 +149,7 @@ export const publicBookingRoutes = new Hono<Env>()
     const result = await publicBookingsService.expireSession(
       c.get("db"),
       c.req.param("sessionId"),
-      publicBookingSessionMutationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicBookingSessionMutationSchema),
       c.get("userId"),
     )
 
@@ -165,9 +166,7 @@ export const publicBookingRoutes = new Hono<Env>()
   .get("/overview", async (c) => {
     const overview = await publicBookingsService.getOverview(
       c.get("db"),
-      publicBookingOverviewLookupQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      ),
+      await parseQuery(c, publicBookingOverviewLookupQuerySchema),
     )
 
     return overview ? c.json({ data: overview }) : notFound(c, "Booking overview not found")

@@ -58,6 +58,7 @@ const peopleKeyRef = { keyType: "people" as const }
 
 interface CustomerPortalServiceOptions {
   kms?: KmsProvider | null
+  resolveDocumentDownloadUrl?: (storageKey: string) => Promise<string | null> | string | null
 }
 
 function resolveMarketingConsentState(params: {
@@ -503,7 +504,11 @@ function resolveFinanceDocumentFileName(
   return `${invoiceType}-${invoiceNumber}.${extension}`
 }
 
-async function listLegalDocumentsForBooking(db: PostgresJsDatabase, bookingId: string) {
+async function listLegalDocumentsForBooking(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  options: CustomerPortalServiceOptions = {},
+) {
   const contractRows = await db
     .select({
       id: contracts.id,
@@ -528,27 +533,31 @@ async function listLegalDocumentsForBooking(db: PostgresJsDatabase, bookingId: s
     )
     .orderBy(desc(contractAttachments.createdAt))
 
-  const bestAttachmentByContractId = new Map<string, typeof contractAttachments.$inferSelect>()
+  const bestAttachmentByContractId = new Map<
+    string,
+    {
+      attachment: typeof contractAttachments.$inferSelect
+      downloadUrl: string
+    }
+  >()
   for (const attachment of attachmentRows) {
     const metadata = getMetadataRecord(attachment.metadata)
-    const downloadUrl = getMetadataString(metadata, ["url", "downloadUrl"])
+    const downloadUrl =
+      attachment.storageKey && options.resolveDocumentDownloadUrl
+        ? await options.resolveDocumentDownloadUrl(attachment.storageKey)
+        : getMetadataString(metadata, ["url", "downloadUrl"])
     if (!downloadUrl || bestAttachmentByContractId.has(attachment.contractId)) {
       continue
     }
-    bestAttachmentByContractId.set(attachment.contractId, attachment)
+    bestAttachmentByContractId.set(attachment.contractId, { attachment, downloadUrl })
   }
 
   return contractRows.flatMap<CustomerPortalBookingDocument>((contract) => {
-    const attachment = bestAttachmentByContractId.get(contract.id)
-    if (!attachment) {
+    const document = bestAttachmentByContractId.get(contract.id)
+    if (!document) {
       return []
     }
-
-    const metadata = getMetadataRecord(attachment.metadata)
-    const downloadUrl = getMetadataString(metadata, ["url", "downloadUrl"])
-    if (!downloadUrl) {
-      return []
-    }
+    const { attachment, downloadUrl } = document
 
     return [
       {
@@ -641,6 +650,7 @@ function deriveBookingSummaryPaymentStatus(
 async function getFinanceDataForBooking(
   db: PostgresJsDatabase,
   bookingId: string,
+  options: CustomerPortalServiceOptions = {},
 ): Promise<{
   documents: CustomerPortalBookingFinancialDocument[]
   payments: CustomerPortalBookingPayment[]
@@ -677,30 +687,35 @@ async function getFinanceDataForBooking(
 
   const invoiceById = new Map(invoiceRows.map((invoice) => [invoice.id, invoice]))
 
-  const documents = invoiceRows.map<CustomerPortalBookingFinancialDocument>((invoice) => {
-    const renditions = renditionByInvoiceId.get(invoice.id) ?? []
-    const selectedRendition =
-      renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
-    const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
-    const downloadUrl = resolveFinanceDocumentDownloadUrl(metadata)
+  const resolvedDocuments = await Promise.all(
+    invoiceRows.map(async (invoice): Promise<CustomerPortalBookingFinancialDocument> => {
+      const renditions = renditionByInvoiceId.get(invoice.id) ?? []
+      const selectedRendition =
+        renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
+      const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
+      const downloadUrl =
+        selectedRendition?.storageKey && options.resolveDocumentDownloadUrl
+          ? await options.resolveDocumentDownloadUrl(selectedRendition.storageKey)
+          : resolveFinanceDocumentDownloadUrl(metadata)
 
-    return {
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      invoiceType: invoice.invoiceType,
-      invoiceStatus: invoice.status,
-      currency: invoice.currency,
-      totalCents: invoice.totalCents,
-      paidCents: invoice.paidCents,
-      balanceDueCents: invoice.balanceDueCents,
-      issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
-      documentStatus: selectedRendition?.status ?? "missing",
-      format: selectedRendition?.format ?? null,
-      generatedAt: normalizeDateTime(selectedRendition?.generatedAt ?? null),
-      downloadUrl,
-    }
-  })
+      return {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceType: invoice.invoiceType,
+        invoiceStatus: invoice.status,
+        currency: invoice.currency,
+        totalCents: invoice.totalCents,
+        paidCents: invoice.paidCents,
+        balanceDueCents: invoice.balanceDueCents,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        documentStatus: selectedRendition?.status ?? "missing",
+        format: selectedRendition?.format ?? null,
+        generatedAt: normalizeDateTime(selectedRendition?.generatedAt ?? null),
+        downloadUrl,
+      }
+    }),
+  )
 
   const paymentHistory = paymentRows.flatMap<CustomerPortalBookingPayment>((payment) => {
     const invoice = invoiceById.get(payment.invoiceId)
@@ -725,7 +740,7 @@ async function getFinanceDataForBooking(
     ]
   })
 
-  const portalDocuments = documents.flatMap<CustomerPortalBookingDocument>((document) => {
+  const portalDocuments = resolvedDocuments.flatMap<CustomerPortalBookingDocument>((document) => {
     if (!document.downloadUrl) {
       return []
     }
@@ -748,7 +763,7 @@ async function getFinanceDataForBooking(
     ]
   })
 
-  return { documents, payments: paymentHistory, portalDocuments }
+  return { documents: resolvedDocuments, payments: paymentHistory, portalDocuments }
 }
 
 function toCustomerCompanion(
@@ -1192,6 +1207,7 @@ async function buildBookingDetail(
   db: PostgresJsDatabase,
   bookingId: string,
   customerRecord: Awaited<ReturnType<typeof getCustomerRecord>> | null = null,
+  options: CustomerPortalServiceOptions = {},
 ): Promise<CustomerPortalBookingDetail | null> {
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1)
   if (!booking) {
@@ -1240,8 +1256,8 @@ async function buildBookingDetail(
       .from(bookingFulfillments)
       .where(eq(bookingFulfillments.bookingId, booking.id))
       .orderBy(asc(bookingFulfillments.createdAt)),
-    listLegalDocumentsForBooking(db, booking.id),
-    getFinanceDataForBooking(db, booking.id),
+    listLegalDocumentsForBooking(db, booking.id, options),
+    getFinanceDataForBooking(db, booking.id, options),
     getBookingBillingContact(db, booking.id, customerRecord),
   ])
 
@@ -2204,6 +2220,7 @@ export const publicCustomerPortalService = {
     db: PostgresJsDatabase,
     userId: string,
     bookingId: string,
+    options: CustomerPortalServiceOptions = {},
   ): Promise<CustomerPortalBookingDetail | null> {
     const authProfile = await getAuthProfileRow(db, userId)
     if (!authProfile) {
@@ -2227,11 +2244,16 @@ export const publicCustomerPortalService = {
       return null
     }
 
-    return buildBookingDetail(db, bookingId, customerRecord)
+    return buildBookingDetail(db, bookingId, customerRecord, options)
   },
 
-  async listBookingDocuments(db: PostgresJsDatabase, userId: string, bookingId: string) {
-    const detail = await this.getBooking(db, userId, bookingId)
+  async listBookingDocuments(
+    db: PostgresJsDatabase,
+    userId: string,
+    bookingId: string,
+    options: CustomerPortalServiceOptions = {},
+  ) {
+    const detail = await this.getBooking(db, userId, bookingId, options)
     return detail?.documents ?? null
   },
 

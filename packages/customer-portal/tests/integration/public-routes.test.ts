@@ -17,7 +17,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { invoiceRenditions, invoices, payments } from "../../../finance/src/schema.js"
 import { contractAttachments, contracts } from "../../../legal/src/contracts/schema.js"
 import { customerPortalRoutes } from "../../src/routes.js"
-import { publicCustomerPortalRoutes } from "../../src/routes-public.js"
+import { createPublicCustomerPortalRoutes } from "../../src/routes-public.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 
@@ -52,7 +52,13 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
         c.set("userId" as never, "user_customer_portal")
         await next()
       })
-      .route("/", publicCustomerPortalRoutes)
+      .route(
+        "/",
+        createPublicCustomerPortalRoutes({
+          resolveDocumentDownloadUrl: (_bindings, storageKey) =>
+            `https://signed.example.com/${storageKey}`,
+        }),
+      )
 
     preflightApp = new Hono()
       .use("*", async (c, next) => {
@@ -779,9 +785,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       kind: "document",
       name: "travel-contract.pdf",
       mimeType: "application/pdf",
-      metadata: {
-        url: "https://example.com/contracts/travel-contract.pdf",
-      },
+      storageKey: `contracts/${contract.id}/travel-contract.pdf`,
     })
 
     const [invoice] = await db
@@ -806,9 +810,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       invoiceId: invoice.id,
       format: "pdf",
       status: "ready",
-      metadata: {
-        url: "https://example.com/finance/proforma-1001.pdf",
-      },
+      storageKey: `finance/${invoice.id}/proforma-1001.pdf`,
       generatedAt: new Date("2026-05-02T00:00:00.000Z"),
     })
 
@@ -900,7 +902,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
         paidCents: 12000,
         balanceDueCents: 12000,
         documentStatus: "ready",
-        downloadUrl: "https://example.com/finance/proforma-1001.pdf",
+        downloadUrl: `https://signed.example.com/finance/${invoice.id}/proforma-1001.pdf`,
       }),
     ])
     expect(detail.financials.payments).toEqual([
@@ -925,11 +927,13 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
           source: "legal",
           type: "contract",
           fileName: "travel-contract.pdf",
+          fileUrl: `https://signed.example.com/contracts/${contract.id}/travel-contract.pdf`,
           reference: "CTR-1001",
         }),
         expect.objectContaining({
           source: "finance",
           type: "proforma",
+          fileUrl: `https://signed.example.com/finance/${invoice.id}/proforma-1001.pdf`,
           reference: "INV-1001",
         }),
       ]),

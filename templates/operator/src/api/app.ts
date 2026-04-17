@@ -3,7 +3,7 @@ import { bookingRequirementsHonoModule } from "@voyantjs/booking-requirements"
 import { bookingsHonoModule, bookingsSupplierExtension } from "@voyantjs/bookings"
 import { createCheckoutHonoModule } from "@voyantjs/checkout"
 import { crmBookingExtension, crmHonoModule } from "@voyantjs/crm"
-import { customerPortalHonoModule } from "@voyantjs/customer-portal"
+import { createCustomerPortalHonoModule } from "@voyantjs/customer-portal"
 import { distributionBookingExtension, distributionHonoModule } from "@voyantjs/distribution"
 import { externalRefsHonoModule } from "@voyantjs/external-refs"
 import { extrasHonoModule } from "@voyantjs/extras"
@@ -45,6 +45,16 @@ const storefrontVerificationHonoModule = createStorefrontVerificationHonoModule(
 })
 const checkoutHonoModule = createCheckoutHonoModule({
   resolveProviders: resolveNotificationProviders,
+})
+const customerPortalHonoModule = createCustomerPortalHonoModule({
+  resolveDocumentDownloadUrl: async (bindings, storageKey) => {
+    const storage = createMediaStorage(bindings as CloudflareBindings)
+    if (!storage) {
+      return null
+    }
+
+    return storage.signedUrl(storageKey, 300)
+  },
 })
 
 export const app = createApp<CloudflareBindings>({

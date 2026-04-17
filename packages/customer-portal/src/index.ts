@@ -2,12 +2,15 @@ import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
 import { customerPortalRoutes } from "./routes.js"
-import { publicCustomerPortalRoutes } from "./routes-public.js"
+import {
+  createPublicCustomerPortalRoutes,
+  type PublicCustomerPortalRouteOptions,
+} from "./routes-public.js"
 
 export type { CustomerPortalRoutes } from "./routes.js"
 export { customerPortalRoutes } from "./routes.js"
 export type { PublicCustomerPortalRoutes } from "./routes-public.js"
-export { publicCustomerPortalRoutes } from "./routes-public.js"
+export { createPublicCustomerPortalRoutes, publicCustomerPortalRoutes } from "./routes-public.js"
 export { publicCustomerPortalService } from "./service-public.js"
 export type {
   BootstrapCustomerPortalInput,
@@ -64,8 +67,14 @@ export const customerPortalModule: Module = {
   name: "customer-portal",
 }
 
-export const customerPortalHonoModule: HonoModule = {
-  module: customerPortalModule,
-  routes: customerPortalRoutes,
-  publicRoutes: publicCustomerPortalRoutes,
+export function createCustomerPortalHonoModule(
+  options: PublicCustomerPortalRouteOptions = {},
+): HonoModule {
+  return {
+    module: customerPortalModule,
+    routes: customerPortalRoutes,
+    publicRoutes: createPublicCustomerPortalRoutes(options),
+  }
 }
+
+export const customerPortalHonoModule: HonoModule = createCustomerPortalHonoModule()

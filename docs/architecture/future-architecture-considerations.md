@@ -1,0 +1,153 @@
+# Voyant Future Architecture Considerations
+
+This document tracks architecture ideas that are worth keeping visible, but
+that should stay out of the active cleanup and execution backlog for now.
+
+The goal is simple:
+
+- capture promising future work without treating it as current scope
+- keep later-stage ideas visible and reviewable
+- avoid bloating the active architecture surface before the basics are settled
+
+These are not rejected ideas. They are deferred ideas.
+
+## Deferral Rules
+
+An item belongs here when:
+
+- it solves a real future problem but not an urgent current one
+- the current framework can stay simpler without it
+- it depends on runtime or scale assumptions that are not settled yet
+- it would add meaningful surface area before the simpler baseline is fully in
+  place
+
+Rule:
+
+If an idea is plausible but not yet necessary, track it here instead of turning
+it into an active architecture requirement.
+
+## Deferred Areas
+
+### 1. Custom link metadata and richer relationship records
+
+Voyant links are already useful for cross-module associations.
+
+A future enhancement may allow the relationship itself to carry additional
+metadata, such as:
+
+- role/label information
+- edge-specific timestamps
+- relationship-scoped configuration
+
+This is useful, but not necessary to validate the current cross-module link and
+query model.
+
+Why deferred:
+
+- the current link model already covers the core cross-module use cases
+- richer link records increase API and query complexity
+
+### 2. Cross-module indexing and projection infrastructure
+
+Application-layer link/query traversal is the right current default.
+
+At larger scale, Voyant may need a more explicit projection/indexing layer for:
+
+- faster cross-module filtering
+- search-oriented linked reads
+- denormalized query performance
+
+Why deferred:
+
+- this is a scale/performance optimization problem, not a baseline architecture
+  blocker
+- it depends on real workload evidence
+
+### 3. Locking and concurrency control as a first-class subsystem
+
+Voyant already uses ordinary database locking where needed.
+
+A future first-class locking surface may be needed for:
+
+- workflow concurrency control
+- daemon ownership
+- long-running integration coordination
+- distributed runtime safety
+
+Likely backends would be:
+
+- memory for local/dev
+- postgres
+- redis
+
+Why deferred:
+
+- the current system should stay simpler until concrete distributed concurrency
+  problems justify a formal locking layer
+
+### 4. Event priority and durable queued event processing
+
+The event envelope and taxonomy are worth standardizing now.
+
+A later-stage enhancement may add:
+
+- durable queued event processing
+- event priority
+- backend-specific delivery/runtime guarantees
+
+Why deferred:
+
+- in-process event delivery is still enough for the current baseline
+- priority only becomes meaningful once durable queued execution exists
+
+### 5. Advanced constraint and index policy
+
+Voyant should already use deliberate indexes and stable local constraints.
+
+Later work may go deeper on:
+
+- composite index guidance
+- partial indexes
+- more formal check-constraint policy
+- package-level query-shape to index-shape mapping guidance
+
+Why deferred:
+
+- the baseline schema-authoring guide is enough for now
+- the more advanced policy should follow real query and scaling patterns
+
+### 6. Asymmetric signing / JWKS-style auth distribution
+
+Voyant’s current shared-secret session model is sufficient for the present auth
+surface.
+
+Future work may be justified when Voyant needs:
+
+- cross-service token verification at scale
+- external token consumers
+- formal key rotation and JWKS distribution
+
+Why deferred:
+
+- current Better Auth and session usage do not require this complexity yet
+
+## Review Guidance
+
+When revisiting an item from this document, ask:
+
+1. Is the current simpler model now causing real friction?
+2. Do we have concrete workload or product evidence for the change?
+3. Can the new primitive stay narrow instead of becoming a framework-wide
+   abstraction leak?
+
+If the answer is yes, the item may be ready to move into the active backlog.
+
+## Non-Goals
+
+This document is not:
+
+- a roadmap commitment
+- a promise that every item here will be built
+- a dump for vague ideas with no architectural reason
+
+The purpose is disciplined deferral, not an architecture wish list.

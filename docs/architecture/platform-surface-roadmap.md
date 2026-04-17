@@ -33,6 +33,10 @@ For the shared admin runtime, extension surface, and localization model, see
 For customer-facing storefront and public-contract rules, see
 [Voyant Storefront And Public Contract Architecture](./storefront-architecture.md).
 
+For deferred later-stage architecture ideas that should stay visible without
+becoming active requirements yet, see
+[Voyant Future Architecture Considerations](./future-architecture-considerations.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

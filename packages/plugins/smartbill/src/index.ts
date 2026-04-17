@@ -8,7 +8,7 @@ export type {
   SmartbillPluginOptions,
   SmartbillSyncEventNames,
 } from "./plugin.js"
-export { smartbillPlugin } from "./plugin.js"
+export { smartbillPlugin, smartbillPlugin as createSmartbillSyncPlugin } from "./plugin.js"
 export type {
   SmartbillInvoiceSettlementPoller,
   SmartbillInvoiceSettlementPollerOptions,

@@ -1,8 +1,19 @@
 # `@voyantjs/plugin-netopia`
 
-Netopia hosted-card payment support for Voyant finance.
+Netopia hosted-card payment adapter bundle for Voyant finance.
 
-This package sits on top of `@voyantjs/finance` and its `payment_sessions` model. It does not replace finance state. It starts a hosted Netopia checkout, stores provider references on the session, and reconciles callback payloads back into Voyant payments, captures, authorizations, invoices, and booking payment schedules.
+This package sits on top of `@voyantjs/finance` and its `payment_sessions`
+model. It does not replace finance state.
+
+Architecturally, this package is primarily:
+
+- a Netopia payment adapter
+- a finance extension
+- an optional Hono plugin bundle for distribution
+
+It starts a hosted Netopia checkout, stores provider references on the session,
+and reconciles callback payloads back into Voyant payments, captures,
+authorizations, invoices, and booking payment schedules.
 
 ## Environment
 
@@ -29,22 +40,26 @@ Mounted as a finance extension, the package exposes:
 
 ## Checkout integration
 
-If you use `@voyantjs/checkout`, the plugin now also exports
+If you use `@voyantjs/checkout`, the package also exports
 `createNetopiaCheckoutStarter()`. That lets checkout create the payment session
 and start the Netopia redirect flow in one request while keeping provider
 startup optional in core checkout.
 
-Because this is a finance extension, these routes mount under the finance module path in the app.
+Because this is a finance extension, these routes mount under the finance module
+path in the app.
 
 ## Usage
 
 ```ts
-import { createNetopiaFinanceExtension } from "@voyantjs/plugin-netopia"
+import { createNetopiaFinanceAdapter } from "@voyantjs/plugin-netopia"
 
-const netopiaFinanceExtension = createNetopiaFinanceExtension()
+const netopiaFinanceExtension = createNetopiaFinanceAdapter()
 ```
 
 Then include the returned extension in `createApp({ extensions: [...] })`.
+
+If you want the packaged Hono bundle instead, use
+`createNetopiaAdapterBundle()` or the existing `netopiaHonoPlugin()` export.
 
 ## Flow
 
@@ -53,7 +68,7 @@ Then include the returned extension in `createApp({ extensions: [...] })`.
 3. Redirect the customer to the returned provider `paymentURL`.
 4. Optionally send a payment-link or invoice notification as part of the collect flow.
 5. Netopia calls the callback route.
-6. The plugin completes, fails, or updates the session in finance.
+6. The adapter completes, fails, or updates the session in finance.
 
 ## Notes
 

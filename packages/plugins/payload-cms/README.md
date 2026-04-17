@@ -1,6 +1,15 @@
 # @voyantjs/plugin-payload-cms
 
-Payload CMS sync plugin for Voyant. Subscribes to module events and mirrors documents into a Payload collection keyed by a `voyantId` field.
+Payload CMS sync adapter bundle for Voyant.
+
+Architecturally, this package is primarily:
+
+- a Payload sync adapter
+- a subscriber bundle that mirrors Voyant module records into Payload
+- an optional plugin bundle for distribution
+
+It subscribes to module events and mirrors documents into a Payload collection
+keyed by a `voyantId` field.
 
 ## Install
 
@@ -11,12 +20,12 @@ pnpm add @voyantjs/plugin-payload-cms
 ## Usage
 
 ```typescript
-import { payloadCmsPlugin } from "@voyantjs/plugin-payload-cms"
+import { createPayloadCmsSyncPlugin } from "@voyantjs/plugin-payload-cms"
 import { createApp } from "@voyantjs/hono"
 
 const app = createApp({
   plugins: [
-    payloadCmsPlugin({
+    createPayloadCmsSyncPlugin({
       apiUrl: "https://cms.example.com/api",
       apiKey: env.PAYLOAD_API_KEY,
       collection: "products",
@@ -33,7 +42,7 @@ By default the plugin wires up 3 subscribers (`product.created`, `product.update
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `payloadCmsPlugin(options)` |
+| `./plugin` | `payloadCmsPlugin(options)` and `createPayloadCmsSyncPlugin(options)` |
 | `./client` | `createPayloadClient` — `upsertByVoyantId`, `deleteByVoyantId`, `findByVoyantId` |
 | `./types` | Plugin option types |
 

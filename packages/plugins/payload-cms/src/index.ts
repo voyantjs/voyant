@@ -6,5 +6,5 @@ export type {
   PayloadMapFn,
   PayloadSyncEventNames,
 } from "./plugin.js"
-export { payloadCmsPlugin } from "./plugin.js"
+export { payloadCmsPlugin, payloadCmsPlugin as createPayloadCmsSyncPlugin } from "./plugin.js"
 export type { PayloadDocBody, PayloadFetch, VoyantEntityEvent } from "./types.js"

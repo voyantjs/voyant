@@ -7,9 +7,11 @@ export {
 } from "./client.js"
 export {
   createNetopiaFinanceExtension,
+  createNetopiaFinanceExtension as createNetopiaFinanceAdapter,
   createNetopiaFinanceRoutes,
   NETOPIA_RUNTIME_CONTAINER_KEY,
   netopiaFinanceExtension,
+  netopiaHonoPlugin as createNetopiaAdapterBundle,
   netopiaHonoPlugin,
 } from "./plugin.js"
 export {

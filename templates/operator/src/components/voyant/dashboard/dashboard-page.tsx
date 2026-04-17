@@ -20,6 +20,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { AdminWidgetSlotRenderer } from "@/components/admin/admin-widget-slot"
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui"
 import {
   ChartContainer,
@@ -84,6 +85,15 @@ export function DashboardPage() {
       ? ((currentMonthBookings - prevMonthBookings) / prevMonthBookings) * 100
       : 0
   const defaultCurrency = bookings[0]?.sellCurrency ?? "USD"
+  const dashboardMetrics = {
+    totalRevenue,
+    confirmedBookings,
+    totalPax,
+    activeProducts,
+    outstandingAmount,
+    outstandingInvoiceCount: outstandingInvoices.length,
+    defaultCurrency,
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -91,6 +101,10 @@ export function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Tour operations overview</p>
       </div>
+      <AdminWidgetSlotRenderer
+        slot="dashboard.header"
+        props={{ bookings, invoices, products, suppliers, metrics: dashboardMetrics }}
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           title="Total Revenue"
@@ -121,6 +135,10 @@ export function DashboardPage() {
           icon={<Package className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
+      <AdminWidgetSlotRenderer
+        slot="dashboard.after-kpis"
+        props={{ bookings, invoices, products, suppliers, metrics: dashboardMetrics }}
+      />
 
       <div className="grid gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
@@ -318,6 +336,10 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <AdminWidgetSlotRenderer
+        slot="dashboard.footer"
+        props={{ bookings, invoices, products, suppliers, metrics: dashboardMetrics }}
+      />
     </div>
   )
 }

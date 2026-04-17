@@ -2,6 +2,11 @@ import type { LinkableDefinition, Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 import { Hono } from "hono"
 
+import {
+  buildFinanceRouteRuntime,
+  FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
+  type FinanceRuntimeOptions,
+} from "./route-runtime.js"
 import { financeRoutes } from "./routes.js"
 import {
   createFinanceAdminDocumentRoutes,
@@ -50,9 +55,7 @@ export const financeModule: Module = {
   linkable: financeLinkable,
 }
 
-export interface FinanceHonoModuleOptions
-  extends FinanceDocumentRouteOptions,
-    FinanceSettlementRouteOptions {}
+export interface FinanceHonoModuleOptions extends FinanceRuntimeOptions {}
 
 export function createFinanceHonoModule(options: FinanceHonoModuleOptions = {}): HonoModule {
   const adminRoutes = new Hono()
@@ -60,8 +63,18 @@ export function createFinanceHonoModule(options: FinanceHonoModuleOptions = {}):
     .route("/", createFinanceAdminDocumentRoutes(options))
     .route("/", createFinanceAdminSettlementRoutes(options))
 
+  const module: Module = {
+    ...financeModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildFinanceRouteRuntime(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
   return {
-    module: financeModule,
+    module,
     adminRoutes,
     publicRoutes: publicFinanceRoutes,
     routes: adminRoutes,
@@ -75,6 +88,12 @@ export {
   type FinanceDocumentRouteOptions,
   type InvoiceDocumentGenerator,
 } from "./routes-documents.js"
+export {
+  buildFinanceRouteRuntime,
+  FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
+  type FinanceRouteRuntime,
+  type FinanceRuntimeOptions,
+} from "./route-runtime.js"
 export {
   createFinanceAdminSettlementRoutes,
   type FinanceSettlementRouteOptions,

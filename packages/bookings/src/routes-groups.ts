@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import { bookingGroupsService } from "./service-groups.js"
@@ -17,15 +18,13 @@ type Env = {
 
 export const bookingGroupRoutes = new Hono<Env>()
   .get("/", async (c) => {
-    const query = bookingGroupListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, bookingGroupListQuerySchema)
     return c.json(await bookingGroupsService.listBookingGroups(c.get("db"), query))
   })
   .post("/", async (c) => {
     const row = await bookingGroupsService.createBookingGroup(
       c.get("db"),
-      insertBookingGroupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingGroupSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -39,7 +38,7 @@ export const bookingGroupRoutes = new Hono<Env>()
     const row = await bookingGroupsService.updateBookingGroup(
       c.get("db"),
       c.req.param("id"),
-      updateBookingGroupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingGroupSchema),
     )
     if (!row) return c.json({ error: "Booking group not found" }, 404)
     return c.json({ data: row })
@@ -57,7 +56,7 @@ export const bookingGroupRoutes = new Hono<Env>()
     const result = await bookingGroupsService.addGroupMember(
       c.get("db"),
       c.req.param("id"),
-      addBookingGroupMemberSchema.parse(await c.req.json()),
+      await parseJsonBody(c, addBookingGroupMemberSchema),
     )
     if (result.status === "group_not_found") {
       return c.json({ error: "Booking group not found" }, 404)

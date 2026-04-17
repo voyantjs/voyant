@@ -1,4 +1,5 @@
 import type { EventBus } from "@voyantjs/core"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -60,15 +61,11 @@ function resolveEventBus(
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {
   return new Hono<Env>()
     .get("/templates", async (c) => {
-      const query = contractTemplateListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateListQuerySchema)
       return c.json(await contractsService.listTemplates(c.get("db"), query))
     })
     .get("/templates/default", async (c) => {
-      const query = contractTemplateDefaultQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateDefaultQuerySchema)
       const row = await contractsService.getDefaultTemplate(c.get("db"), query)
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
@@ -76,7 +73,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
     .post("/templates", async (c) => {
       const row = await contractsService.createTemplate(
         c.get("db"),
-        insertContractTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractTemplateSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -89,7 +86,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateTemplate(
         c.get("db"),
         c.req.param("id"),
-        updateContractTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractTemplateSchema),
       )
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
@@ -100,7 +97,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ success: true })
     })
     .post("/templates/:id/preview", async (c) => {
-      const input = renderTemplateInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, renderTemplateInputSchema)
       const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
       if (!template) return c.json({ error: "Template not found" }, 404)
       const body = input.body ?? template.body
@@ -116,7 +113,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const version = await contractsService.createTemplateVersion(
         c.get("db"),
         c.req.param("id"),
-        insertContractTemplateVersionSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractTemplateVersionSchema),
       )
       if (!version) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: version }, 201)
@@ -133,7 +130,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
     .post("/number-series", async (c) => {
       const row = await contractsService.createSeries(
         c.get("db"),
-        insertContractNumberSeriesSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractNumberSeriesSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -146,7 +143,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateSeries(
         c.get("db"),
         c.req.param("id"),
-        updateContractNumberSeriesSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractNumberSeriesSchema),
       )
       if (!row) return c.json({ error: "Series not found" }, 404)
       return c.json({ data: row })
@@ -157,15 +154,13 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ success: true })
     })
     .get("/", async (c) => {
-      const query = contractListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractListQuerySchema)
       return c.json(await contractsService.listContracts(c.get("db"), query))
     })
     .post("/", async (c) => {
       const row = await contractsService.createContract(
         c.get("db"),
-        insertContractSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -178,7 +173,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateContract(
         c.get("db"),
         c.req.param("id"),
-        updateContractSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractSchema),
       )
       if (!row) return c.json({ error: "Contract not found" }, 404)
       return c.json({ data: row })
@@ -208,7 +203,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result.contract })
     })
     .post("/:id/sign", async (c) => {
-      const input = insertContractSignatureSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, insertContractSignatureSchema)
       const result = await contractsService.signContract(c.get("db"), c.req.param("id"), input)
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
       if (result.status === "not_signable") {
@@ -233,7 +228,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result.contract })
     })
     .post("/:id/render", async (c) => {
-      const input = renderTemplateInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, renderTemplateInputSchema)
       const contract = await contractsService.getContractById(c.get("db"), c.req.param("id"))
       if (!contract) return c.json({ error: "Contract not found" }, 404)
       const rendered = contractsService.renderPreview(input)
@@ -309,7 +304,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.createAttachment(
         c.get("db"),
         c.req.param("id"),
-        insertContractAttachmentSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractAttachmentSchema),
       )
       if (!row) return c.json({ error: "Contract not found" }, 404)
       return c.json({ data: row }, 201)
@@ -318,7 +313,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateAttachment(
         c.get("db"),
         c.req.param("attachmentId"),
-        updateContractAttachmentSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractAttachmentSchema),
       )
       if (!row) return c.json({ error: "Attachment not found" }, 404)
       return c.json({ data: row })
@@ -335,15 +330,13 @@ export const contractsAdminRoutes = createContractsAdminRoutes()
 export function createContractsPublicRoutes() {
   return new Hono<Env>()
     .get("/templates/default", async (c) => {
-      const query = contractTemplateDefaultQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateDefaultQuerySchema)
       const row = await contractsService.getDefaultTemplate(c.get("db"), query)
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
     })
     .post("/templates/:id/preview", async (c) => {
-      const input = publicRenderTemplatePreviewInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, publicRenderTemplatePreviewInputSchema)
       const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
       if (!template?.active) return c.json({ error: "Template not found" }, 404)
       const rendered = contractsService.renderPreview({
@@ -360,7 +353,7 @@ export function createContractsPublicRoutes() {
       return c.json({ data: publicContract })
     })
     .post("/:id/sign", async (c) => {
-      const input = insertContractSignatureSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, insertContractSignatureSchema)
       const result = await contractsService.signContract(c.get("db"), c.req.param("id"), input)
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
       if (result.status === "not_signable") {

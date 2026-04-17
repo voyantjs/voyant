@@ -28,6 +28,15 @@ The current gap is no longer “invent the surface model”. The gap is:
 - add first-class lifecycle/document workflows where apps still need copied
   orchestration
 
+Transport taxonomy note:
+
+- `@voyantjs/hono` is the default HTTP transport adapter for Voyant, not a
+  plugin package in the same sense as Netopia or SmartBill
+- the current `HonoPlugin` / `@voyantjs/hono/plugin` naming is legacy
+  bundle-contribution terminology inside the Hono transport and should be
+  revisited in a future taxonomy cleanup, likely toward a `HonoBundle` /
+  `@voyantjs/hono/bundle` style surface
+
 This document reflects the source tree on `main` as of 2026-04-14 and calls
 out where the latest published npm train still lags behind source.
 

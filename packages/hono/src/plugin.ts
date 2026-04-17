@@ -3,11 +3,12 @@ import type { BootstrapHandler, LinkDefinition, Subscriber } from "@voyantjs/cor
 import type { HonoExtension, HonoModule } from "./module.js"
 
 /**
- * Hono-flavoured plugin bundle.
+ * Hono-flavoured bundle contribution surface.
  *
- * Unlike the transport-agnostic `Plugin` in `@voyantjs/core`, a
- * `HonoPlugin` contributes {@link HonoModule} / {@link HonoExtension}
- * wrappers that can carry HTTP routes.
+ * `@voyantjs/hono` is the default HTTP transport adapter for Voyant. The
+ * `HonoPlugin` name is the current transport-specific bundle-contribution
+ * term for reusable packages that need to contribute {@link HonoModule} /
+ * {@link HonoExtension} wrappers that can carry HTTP routes.
  *
  * Registered via `createApp({ plugins: [...] })` — the app factory expands
  * each plugin into the underlying modules, extensions, subscribers, and link

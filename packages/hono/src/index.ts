@@ -5,6 +5,7 @@ export {
   extractBearerToken,
   generateNumericCode,
   randomBytesHex,
+  requireUserId,
   sha256Base64Url,
   sha256Hex,
   unsignCookie,
@@ -43,8 +44,10 @@ export type {
   VoyantVariables,
 } from "./types.js"
 export {
+  ApiHttpError,
   normalizeValidationError,
   parseJsonBody,
   parseQuery,
   RequestValidationError,
+  UnauthorizedApiError,
 } from "./validation.js"

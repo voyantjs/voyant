@@ -1,15 +1,45 @@
 import type { Context } from "hono"
 import { ZodError, type ZodType } from "zod"
 
-export class RequestValidationError extends Error {
-  readonly status = 400
-  readonly code = "invalid_request"
+export class ApiHttpError extends Error {
+  readonly status: number
+  readonly code?: string
   readonly details?: Record<string, unknown>
 
-  constructor(message: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    options: {
+      status: number
+      code?: string
+      details?: Record<string, unknown>
+    },
+  ) {
     super(message)
+    this.name = "ApiHttpError"
+    this.status = options.status
+    this.code = options.code
+    this.details = options.details
+  }
+}
+
+export class RequestValidationError extends ApiHttpError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, {
+      status: 400,
+      code: "invalid_request",
+      details,
+    })
     this.name = "RequestValidationError"
-    this.details = details
+  }
+}
+
+export class UnauthorizedApiError extends ApiHttpError {
+  constructor(message = "Unauthorized") {
+    super(message, {
+      status: 401,
+      code: "unauthorized",
+    })
+    this.name = "UnauthorizedApiError"
   }
 }
 
@@ -60,8 +90,8 @@ export function parseQuery<T>(
   )
 }
 
-export function normalizeValidationError(error: unknown): RequestValidationError | undefined {
-  if (error instanceof RequestValidationError) {
+export function normalizeValidationError(error: unknown): ApiHttpError | undefined {
+  if (error instanceof ApiHttpError) {
     return error
   }
 

@@ -22,20 +22,18 @@ const REDACT_HEADERS = new Set(["authorization", "x-api-key"])
 
 export function handleApiError(err: unknown, c: Context): Response {
   const id = c.res.headers.get("X-Request-Id") || generateRequestId()
-  const validationError = normalizeValidationError(err)
+  const apiError = normalizeValidationError(err)
   const errRecord = err instanceof Object ? (err as Record<string, unknown>) : {}
-  const code =
-    validationError?.code ?? (typeof errRecord.code === "string" ? errRecord.code : undefined)
-  const status =
-    validationError?.status ?? (typeof errRecord.status === "number" ? errRecord.status : 500)
+  const code = apiError?.code ?? (typeof errRecord.code === "string" ? errRecord.code : undefined)
+  const status = apiError?.status ?? (typeof errRecord.status === "number" ? errRecord.status : 500)
   const details =
-    validationError?.details ??
+    apiError?.details ??
     (status < 500 && errRecord.details && typeof errRecord.details === "object"
       ? (errRecord.details as Record<string, unknown>)
       : undefined)
   const errorMessage =
     status < 500
-      ? (validationError?.message ??
+      ? (apiError?.message ??
         (typeof errRecord.message === "string" ? errRecord.message : "Bad Request"))
       : "Internal Server Error"
 

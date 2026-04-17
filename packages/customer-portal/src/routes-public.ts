@@ -1,4 +1,4 @@
-import { parseJsonBody } from "@voyantjs/hono"
+import { parseJsonBody, requireUserId } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
@@ -38,10 +38,6 @@ function resolveOptionalKms(c: Context<Env>) {
   }
 }
 
-function unauthorized<T extends Env>(c: Context<T>) {
-  return c.json({ error: "Unauthorized" }, 401)
-}
-
 function notFound<T extends Env>(c: Context<T>, error: string) {
   return c.json({ error }, 404)
 }
@@ -62,10 +58,7 @@ function hasBootstrapErrorResult(
 
 export const publicCustomerPortalRoutes = new Hono<Env>()
   .get("/me", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const profile = await publicCustomerPortalService.getProfileWithOptions(c.get("db"), userId, {
       kms: resolveOptionalKms(c),
@@ -73,10 +66,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return profile ? c.json({ data: profile }) : notFound(c, "Customer profile not found")
   })
   .patch("/me", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const result = await publicCustomerPortalService.updateProfileWithOptions(
       c.get("db"),
@@ -98,10 +88,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ data: result.profile })
   })
   .post("/bootstrap", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const result = await publicCustomerPortalService.bootstrap(
       c.get("db"),
@@ -128,18 +115,12 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ data: result })
   })
   .get("/companions", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     return c.json({ data: await publicCustomerPortalService.listCompanions(c.get("db"), userId) })
   })
   .post("/companions", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const companion = await publicCustomerPortalService.createCompanion(
       c.get("db"),
@@ -154,10 +135,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ data: companion }, 201)
   })
   .post("/companions/import-booking-participants", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const result = await publicCustomerPortalService.importBookingParticipantsAsCompanions(
       c.get("db"),
@@ -172,10 +150,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ data: result })
   })
   .patch("/companions/:companionId", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const companion = await publicCustomerPortalService.updateCompanion(
       c.get("db"),
@@ -195,10 +170,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ data: companion })
   })
   .delete("/companions/:companionId", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const result = await publicCustomerPortalService.deleteCompanion(
       c.get("db"),
@@ -217,19 +189,13 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/bookings", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const bookings = await publicCustomerPortalService.listBookings(c.get("db"), userId)
     return bookings ? c.json({ data: bookings }) : notFound(c, "Customer profile not found")
   })
   .get("/bookings/:bookingId", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const booking = await publicCustomerPortalService.getBooking(
       c.get("db"),
@@ -240,10 +206,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return booking ? c.json({ data: booking }) : notFound(c, "Booking not found")
   })
   .get("/bookings/:bookingId/documents", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const documents = await publicCustomerPortalService.listBookingDocuments(
       c.get("db"),
@@ -254,10 +217,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     return documents ? c.json({ data: documents }) : notFound(c, "Booking not found")
   })
   .get("/bookings/:bookingId/billing-contact", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) {
-      return unauthorized(c)
-    }
+    const userId = requireUserId(c)
 
     const billingContact = await publicCustomerPortalService.getBookingBillingContact(
       c.get("db"),

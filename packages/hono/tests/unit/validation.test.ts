@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
+import { requireUserId } from "../../src/auth/require-user.js"
 import { handleApiError, requestId } from "../../src/middleware/error-boundary.js"
 import { parseJsonBody, parseQuery } from "../../src/validation.js"
 
@@ -57,6 +58,25 @@ describe("validation helpers", () => {
     expect(await response.json()).toMatchObject({
       error: "Invalid JSON body",
       code: "invalid_request",
+    })
+  })
+
+  it("returns a structured 401 when a route requires a user id", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const app = new Hono()
+    app.onError(handleApiError)
+    app.use("*", requestId)
+    app.get("/me", (c) => {
+      const userId = requireUserId(c)
+      return c.json({ userId })
+    })
+
+    const response = await app.request("http://example.com/me")
+    expect(response.status).toBe(401)
+    expect(await response.json()).toMatchObject({
+      error: "Unauthorized",
+      code: "unauthorized",
     })
   })
 })

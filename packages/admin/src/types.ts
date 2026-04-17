@@ -9,6 +9,8 @@ export interface AdminUser {
   email: string
   firstName?: string | null
   lastName?: string | null
+  locale?: string | null
+  timeZone?: string | null
   /** Legacy combined name field. `firstName`/`lastName` take precedence. */
   name?: string
   avatar?: string | null

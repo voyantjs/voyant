@@ -30,70 +30,10 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 export const COMING_SOON = "COMING_SOON" as const
 export const BETA = "BETA" as const
-
-const baseData = {
-  user: {
-    name: "",
-    email: "",
-    avatar: "",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Products",
-      url: "/products",
-      icon: Package,
-      items: [{ title: "Categories", url: "/products/categories" }],
-    },
-    {
-      title: "Bookings",
-      url: "/bookings",
-      icon: CalendarCheck,
-    },
-    {
-      title: "Suppliers",
-      url: "/suppliers",
-      icon: Building2,
-    },
-    {
-      title: "People",
-      url: "/people",
-      icon: Users,
-    },
-    {
-      title: "Organizations",
-      url: "/organizations",
-      icon: Building,
-    },
-    {
-      title: "Availability",
-      url: "/availability",
-      icon: CalendarDays,
-    },
-    {
-      title: "Resources",
-      url: "/resources",
-      icon: Wrench,
-    },
-    {
-      title: "Finance",
-      url: "/finance",
-      icon: DollarSign,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
-  ],
-} as const
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user?: {
@@ -109,6 +49,7 @@ function OrgSwitcher() {
   const navigate = useNavigate()
   const { activeOrganization, organizations, isSwitchingOrganization, setActiveOrganization } =
     useWorkspace()
+  const messages = useAdminMessages()
 
   return (
     <DropdownMenu>
@@ -146,7 +87,7 @@ function OrgSwitcher() {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Create organization
+          {messages.createOrganization}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -154,13 +95,67 @@ function OrgSwitcher() {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const messages = useAdminMessages()
   const resolvedUser = {
-    name: user?.name ?? baseData.user.name,
+    name: user?.name ?? "",
     firstName: user?.firstName,
     lastName: user?.lastName,
-    email: user?.email ?? baseData.user.email,
-    avatar: user?.avatar ?? baseData.user.avatar,
+    email: user?.email ?? "",
+    avatar: user?.avatar ?? "",
   }
+  const navMain = [
+    {
+      title: messages.nav.dashboard,
+      url: "/",
+      icon: LayoutDashboard,
+    },
+    {
+      title: messages.nav.products,
+      url: "/products",
+      icon: Package,
+      items: [{ title: messages.nav.categories, url: "/products/categories" }],
+    },
+    {
+      title: messages.nav.bookings,
+      url: "/bookings",
+      icon: CalendarCheck,
+    },
+    {
+      title: messages.nav.suppliers,
+      url: "/suppliers",
+      icon: Building2,
+    },
+    {
+      title: messages.nav.people,
+      url: "/people",
+      icon: Users,
+    },
+    {
+      title: messages.nav.organizations,
+      url: "/organizations",
+      icon: Building,
+    },
+    {
+      title: messages.nav.availability,
+      url: "/availability",
+      icon: CalendarDays,
+    },
+    {
+      title: messages.nav.resources,
+      url: "/resources",
+      icon: Wrench,
+    },
+    {
+      title: messages.nav.finance,
+      url: "/finance",
+      icon: DollarSign,
+    },
+    {
+      title: messages.nav.settings,
+      url: "/settings",
+      icon: Settings,
+    },
+  ] as const
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -168,7 +163,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <OrgSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavGroup items={baseData.navMain} />
+        <NavGroup items={navMain} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={resolvedUser} />

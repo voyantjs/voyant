@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./providers/theme": "./src/providers/theme.tsx",
+    "./providers/locale": "./src/providers/locale.tsx",
     "./providers/query-client": "./src/providers/query-client.ts",
     "./providers/admin-provider": "./src/providers/admin-provider.tsx",
     "./lib/initials": "./src/lib/initials.ts",

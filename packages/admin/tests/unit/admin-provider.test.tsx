@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AdminProvider } from "../../src/providers/admin-provider.js"
+import { useLocale } from "../../src/providers/locale.js"
 import { useTheme } from "../../src/providers/theme.js"
 
 const fallbackStorageState = new Map<string, string>()
@@ -113,5 +114,15 @@ describe("AdminProvider", () => {
     )
     renderHook(() => useTheme(), { wrapper })
     expect(getTestStorage().length).toBe(0)
+  })
+
+  it("provides the LocaleProvider to its children", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AdminProvider themeStorageKey={null} defaultLocale="ro">
+        {children}
+      </AdminProvider>
+    )
+    const { result } = renderHook(() => useLocale(), { wrapper })
+    expect(result.current.resolvedLocale).toBe("ro")
   })
 })

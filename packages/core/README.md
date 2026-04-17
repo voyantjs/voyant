@@ -1,6 +1,6 @@
 # @voyantjs/core
 
-Module system and framework primitives for Voyant. Transport-agnostic — provides the contracts, registry, container, event bus, links, query, workflows, plugins, and config shape that every Voyant module and transport adapter builds on.
+Module system and framework primitives for Voyant. Transport-agnostic — provides the contracts, registry, container, event bus, links, query, workflows, and config shape that every Voyant module and transport adapter builds on. Plugin bundles are supported as a packaging layer on top of those primitives, not as the primary architecture unit.
 
 ## Install
 
@@ -13,9 +13,9 @@ pnpm add @voyantjs/core
 ```typescript
 import { defineModule } from "@voyantjs/core/module"
 import { defineLink } from "@voyantjs/core/links"
-import { definePlugin } from "@voyantjs/core/plugin"
 import { defineVoyantConfig } from "@voyantjs/core/config"
 import { createWorkflow, step } from "@voyantjs/core/workflows"
+import { definePlugin } from "@voyantjs/core/plugin"
 ```
 
 ## Exports
@@ -32,7 +32,7 @@ import { createWorkflow, step } from "@voyantjs/core/workflows"
 | `./links` | Module Links — `defineLink`, `generateLinkTableSql`, `LinkService` |
 | `./query` | Cross-module reads — `queryGraph`, `createQueryContext` |
 | `./workflows` | In-process saga primitive with compensation |
-| `./plugin` | Plugin bundles — `definePlugin`, `registerPlugins` |
+| `./plugin` | Plugin bundles for reusable package distribution — `definePlugin`, `registerPlugins` |
 | `./config` | `VoyantConfig` manifest shape + `defineVoyantConfig` |
 | `./env` | Environment helpers |
 

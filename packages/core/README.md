@@ -2,8 +2,8 @@
 
 Module system and framework primitives for Voyant. Transport-agnostic —
 provides the contracts, registry, container, event bus, links, query,
-workflows, plugin bundles, and config shape that every Voyant module and
-transport adapter builds on.
+workflows, optional plugin bundles, and config shape that every Voyant module
+and transport adapter builds on.
 
 ## Install
 
@@ -23,7 +23,7 @@ import { createWorkflow, step } from "@voyantjs/core/workflows"
 
 In Voyant, modules, providers, extensions, and workflows are the main runtime
 primitives. Plugins are optional distribution bundles that package those pieces
-together for reuse across projects.
+together for reuse across projects when a broader bundle is helpful.
 
 ## Exports
 

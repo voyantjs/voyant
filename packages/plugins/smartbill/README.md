@@ -36,9 +36,9 @@ const app = createApp({
 })
 ```
 
-The exported value is a distribution bundle. At runtime, the package behaves
-primarily as a subscriber-driven SmartBill sync adapter. By default it wires up
-3 subscribers (`invoice.issued`, `invoice.voided`,
+The exported value is an optional distribution bundle. At runtime, the package
+behaves primarily as a subscriber-driven SmartBill sync adapter. By default it
+wires up 3 subscribers (`invoice.issued`, `invoice.voided`,
 `invoice.external.sync.requested`) that create, cancel, and check payment
 status on SmartBill. All error handling is fire-and-forget per the EventBus
 contract.

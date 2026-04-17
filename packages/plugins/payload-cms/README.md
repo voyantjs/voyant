@@ -35,10 +35,10 @@ const app = createApp({
 })
 ```
 
-The exported value is a distribution bundle. At runtime, the package behaves
-primarily as a subscriber-driven Payload sync adapter. By default it wires up
-3 subscribers (`product.created`, `product.updated`, `product.deleted`) that
-upsert/delete documents keyed by `voyantId`. All error handling is
+The exported value is an optional distribution bundle. At runtime, the package
+behaves primarily as a subscriber-driven Payload sync adapter. By default it
+wires up 3 subscribers (`product.created`, `product.updated`, `product.deleted`)
+that upsert/delete documents keyed by `voyantId`. All error handling is
 fire-and-forget per the EventBus contract.
 
 ## Exports

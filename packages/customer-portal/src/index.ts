@@ -1,6 +1,10 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
+import {
+  buildPublicCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./route-runtime.js"
 import { customerPortalRoutes } from "./routes.js"
 import {
   createPublicCustomerPortalRoutes,
@@ -70,11 +74,28 @@ export const customerPortalModule: Module = {
 export function createCustomerPortalHonoModule(
   options: PublicCustomerPortalRouteOptions = {},
 ): HonoModule {
+  const module: Module = {
+    ...customerPortalModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildPublicCustomerPortalRouteRuntime(bindings, options),
+      )
+    },
+  }
+
   return {
-    module: customerPortalModule,
+    module,
     routes: customerPortalRoutes,
     publicRoutes: createPublicCustomerPortalRoutes(options),
   }
 }
 
 export const customerPortalHonoModule: HonoModule = createCustomerPortalHonoModule()
+
+export {
+  buildPublicCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+  type PublicCustomerPortalRouteRuntime,
+  type PublicCustomerPortalRuntimeOptions,
+} from "./route-runtime.js"

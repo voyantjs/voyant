@@ -3,6 +3,11 @@ import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
 
+import {
+  buildPublicCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+  type PublicCustomerPortalRouteRuntime,
+} from "./route-runtime.js"
 import { publicCustomerPortalService } from "./service-public.js"
 import {
   bootstrapCustomerPortalSchema,
@@ -15,6 +20,7 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: import("@voyantjs/core").ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
@@ -64,8 +70,13 @@ export interface PublicCustomerPortalRouteOptions {
 }
 
 export function createPublicCustomerPortalRoutes(options: PublicCustomerPortalRouteOptions = {}) {
+  const getRuntime = (c: Context<Env>) =>
+    c.var.container?.resolve<PublicCustomerPortalRouteRuntime>(
+      CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+    ) ?? buildPublicCustomerPortalRouteRuntime(c.env, options)
+
   const resolveDocumentDownloadUrl = (c: Context<Env>, storageKey: string) =>
-    options.resolveDocumentDownloadUrl?.(c.env, storageKey) ?? null
+    getRuntime(c).resolveDocumentDownloadUrl?.(storageKey) ?? null
 
   return new Hono<Env>()
     .get("/me", async (c) => {

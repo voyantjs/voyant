@@ -1,5 +1,6 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 
 import { bookingRequirementsService } from "./service.js"
 import {
@@ -38,9 +39,7 @@ type Env = {
 
 export const bookingRequirementsRoutes = new Hono<Env>()
   .get("/contact-requirements", async (c) => {
-    const query = productContactRequirementListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, productContactRequirementListQuerySchema)
     return c.json(
       await bookingRequirementsService.listProductContactRequirements(c.get("db"), query),
     )
@@ -50,7 +49,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createProductContactRequirement(
           c.get("db"),
-          insertProductContactRequirementSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductContactRequirementSchema),
         ),
       },
       201,
@@ -68,7 +67,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateProductContactRequirement(
       c.get("db"),
       c.req.param("id"),
-      updateProductContactRequirementSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductContactRequirementSchema),
     )
     if (!row) return c.json({ error: "Product contact requirement not found" }, 404)
     return c.json({ data: row })
@@ -82,9 +81,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/questions", async (c) => {
-    const query = productBookingQuestionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, productBookingQuestionListQuerySchema)
     return c.json(await bookingRequirementsService.listProductBookingQuestions(c.get("db"), query))
   })
   .post("/questions", async (c) => {
@@ -92,7 +89,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createProductBookingQuestion(
           c.get("db"),
-          insertProductBookingQuestionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductBookingQuestionSchema),
         ),
       },
       201,
@@ -110,7 +107,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateProductBookingQuestion(
       c.get("db"),
       c.req.param("id"),
-      updateProductBookingQuestionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductBookingQuestionSchema),
     )
     if (!row) return c.json({ error: "Product booking question not found" }, 404)
     return c.json({ data: row })
@@ -124,9 +121,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/option-questions", async (c) => {
-    const query = optionBookingQuestionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, optionBookingQuestionListQuerySchema)
     return c.json(await bookingRequirementsService.listOptionBookingQuestions(c.get("db"), query))
   })
   .post("/option-questions", async (c) => {
@@ -134,7 +129,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createOptionBookingQuestion(
           c.get("db"),
-          insertOptionBookingQuestionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionBookingQuestionSchema),
         ),
       },
       201,
@@ -152,7 +147,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateOptionBookingQuestion(
       c.get("db"),
       c.req.param("id"),
-      updateOptionBookingQuestionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionBookingQuestionSchema),
     )
     if (!row) return c.json({ error: "Option booking question not found" }, 404)
     return c.json({ data: row })
@@ -166,9 +161,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/question-options", async (c) => {
-    const query = bookingQuestionOptionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, bookingQuestionOptionListQuerySchema)
     return c.json(await bookingRequirementsService.listBookingQuestionOptions(c.get("db"), query))
   })
   .post("/question-options", async (c) => {
@@ -176,7 +169,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createBookingQuestionOption(
           c.get("db"),
-          insertBookingQuestionOptionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingQuestionOptionSchema),
         ),
       },
       201,
@@ -194,7 +187,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateBookingQuestionOption(
       c.get("db"),
       c.req.param("id"),
-      updateBookingQuestionOptionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingQuestionOptionSchema),
     )
     if (!row) return c.json({ error: "Booking question option not found" }, 404)
     return c.json({ data: row })
@@ -208,9 +201,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/unit-triggers", async (c) => {
-    const query = bookingQuestionUnitTriggerListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, bookingQuestionUnitTriggerListQuerySchema)
     return c.json(
       await bookingRequirementsService.listBookingQuestionUnitTriggers(c.get("db"), query),
     )
@@ -220,7 +211,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createBookingQuestionUnitTrigger(
           c.get("db"),
-          insertBookingQuestionUnitTriggerSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingQuestionUnitTriggerSchema),
         ),
       },
       201,
@@ -238,7 +229,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateBookingQuestionUnitTrigger(
       c.get("db"),
       c.req.param("id"),
-      updateBookingQuestionUnitTriggerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingQuestionUnitTriggerSchema),
     )
     if (!row) return c.json({ error: "Booking question unit trigger not found" }, 404)
     return c.json({ data: row })
@@ -252,9 +243,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/option-triggers", async (c) => {
-    const query = bookingQuestionOptionTriggerListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, bookingQuestionOptionTriggerListQuerySchema)
     return c.json(
       await bookingRequirementsService.listBookingQuestionOptionTriggers(c.get("db"), query),
     )
@@ -264,7 +253,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createBookingQuestionOptionTrigger(
           c.get("db"),
-          insertBookingQuestionOptionTriggerSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingQuestionOptionTriggerSchema),
         ),
       },
       201,
@@ -282,7 +271,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateBookingQuestionOptionTrigger(
       c.get("db"),
       c.req.param("id"),
-      updateBookingQuestionOptionTriggerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingQuestionOptionTriggerSchema),
     )
     if (!row) return c.json({ error: "Booking question option trigger not found" }, 404)
     return c.json({ data: row })
@@ -296,9 +285,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/extra-triggers", async (c) => {
-    const query = bookingQuestionExtraTriggerListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, bookingQuestionExtraTriggerListQuerySchema)
     return c.json(
       await bookingRequirementsService.listBookingQuestionExtraTriggers(c.get("db"), query),
     )
@@ -308,7 +295,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createBookingQuestionExtraTrigger(
           c.get("db"),
-          insertBookingQuestionExtraTriggerSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingQuestionExtraTriggerSchema),
         ),
       },
       201,
@@ -326,7 +313,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateBookingQuestionExtraTrigger(
       c.get("db"),
       c.req.param("id"),
-      updateBookingQuestionExtraTriggerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingQuestionExtraTriggerSchema),
     )
     if (!row) return c.json({ error: "Booking question extra trigger not found" }, 404)
     return c.json({ data: row })
@@ -340,9 +327,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/answers", async (c) => {
-    const query = bookingAnswerListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, bookingAnswerListQuerySchema)
     return c.json(await bookingRequirementsService.listBookingAnswers(c.get("db"), query))
   })
   .post("/answers", async (c) => {
@@ -350,7 +335,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
       {
         data: await bookingRequirementsService.createBookingAnswer(
           c.get("db"),
-          insertBookingAnswerSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingAnswerSchema),
         ),
       },
       201,
@@ -368,7 +353,7 @@ export const bookingRequirementsRoutes = new Hono<Env>()
     const row = await bookingRequirementsService.updateBookingAnswer(
       c.get("db"),
       c.req.param("id"),
-      updateBookingAnswerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingAnswerSchema),
     )
     if (!row) return c.json({ error: "Booking answer not found" }, 404)
     return c.json({ data: row })

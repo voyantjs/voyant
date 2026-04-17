@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { type Env, notFound } from "./routes-shared.js"
 import { pricingService } from "./service.js"
 import {
@@ -30,7 +31,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listOptionPriceRules(
         c.get("db"),
-        optionPriceRuleListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, optionPriceRuleListQuerySchema),
       ),
     ),
   )
@@ -39,7 +40,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createOptionPriceRule(
           c.get("db"),
-          insertOptionPriceRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionPriceRuleSchema),
         ),
       },
       201,
@@ -53,7 +54,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateOptionPriceRule(
       c.get("db"),
       c.req.param("id"),
-      updateOptionPriceRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionPriceRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Option price rule not found")
   })
@@ -65,9 +66,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listOptionUnitPriceRules(
         c.get("db"),
-        optionUnitPriceRuleListQuerySchema.parse(
-          Object.fromEntries(new URL(c.req.url).searchParams),
-        ),
+        await parseQuery(c, optionUnitPriceRuleListQuerySchema),
       ),
     ),
   )
@@ -76,7 +75,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createOptionUnitPriceRule(
           c.get("db"),
-          insertOptionUnitPriceRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionUnitPriceRuleSchema),
         ),
       },
       201,
@@ -90,7 +89,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateOptionUnitPriceRule(
       c.get("db"),
       c.req.param("id"),
-      updateOptionUnitPriceRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionUnitPriceRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Option unit price rule not found")
   })
@@ -102,9 +101,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listOptionStartTimeRules(
         c.get("db"),
-        optionStartTimeRuleListQuerySchema.parse(
-          Object.fromEntries(new URL(c.req.url).searchParams),
-        ),
+        await parseQuery(c, optionStartTimeRuleListQuerySchema),
       ),
     ),
   )
@@ -113,7 +110,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createOptionStartTimeRule(
           c.get("db"),
-          insertOptionStartTimeRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionStartTimeRuleSchema),
         ),
       },
       201,
@@ -127,7 +124,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateOptionStartTimeRule(
       c.get("db"),
       c.req.param("id"),
-      updateOptionStartTimeRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionStartTimeRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Option start time rule not found")
   })
@@ -139,7 +136,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listOptionUnitTiers(
         c.get("db"),
-        optionUnitTierListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, optionUnitTierListQuerySchema),
       ),
     ),
   )
@@ -148,7 +145,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createOptionUnitTier(
           c.get("db"),
-          insertOptionUnitTierSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionUnitTierSchema),
         ),
       },
       201,
@@ -162,7 +159,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateOptionUnitTier(
       c.get("db"),
       c.req.param("id"),
-      updateOptionUnitTierSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionUnitTierSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Option unit tier not found")
   })
@@ -174,7 +171,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listPickupPriceRules(
         c.get("db"),
-        pickupPriceRuleListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, pickupPriceRuleListQuerySchema),
       ),
     ),
   )
@@ -183,7 +180,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createPickupPriceRule(
           c.get("db"),
-          insertPickupPriceRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPickupPriceRuleSchema),
         ),
       },
       201,
@@ -197,7 +194,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updatePickupPriceRule(
       c.get("db"),
       c.req.param("id"),
-      updatePickupPriceRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePickupPriceRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Pickup price rule not found")
   })
@@ -209,7 +206,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listDropoffPriceRules(
         c.get("db"),
-        dropoffPriceRuleListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, dropoffPriceRuleListQuerySchema),
       ),
     ),
   )
@@ -218,7 +215,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createDropoffPriceRule(
           c.get("db"),
-          insertDropoffPriceRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertDropoffPriceRuleSchema),
         ),
       },
       201,
@@ -232,7 +229,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateDropoffPriceRule(
       c.get("db"),
       c.req.param("id"),
-      updateDropoffPriceRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateDropoffPriceRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Dropoff price rule not found")
   })
@@ -244,7 +241,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     c.json(
       await pricingService.listExtraPriceRules(
         c.get("db"),
-        extraPriceRuleListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, extraPriceRuleListQuerySchema),
       ),
     ),
   )
@@ -253,7 +250,7 @@ export const pricingRuleRoutes = new Hono<Env>()
       {
         data: await pricingService.createExtraPriceRule(
           c.get("db"),
-          insertExtraPriceRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertExtraPriceRuleSchema),
         ),
       },
       201,
@@ -267,7 +264,7 @@ export const pricingRuleRoutes = new Hono<Env>()
     const row = await pricingService.updateExtraPriceRule(
       c.get("db"),
       c.req.param("id"),
-      updateExtraPriceRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateExtraPriceRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Extra price rule not found")
   })

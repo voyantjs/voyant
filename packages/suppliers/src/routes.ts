@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   insertAddressForEntitySchema,
   insertContactPointForEntitySchema,
@@ -8,6 +9,7 @@ import {
 } from "@voyantjs/identity/validation"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
+import { z } from "zod"
 
 import { suppliersService } from "./service.js"
 import {
@@ -44,7 +46,7 @@ export const supplierRoutes = new Hono<Env>()
 
   // GET / — List suppliers
   .get("/", async (c) => {
-    const query = supplierListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, supplierListQuerySchema)
     return c.json(await suppliersService.listSuppliers(c.get("db"), query))
   })
 
@@ -53,7 +55,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateContactPoint(
       c.get("db"),
       c.req.param("contactPointId"),
-      updateIdentityContactPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityContactPointSchema),
     )
 
     if (!row) {
@@ -68,7 +70,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateNamedContact(
       c.get("db"),
       c.req.param("contactId"),
-      updateIdentityNamedContactSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityNamedContactSchema),
     )
 
     if (!row) {
@@ -108,7 +110,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateAddress(
       c.get("db"),
       c.req.param("addressId"),
-      updateIdentityAddressSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityAddressSchema),
     )
 
     if (!row) {
@@ -142,7 +144,7 @@ export const supplierRoutes = new Hono<Env>()
 
   // POST / — Create supplier
   .post("/", async (c) => {
-    const data = insertSupplierSchema.parse(await c.req.json())
+    const data = await parseJsonBody(c, insertSupplierSchema)
     return c.json({ data: await suppliersService.createSupplier(c.get("db"), data) }, 201)
   })
 
@@ -151,7 +153,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateSupplier(
       c.get("db"),
       c.req.param("id"),
-      updateSupplierSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierSchema),
     )
 
     if (!row) {
@@ -184,7 +186,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createContactPoint(
       c.get("db"),
       c.req.param("id"),
-      insertContactPointForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertContactPointForEntitySchema),
     )
 
     if (!row) {
@@ -206,7 +208,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createNamedContact(
       c.get("db"),
       c.req.param("id"),
-      insertNamedContactForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertNamedContactForEntitySchema),
     )
 
     if (!row) {
@@ -226,7 +228,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createAddress(
       c.get("db"),
       c.req.param("id"),
-      insertAddressForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertAddressForEntitySchema),
     )
 
     if (!row) {
@@ -250,7 +252,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createService(
       c.get("db"),
       c.req.param("id"),
-      insertServiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertServiceSchema),
     )
 
     if (!row) {
@@ -265,7 +267,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateService(
       c.get("db"),
       c.req.param("serviceId"),
-      updateServiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateServiceSchema),
     )
 
     if (!row) {
@@ -302,7 +304,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createRate(
       c.get("db"),
       c.req.param("serviceId"),
-      insertRateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertRateSchema),
     )
 
     if (!row) {
@@ -317,7 +319,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateRate(
       c.get("db"),
       c.req.param("rateId"),
-      updateRateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRateSchema),
     )
 
     if (!row) {
@@ -359,7 +361,7 @@ export const supplierRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertSupplierNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertSupplierNoteSchema),
     )
 
     if (!row) {
@@ -375,7 +377,7 @@ export const supplierRoutes = new Hono<Env>()
 
   // GET /:id/availability — List availability entries
   .get("/:id/availability", async (c) => {
-    const query = availabilityQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, availabilityQuerySchema)
     return c.json({
       data: await suppliersService.listAvailability(c.get("db"), c.req.param("id"), query),
     })
@@ -383,7 +385,7 @@ export const supplierRoutes = new Hono<Env>()
 
   // POST /:id/availability — Add availability entries (bulk)
   .post("/:id/availability", async (c) => {
-    const body = await c.req.json()
+    const body = await parseJsonBody(c, z.unknown())
     const entries = Array.isArray(body) ? body : [body]
     const row = await suppliersService.createAvailability(
       c.get("db"),
@@ -412,7 +414,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.createContract(
       c.get("db"),
       c.req.param("id"),
-      insertContractSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertContractSchema),
     )
 
     if (!row) {
@@ -427,7 +429,7 @@ export const supplierRoutes = new Hono<Env>()
     const row = await suppliersService.updateContract(
       c.get("db"),
       c.req.param("contractId"),
-      updateContractSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateContractSchema),
     )
 
     if (!row) {

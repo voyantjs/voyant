@@ -15,8 +15,10 @@ import {
   setActiveWorkspaceOrganization,
 } from "@voyantjs/auth/workspace"
 import type { VoyantPermission, VoyantRequestAuthContext } from "@voyantjs/hono"
+import { parseOptionalJsonBody } from "@voyantjs/hono"
 import { type Context, Hono } from "hono"
 import { Resend } from "resend"
+import { z } from "zod"
 
 import { getDbFromHyperdrive } from "../lib/db"
 
@@ -210,7 +212,7 @@ auth.post("/auth/workspace/active-organization", async (c) => {
     return response
   }
 
-  const body = (await c.req.json().catch(() => null)) as { organizationId?: unknown } | null
+  const body = await parseOptionalJsonBody(c, z.object({ organizationId: z.unknown().optional() }))
   const organizationId =
     typeof body?.organizationId === "string" && body.organizationId.trim().length > 0
       ? body.organizationId.trim()

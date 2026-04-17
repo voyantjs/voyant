@@ -1,6 +1,10 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 import { Hono } from "hono"
+import {
+  buildContractsRouteRuntime,
+  CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./contracts/route-runtime.js"
 import { contractsLinkable } from "./contracts/index.js"
 import {
   type ContractsRouteOptions,
@@ -29,8 +33,18 @@ export function createLegalHonoModule(options: ContractsRouteOptions = {}): Hono
     .route("/contracts", createContractsPublicRoutes())
     .route("/policies", policiesPublicRoutes)
 
+  const module: Module = {
+    ...legalModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildContractsRouteRuntime(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
   return {
-    module: legalModule,
+    module,
     adminRoutes: legalAdminRoutes,
     publicRoutes: legalPublicRoutes,
   }
@@ -40,4 +54,9 @@ export const legalHonoModule: HonoModule = createLegalHonoModule()
 
 export * from "./contracts/index.js"
 export type { ContractsRouteOptions } from "./contracts/routes.js"
+export {
+  buildContractsRouteRuntime,
+  CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
+  type ContractsRouteRuntime,
+} from "./contracts/route-runtime.js"
 export * from "./policies/index.js"

@@ -1,5 +1,15 @@
+import { fetchWithValidation, VoyantApiError, type VoyantFetcher } from "@voyantjs/storefront-react"
+
 import { findMockProduct, MOCK_PRODUCTS } from "./mock-data"
-import type { InquiryInput, InquiryResponse, PublicProduct, PublicProductList } from "./types"
+import {
+  type InquiryInput,
+  type InquiryResponse,
+  inquiryResponseSchema,
+  type PublicProduct,
+  type PublicProductList,
+  publicProductListSchema,
+  publicProductSchema,
+} from "./types"
 
 /**
  * Server-side Voyant REST client.
@@ -18,39 +28,42 @@ const API_URL = process.env.VOYANT_API_URL?.replace(/\/$/, "") ?? ""
 const API_KEY = process.env.VOYANT_API_KEY ?? ""
 const MOCK = process.env.USE_MOCK_DATA === "1" || API_URL === ""
 
-function headers(): HeadersInit {
-  const h: Record<string, string> = { "Content-Type": "application/json" }
+function createApiHeaders(init?: HeadersInit): Headers {
+  const h = new Headers(init)
   if (API_KEY) {
-    h.Authorization = `Bearer ${API_KEY}`
+    h.set("Authorization", `Bearer ${API_KEY}`)
   }
   return h
 }
 
-async function voyantFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_URL) {
-    throw new Error("VOYANT_API_URL is not configured")
-  }
-  const res = await fetch(`${API_URL}${path}`, {
+const apiFetcher: VoyantFetcher = (url, init) =>
+  fetch(url, {
     ...init,
-    headers: { ...headers(), ...init?.headers },
+    headers: createApiHeaders(init?.headers),
     // Customer portals rarely need cached responses in the BFF layer; let
     // Next.js decide at the route-handler level.
     cache: "no-store",
   })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Voyant ${res.status}: ${body}`)
+
+async function voyantFetch<T>(
+  path: string,
+  schema: Parameters<typeof fetchWithValidation<T>>[1],
+  init?: RequestInit,
+): Promise<T> {
+  if (!API_URL) {
+    throw new Error("VOYANT_API_URL is not configured")
   }
-  return (await res.json()) as T
+
+  return fetchWithValidation(path, schema, { baseUrl: API_URL, fetcher: apiFetcher }, init)
 }
 
 export async function listProducts(): Promise<PublicProductList> {
   if (MOCK) {
-    return { items: MOCK_PRODUCTS, total: MOCK_PRODUCTS.length }
+    return { items: [...MOCK_PRODUCTS], total: MOCK_PRODUCTS.length }
   }
   // Real Voyant call — adapt the mapping to your product schema's public
   // projection. The DMC template returns `{ items, total }` by convention.
-  return voyantFetch<PublicProductList>("/v1/public/products")
+  return voyantFetch("/v1/public/products", publicProductListSchema)
 }
 
 export async function getProduct(id: string): Promise<PublicProduct | null> {
@@ -58,9 +71,9 @@ export async function getProduct(id: string): Promise<PublicProduct | null> {
     return findMockProduct(id)
   }
   try {
-    return await voyantFetch<PublicProduct>(`/v1/public/products/${encodeURIComponent(id)}`)
+    return await voyantFetch(`/v1/public/products/${encodeURIComponent(id)}`, publicProductSchema)
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith("Voyant 404")) {
+    if (err instanceof VoyantApiError && err.status === 404) {
       return null
     }
     throw err
@@ -78,7 +91,7 @@ export async function submitInquiry(input: InquiryInput): Promise<InquiryRespons
       createdAt: new Date().toISOString(),
     }
   }
-  return voyantFetch<InquiryResponse>("/v1/public/inquiries", {
+  return voyantFetch("/v1/public/inquiries", inquiryResponseSchema, {
     method: "POST",
     body: JSON.stringify(input),
   })

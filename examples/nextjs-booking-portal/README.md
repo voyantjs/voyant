@@ -25,7 +25,7 @@ examples/nextjs-booking-portal/
 │       ├── products/[id]/route.ts   GET /api/products/:id
 │       └── inquiries/route.ts       POST /api/inquiries
 ├── lib/
-│   ├── voyant-client.ts             Server-side REST client + mock fallback
+│   ├── voyant-client.ts             Server-side public client + mock fallback
 │   ├── mock-data.ts                 Demo product catalog
 │   ├── types.ts                     Public product / inquiry types
 │   └── format.ts                    Formatting helpers
@@ -60,8 +60,9 @@ backend.
    ```
 3. Restart `pnpm -F nextjs-booking-portal dev`.
 
-The client in `lib/voyant-client.ts` expects Voyant to return product payloads
-in the shape described by `lib/types.ts#PublicProduct`. In a real deployment
+The client in `lib/voyant-client.ts` uses the shared public fetch/error
+contract from `@voyantjs/storefront-react`, but keeps example-local response
+schemas for the simplified product and inquiry payloads. In a real deployment
 you would either:
 
 - Map Voyant's `selectProductSchema` to the public shape in a server-side

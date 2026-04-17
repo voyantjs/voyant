@@ -20,12 +20,12 @@ pnpm add @voyantjs/plugin-sanity-cms
 ## Usage
 
 ```typescript
-import { createSanityCmsSyncPlugin } from "@voyantjs/plugin-sanity-cms"
+import { sanityCmsPlugin } from "@voyantjs/plugin-sanity-cms"
 import { createApp } from "@voyantjs/hono"
 
 const app = createApp({
   plugins: [
-    createSanityCmsSyncPlugin({
+    sanityCmsPlugin({
       projectId: env.SANITY_PROJECT_ID,
       dataset: "production",
       token: env.SANITY_TOKEN,
@@ -43,7 +43,7 @@ Uses GROQ for reads and Sanity Mutations API for writes. Default `apiVersion` is
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `sanityCmsPlugin(options)` and `createSanityCmsSyncPlugin(options)` |
+| `./plugin` | `sanityCmsPlugin(options)` |
 | `./client` | `createSanityClient` — `upsertByVoyantId`, `deleteByVoyantId`, `findByVoyantId` |
 | `./types` | Plugin option types |
 

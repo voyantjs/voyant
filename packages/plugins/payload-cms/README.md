@@ -20,12 +20,12 @@ pnpm add @voyantjs/plugin-payload-cms
 ## Usage
 
 ```typescript
-import { createPayloadCmsSyncPlugin } from "@voyantjs/plugin-payload-cms"
+import { payloadCmsPlugin } from "@voyantjs/plugin-payload-cms"
 import { createApp } from "@voyantjs/hono"
 
 const app = createApp({
   plugins: [
-    createPayloadCmsSyncPlugin({
+    payloadCmsPlugin({
       apiUrl: "https://cms.example.com/api",
       apiKey: env.PAYLOAD_API_KEY,
       collection: "products",
@@ -42,7 +42,7 @@ By default the plugin wires up 3 subscribers (`product.created`, `product.update
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `payloadCmsPlugin(options)` and `createPayloadCmsSyncPlugin(options)` |
+| `./plugin` | `payloadCmsPlugin(options)` |
 | `./client` | `createPayloadClient` — `upsertByVoyantId`, `deleteByVoyantId`, `findByVoyantId` |
 | `./types` | Plugin option types |
 

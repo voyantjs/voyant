@@ -20,12 +20,12 @@ pnpm add @voyantjs/plugin-smartbill
 ## Usage
 
 ```typescript
-import { createSmartbillSyncPlugin } from "@voyantjs/plugin-smartbill"
+import { smartbillPlugin } from "@voyantjs/plugin-smartbill"
 import { createApp } from "@voyantjs/hono"
 
 const app = createApp({
   plugins: [
-    createSmartbillSyncPlugin({
+    smartbillPlugin({
       username: env.SMARTBILL_USERNAME,
       apiToken: env.SMARTBILL_API_TOKEN,
       companyVatCode: "RO12345678",
@@ -43,7 +43,7 @@ By default the plugin wires up 3 subscribers (`invoice.issued`, `invoice.voided`
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `smartbillPlugin(options)` and `createSmartbillSyncPlugin(options)` |
+| `./plugin` | `smartbillPlugin(options)` |
 | `./client` | `createSmartbillClient` — `createInvoice`, `cancelInvoice`, `viewPdf`, `getPaymentStatus`, etc. |
 | `./types` | SmartBill invoice types |
 

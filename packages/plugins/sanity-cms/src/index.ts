@@ -6,5 +6,5 @@ export type {
   SanityMapFn,
   SanitySyncEventNames,
 } from "./plugin.js"
-export { sanityCmsPlugin, sanityCmsPlugin as createSanityCmsSyncPlugin } from "./plugin.js"
+export { sanityCmsPlugin } from "./plugin.js"
 export type { SanityDocBody, SanityFetch, VoyantEntityEvent } from "./types.js"

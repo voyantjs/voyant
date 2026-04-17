@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -112,7 +113,7 @@ async function handleBatchDelete({
 
 export const resourcesRoutes = new Hono<Env>()
   .get("/resources", async (c) => {
-    const query = resourceListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, resourceListQuerySchema)
     return c.json(await resourcesService.listResources(c.get("db"), query))
   })
   .post("/resources", async (c) => {
@@ -120,14 +121,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createResource(
           c.get("db"),
-          insertResourceSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourceSchema),
         ),
       },
       201,
     )
   })
   .post("/resources/batch-update", async (c) => {
-    const body = batchUpdateResourceSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourceSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -138,7 +139,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/resources/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -156,7 +157,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updateResource(
       c.get("db"),
       c.req.param("id"),
-      updateResourceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourceSchema),
     )
     if (!row) return c.json({ error: "Resource not found" }, 404)
     return c.json({ data: row })
@@ -167,9 +168,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/pools", async (c) => {
-    const query = resourcePoolListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourcePoolListQuerySchema)
     return c.json(await resourcesService.listPools(c.get("db"), query))
   })
   .post("/pools", async (c) => {
@@ -177,14 +176,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createPool(
           c.get("db"),
-          insertResourcePoolSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourcePoolSchema),
         ),
       },
       201,
     )
   })
   .post("/pools/batch-update", async (c) => {
-    const body = batchUpdateResourcePoolSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourcePoolSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -195,7 +194,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/pools/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -213,7 +212,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updatePool(
       c.get("db"),
       c.req.param("id"),
-      updateResourcePoolSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourcePoolSchema),
     )
     if (!row) return c.json({ error: "Resource pool not found" }, 404)
     return c.json({ data: row })
@@ -224,9 +223,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/pool-members", async (c) => {
-    const query = resourcePoolMemberListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourcePoolMemberListQuerySchema)
     return c.json(await resourcesService.listPoolMembers(c.get("db"), query))
   })
   .post("/pool-members", async (c) => {
@@ -234,7 +231,7 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createPoolMember(
           c.get("db"),
-          insertResourcePoolMemberSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourcePoolMemberSchema),
         ),
       },
       201,
@@ -246,9 +243,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/requirements", async (c) => {
-    const query = resourceRequirementListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourceRequirementListQuerySchema)
     return c.json(await resourcesService.listRequirements(c.get("db"), query))
   })
   .post("/requirements", async (c) => {
@@ -256,14 +251,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createRequirement(
           c.get("db"),
-          insertResourceRequirementSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourceRequirementSchema),
         ),
       },
       201,
     )
   })
   .post("/requirements/batch-update", async (c) => {
-    const body = batchUpdateResourceRequirementSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourceRequirementSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -274,7 +269,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/requirements/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -292,7 +287,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updateRequirement(
       c.get("db"),
       c.req.param("id"),
-      updateResourceRequirementSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourceRequirementSchema),
     )
     if (!row) return c.json({ error: "Resource requirement not found" }, 404)
     return c.json({ data: row })
@@ -303,9 +298,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/allocations", async (c) => {
-    const query = resourceRequirementListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourceRequirementListQuerySchema)
     return c.json(await resourcesService.listRequirements(c.get("db"), query))
   })
   .post("/allocations", async (c) => {
@@ -313,14 +306,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createRequirement(
           c.get("db"),
-          insertResourceRequirementSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourceRequirementSchema),
         ),
       },
       201,
     )
   })
   .post("/allocations/batch-update", async (c) => {
-    const body = batchUpdateResourceRequirementSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourceRequirementSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -331,7 +324,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/allocations/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -349,7 +342,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updateRequirement(
       c.get("db"),
       c.req.param("id"),
-      updateResourceRequirementSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourceRequirementSchema),
     )
     if (!row) return c.json({ error: "Resource allocation not found" }, 404)
     return c.json({ data: row })
@@ -360,9 +353,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/slot-assignments", async (c) => {
-    const query = resourceSlotAssignmentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourceSlotAssignmentListQuerySchema)
     return c.json(await resourcesService.listSlotAssignments(c.get("db"), query))
   })
   .post("/slot-assignments", async (c) => {
@@ -370,14 +361,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createSlotAssignment(
           c.get("db"),
-          insertResourceSlotAssignmentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourceSlotAssignmentSchema),
         ),
       },
       201,
     )
   })
   .post("/slot-assignments/batch-update", async (c) => {
-    const body = batchUpdateResourceSlotAssignmentSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourceSlotAssignmentSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -388,7 +379,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/slot-assignments/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -406,7 +397,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updateSlotAssignment(
       c.get("db"),
       c.req.param("id"),
-      updateResourceSlotAssignmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourceSlotAssignmentSchema),
     )
     if (!row) return c.json({ error: "Resource slot assignment not found" }, 404)
     return c.json({ data: row })
@@ -417,9 +408,7 @@ export const resourcesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/closeouts", async (c) => {
-    const query = resourceCloseoutListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, resourceCloseoutListQuerySchema)
     return c.json(await resourcesService.listCloseouts(c.get("db"), query))
   })
   .post("/closeouts", async (c) => {
@@ -427,14 +416,14 @@ export const resourcesRoutes = new Hono<Env>()
       {
         data: await resourcesService.createCloseout(
           c.get("db"),
-          insertResourceCloseoutSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertResourceCloseoutSchema),
         ),
       },
       201,
     )
   })
   .post("/closeouts/batch-update", async (c) => {
-    const body = batchUpdateResourceCloseoutSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateResourceCloseoutSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -445,7 +434,7 @@ export const resourcesRoutes = new Hono<Env>()
     )
   })
   .post("/closeouts/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -463,7 +452,7 @@ export const resourcesRoutes = new Hono<Env>()
     const row = await resourcesService.updateCloseout(
       c.get("db"),
       c.req.param("id"),
-      updateResourceCloseoutSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateResourceCloseoutSchema),
     )
     if (!row) return c.json({ error: "Resource closeout not found" }, 404)
     return c.json({ data: row })

@@ -43,6 +43,16 @@ export class UnauthorizedApiError extends ApiHttpError {
   }
 }
 
+export class ForbiddenApiError extends ApiHttpError {
+  constructor(message = "Forbidden") {
+    super(message, {
+      status: 403,
+      code: "forbidden",
+    })
+    this.name = "ForbiddenApiError"
+  }
+}
+
 function toValidationError(
   error: ZodError,
   fallbackMessage = "Invalid request",

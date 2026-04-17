@@ -1,3 +1,4 @@
+import { parseJsonBody, requireUserId } from "@voyantjs/hono"
 import {
   insertAddressSchema,
   insertContactPointSchema,
@@ -114,13 +115,12 @@ export const accountRoutes = new Hono<Env>()
     })
   })
   .post("/organizations/:id/notes", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) return c.json({ error: "User ID required to create notes" }, 400)
+    const userId = requireUserId(c)
     const row = await crmService.createOrganizationNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertOrganizationNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertOrganizationNoteSchema),
     )
     if (!row) return c.json({ error: "Organization not found" }, 404)
     return c.json({ data: row }, 201)
@@ -218,13 +218,12 @@ export const accountRoutes = new Hono<Env>()
     })
   })
   .post("/people/:id/notes", async (c) => {
-    const userId = c.get("userId")
-    if (!userId) return c.json({ error: "User ID required to create notes" }, 400)
+    const userId = requireUserId(c)
     const row = await crmService.createPersonNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertPersonNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPersonNoteSchema),
     )
     if (!row) return c.json({ error: "Person not found" }, 404)
     return c.json({ data: row }, 201)

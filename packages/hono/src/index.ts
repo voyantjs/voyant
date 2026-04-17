@@ -45,6 +45,7 @@ export type {
 } from "./types.js"
 export {
   ApiHttpError,
+  ForbiddenApiError,
   normalizeValidationError,
   parseJsonBody,
   parseQuery,

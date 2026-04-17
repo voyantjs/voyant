@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -26,9 +27,7 @@ type Env = {
 
 export const identityRoutes = new Hono<Env>()
   .get("/named-contacts", async (c) => {
-    const query = namedContactListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, namedContactListQuerySchema)
     return c.json(await identityService.listNamedContacts(c.get("db"), query))
   })
   .post("/named-contacts", async (c) => {
@@ -36,7 +35,7 @@ export const identityRoutes = new Hono<Env>()
       {
         data: await identityService.createNamedContact(
           c.get("db"),
-          insertNamedContactSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertNamedContactSchema),
         ),
       },
       201,
@@ -51,7 +50,7 @@ export const identityRoutes = new Hono<Env>()
     const row = await identityService.updateNamedContact(
       c.get("db"),
       c.req.param("id"),
-      updateNamedContactSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateNamedContactSchema),
     )
     if (!row) return c.json({ error: "Named contact not found" }, 404)
     return c.json({ data: row })
@@ -62,9 +61,7 @@ export const identityRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/contact-points", async (c) => {
-    const query = contactPointListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, contactPointListQuerySchema)
     return c.json(await identityService.listContactPoints(c.get("db"), query))
   })
   .post("/contact-points", async (c) => {
@@ -72,7 +69,7 @@ export const identityRoutes = new Hono<Env>()
       {
         data: await identityService.createContactPoint(
           c.get("db"),
-          insertContactPointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertContactPointSchema),
         ),
       },
       201,
@@ -87,7 +84,7 @@ export const identityRoutes = new Hono<Env>()
     const row = await identityService.updateContactPoint(
       c.get("db"),
       c.req.param("id"),
-      updateContactPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateContactPointSchema),
     )
     if (!row) return c.json({ error: "Contact point not found" }, 404)
     return c.json({ data: row })
@@ -98,7 +95,7 @@ export const identityRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/addresses", async (c) => {
-    const query = addressListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, addressListQuerySchema)
     return c.json(await identityService.listAddresses(c.get("db"), query))
   })
   .post("/addresses", async (c) => {
@@ -106,7 +103,7 @@ export const identityRoutes = new Hono<Env>()
       {
         data: await identityService.createAddress(
           c.get("db"),
-          insertAddressSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAddressSchema),
         ),
       },
       201,
@@ -121,7 +118,7 @@ export const identityRoutes = new Hono<Env>()
     const row = await identityService.updateAddress(
       c.get("db"),
       c.req.param("id"),
-      updateAddressSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAddressSchema),
     )
     if (!row) return c.json({ error: "Address not found" }, 404)
     return c.json({ data: row })
@@ -143,7 +140,7 @@ export const identityRoutes = new Hono<Env>()
   })
   .post("/entities/:entityType/:entityId/contact-points", async (c) => {
     const params = c.req.param()
-    const body = insertContactPointForEntitySchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, insertContactPointForEntitySchema)
     return c.json(
       {
         data: await identityService.createContactPoint(c.get("db"), {
@@ -167,7 +164,7 @@ export const identityRoutes = new Hono<Env>()
   })
   .post("/entities/:entityType/:entityId/addresses", async (c) => {
     const params = c.req.param()
-    const body = insertAddressForEntitySchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, insertAddressForEntitySchema)
     return c.json(
       {
         data: await identityService.createAddress(c.get("db"), {
@@ -191,7 +188,7 @@ export const identityRoutes = new Hono<Env>()
   })
   .post("/entities/:entityType/:entityId/named-contacts", async (c) => {
     const params = c.req.param()
-    const body = insertNamedContactForEntitySchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, insertNamedContactForEntitySchema)
     return c.json(
       {
         data: await identityService.createNamedContact(c.get("db"), {

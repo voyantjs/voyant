@@ -19,6 +19,7 @@ function makeModule(options: {
   admin?: boolean
   public_?: boolean
   legacy?: boolean
+  publicPath?: string
 }): HonoModule {
   const admin = new Hono().get("/ping", (c) => c.json({ surface: "admin", name: options.name }))
   const pub = new Hono().get("/ping", (c) => c.json({ surface: "public", name: options.name }))
@@ -28,6 +29,7 @@ function makeModule(options: {
     module: { name: options.name },
     ...(options.admin ? { adminRoutes: admin } : {}),
     ...(options.public_ ? { publicRoutes: pub } : {}),
+    ...(options.publicPath ? { publicPath: options.publicPath } : {}),
     ...(options.legacy ? { routes: legacy } : {}),
   }
 }
@@ -60,6 +62,16 @@ describe("createApp surface mounting", () => {
   it("mounts publicRoutes under /v1/public/{name}", async () => {
     const app = build("customer", [makeModule({ name: "things", public_: true })])
     const res = await app.request("/v1/public/things/ping", {}, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { surface: string }
+    expect(body.surface).toBe("public")
+  })
+
+  it("allows modules to mount publicRoutes at the public root", async () => {
+    const app = build("customer", [
+      makeModule({ name: "storefront", public_: true, publicPath: "/" }),
+    ])
+    const res = await app.request("/v1/public/ping", {}, TEST_ENV, TEST_CTX)
     expect(res.status).toBe(200)
     const body = (await res.json()) as { surface: string }
     expect(body.surface).toBe("public")

@@ -10,6 +10,24 @@ import { requireActor } from "./middleware/require-actor.js"
 import { expandHonoPlugins } from "./plugin.js"
 import type { VoyantAppConfig, VoyantBindings, VoyantVariables } from "./types.js"
 
+function resolveSurfaceMountPath(
+  prefix: string,
+  path: string | undefined,
+  fallback: string,
+): string {
+  const normalized = path?.trim()
+
+  if (!normalized) {
+    return `${prefix}/${fallback}`
+  }
+
+  if (normalized === "/") {
+    return prefix
+  }
+
+  return `${prefix}/${normalized.replace(/^\/+|\/+$/g, "")}`
+}
+
 export function createApp<TBindings extends VoyantBindings>(
   config: VoyantAppConfig<TBindings>,
 ): Hono<{ Bindings: TBindings; Variables: VoyantVariables }> {
@@ -100,7 +118,10 @@ export function createApp<TBindings extends VoyantBindings>(
       app.route(`/v1/admin/${mod.module.name}`, mod.adminRoutes)
     }
     if (mod.publicRoutes) {
-      app.route(`/v1/public/${mod.module.name}`, mod.publicRoutes)
+      app.route(
+        resolveSurfaceMountPath("/v1/public", mod.publicPath, mod.module.name),
+        mod.publicRoutes,
+      )
     }
     if (mod.routes) {
       app.route(`/v1/${mod.module.name}`, mod.routes)
@@ -113,7 +134,10 @@ export function createApp<TBindings extends VoyantBindings>(
       app.route(`/v1/admin/${ext.extension.module}`, ext.adminRoutes)
     }
     if (ext.publicRoutes) {
-      app.route(`/v1/public/${ext.extension.module}`, ext.publicRoutes)
+      app.route(
+        resolveSurfaceMountPath("/v1/public", ext.publicPath, ext.extension.module),
+        ext.publicRoutes,
+      )
     }
     if (ext.routes) {
       app.route(`/v1/${ext.extension.module}`, ext.routes)

@@ -18,16 +18,12 @@ import {
 } from "./schemas.js"
 
 export function getStorefrontSettings(client: FetchWithValidationOptions) {
-  return fetchWithValidation(
-    "/v1/public/storefront/settings",
-    storefrontSettingsResponseSchema,
-    client,
-  )
+  return fetchWithValidation("/v1/public/settings", storefrontSettingsResponseSchema, client)
 }
 
 export function getStorefrontDeparture(client: FetchWithValidationOptions, departureId: string) {
   return fetchWithValidation(
-    `/v1/public/storefront/departures/${departureId}`,
+    `/v1/public/departures/${departureId}`,
     storefrontDepartureResponseSchema,
     client,
   )
@@ -39,7 +35,7 @@ export function listStorefrontProductDepartures(
   query?: StorefrontDepartureListQuery,
 ) {
   return fetchWithValidation(
-    withQueryParams(`/v1/public/storefront/products/${productId}/departures`, query),
+    withQueryParams(`/v1/public/products/${productId}/departures`, query),
     storefrontDepartureListResponseSchema,
     client,
   )
@@ -53,7 +49,7 @@ export function previewStorefrontDeparturePrice(
   const parsed = storefrontDeparturePricePreviewInputSchema.parse(input)
 
   return fetchWithValidation(
-    `/v1/public/storefront/departures/${departureId}/price`,
+    `/v1/public/departures/${departureId}/price`,
     storefrontDeparturePricePreviewResponseSchema,
     client,
     { method: "POST", body: JSON.stringify(parsed) },
@@ -66,7 +62,7 @@ export function listStorefrontProductExtensions(
   query?: StorefrontProductExtensionsQuery,
 ) {
   return fetchWithValidation(
-    withQueryParams(`/v1/public/storefront/products/${productId}/extensions`, query),
+    withQueryParams(`/v1/public/products/${productId}/extensions`, query),
     storefrontProductExtensionsResponseSchema,
     client,
   )
@@ -78,7 +74,7 @@ export function getStorefrontDepartureItinerary(
   departureId: string,
 ) {
   return fetchWithValidation(
-    `/v1/public/storefront/products/${productId}/departures/${departureId}/itinerary`,
+    `/v1/public/products/${productId}/departures/${departureId}/itinerary`,
     storefrontDepartureItineraryResponseSchema,
     client,
   )
@@ -90,7 +86,7 @@ export function listStorefrontProductOffers(
   query?: StorefrontPromotionalOfferListQuery,
 ) {
   return fetchWithValidation(
-    withQueryParams(`/v1/public/storefront/products/${productId}/offers`, query),
+    withQueryParams(`/v1/public/products/${productId}/offers`, query),
     storefrontPromotionalOfferListResponseSchema,
     client,
   )
@@ -102,7 +98,7 @@ export function getStorefrontOfferBySlug(
   query?: Pick<StorefrontPromotionalOfferListQuery, "locale">,
 ) {
   return fetchWithValidation(
-    withQueryParams(`/v1/public/storefront/offers/${slug}`, query),
+    withQueryParams(`/v1/public/offers/${slug}`, query),
     storefrontPromotionalOfferResponseSchema,
     client,
   )

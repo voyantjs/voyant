@@ -222,16 +222,30 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
     expect(attachments[0]?.storageKey).toContain("contract-2.pdf")
     expect(documentEvents).toEqual([
       expect.objectContaining({
-        contractId: contract.id,
-        attachmentKind: "document",
-        attachmentName: "contract-1.pdf",
-        regenerated: false,
+        name: "contract.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          contractId: contract.id,
+          attachmentKind: "document",
+          attachmentName: "contract-1.pdf",
+          regenerated: false,
+        }),
       }),
       expect.objectContaining({
-        contractId: contract.id,
-        attachmentKind: "document",
-        attachmentName: "contract-2.pdf",
-        regenerated: true,
+        name: "contract.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          contractId: contract.id,
+          attachmentKind: "document",
+          attachmentName: "contract-2.pdf",
+          regenerated: true,
+        }),
       }),
     ])
   })

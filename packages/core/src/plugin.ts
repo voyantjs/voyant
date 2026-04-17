@@ -12,7 +12,7 @@
  * contract to carry route bundles.
  */
 
-import type { EventBus, EventHandler } from "./events.js"
+import type { EventBus, EventHandler, EventMetadata } from "./events.js"
 import type { LinkDefinition } from "./links.js"
 import type { BootstrapHandler, Extension, Module } from "./module.js"
 
@@ -22,11 +22,14 @@ import type { BootstrapHandler, Extension, Module } from "./module.js"
  * When the plugin is registered, `handler` is attached to the provided
  * {@link EventBus} for the given `event` name.
  */
-export interface Subscriber<TData = unknown> {
+export interface Subscriber<
+  TData = unknown,
+  TMetadata extends EventMetadata | undefined = EventMetadata | undefined,
+> {
   /** Event name, following `<resource>.<pastTenseAction>` convention. */
   event: string
   /** Callback invoked when the event is emitted. */
-  handler: EventHandler<TData>
+  handler: EventHandler<TData, TMetadata>
 }
 
 /**

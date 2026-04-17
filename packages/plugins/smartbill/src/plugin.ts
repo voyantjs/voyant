@@ -88,8 +88,8 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
   const subscribers: Subscriber[] = [
     {
       event: eventNames.issued,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           const body = mapEvent(event)
@@ -108,8 +108,8 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
     },
     {
       event: eventNames.voided,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           const seriesName =
@@ -138,8 +138,8 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
     },
     {
       event: eventNames.syncRequested,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           const seriesName =

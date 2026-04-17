@@ -3,6 +3,14 @@ import { describe, expect, it, vi } from "vitest"
 import { smartbillPlugin } from "../../src/plugin.js"
 import type { SmartbillFetch } from "../../src/types.js"
 
+function eventEnvelope<T>(data: T) {
+  return {
+    name: "test.event",
+    data,
+    emittedAt: "2026-01-01T00:00:00.000Z",
+  }
+}
+
 function jsonResponse(status: number, body: unknown) {
   const text = JSON.stringify(body)
   return {
@@ -79,12 +87,14 @@ describe("smartbillPlugin — invoice.issued subscriber", () => {
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![0]!.handler
 
-    await handler({
-      id: "inv_123",
-      clientName: "Test SRL",
-      currency: "RON",
-      lineItems: [{ name: "Tour", quantity: 1, unitPrice: 50000 }],
-    })
+    await handler(
+      eventEnvelope({
+        id: "inv_123",
+        clientName: "Test SRL",
+        currency: "RON",
+        lineItems: [{ name: "Tour", quantity: 1, unitPrice: 50000 }],
+      }),
+    )
 
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, init] = fetchMock.mock.calls[0]!
@@ -104,7 +114,7 @@ describe("smartbillPlugin — invoice.issued subscriber", () => {
     const handler = plugin.subscribers![0]!.handler
 
     // Should not throw
-    await handler({ id: "inv_fail", lineItems: [] })
+    await handler(eventEnvelope({ id: "inv_fail", lineItems: [] }))
 
     expect(logger.error).toHaveBeenCalledOnce()
     expect(logger.error.mock.calls[0]![0]).toContain("createInvoice")
@@ -114,14 +124,14 @@ describe("smartbillPlugin — invoice.issued subscriber", () => {
   it("ignores null data", async () => {
     const fetchMock = vi.fn<SmartbillFetch>()
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock })
-    await plugin.subscribers![0]!.handler(null)
+    await plugin.subscribers![0]!.handler(eventEnvelope(null))
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it("ignores data without id", async () => {
     const fetchMock = vi.fn<SmartbillFetch>()
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock })
-    await plugin.subscribers![0]!.handler({ noId: true })
+    await plugin.subscribers![0]!.handler(eventEnvelope({ noId: true }))
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
@@ -133,11 +143,13 @@ describe("smartbillPlugin — invoice.voided subscriber", () => {
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![1]!.handler
 
-    await handler({
-      id: "inv_void",
-      externalSeriesName: "B",
-      externalNumber: "42",
-    })
+    await handler(
+      eventEnvelope({
+        id: "inv_void",
+        externalSeriesName: "B",
+        externalNumber: "42",
+      }),
+    )
 
     expect(fetchMock).toHaveBeenCalledOnce()
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body ?? "{}")
@@ -155,7 +167,7 @@ describe("smartbillPlugin — invoice.voided subscriber", () => {
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![1]!.handler
 
-    await handler({ id: "inv_void2", invoiceNumber: "99" })
+    await handler(eventEnvelope({ id: "inv_void2", invoiceNumber: "99" }))
 
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body ?? "{}")
     expect(body.seriesName).toBe("A") // falls back to options.seriesName
@@ -168,7 +180,7 @@ describe("smartbillPlugin — invoice.voided subscriber", () => {
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![1]!.handler
 
-    await handler({ id: "inv_no_num" })
+    await handler(eventEnvelope({ id: "inv_no_num" }))
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(logger.error).toHaveBeenCalledOnce()
@@ -181,7 +193,7 @@ describe("smartbillPlugin — invoice.voided subscriber", () => {
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![1]!.handler
 
-    await handler({ id: "inv_err", externalNumber: "1" })
+    await handler(eventEnvelope({ id: "inv_err", externalNumber: "1" }))
 
     expect(logger.error).toHaveBeenCalledOnce()
     expect(logger.error.mock.calls[0]![0]).toContain("cancelInvoice")
@@ -197,7 +209,7 @@ describe("smartbillPlugin — invoice.external.sync.requested subscriber", () =>
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![2]!.handler
 
-    await handler({ id: "inv_sync", externalNumber: "55" })
+    await handler(eventEnvelope({ id: "inv_sync", externalNumber: "55" }))
 
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url] = fetchMock.mock.calls[0]!
@@ -212,7 +224,7 @@ describe("smartbillPlugin — invoice.external.sync.requested subscriber", () =>
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![2]!.handler
 
-    await handler({ id: "inv_no_num" })
+    await handler(eventEnvelope({ id: "inv_no_num" }))
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(logger.error).toHaveBeenCalledOnce()
@@ -225,7 +237,7 @@ describe("smartbillPlugin — invoice.external.sync.requested subscriber", () =>
     const plugin = smartbillPlugin({ ...baseOptions, fetch: fetchMock, logger })
     const handler = plugin.subscribers![2]!.handler
 
-    await handler({ id: "inv_err", externalNumber: "1" })
+    await handler(eventEnvelope({ id: "inv_err", externalNumber: "1" }))
 
     expect(logger.error).toHaveBeenCalledOnce()
     expect(logger.error.mock.calls[0]![0]).toContain("getPaymentStatus")
@@ -253,7 +265,7 @@ describe("smartbillPlugin — custom mapEvent", () => {
     })
     const handler = plugin.subscribers![0]!.handler
 
-    await handler({ id: "inv_custom" })
+    await handler(eventEnvelope({ id: "inv_custom" }))
 
     expect(customMapper).toHaveBeenCalledOnce()
     expect(customMapper.mock.calls[0]![0].id).toBe("inv_custom")

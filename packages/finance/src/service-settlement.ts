@@ -211,14 +211,21 @@ export const financeSettlementService = {
             invoice = (await financeService.getInvoiceById(db, invoice.id)) ?? invoice
 
             if (createdPaymentId) {
-              await runtime.eventBus?.emit("invoice.settled", {
-                invoiceId: invoice.id,
-                paymentId: createdPaymentId,
-                provider: externalRef.provider,
-                newlyAppliedAmountCents,
-                paidCents: invoice.paidCents,
-                balanceDueCents: invoice.balanceDueCents,
-              } satisfies InvoiceSettledEvent)
+              await runtime.eventBus?.emit(
+                "invoice.settled",
+                {
+                  invoiceId: invoice.id,
+                  paymentId: createdPaymentId,
+                  provider: externalRef.provider,
+                  newlyAppliedAmountCents,
+                  paidCents: invoice.paidCents,
+                  balanceDueCents: invoice.balanceDueCents,
+                } satisfies InvoiceSettledEvent,
+                {
+                  category: "domain",
+                  source: "service",
+                },
+              )
             }
           }
         }

@@ -154,7 +154,12 @@ describe("createApp with plugins", () => {
     const res = await app.request("/v1/admin/events/emit", { method: "POST" }, TEST_ENV, TEST_CTX)
     expect(res.status).toBe(200)
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler).toHaveBeenCalledWith({ bookingId: "b_123" })
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "booking.created",
+        data: { bookingId: "b_123" },
+      }),
+    )
   })
 
   it("runs plugin, module, and extension bootstraps once in order", async () => {
@@ -250,6 +255,11 @@ describe("createApp with plugins", () => {
     const res = await app.request("/v1/admin/bus/emit", { method: "POST" }, TEST_ENV, TEST_CTX)
     expect(res.status).toBe(200)
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler).toHaveBeenCalledWith({ bookingId: "b_234" })
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "booking.updated",
+        data: { bookingId: "b_234" },
+      }),
+    )
   })
 })

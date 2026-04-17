@@ -11,7 +11,13 @@ describe("createEventBus", () => {
     await bus.emit("booking.created", { id: "book_1" })
 
     expect(handler).toHaveBeenCalledOnce()
-    expect(handler).toHaveBeenCalledWith({ id: "book_1" })
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "booking.created",
+        data: { id: "book_1" },
+        emittedAt: expect.any(String),
+      }),
+    )
   })
 
   it("delivers to multiple subscribers for the same event", async () => {
@@ -23,8 +29,42 @@ describe("createEventBus", () => {
 
     await bus.emit("quote.sent", { id: "q1" })
 
-    expect(a).toHaveBeenCalledWith({ id: "q1" })
-    expect(b).toHaveBeenCalledWith({ id: "q1" })
+    expect(a).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "quote.sent",
+        data: { id: "q1" },
+      }),
+    )
+    expect(b).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "quote.sent",
+        data: { id: "q1" },
+      }),
+    )
+  })
+
+  it("includes metadata in the delivered envelope when provided", async () => {
+    const bus = createEventBus()
+    const handler = vi.fn()
+    bus.subscribe("invoice.settled", handler)
+
+    await bus.emit(
+      "invoice.settled",
+      { id: "inv_1" },
+      { category: "domain", source: "service", correlationId: "corr_123" },
+    )
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "invoice.settled",
+        data: { id: "inv_1" },
+        metadata: {
+          category: "domain",
+          source: "service",
+          correlationId: "corr_123",
+        },
+      }),
+    )
   })
 
   it("does nothing when no subscribers are registered", async () => {

@@ -146,10 +146,17 @@ describe.skipIf(!DB_AVAILABLE)("Booking document notification routes", () => {
     })
     expect(sentEvents).toEqual([
       expect.objectContaining({
-        bookingId: "book_docs_1",
-        recipient: "ana@example.com",
-        provider: "local",
-        documentKeys: ["legal:ctat_docs_1", "finance:invr_docs_1"],
+        name: "booking.documents.sent",
+        metadata: {
+          category: "domain",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          bookingId: "book_docs_1",
+          recipient: "ana@example.com",
+          provider: "local",
+          documentKeys: ["legal:ctat_docs_1", "finance:invr_docs_1"],
+        }),
       }),
     ])
   })

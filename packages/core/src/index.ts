@@ -18,7 +18,15 @@ export type {
   VoyantPermission,
   VoyantVariables,
 } from "./env.js"
-export type { EventBus, EventHandler, Subscription } from "./events.js"
+export type {
+  EventBus,
+  EventCategory,
+  EventEnvelope,
+  EventHandler,
+  EventMetadata,
+  EventSource,
+  Subscription,
+} from "./events.js"
 export { createEventBus } from "./events.js"
 export { hooks } from "./hooks.js"
 export type {

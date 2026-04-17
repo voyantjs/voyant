@@ -88,8 +88,8 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
   const subscribers: Subscriber[] = [
     {
       event: eventNames.created,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           await client.upsertByVoyantId(options.documentType, event.id, mapEvent(event))
@@ -100,8 +100,8 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
     },
     {
       event: eventNames.updated,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           await client.upsertByVoyantId(options.documentType, event.id, mapEvent(event))
@@ -112,8 +112,8 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
     },
     {
       event: eventNames.deleted,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
           await client.deleteByVoyantId(options.documentType, event.id)

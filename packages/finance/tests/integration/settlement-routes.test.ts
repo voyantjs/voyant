@@ -150,11 +150,18 @@ describe.skipIf(!DB_AVAILABLE)("Finance settlement routes", () => {
     expect(syncedRef?.syncError).toBeNull()
     expect(settlementEvents).toEqual([
       expect.objectContaining({
-        invoiceId: invoice.id,
-        provider: "smartbill",
-        newlyAppliedAmountCents: 30000,
-        paidCents: 60000,
-        balanceDueCents: 40000,
+        name: "invoice.settled",
+        metadata: {
+          category: "domain",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          invoiceId: invoice.id,
+          provider: "smartbill",
+          newlyAppliedAmountCents: 30000,
+          paidCents: 60000,
+          balanceDueCents: 40000,
+        }),
       }),
     ])
   })

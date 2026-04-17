@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -20,7 +21,7 @@ type Env = {
 
 export const pipelineRoutes = new Hono<Env>()
   .get("/pipelines", async (c) => {
-    const query = pipelineListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, pipelineListQuerySchema)
     return c.json(await crmService.listPipelines(c.get("db"), query))
   })
   .post("/pipelines", async (c) => {
@@ -28,7 +29,7 @@ export const pipelineRoutes = new Hono<Env>()
       {
         data: await crmService.createPipeline(
           c.get("db"),
-          insertPipelineSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPipelineSchema),
         ),
       },
       201,
@@ -43,7 +44,7 @@ export const pipelineRoutes = new Hono<Env>()
     const row = await crmService.updatePipeline(
       c.get("db"),
       c.req.param("id"),
-      updatePipelineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePipelineSchema),
     )
     if (!row) return c.json({ error: "Pipeline not found" }, 404)
     return c.json({ data: row })
@@ -54,16 +55,13 @@ export const pipelineRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/stages", async (c) => {
-    const query = stageListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, stageListQuerySchema)
     return c.json(await crmService.listStages(c.get("db"), query))
   })
   .post("/stages", async (c) => {
     return c.json(
       {
-        data: await crmService.createStage(
-          c.get("db"),
-          insertStageSchema.parse(await c.req.json()),
-        ),
+        data: await crmService.createStage(c.get("db"), await parseJsonBody(c, insertStageSchema)),
       },
       201,
     )
@@ -77,7 +75,7 @@ export const pipelineRoutes = new Hono<Env>()
     const row = await crmService.updateStage(
       c.get("db"),
       c.req.param("id"),
-      updateStageSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateStageSchema),
     )
     if (!row) return c.json({ error: "Stage not found" }, 404)
     return c.json({ data: row })

@@ -1,27 +1,16 @@
 import { generateAvailabilitySlots } from "@voyantjs/availability"
 import { expireStaleBookingHolds } from "@voyantjs/bookings/tasks"
 import { createDbClient } from "@voyantjs/db"
-import {
-  buildNotificationTaskRuntime,
-  createDefaultNotificationProviders,
-} from "@voyantjs/notifications"
 import { sendDueNotificationReminders } from "@voyantjs/notifications/tasks"
 import { generateProductPdf } from "@voyantjs/products/tasks"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import { hatchet } from "./hatchet-client.js"
+import { getNotificationTaskRuntime } from "./lib/notifications.js"
 
 function getDb() {
   return createDbClient(process.env.DATABASE_URL!, { adapter: "node" }) as PostgresJsDatabase
 }
-
-const resolveNotificationProviders = (env: Record<string, unknown>) =>
-  createDefaultNotificationProviders(env, { emailProvider: "resend" })
-
-const getNotificationTaskRuntime = () =>
-  buildNotificationTaskRuntime(process.env, {
-    resolveProviders: resolveNotificationProviders,
-  })
 
 const generatePdf = hatchet.task({
   name: "products.generate-pdf",
@@ -69,7 +58,7 @@ const sendPaymentReminders = hatchet.workflow({
 sendPaymentReminders.task({
   name: "run",
   fn: async (input: { now?: string | null }) => {
-    return sendDueNotificationReminders(getDb(), process.env, input, getNotificationTaskRuntime())
+    return sendDueNotificationReminders(getDb(), process.env, input, getNotificationTaskRuntime(process.env))
   },
 })
 

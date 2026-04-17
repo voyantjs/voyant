@@ -15,7 +15,6 @@ import { hospitalityHonoModule } from "@voyantjs/hospitality"
 import { identityHonoModule } from "@voyantjs/identity"
 import { marketsHonoModule } from "@voyantjs/markets"
 import {
-  createDefaultNotificationProviders,
   createNotificationsHonoModule,
 } from "@voyantjs/notifications"
 import { octoHonoModule } from "@voyantjs/octo"
@@ -29,9 +28,7 @@ import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { getDbFromHyperdrive } from "./lib/db"
 import { createMediaStorage, guessMimeType } from "./lib/storage"
-
-const resolveNotificationProviders = (env: Record<string, unknown>) =>
-  createDefaultNotificationProviders(env, { emailProvider: "resend" })
+import { resolveNotificationProviders } from "../lib/notifications"
 
 const notificationsHonoModule = createNotificationsHonoModule({
   resolveProviders: resolveNotificationProviders,

@@ -10,12 +10,10 @@ import {
 import { financeRoutes } from "./routes.js"
 import {
   createFinanceAdminDocumentRoutes,
-  type FinanceDocumentRouteOptions,
 } from "./routes-documents.js"
 import { publicFinanceRoutes } from "./routes-public.js"
 import {
   createFinanceAdminSettlementRoutes,
-  type FinanceSettlementRouteOptions,
 } from "./routes-settlement.js"
 
 export type { FinanceRoutes } from "./routes.js"

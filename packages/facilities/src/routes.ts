@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   insertAddressForEntitySchema,
   insertContactPointForEntitySchema,
@@ -41,7 +42,7 @@ type Env = {
 
 export const facilitiesRoutes = new Hono<Env>()
   .get("/facilities", async (c) => {
-    const query = facilityListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, facilityListQuerySchema)
     return c.json(await facilitiesService.listFacilities(c.get("db"), query))
   })
   .post("/facilities", async (c) => {
@@ -49,7 +50,7 @@ export const facilitiesRoutes = new Hono<Env>()
       {
         data: await facilitiesService.createFacility(
           c.get("db"),
-          insertFacilitySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertFacilitySchema),
         ),
       },
       201,
@@ -64,7 +65,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateFacility(
       c.get("db"),
       c.req.param("id"),
-      updateFacilitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateFacilitySchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row })
@@ -83,7 +84,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.createContactPoint(
       c.get("db"),
       c.req.param("id"),
-      insertContactPointForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertContactPointForEntitySchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -92,7 +93,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateContactPoint(
       c.get("db"),
       c.req.param("id"),
-      updateIdentityContactPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityContactPointSchema),
     )
     if (!row) return c.json({ error: "Contact point not found" }, 404)
     return c.json({ data: row })
@@ -109,7 +110,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.createAddress(
       c.get("db"),
       c.req.param("id"),
-      insertAddressForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertAddressForEntitySchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -118,7 +119,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateAddress(
       c.get("db"),
       c.req.param("id"),
-      updateIdentityAddressSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityAddressSchema),
     )
     if (!row) return c.json({ error: "Address not found" }, 404)
     return c.json({ data: row })
@@ -129,16 +130,14 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/facility-contacts", async (c) => {
-    const query = facilityContactListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, facilityContactListQuerySchema)
     return c.json(await facilitiesService.listFacilityContacts(c.get("db"), query))
   })
   .post("/facilities/:id/contacts", async (c) => {
     const row = await facilitiesService.createFacilityContact(
       c.get("db"),
       c.req.param("id"),
-      insertFacilityContactSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFacilityContactSchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -147,7 +146,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateFacilityContact(
       c.get("db"),
       c.req.param("id"),
-      updateFacilityContactSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateFacilityContactSchema),
     )
     if (!row) return c.json({ error: "Facility contact not found" }, 404)
     return c.json({ data: row })
@@ -158,16 +157,14 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/facility-features", async (c) => {
-    const query = facilityFeatureListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, facilityFeatureListQuerySchema)
     return c.json(await facilitiesService.listFacilityFeatures(c.get("db"), query))
   })
   .post("/facilities/:id/features", async (c) => {
     const row = await facilitiesService.createFacilityFeature(
       c.get("db"),
       c.req.param("id"),
-      insertFacilityFeatureSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFacilityFeatureSchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -176,7 +173,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateFacilityFeature(
       c.get("db"),
       c.req.param("id"),
-      updateFacilityFeatureSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateFacilityFeatureSchema),
     )
     if (!row) return c.json({ error: "Facility feature not found" }, 404)
     return c.json({ data: row })
@@ -187,16 +184,14 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/facility-operation-schedules", async (c) => {
-    const query = facilityOperationScheduleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, facilityOperationScheduleListQuerySchema)
     return c.json(await facilitiesService.listFacilityOperationSchedules(c.get("db"), query))
   })
   .post("/facilities/:id/operation-schedules", async (c) => {
     const row = await facilitiesService.createFacilityOperationSchedule(
       c.get("db"),
       c.req.param("id"),
-      insertFacilityOperationScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFacilityOperationScheduleSchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -205,7 +200,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateFacilityOperationSchedule(
       c.get("db"),
       c.req.param("id"),
-      updateFacilityOperationScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateFacilityOperationScheduleSchema),
     )
     if (!row) return c.json({ error: "Facility operation schedule not found" }, 404)
     return c.json({ data: row })
@@ -219,13 +214,13 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/properties", async (c) => {
-    const query = propertyListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, propertyListQuerySchema)
     return c.json(await facilitiesService.listProperties(c.get("db"), query))
   })
   .post("/properties", async (c) => {
     const row = await facilitiesService.createProperty(
       c.get("db"),
-      insertPropertySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPropertySchema),
     )
     if (!row) return c.json({ error: "Facility not found" }, 404)
     return c.json({ data: row }, 201)
@@ -239,7 +234,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updateProperty(
       c.get("db"),
       c.req.param("id"),
-      updatePropertySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePropertySchema),
     )
     if (!row) return c.json({ error: "Property not found" }, 404)
     return c.json({ data: row })
@@ -250,15 +245,13 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/property-groups", async (c) => {
-    const query = propertyGroupListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, propertyGroupListQuerySchema)
     return c.json(await facilitiesService.listPropertyGroups(c.get("db"), query))
   })
   .post("/property-groups", async (c) => {
     const row = await facilitiesService.createPropertyGroup(
       c.get("db"),
-      insertPropertyGroupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPropertyGroupSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -271,7 +264,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updatePropertyGroup(
       c.get("db"),
       c.req.param("id"),
-      updatePropertyGroupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePropertyGroupSchema),
     )
     if (!row) return c.json({ error: "Property group not found" }, 404)
     return c.json({ data: row })
@@ -282,15 +275,13 @@ export const facilitiesRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/property-group-members", async (c) => {
-    const query = propertyGroupMemberListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, propertyGroupMemberListQuerySchema)
     return c.json(await facilitiesService.listPropertyGroupMembers(c.get("db"), query))
   })
   .post("/property-group-members", async (c) => {
     const row = await facilitiesService.createPropertyGroupMember(
       c.get("db"),
-      insertPropertyGroupMemberSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPropertyGroupMemberSchema),
     )
     if (!row) return c.json({ error: "Property group or property not found" }, 404)
     return c.json({ data: row }, 201)
@@ -304,7 +295,7 @@ export const facilitiesRoutes = new Hono<Env>()
     const row = await facilitiesService.updatePropertyGroupMember(
       c.get("db"),
       c.req.param("id"),
-      updatePropertyGroupMemberSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePropertyGroupMemberSchema),
     )
     if (!row) return c.json({ error: "Property group member not found" }, 404)
     return c.json({ data: row })

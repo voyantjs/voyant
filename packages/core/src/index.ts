@@ -57,6 +57,7 @@ export type {
   EntityFetcher,
   EntityFetcherArgs,
   EntityRecord,
+  QueryContextValue,
   QueryFilters,
   QueryGraphConfig,
   QueryGraphContext,

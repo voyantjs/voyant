@@ -8,6 +8,7 @@ export {
 export {
   createNetopiaFinanceExtension,
   createNetopiaFinanceRoutes,
+  NETOPIA_RUNTIME_CONTAINER_KEY,
   netopiaFinanceExtension,
   netopiaHonoPlugin,
 } from "./plugin.js"
@@ -44,6 +45,8 @@ export {
   netopiaPaymentInstrumentSchema,
   netopiaPaymentOptionsSchema,
   netopiaProductLineSchema,
+  netopiaRuntimeOptionsSchema,
   netopiaStartPaymentSessionSchema,
   netopiaWebhookPayloadSchema,
+  resolvedNetopiaRuntimeOptionsSchema,
 } from "./validation.js"

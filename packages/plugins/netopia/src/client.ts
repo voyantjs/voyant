@@ -1,3 +1,4 @@
+import { ZodError } from "zod"
 import type {
   NetopiaFetch,
   NetopiaRuntimeOptions,
@@ -5,6 +6,7 @@ import type {
   NetopiaStartPaymentResponse,
   ResolvedNetopiaRuntimeOptions,
 } from "./types.js"
+import { resolvedNetopiaRuntimeOptionsSchema } from "./validation.js"
 
 export interface NetopiaClientApi {
   startCardPayment(request: NetopiaStartPaymentRequest): Promise<NetopiaStartPaymentResponse>
@@ -32,17 +34,30 @@ export function resolveNetopiaRuntimeOptions(
   if (!notifyUrl) throw new Error("Missing Netopia config: NETOPIA_NOTIFY_URL")
   if (!redirectUrl) throw new Error("Missing Netopia config: NETOPIA_REDIRECT_URL")
 
-  return {
-    apiUrl,
-    apiKey,
-    posSignature,
-    notifyUrl,
-    redirectUrl,
-    emailTemplate: options.emailTemplate ?? "confirm",
-    language: options.language ?? "ro",
-    successStatuses: options.successStatuses ?? [3, 5],
-    processingStatuses: options.processingStatuses ?? [1, 15],
-    fetch: options.fetch,
+  try {
+    return resolvedNetopiaRuntimeOptionsSchema.parse({
+      apiUrl,
+      apiKey,
+      posSignature,
+      notifyUrl,
+      redirectUrl,
+      emailTemplate: options.emailTemplate,
+      language: options.language,
+      successStatuses: options.successStatuses,
+      processingStatuses: options.processingStatuses,
+      fetch: options.fetch,
+    })
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const detail = error.issues
+        .map((issue) => {
+          const path = issue.path.join(".") || "runtimeOptions"
+          return `${path}: ${issue.message}`
+        })
+        .join("; ")
+      throw new Error(`Invalid Netopia runtime options: ${detail}`)
+    }
+    throw error
   }
 }
 

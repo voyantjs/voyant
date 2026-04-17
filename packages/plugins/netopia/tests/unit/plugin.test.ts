@@ -1,7 +1,9 @@
+import { createContainer, createEventBus } from "@voyantjs/core"
 import { financeService, type PaymentSession } from "@voyantjs/finance"
 import { notificationsService } from "@voyantjs/notifications"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { NetopiaClientApi } from "../../src/client.js"
+import { NETOPIA_RUNTIME_CONTAINER_KEY, netopiaHonoPlugin } from "../../src/plugin.js"
 import { deriveNetopiaOrderId, mapNetopiaPaymentStatus, netopiaService } from "../../src/service.js"
 import * as startService from "../../src/service-start.js"
 
@@ -72,6 +74,49 @@ const billingInput = {
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+describe("netopiaHonoPlugin.bootstrap", () => {
+  it("validates and registers the resolved runtime once", async () => {
+    const plugin = netopiaHonoPlugin({
+      apiUrl: "https://secure.mobilpay.ro/pay",
+      apiKey: "api-key",
+      posSignature: "pos-signature",
+      notifyUrl: "https://api.example.com/netopia/callback",
+      redirectUrl: "https://app.example.com/checkout/return",
+    })
+    const container = createContainer()
+
+    await plugin.bootstrap?.({
+      bindings: {},
+      container,
+      eventBus: createEventBus(),
+    })
+
+    expect(container.resolve(NETOPIA_RUNTIME_CONTAINER_KEY)).toMatchObject({
+      apiUrl: "https://secure.mobilpay.ro/pay",
+      apiKey: "api-key",
+      posSignature: "pos-signature",
+      notifyUrl: "https://api.example.com/netopia/callback",
+      redirectUrl: "https://app.example.com/checkout/return",
+      emailTemplate: "confirm",
+      language: "ro",
+      successStatuses: [3, 5],
+      processingStatuses: [1, 15],
+    })
+  })
+
+  it("fails fast when required runtime config is missing", async () => {
+    const plugin = netopiaHonoPlugin()
+
+    expect(() =>
+      plugin.bootstrap?.({
+        bindings: {},
+        container: createContainer(),
+        eventBus: createEventBus(),
+      }),
+    ).toThrow(/NETOPIA_URL/)
+  })
 })
 
 describe("deriveNetopiaOrderId", () => {

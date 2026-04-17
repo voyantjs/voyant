@@ -8,6 +8,7 @@ import {
   sendPaymentSessionNotificationSchema,
 } from "@voyantjs/notifications"
 import { z } from "zod"
+import type { NetopiaFetch, NetopiaRuntimeOptions } from "./types.js"
 
 export const netopiaBillingAddressSchema = z.object({
   email: z.string().email(),
@@ -49,6 +50,49 @@ export const netopiaPaymentInstrumentSchema = z.object({
 })
 
 export const netopiaBrowserDataSchema = z.record(z.string(), z.string().optional())
+
+const optionalRuntimeUrl = z.string().trim().url().optional()
+
+const optionalRuntimeString = z.string().trim().min(1).optional()
+
+const optionalIntegerArray = z.array(z.number().int()).min(1).optional()
+
+const optionalFetch = z.custom<NetopiaFetch | undefined>(
+  (value) => value === undefined || typeof value === "function",
+  "Expected a fetch implementation function",
+)
+
+const optionalProviderResolver = z.custom<NetopiaRuntimeOptions["resolveNotificationProviders"]>(
+  (value) => value === undefined || typeof value === "function",
+  "Expected a notification provider resolver function",
+)
+
+export const netopiaRuntimeOptionsSchema = z.object({
+  apiUrl: optionalRuntimeUrl,
+  apiKey: optionalRuntimeString,
+  posSignature: optionalRuntimeString,
+  notifyUrl: optionalRuntimeUrl,
+  redirectUrl: optionalRuntimeUrl,
+  emailTemplate: optionalRuntimeString,
+  language: optionalRuntimeString,
+  successStatuses: optionalIntegerArray,
+  processingStatuses: optionalIntegerArray,
+  fetch: optionalFetch.optional(),
+  resolveNotificationProviders: optionalProviderResolver.optional(),
+})
+
+export const resolvedNetopiaRuntimeOptionsSchema = z.object({
+  apiUrl: z.string().trim().url(),
+  apiKey: z.string().trim().min(1),
+  posSignature: z.string().trim().min(1),
+  notifyUrl: z.string().trim().url(),
+  redirectUrl: z.string().trim().url(),
+  emailTemplate: z.string().trim().min(1).default("confirm"),
+  language: z.string().trim().min(1).default("ro"),
+  successStatuses: z.array(z.number().int()).min(1).default([3, 5]),
+  processingStatuses: z.array(z.number().int()).min(1).default([1, 15]),
+  fetch: optionalFetch.optional(),
+})
 
 export const netopiaStartPaymentSessionSchema = z.object({
   description: z.string().optional(),

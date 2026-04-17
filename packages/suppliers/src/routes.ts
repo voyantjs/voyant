@@ -1,3 +1,4 @@
+import { parseJsonBody, requireUserId } from "@voyantjs/hono"
 import {
   insertAddressForEntitySchema,
   insertContactPointForEntitySchema,
@@ -349,17 +350,13 @@ export const supplierRoutes = new Hono<Env>()
 
   // POST /:id/notes — Add note to supplier
   .post("/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
 
     const row = await suppliersService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertSupplierNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertSupplierNoteSchema),
     )
 
     if (!row) {

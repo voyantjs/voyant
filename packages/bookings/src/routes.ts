@@ -1,3 +1,4 @@
+import { parseJsonBody, requireUserId } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
@@ -1025,16 +1026,12 @@ export const bookingRoutes = new Hono<Env>()
 
   // 28. POST /:id/notes — Add note
   .post("/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
     const row = await bookingsService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertBookingNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingNoteSchema),
     )
 
     if (!row) {

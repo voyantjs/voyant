@@ -1,3 +1,4 @@
+import { parseJsonBody, RequestValidationError, requireUserId } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -1411,16 +1412,20 @@ export const productRoutes = new Hono<Env>()
 
   // POST /:id/versions — Create version snapshot
   .post("/:id/versions", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create versions" }, 400)
-    }
+    const userId = requireUserId(c)
     const row = await productsService.createVersion(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertVersionSchema.parse(await c.req.json().catch(() => ({}))),
+      await parseJsonBody(c, insertVersionSchema, {
+        invalidJsonMessage: "Invalid JSON body",
+      }).catch((error) => {
+        if (error instanceof RequestValidationError && error.message === "Invalid JSON body") {
+          return {}
+        }
+
+        throw error
+      }),
     )
 
     if (!row) {
@@ -1441,16 +1446,12 @@ export const productRoutes = new Hono<Env>()
 
   // POST /:id/notes — Add note to product
   .post("/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
     const row = await productsService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertProductNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertProductNoteSchema),
     )
 
     if (!row) {

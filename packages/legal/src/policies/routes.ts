@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -35,22 +36,20 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- policies ----------
 
   .get("/", async (c) => {
-    const query = policyListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, policyListQuerySchema)
     return c.json(await policiesService.listPolicies(c.get("db"), query))
   })
 
   .post("/", async (c) => {
     const row = await policiesService.createPolicy(
       c.get("db"),
-      insertPolicySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPolicySchema),
     )
     return c.json({ data: row }, 201)
   })
 
   .get("/resolve", async (c) => {
-    const input = resolvePolicyInputSchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const input = await parseQuery(c, resolvePolicyInputSchema)
     const result = await policiesService.resolvePolicy(c.get("db"), input)
     if (!result) return c.json({ data: null })
     return c.json({ data: result })
@@ -66,7 +65,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const row = await policiesService.updatePolicy(
       c.get("db"),
       c.req.param("id"),
-      updatePolicySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePolicySchema),
     )
     if (!row) return c.json({ error: "Policy not found" }, 404)
     return c.json({ data: row })
@@ -79,7 +78,7 @@ export const policiesAdminRoutes = new Hono<Env>()
   })
 
   .post("/:id/evaluate", async (c) => {
-    const input = evaluateCancellationInputSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, evaluateCancellationInputSchema)
     const result = await policiesService.evaluateCancellation(c.get("db"), c.req.param("id"), input)
     if (!result) return c.json({ error: "Policy or current version not found" }, 404)
     return c.json({ data: result })
@@ -96,7 +95,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const version = await policiesService.createPolicyVersion(
       c.get("db"),
       c.req.param("id"),
-      insertPolicyVersionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPolicyVersionSchema),
     )
     if (!version) return c.json({ error: "Policy not found" }, 404)
     return c.json({ data: version }, 201)
@@ -112,7 +111,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const row = await policiesService.updatePolicyVersion(
       c.get("db"),
       c.req.param("versionId"),
-      updatePolicyVersionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePolicyVersionSchema),
     )
     if (!row) return c.json({ error: "Policy version not found or not a draft" }, 404)
     return c.json({ data: row })
@@ -144,7 +143,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const row = await policiesService.createPolicyRule(
       c.get("db"),
       c.req.param("versionId"),
-      insertPolicyRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPolicyRuleSchema),
     )
     if (!row) return c.json({ error: "Policy version not found" }, 404)
     return c.json({ data: row }, 201)
@@ -154,7 +153,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const row = await policiesService.updatePolicyRule(
       c.get("db"),
       c.req.param("ruleId"),
-      updatePolicyRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePolicyRuleSchema),
     )
     if (!row) return c.json({ error: "Policy rule not found" }, 404)
     return c.json({ data: row })
@@ -169,16 +168,14 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- assignments ----------
 
   .get("/assignments", async (c) => {
-    const query = policyAssignmentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, policyAssignmentListQuerySchema)
     return c.json(await policiesService.listPolicyAssignments(c.get("db"), query))
   })
 
   .post("/assignments", async (c) => {
     const row = await policiesService.createPolicyAssignment(
       c.get("db"),
-      insertPolicyAssignmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPolicyAssignmentSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -187,7 +184,7 @@ export const policiesAdminRoutes = new Hono<Env>()
     const row = await policiesService.updatePolicyAssignment(
       c.get("db"),
       c.req.param("id"),
-      updatePolicyAssignmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePolicyAssignmentSchema),
     )
     if (!row) return c.json({ error: "Policy assignment not found" }, 404)
     return c.json({ data: row })
@@ -202,16 +199,14 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- acceptances ----------
 
   .get("/acceptances", async (c) => {
-    const query = policyAcceptanceListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, policyAcceptanceListQuerySchema)
     return c.json(await policiesService.listPolicyAcceptances(c.get("db"), query))
   })
 
   .post("/acceptances", async (c) => {
     const row = await policiesService.recordPolicyAcceptance(
       c.get("db"),
-      insertPolicyAcceptanceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPolicyAcceptanceSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -239,7 +234,7 @@ export const policiesPublicRoutes = new Hono<Env>()
   })
 
   .post("/:id/accept", async (c) => {
-    const input = insertPolicyAcceptanceSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, insertPolicyAcceptanceSchema)
     const row = await policiesService.recordPolicyAcceptance(c.get("db"), input)
     return c.json({ data: row }, 201)
   })

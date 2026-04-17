@@ -76,6 +76,15 @@ describe("smartbillPlugin structure", () => {
     const events = plugin.subscribers!.map((s) => s.event)
     expect(events).toEqual(["custom.issued", "custom.voided", "custom.sync"])
   })
+
+  it("fails fast on invalid plugin options", () => {
+    expect(() =>
+      smartbillPlugin({
+        ...baseOptions,
+        username: "",
+      }),
+    ).toThrowError(/Invalid SmartBill plugin options/)
+  })
 })
 
 describe("smartbillPlugin — invoice.issued subscriber", () => {

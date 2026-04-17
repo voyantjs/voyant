@@ -1909,6 +1909,9 @@ importers:
       '@voyantjs/core':
         specifier: workspace:*
         version: link:../../core
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
@@ -1925,6 +1928,9 @@ importers:
       '@voyantjs/core':
         specifier: workspace:*
         version: link:../../core
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
@@ -1941,6 +1947,9 @@ importers:
       '@voyantjs/core':
         specifier: workspace:*
         version: link:../../core
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*

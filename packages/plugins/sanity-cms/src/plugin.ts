@@ -1,7 +1,9 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
+import { ZodError } from "zod"
 
 import { createSanityClient, type SanityClientOptions } from "./client.js"
 import type { SanityDocBody, VoyantEntityEvent } from "./types.js"
+import { sanityCmsPluginOptionsSchema } from "./validation.js"
 
 /**
  * Event names the plugin subscribes to. Defaults match the
@@ -76,13 +78,14 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
  * EventBus contract, so a Sanity outage never blocks the emitter.
  */
 export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
-  const client = createSanityClient(options)
-  const mapEvent = options.mapEvent ?? defaultMapEvent
-  const logger = options.logger ?? console
+  const validatedOptions = parseSanityCmsPluginOptions(options)
+  const client = createSanityClient(validatedOptions)
+  const mapEvent = validatedOptions.mapEvent ?? defaultMapEvent
+  const logger = validatedOptions.logger ?? console
   const eventNames = {
-    created: options.events?.created ?? "product.created",
-    updated: options.events?.updated ?? "product.updated",
-    deleted: options.events?.deleted ?? "product.deleted",
+    created: validatedOptions.events?.created ?? "product.created",
+    updated: validatedOptions.events?.updated ?? "product.updated",
+    deleted: validatedOptions.events?.deleted ?? "product.deleted",
   }
 
   const subscribers: Subscriber[] = [
@@ -92,7 +95,7 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
         const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.upsertByVoyantId(options.documentType, event.id, mapEvent(event))
+          await client.upsertByVoyantId(validatedOptions.documentType, event.id, mapEvent(event))
         } catch (err) {
           logger.error(`[sanity-cms] upsert on "${eventNames.created}" failed for ${event.id}`, err)
         }
@@ -104,7 +107,7 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
         const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.upsertByVoyantId(options.documentType, event.id, mapEvent(event))
+          await client.upsertByVoyantId(validatedOptions.documentType, event.id, mapEvent(event))
         } catch (err) {
           logger.error(`[sanity-cms] upsert on "${eventNames.updated}" failed for ${event.id}`, err)
         }
@@ -116,7 +119,7 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
         const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.deleteByVoyantId(options.documentType, event.id)
+          await client.deleteByVoyantId(validatedOptions.documentType, event.id)
         } catch (err) {
           logger.error(`[sanity-cms] delete on "${eventNames.deleted}" failed for ${event.id}`, err)
         }
@@ -128,5 +131,22 @@ export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
     name: "sanity-cms",
     version: "0.1.0",
     subscribers,
+  }
+}
+
+function parseSanityCmsPluginOptions(options: SanityCmsPluginOptions): SanityCmsPluginOptions {
+  try {
+    return sanityCmsPluginOptionsSchema.parse(options)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const detail = error.issues
+        .map((issue) => {
+          const path = issue.path.join(".") || "options"
+          return `${path}: ${issue.message}`
+        })
+        .join("; ")
+      throw new Error(`Invalid Sanity CMS plugin options: ${detail}`)
+    }
+    throw error
   }
 }

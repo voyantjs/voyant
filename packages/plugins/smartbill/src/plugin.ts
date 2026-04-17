@@ -1,8 +1,10 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
+import { ZodError } from "zod"
 
 import { createSmartbillClient, type SmartbillClientOptions } from "./client.js"
 import { mapVoyantInvoiceToSmartbill, type SmartbillMappingOptions } from "./mapping.js"
 import type { VoyantInvoiceEvent } from "./types.js"
+import { smartbillPluginOptionsSchema } from "./validation.js"
 
 /**
  * Event names the plugin subscribes to. Defaults match the
@@ -67,22 +69,23 @@ function coerceEvent(data: unknown): VoyantInvoiceEvent | null {
  * EventBus contract, so a SmartBill outage never blocks the emitter.
  */
 export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
-  const client = createSmartbillClient(options)
-  const logger = options.logger ?? console
+  const validatedOptions = parseSmartbillPluginOptions(options)
+  const client = createSmartbillClient(validatedOptions)
+  const logger = validatedOptions.logger ?? console
   const mappingOptions: SmartbillMappingOptions = {
-    companyVatCode: options.companyVatCode,
-    seriesName: options.seriesName,
-    language: options.language,
-    isTaxIncluded: options.isTaxIncluded,
-    art311SpecialRegime: options.art311SpecialRegime,
+    companyVatCode: validatedOptions.companyVatCode,
+    seriesName: validatedOptions.seriesName,
+    language: validatedOptions.language,
+    isTaxIncluded: validatedOptions.isTaxIncluded,
+    art311SpecialRegime: validatedOptions.art311SpecialRegime,
   }
   const mapEvent =
-    options.mapEvent ??
+    validatedOptions.mapEvent ??
     ((ev: VoyantInvoiceEvent) => mapVoyantInvoiceToSmartbill(ev, mappingOptions))
   const eventNames = {
-    issued: options.events?.issued ?? "invoice.issued",
-    voided: options.events?.voided ?? "invoice.voided",
-    syncRequested: options.events?.syncRequested ?? "invoice.external.sync.requested",
+    issued: validatedOptions.events?.issued ?? "invoice.issued",
+    voided: validatedOptions.events?.voided ?? "invoice.voided",
+    syncRequested: validatedOptions.events?.syncRequested ?? "invoice.external.sync.requested",
   }
 
   const subscribers: Subscriber[] = [
@@ -115,7 +118,7 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
           const seriesName =
             typeof event.externalSeriesName === "string"
               ? event.externalSeriesName
-              : options.seriesName
+              : validatedOptions.seriesName
           const number =
             typeof event.externalNumber === "string"
               ? event.externalNumber
@@ -126,7 +129,7 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
             logger.error(`[smartbill] cannot cancel invoice ${event.id}: missing external number`)
             return
           }
-          await client.cancelInvoice(options.companyVatCode, seriesName, number)
+          await client.cancelInvoice(validatedOptions.companyVatCode, seriesName, number)
           logger.info?.(`[smartbill] invoice cancelled: ${seriesName}-${number} for ${event.id}`)
         } catch (err) {
           logger.error(
@@ -145,7 +148,7 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
           const seriesName =
             typeof event.externalSeriesName === "string"
               ? event.externalSeriesName
-              : options.seriesName
+              : validatedOptions.seriesName
           const number =
             typeof event.externalNumber === "string"
               ? event.externalNumber
@@ -156,7 +159,11 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
             logger.error(`[smartbill] cannot sync invoice ${event.id}: missing external number`)
             return
           }
-          const status = await client.getPaymentStatus(options.companyVatCode, seriesName, number)
+          const status = await client.getPaymentStatus(
+            validatedOptions.companyVatCode,
+            seriesName,
+            number,
+          )
           logger.info?.(
             `[smartbill] payment status for ${seriesName}-${number}: ${status.status}`,
             status,
@@ -175,5 +182,22 @@ export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
     name: "smartbill",
     version: "0.1.0",
     subscribers,
+  }
+}
+
+function parseSmartbillPluginOptions(options: SmartbillPluginOptions): SmartbillPluginOptions {
+  try {
+    return smartbillPluginOptionsSchema.parse(options)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const detail = error.issues
+        .map((issue) => {
+          const path = issue.path.join(".") || "options"
+          return `${path}: ${issue.message}`
+        })
+        .join("; ")
+      throw new Error(`Invalid SmartBill plugin options: ${detail}`)
+    }
+    throw error
   }
 }

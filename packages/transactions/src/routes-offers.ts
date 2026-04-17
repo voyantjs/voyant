@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   authorizeTransactionPiiAccess,
   createPiiService,
@@ -25,7 +26,7 @@ import {
 
 export const transactionOfferRoutes = new Hono<Env>()
   .get("/offers", async (c) => {
-    const query = offerListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, offerListQuerySchema)
     return c.json(await transactionsService.listOffers(c.get("db"), query))
   })
   .post("/offers", async (c) =>
@@ -33,7 +34,7 @@ export const transactionOfferRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOffer(
           c.get("db"),
-          insertOfferSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOfferSchema),
         ),
       },
       201,
@@ -47,7 +48,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     const row = await transactionsService.updateOffer(
       c.get("db"),
       c.req.param("id"),
-      updateOfferSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOfferSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Offer not found")
   })
@@ -56,13 +57,11 @@ export const transactionOfferRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Offer not found")
   })
   .get("/offer-participants", async (c) => {
-    const query = offerParticipantListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, offerParticipantListQuerySchema)
     return c.json(await transactionsService.listOfferParticipants(c.get("db"), query))
   })
   .post("/offer-participants", async (c) => {
-    const payload = insertOfferParticipantSchema.parse(await c.req.json())
+    const payload = await parseJsonBody(c, insertOfferParticipantSchema)
     const row = await transactionsService.createOfferParticipant(c.get("db"), payload)
     if (!row) return c.json({ data: row }, 201)
     if (hasParticipantIdentityInput(payload)) {
@@ -80,7 +79,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     return row ? c.json({ data: row }) : notFound(c, "Offer participant not found")
   })
   .patch("/offer-participants/:id", async (c) => {
-    const payload = updateOfferParticipantSchema.parse(await c.req.json())
+    const payload = await parseJsonBody(c, updateOfferParticipantSchema)
     const row = await transactionsService.updateOfferParticipant(
       c.get("db"),
       c.req.param("id"),
@@ -147,7 +146,7 @@ export const transactionOfferRoutes = new Hono<Env>()
       c.get("db"),
       "offer",
       participant.id,
-      updateOfferParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOfferParticipantSchema),
       c.get("userId"),
     )
     return row ? c.json({ data: row }) : notFound(c, "Offer participant not found")
@@ -181,9 +180,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Offer participant not found")
   })
   .get("/offer-items", async (c) => {
-    const query = offerItemListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, offerItemListQuerySchema)
     return c.json(await transactionsService.listOfferItems(c.get("db"), query))
   })
   .post("/offer-items", async (c) =>
@@ -191,7 +188,7 @@ export const transactionOfferRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOfferItem(
           c.get("db"),
-          insertOfferItemSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOfferItemSchema),
         ),
       },
       201,
@@ -205,7 +202,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     const row = await transactionsService.updateOfferItem(
       c.get("db"),
       c.req.param("id"),
-      updateOfferItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOfferItemSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Offer item not found")
   })
@@ -214,9 +211,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Offer item not found")
   })
   .get("/offer-item-participants", async (c) => {
-    const query = offerItemParticipantListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, offerItemParticipantListQuerySchema)
     return c.json(await transactionsService.listOfferItemParticipants(c.get("db"), query))
   })
   .post("/offer-item-participants", async (c) =>
@@ -224,7 +219,7 @@ export const transactionOfferRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOfferItemParticipant(
           c.get("db"),
-          insertOfferItemParticipantSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOfferItemParticipantSchema),
         ),
       },
       201,
@@ -241,7 +236,7 @@ export const transactionOfferRoutes = new Hono<Env>()
     const row = await transactionsService.updateOfferItemParticipant(
       c.get("db"),
       c.req.param("id"),
-      updateOfferItemParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOfferItemParticipantSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Offer item participant not found")
   })

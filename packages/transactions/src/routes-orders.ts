@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   authorizeTransactionPiiAccess,
   createPiiService,
@@ -28,7 +29,7 @@ import {
 
 export const transactionOrderRoutes = new Hono<Env>()
   .get("/orders", async (c) => {
-    const query = orderListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, orderListQuerySchema)
     return c.json(await transactionsService.listOrders(c.get("db"), query))
   })
   .post("/orders", async (c) =>
@@ -36,7 +37,7 @@ export const transactionOrderRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOrder(
           c.get("db"),
-          insertOrderSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrderSchema),
         ),
       },
       201,
@@ -50,7 +51,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.updateOrder(
       c.get("db"),
       c.req.param("id"),
-      updateOrderSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrderSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Order not found")
   })
@@ -59,13 +60,11 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order not found")
   })
   .get("/order-participants", async (c) => {
-    const query = orderParticipantListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, orderParticipantListQuerySchema)
     return c.json(await transactionsService.listOrderParticipants(c.get("db"), query))
   })
   .post("/order-participants", async (c) => {
-    const payload = insertOrderParticipantSchema.parse(await c.req.json())
+    const payload = await parseJsonBody(c, insertOrderParticipantSchema)
     const row = await transactionsService.createOrderParticipant(c.get("db"), payload)
     if (!row) return c.json({ data: row }, 201)
     if (hasParticipantIdentityInput(payload)) {
@@ -83,7 +82,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ data: row }) : notFound(c, "Order participant not found")
   })
   .patch("/order-participants/:id", async (c) => {
-    const payload = updateOrderParticipantSchema.parse(await c.req.json())
+    const payload = await parseJsonBody(c, updateOrderParticipantSchema)
     const row = await transactionsService.updateOrderParticipant(
       c.get("db"),
       c.req.param("id"),
@@ -150,7 +149,7 @@ export const transactionOrderRoutes = new Hono<Env>()
       c.get("db"),
       "order",
       participant.id,
-      updateOrderParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrderParticipantSchema),
       c.get("userId"),
     )
     return row ? c.json({ data: row }) : notFound(c, "Order participant not found")
@@ -184,9 +183,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order participant not found")
   })
   .get("/order-items", async (c) => {
-    const query = orderItemListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, orderItemListQuerySchema)
     return c.json(await transactionsService.listOrderItems(c.get("db"), query))
   })
   .post("/order-items", async (c) =>
@@ -194,7 +191,7 @@ export const transactionOrderRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOrderItem(
           c.get("db"),
-          insertOrderItemSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrderItemSchema),
         ),
       },
       201,
@@ -208,7 +205,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.updateOrderItem(
       c.get("db"),
       c.req.param("id"),
-      updateOrderItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrderItemSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Order item not found")
   })
@@ -217,9 +214,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order item not found")
   })
   .get("/order-item-participants", async (c) => {
-    const query = orderItemParticipantListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, orderItemParticipantListQuerySchema)
     return c.json(await transactionsService.listOrderItemParticipants(c.get("db"), query))
   })
   .post("/order-item-participants", async (c) =>
@@ -227,7 +222,7 @@ export const transactionOrderRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOrderItemParticipant(
           c.get("db"),
-          insertOrderItemParticipantSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrderItemParticipantSchema),
         ),
       },
       201,
@@ -244,7 +239,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.updateOrderItemParticipant(
       c.get("db"),
       c.req.param("id"),
-      updateOrderItemParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrderItemParticipantSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Order item participant not found")
   })
@@ -253,9 +248,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order item participant not found")
   })
   .get("/order-terms", async (c) => {
-    const query = orderTermListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, orderTermListQuerySchema)
     return c.json(await transactionsService.listOrderTerms(c.get("db"), query))
   })
   .post("/order-terms", async (c) =>
@@ -263,7 +256,7 @@ export const transactionOrderRoutes = new Hono<Env>()
       {
         data: await transactionsService.createOrderTerm(
           c.get("db"),
-          insertOrderTermSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrderTermSchema),
         ),
       },
       201,
@@ -277,7 +270,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.updateOrderTerm(
       c.get("db"),
       c.req.param("id"),
-      updateOrderTermSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrderTermSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Order term not found")
   })

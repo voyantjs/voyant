@@ -93,6 +93,14 @@ describe("defineLink", () => {
     expect(a.cardinality).toBe("one-to-one")
     expect(b.cardinality).toBe("one-to-one")
   })
+
+  it("supports read-only links backed by an external resolver", () => {
+    const list = async () => []
+    const def = defineLink(person, product, {
+      readOnly: { list },
+    })
+    expect(def.readOnly?.list).toBe(list)
+  })
 })
 
 describe("generateLinkTableSql", () => {
@@ -176,6 +184,13 @@ describe("generateLinkTableSql", () => {
     const uniques = indexes.filter((s) => s.startsWith("CREATE UNIQUE INDEX"))
     expect(uniques.length).toBe(1)
     expect(uniques[0]).toContain("_pair_idx")
+  })
+
+  it("throws for read-only links because no pivot table should be materialized", () => {
+    const def = defineLink(person, product, {
+      readOnly: { list: async () => [] },
+    })
+    expect(() => generateLinkTableSql(def)).toThrow(/read-only link/)
   })
 })
 

@@ -18,6 +18,9 @@ For executable backend workload classification, see
 For runtime cache backend guidance and cache-semantics rules, see
 [Voyant Caching Architecture](./caching-architecture.md).
 
+For public-media and private-document storage rules, see
+[Voyant Storage Architecture](./storage-architecture.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

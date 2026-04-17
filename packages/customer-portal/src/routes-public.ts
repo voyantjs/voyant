@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
@@ -80,7 +81,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     const result = await publicCustomerPortalService.updateProfileWithOptions(
       c.get("db"),
       userId,
-      updateCustomerPortalProfileSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCustomerPortalProfileSchema),
       {
         kms: resolveOptionalKms(c),
       },
@@ -105,7 +106,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     const result = await publicCustomerPortalService.bootstrap(
       c.get("db"),
       userId,
-      bootstrapCustomerPortalSchema.parse(await c.req.json()),
+      await parseJsonBody(c, bootstrapCustomerPortalSchema),
     )
 
     if (hasBootstrapErrorResult(result)) {
@@ -143,7 +144,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     const companion = await publicCustomerPortalService.createCompanion(
       c.get("db"),
       userId,
-      createCustomerPortalCompanionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, createCustomerPortalCompanionSchema),
     )
 
     if (!companion) {
@@ -161,7 +162,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     const result = await publicCustomerPortalService.importBookingParticipantsAsCompanions(
       c.get("db"),
       userId,
-      importCustomerPortalBookingParticipantsSchema.parse(await c.req.json()),
+      await parseJsonBody(c, importCustomerPortalBookingParticipantsSchema),
     )
 
     if (!result) {
@@ -180,7 +181,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
       c.get("db"),
       userId,
       c.req.param("companionId"),
-      updateCustomerPortalCompanionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCustomerPortalCompanionSchema),
     )
 
     if (companion === "forbidden") {

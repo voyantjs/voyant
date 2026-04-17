@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -38,7 +39,7 @@ type Env = {
 
 export const marketsRoutes = new Hono<Env>()
   .get("/markets", async (c) => {
-    const query = marketListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, marketListQuerySchema)
     return c.json(await marketsService.listMarkets(c.get("db"), query))
   })
   .post("/markets", async (c) => {
@@ -46,7 +47,7 @@ export const marketsRoutes = new Hono<Env>()
       {
         data: await marketsService.createMarket(
           c.get("db"),
-          insertMarketSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertMarketSchema),
         ),
       },
       201,
@@ -61,7 +62,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarket(
       c.get("db"),
       c.req.param("id"),
-      updateMarketSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketSchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row })
@@ -72,16 +73,14 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/market-locales", async (c) => {
-    const query = marketLocaleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, marketLocaleListQuerySchema)
     return c.json(await marketsService.listMarketLocales(c.get("db"), query))
   })
   .post("/markets/:id/locales", async (c) => {
     const row = await marketsService.createMarketLocale(
       c.get("db"),
       c.req.param("id"),
-      insertMarketLocaleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertMarketLocaleSchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row }, 201)
@@ -90,7 +89,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarketLocale(
       c.get("db"),
       c.req.param("id"),
-      updateMarketLocaleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketLocaleSchema),
     )
     if (!row) return c.json({ error: "Market locale not found" }, 404)
     return c.json({ data: row })
@@ -101,16 +100,14 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/market-currencies", async (c) => {
-    const query = marketCurrencyListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, marketCurrencyListQuerySchema)
     return c.json(await marketsService.listMarketCurrencies(c.get("db"), query))
   })
   .post("/markets/:id/currencies", async (c) => {
     const row = await marketsService.createMarketCurrency(
       c.get("db"),
       c.req.param("id"),
-      insertMarketCurrencySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertMarketCurrencySchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row }, 201)
@@ -119,7 +116,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarketCurrency(
       c.get("db"),
       c.req.param("id"),
-      updateMarketCurrencySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketCurrencySchema),
     )
     if (!row) return c.json({ error: "Market currency not found" }, 404)
     return c.json({ data: row })
@@ -130,9 +127,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/fx-rate-sets", async (c) => {
-    const query = fxRateSetListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, fxRateSetListQuerySchema)
     return c.json(await marketsService.listFxRateSets(c.get("db"), query))
   })
   .post("/fx-rate-sets", async (c) => {
@@ -140,7 +135,7 @@ export const marketsRoutes = new Hono<Env>()
       {
         data: await marketsService.createFxRateSet(
           c.get("db"),
-          insertFxRateSetSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertFxRateSetSchema),
         ),
       },
       201,
@@ -155,7 +150,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateFxRateSet(
       c.get("db"),
       c.req.param("id"),
-      updateFxRateSetSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateFxRateSetSchema),
     )
     if (!row) return c.json({ error: "FX rate set not found" }, 404)
     return c.json({ data: row })
@@ -166,16 +161,14 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/exchange-rates", async (c) => {
-    const query = exchangeRateListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, exchangeRateListQuerySchema)
     return c.json(await marketsService.listExchangeRates(c.get("db"), query))
   })
   .post("/fx-rate-sets/:id/exchange-rates", async (c) => {
     const row = await marketsService.createExchangeRate(
       c.get("db"),
       c.req.param("id"),
-      insertExchangeRateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertExchangeRateSchema),
     )
     if (!row) return c.json({ error: "FX rate set not found" }, 404)
     return c.json({ data: row }, 201)
@@ -184,7 +177,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateExchangeRate(
       c.get("db"),
       c.req.param("id"),
-      updateExchangeRateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateExchangeRateSchema),
     )
     if (!row) return c.json({ error: "Exchange rate not found" }, 404)
     return c.json({ data: row })
@@ -195,15 +188,13 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/price-catalogs", async (c) => {
-    const query = marketPriceCatalogListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, marketPriceCatalogListQuerySchema)
     return c.json(await marketsService.listMarketPriceCatalogs(c.get("db"), query))
   })
   .post("/price-catalogs", async (c) => {
     const row = await marketsService.createMarketPriceCatalog(
       c.get("db"),
-      insertMarketPriceCatalogSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertMarketPriceCatalogSchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row }, 201)
@@ -217,7 +208,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarketPriceCatalog(
       c.get("db"),
       c.req.param("id"),
-      updateMarketPriceCatalogSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketPriceCatalogSchema),
     )
     if (!row) return c.json({ error: "Market price catalog not found" }, 404)
     return c.json({ data: row })
@@ -228,15 +219,13 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/product-rules", async (c) => {
-    const query = marketProductRuleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, marketProductRuleListQuerySchema)
     return c.json(await marketsService.listMarketProductRules(c.get("db"), query))
   })
   .post("/product-rules", async (c) => {
     const row = await marketsService.createMarketProductRule(
       c.get("db"),
-      insertMarketProductRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertMarketProductRuleSchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row }, 201)
@@ -250,7 +239,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarketProductRule(
       c.get("db"),
       c.req.param("id"),
-      updateMarketProductRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketProductRuleSchema),
     )
     if (!row) return c.json({ error: "Market product rule not found" }, 404)
     return c.json({ data: row })
@@ -261,15 +250,13 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/channel-rules", async (c) => {
-    const query = marketChannelRuleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, marketChannelRuleListQuerySchema)
     return c.json(await marketsService.listMarketChannelRules(c.get("db"), query))
   })
   .post("/channel-rules", async (c) => {
     const row = await marketsService.createMarketChannelRule(
       c.get("db"),
-      insertMarketChannelRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertMarketChannelRuleSchema),
     )
     if (!row) return c.json({ error: "Market not found" }, 404)
     return c.json({ data: row }, 201)
@@ -283,7 +270,7 @@ export const marketsRoutes = new Hono<Env>()
     const row = await marketsService.updateMarketChannelRule(
       c.get("db"),
       c.req.param("id"),
-      updateMarketChannelRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMarketChannelRuleSchema),
     )
     if (!row) return c.json({ error: "Market channel rule not found" }, 404)
     return c.json({ data: row })

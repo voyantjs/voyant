@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@voyantjs/hono"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -87,7 +88,7 @@ export function createStorefrontVerificationPublicRoutes(
       try {
         const result = await service.startEmailChallenge(
           c.get("db"),
-          startEmailVerificationChallengeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, startEmailVerificationChallengeSchema),
           getSenders(c.env, options),
         )
         return c.json({ data: result }, 201)
@@ -100,7 +101,7 @@ export function createStorefrontVerificationPublicRoutes(
       try {
         const result = await service.confirmEmailChallenge(
           c.get("db"),
-          confirmEmailVerificationChallengeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, confirmEmailVerificationChallengeSchema),
         )
         return c.json({ data: result })
       } catch (error) {
@@ -112,7 +113,7 @@ export function createStorefrontVerificationPublicRoutes(
       try {
         const result = await service.startSmsChallenge(
           c.get("db"),
-          startSmsVerificationChallengeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, startSmsVerificationChallengeSchema),
           getSenders(c.env, options),
         )
         return c.json({ data: result }, 201)
@@ -125,7 +126,7 @@ export function createStorefrontVerificationPublicRoutes(
       try {
         const result = await service.confirmSmsChallenge(
           c.get("db"),
-          confirmSmsVerificationChallengeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, confirmSmsVerificationChallengeSchema),
         )
         return c.json({ data: result })
       } catch (error) {

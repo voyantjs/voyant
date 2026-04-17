@@ -1,9 +1,9 @@
-import type { Actor } from "@voyantjs/core"
+import { type Actor, createEventBus } from "@voyantjs/core"
 import { Hono } from "hono"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { createApp } from "../../src/app.js"
-import type { HonoModule } from "../../src/module.js"
+import type { HonoExtension, HonoModule } from "../../src/module.js"
 import { defineHonoPlugin, expandHonoPlugins } from "../../src/plugin.js"
 import type { VoyantBindings } from "../../src/types.js"
 
@@ -132,5 +132,124 @@ describe("createApp with plugins", () => {
         plugins: [p1, p2],
       }),
     ).toThrow(/Duplicate plugin name/)
+  })
+
+  it("wires plugin subscribers to the app event bus", async () => {
+    const handler = vi.fn()
+    const plugin = defineHonoPlugin({
+      name: "events",
+      subscribers: [{ event: "booking.created", handler }],
+      modules: [
+        {
+          module: { name: "events" },
+          adminRoutes: new Hono().post("/emit", async (c) => {
+            await c.var.eventBus.emit("booking.created", { bookingId: "b_123" })
+            return c.json({ ok: true })
+          }),
+        },
+      ],
+    })
+
+    const app = build([plugin])
+    const res = await app.request("/v1/admin/events/emit", { method: "POST" }, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledWith({ bookingId: "b_123" })
+  })
+
+  it("runs plugin, module, and extension bootstraps once in order", async () => {
+    const calls: string[] = []
+    const mod: HonoModule = {
+      module: {
+        name: "boot",
+        bootstrap: () => {
+          calls.push("module")
+        },
+      },
+      adminRoutes: new Hono().get("/ping", (c) => c.json({ ok: true })),
+    }
+    const ext: HonoExtension = {
+      extension: {
+        name: "boot-ext",
+        module: "boot",
+        bootstrap: () => {
+          calls.push("extension")
+        },
+      },
+    }
+    const plugin = defineHonoPlugin({
+      name: "boot-plugin",
+      bootstrap: () => {
+        calls.push("plugin")
+      },
+      modules: [mod],
+      extensions: [ext],
+    })
+
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      plugins: [plugin],
+      auth: { resolve: () => ({ userId: "u1", actor: "staff" }) },
+    })
+
+    const r1 = await app.request("/v1/admin/boot/ping", {}, TEST_ENV, TEST_CTX)
+    const r2 = await app.request("/v1/admin/boot/ping", {}, TEST_ENV, TEST_CTX)
+    expect(r1.status).toBe(200)
+    expect(r2.status).toBe(200)
+    expect(calls).toEqual(["plugin", "module", "extension"])
+  })
+
+  it("exposes bootstrap-registered services through the shared container", async () => {
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      modules: [
+        {
+          module: {
+            name: "runtime",
+            bootstrap: ({ container }) => {
+              container.register("runtime.registry", { status: "ready" })
+            },
+          },
+          adminRoutes: new Hono().get("/check", (c) => {
+            const runtime = c.var.container.resolve<{ status: string }>("runtime.registry")
+            return c.json(runtime)
+          }),
+        },
+      ],
+      auth: { resolve: () => ({ userId: "u1", actor: "staff" }) },
+    })
+
+    const res = await app.request("/v1/admin/runtime/check", {}, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ status: "ready" })
+  })
+
+  it("uses a caller-provided event bus when supplied", async () => {
+    const bus = createEventBus()
+    const handler = vi.fn()
+    bus.subscribe("booking.updated", handler)
+
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      eventBus: bus,
+      modules: [
+        {
+          module: { name: "bus" },
+          adminRoutes: new Hono().post("/emit", async (c) => {
+            await c.var.eventBus.emit("booking.updated", { bookingId: "b_234" })
+            return c.json({ ok: true })
+          }),
+        },
+      ],
+      auth: { resolve: () => ({ userId: "u1", actor: "staff" }) },
+    })
+
+    const res = await app.request("/v1/admin/bus/emit", { method: "POST" }, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledWith({ bookingId: "b_234" })
   })
 })

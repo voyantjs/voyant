@@ -36,7 +36,7 @@ export type {
   ResolvedLinkSpec,
 } from "./links.js"
 export { defineLink, generateLinkTableSql, resolveLinkFromSpec } from "./links.js"
-export type { Extension, Module } from "./module.js"
+export type { BootstrapContext, BootstrapHandler, Extension, Module } from "./module.js"
 export type { JobOptions, JobRunner } from "./orchestration.js"
 export type {
   Plugin,

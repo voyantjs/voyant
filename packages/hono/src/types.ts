@@ -1,5 +1,6 @@
 import type {
   VoyantVariables as CoreVoyantVariables,
+  EventBus,
   ModuleContainer,
   VoyantAuthContext,
   VoyantPermission,
@@ -34,6 +35,7 @@ export type VoyantDb = PostgresJsDatabase | NeonHttpDatabase
 export type VoyantVariables = CoreVoyantVariables & {
   db: VoyantDb
   container: ModuleContainer
+  eventBus: EventBus
 }
 
 export type DbFactory<TBindings extends VoyantBindings = VoyantBindings> = (
@@ -87,6 +89,7 @@ export interface VoyantAppConfig<TBindings extends VoyantBindings = VoyantBindin
   modules?: HonoModule[]
   extensions?: HonoExtension[]
   plugins?: HonoPlugin[]
+  eventBus?: EventBus
   auth?: VoyantAuthIntegration<TBindings>
   publicPaths?: string[]
   logger?: LoggerProvider

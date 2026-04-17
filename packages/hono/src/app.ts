@@ -1,4 +1,4 @@
-import { createContainer } from "@voyantjs/core"
+import { createContainer, createEventBus } from "@voyantjs/core"
 import { Hono } from "hono"
 
 import { requireAuth } from "./middleware/auth.js"
@@ -19,6 +19,7 @@ export function createApp<TBindings extends VoyantBindings>(
   const expanded = config.plugins ? expandHonoPlugins(config.plugins) : null
   const allModules = [...(config.modules ?? []), ...(expanded?.modules ?? [])]
   const allExtensions = [...(config.extensions ?? []), ...(expanded?.extensions ?? [])]
+  const eventBus = config.eventBus ?? createEventBus()
 
   // Module container — registered services are resolvable from routes
   const container = createContainer()
@@ -27,8 +28,35 @@ export function createApp<TBindings extends VoyantBindings>(
       container.register(mod.module.name, mod.module.service)
     }
   }
+  for (const sub of expanded?.subscribers ?? []) {
+    eventBus.subscribe(sub.event, sub.handler)
+  }
+
+  let bootstrapPromise: Promise<void> | null = null
+  function ensureRuntimeBootstrapped(bindings: TBindings) {
+    if (!bootstrapPromise) {
+      bootstrapPromise = (async () => {
+        const ctx = { bindings, container, eventBus }
+
+        for (const plugin of config.plugins ?? []) {
+          await plugin.bootstrap?.(ctx)
+        }
+        for (const mod of allModules) {
+          await mod.module.bootstrap?.(ctx)
+        }
+        for (const ext of allExtensions) {
+          await ext.extension.bootstrap?.(ctx)
+        }
+      })()
+    }
+
+    return bootstrapPromise
+  }
+
   app.use("*", async (c, next) => {
     c.set("container", container)
+    c.set("eventBus", eventBus)
+    await ensureRuntimeBootstrapped(c.env)
     return next()
   })
 

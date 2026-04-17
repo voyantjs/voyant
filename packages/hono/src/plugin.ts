@@ -1,4 +1,4 @@
-import type { LinkDefinition, Subscriber } from "@voyantjs/core"
+import type { BootstrapHandler, LinkDefinition, Subscriber } from "@voyantjs/core"
 
 import type { HonoExtension, HonoModule } from "./module.js"
 
@@ -18,6 +18,8 @@ export interface HonoPlugin {
   name: string
   /** Optional version tag for diagnostics. */
   version?: string
+  /** Optional lazy runtime bootstrap executed once per app/isolate. */
+  bootstrap?: BootstrapHandler
   /** Hono modules (module + routes) contributed by the plugin. */
   modules?: HonoModule[]
   /** Hono extensions (extension + routes) contributed by the plugin. */

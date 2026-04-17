@@ -14,7 +14,7 @@
 
 import type { EventBus, EventHandler } from "./events.js"
 import type { LinkDefinition } from "./links.js"
-import type { Extension, Module } from "./module.js"
+import type { BootstrapHandler, Extension, Module } from "./module.js"
 
 /**
  * A single event subscription contributed by a plugin.
@@ -46,6 +46,11 @@ export interface Plugin {
   name: string
   /** Optional version tag for diagnostics. */
   version?: string
+  /**
+   * Optional lazy runtime bootstrap executed once per app/isolate, on the
+   * first request where bindings are available.
+   */
+  bootstrap?: BootstrapHandler
   /** Modules contributed by the plugin. */
   modules?: Module[]
   /** Extensions contributed by the plugin. */

@@ -12,6 +12,9 @@ For HTTP route conventions across the admin and public API surfaces, see
 For package and extension-surface classification, see
 [Voyant Module, Provider, Extension, And Plugin Taxonomy](./module-provider-plugin-taxonomy.md).
 
+For executable backend workload classification, see
+[Voyant Execution Architecture](./execution-architecture.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

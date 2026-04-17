@@ -24,7 +24,7 @@ type Env = {
 
 export const extrasRoutes = new Hono<Env>()
   .get("/product-extras", async (c) => {
-    const query = parseQuery(c, productExtraListQuerySchema)
+    const query = await parseQuery(c, productExtraListQuerySchema)
     return c.json(await extrasService.listProductExtras(c.get("db"), query))
   })
   .post("/product-extras", async (c) => {
@@ -58,7 +58,7 @@ export const extrasRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/option-extra-configs", async (c) => {
-    const query = parseQuery(c, optionExtraConfigListQuerySchema)
+    const query = await parseQuery(c, optionExtraConfigListQuerySchema)
     return c.json(await extrasService.listOptionExtraConfigs(c.get("db"), query))
   })
   .post("/option-extra-configs", async (c) => {
@@ -92,7 +92,7 @@ export const extrasRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/booking-extras", async (c) => {
-    const query = parseQuery(c, bookingExtraListQuerySchema)
+    const query = await parseQuery(c, bookingExtraListQuerySchema)
     return c.json(await extrasService.listBookingExtras(c.get("db"), query))
   })
   .post("/booking-extras", async (c) => {

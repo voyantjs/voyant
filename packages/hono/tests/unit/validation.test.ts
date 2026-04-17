@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import { handleApiError, requestId } from "../../src/middleware/error-boundary.js"
-import { parseJsonBody, parseQuery } from "../../src/validation.js"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "../../src/validation.js"
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -58,5 +58,29 @@ describe("validation helpers", () => {
       error: "Invalid JSON body",
       code: "invalid_request",
     })
+  })
+
+  it("falls back to an empty body when optional JSON parsing is used", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const app = new Hono()
+    app.onError(handleApiError)
+    app.use("*", requestId)
+    app.post("/search", async (c) => {
+      const body = await parseOptionalJsonBody(
+        c,
+        z.object({ includeDrafts: z.boolean().default(false) }),
+      )
+      return c.json({ includeDrafts: body.includeDrafts })
+    })
+
+    const response = await app.request("http://example.com/search", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "",
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ includeDrafts: false })
   })
 })

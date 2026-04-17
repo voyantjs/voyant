@@ -45,6 +45,7 @@ export type {
 export {
   normalizeValidationError,
   parseJsonBody,
+  parseOptionalJsonBody,
   parseQuery,
   RequestValidationError,
 } from "./validation.js"

@@ -1,4 +1,5 @@
 import type { EventBus } from "@voyantjs/core"
+import { parseOptionalJsonBody } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import { financeSettlementService, type InvoiceSettlementPoller } from "./service-settlement.js"
@@ -42,7 +43,7 @@ export function createFinanceAdminSettlementRoutes(options: FinanceSettlementRou
     const result = await financeSettlementService.pollInvoiceSettlement(
       c.get("db"),
       c.req.param("id"),
-      pollInvoiceSettlementInputSchema.parse(await c.req.json().catch(() => ({}))),
+      await parseOptionalJsonBody(c, pollInvoiceSettlementInputSchema),
       {
         bindings: c.env,
         invoiceSettlementPollers: resolveInvoiceSettlementPollers(options, c.env),

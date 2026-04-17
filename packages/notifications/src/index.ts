@@ -32,6 +32,12 @@ export {
   NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
 } from "./routes.js"
 export type {
+  NotificationTaskEnv,
+  NotificationTaskRuntime,
+  NotificationTaskRuntimeOptions,
+} from "./task-runtime.js"
+export { buildNotificationTaskRuntime } from "./task-runtime.js"
+export type {
   NewNotificationDelivery,
   NewNotificationReminderRule,
   NewNotificationReminderRun,

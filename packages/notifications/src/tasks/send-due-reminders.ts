@@ -1,23 +1,18 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-import { createDefaultNotificationProviders } from "../provider-resolution.js"
 import { createNotificationService, notificationsService } from "../service.js"
-import type { NotificationProvider } from "../types.js"
-
-type NotificationTaskEnv = {
-  RESEND_API_KEY?: unknown
-  EMAIL_FROM?: unknown
-}
+import {
+  buildNotificationTaskRuntime,
+  type NotificationTaskEnv,
+  type NotificationTaskRuntimeOptions,
+} from "../task-runtime.js"
 
 export async function sendDueNotificationReminders(
   db: PostgresJsDatabase,
   env: NotificationTaskEnv,
   input: { now?: string | null } = {},
-  options: {
-    resolveProviders?: (env: NotificationTaskEnv) => ReadonlyArray<NotificationProvider>
-  } = {},
+  options: NotificationTaskRuntimeOptions = {},
 ) {
-  const dispatcher = createNotificationService(
-    options.resolveProviders?.(env) ?? createDefaultNotificationProviders(env),
-  )
+  const runtime = buildNotificationTaskRuntime(env, options)
+  const dispatcher = createNotificationService(runtime.providers)
   return notificationsService.runDueReminders(db, dispatcher, input)
 }

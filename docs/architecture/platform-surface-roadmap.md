@@ -3,6 +3,9 @@
 This roadmap turns downstream integration friction into an upstream package and
 API plan for Voyant itself.
 
+For schema and migration conventions across modules, see
+[Voyant Data Model And Schema Authoring](./data-model-schema-authoring.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

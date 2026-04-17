@@ -9,6 +9,9 @@ For schema and migration conventions across modules, see
 For HTTP route conventions across the admin and public API surfaces, see
 [Voyant API Route Authoring](./api-route-authoring.md).
 
+For package and extension-surface classification, see
+[Voyant Module, Provider, Extension, And Plugin Taxonomy](./module-provider-plugin-taxonomy.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

@@ -6,6 +6,7 @@ import {
   recordBookingRedemptionSchema,
   reserveBookingSchema,
 } from "@voyantjs/bookings"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -26,15 +27,11 @@ type Env = {
 
 export const octoRoutes = new Hono<Env>()
   .get("/products", async (c) => {
-    const query = octoProductListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, octoProductListQuerySchema)
     return c.json(await octoService.listProjectedProducts(c.get("db"), query))
   })
   .get("/availability", async (c) => {
-    const query = octoAvailabilityListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, octoAvailabilityListQuerySchema)
     return c.json(await octoService.listProjectedAvailability(c.get("db"), query))
   })
   .get("/products/:id", async (c) => {
@@ -43,16 +40,15 @@ export const octoRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .get("/products/:id/availability", async (c) => {
+    const baseQuery = await parseQuery(c, octoAvailabilityListQuerySchema.partial())
     const query = octoAvailabilityListQuerySchema.parse({
-      ...Object.fromEntries(new URL(c.req.url).searchParams),
+      ...baseQuery,
       productId: c.req.param("id"),
     })
     return c.json(await octoService.listProjectedAvailability(c.get("db"), query))
   })
   .get("/products/:id/calendar", async (c) => {
-    const query = octoAvailabilityCalendarQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, octoAvailabilityCalendarQuerySchema)
     return c.json(
       await octoService.getProjectedAvailabilityCalendar(c.get("db"), c.req.param("id"), query),
     )
@@ -65,7 +61,7 @@ export const octoRoutes = new Hono<Env>()
   .post("/bookings", async (c) => {
     const result = await octoService.reserveProjectedBooking(
       c.get("db"),
-      reserveBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingSchema),
       c.get("userId"),
     )
 
@@ -85,9 +81,7 @@ export const octoRoutes = new Hono<Env>()
     return c.json({ error: "Unable to reserve booking" }, 400)
   })
   .get("/bookings", async (c) => {
-    const query = octoBookingListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, octoBookingListQuerySchema)
     return c.json(await octoService.listProjectedBookings(c.get("db"), query))
   })
   .get("/bookings/:id", async (c) => {
@@ -99,7 +93,7 @@ export const octoRoutes = new Hono<Env>()
     const result = await octoService.confirmProjectedBooking(
       c.get("db"),
       c.req.param("id"),
-      confirmBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, confirmBookingSchema),
       c.get("userId"),
     )
 
@@ -114,7 +108,7 @@ export const octoRoutes = new Hono<Env>()
     const result = await octoService.extendProjectedBookingHold(
       c.get("db"),
       c.req.param("id"),
-      extendBookingHoldSchema.parse(await c.req.json()),
+      await parseJsonBody(c, extendBookingHoldSchema),
       c.get("userId"),
     )
 
@@ -129,7 +123,7 @@ export const octoRoutes = new Hono<Env>()
     const result = await octoService.expireProjectedBooking(
       c.get("db"),
       c.req.param("id"),
-      expireBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, expireBookingSchema),
       c.get("userId"),
     )
 
@@ -143,7 +137,7 @@ export const octoRoutes = new Hono<Env>()
     const result = await octoService.cancelProjectedBooking(
       c.get("db"),
       c.req.param("id"),
-      cancelBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, cancelBookingSchema),
       c.get("userId"),
     )
 
@@ -165,7 +159,7 @@ export const octoRoutes = new Hono<Env>()
     const result = await octoService.recordProjectedRedemption(
       c.get("db"),
       c.req.param("id"),
-      recordBookingRedemptionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, recordBookingRedemptionSchema),
       c.get("userId"),
     )
 

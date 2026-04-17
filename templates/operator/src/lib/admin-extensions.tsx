@@ -1,4 +1,6 @@
-import type { AdminExtension } from "@voyantjs/voyant-admin"
+import { defineAdminExtension, type AdminExtension } from "@voyantjs/voyant-admin"
+
+import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/dashboard-outstanding-invoices-widget"
 
 /**
  * Template-local admin extension registry.
@@ -16,4 +18,16 @@ import type { AdminExtension } from "@voyantjs/voyant-admin"
  * - `invoice.details.header`
  * - `invoice.details.after-summary`
  */
-export const adminExtensions: ReadonlyArray<AdminExtension> = []
+export const adminExtensions: ReadonlyArray<AdminExtension> = [
+  defineAdminExtension({
+    id: "dashboard-outstanding-invoices",
+    widgets: [
+      {
+        id: "dashboard-outstanding-invoices.card",
+        slot: "dashboard.after-kpis",
+        order: 10,
+        component: DashboardOutstandingInvoicesWidget,
+      },
+    ],
+  }),
+]

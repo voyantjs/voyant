@@ -21,6 +21,10 @@ import type {
   PublicValidateVoucherInput,
 } from "./validation-public.js"
 
+export interface PublicFinanceRuntimeOptions {
+  resolveDocumentDownloadUrl?: (storageKey: string) => Promise<string | null> | string | null
+}
+
 function normalizeDateTime(value: Date | string | null | undefined) {
   if (!value) {
     return null
@@ -143,15 +147,22 @@ function toPublicPaymentSession(
   }
 }
 
-function mapInvoiceDocument(
+async function mapInvoiceDocument(
   invoice: typeof invoices.$inferSelect,
   renditions: Array<typeof invoiceRenditions.$inferSelect>,
-): PublicFinanceBookingDocument {
+  runtime: PublicFinanceRuntimeOptions = {},
+): Promise<PublicFinanceBookingDocument> {
   const selectedRendition =
     renditions.find((rendition) => rendition.status === "ready") ?? renditions[0] ?? null
   const metadata = getMetadataRecord(selectedRendition?.metadata ?? null)
+  const resolvedDownloadUrl =
+    selectedRendition?.storageKey && runtime.resolveDocumentDownloadUrl
+      ? await runtime.resolveDocumentDownloadUrl(selectedRendition.storageKey)
+      : null
   const downloadUrl =
-    getMetadataDownloadUrl(metadata) ?? maybeUrl(selectedRendition?.storageKey ?? null)
+    resolvedDownloadUrl ??
+    getMetadataDownloadUrl(metadata) ??
+    maybeUrl(selectedRendition?.storageKey ?? null)
 
   return {
     invoiceId: invoice.id,
@@ -179,6 +190,7 @@ export const publicFinanceService = {
   async getBookingDocuments(
     db: PostgresJsDatabase,
     bookingId: string,
+    runtime: PublicFinanceRuntimeOptions = {},
   ): Promise<PublicBookingFinanceDocuments | null> {
     const [booking] = await db
       .select({ id: bookings.id })
@@ -215,8 +227,10 @@ export const publicFinanceService = {
 
     return {
       bookingId,
-      documents: invoiceRows.map((invoice) =>
-        mapInvoiceDocument(invoice, renditionByInvoiceId.get(invoice.id) ?? []),
+      documents: await Promise.all(
+        invoiceRows.map((invoice) =>
+          mapInvoiceDocument(invoice, renditionByInvoiceId.get(invoice.id) ?? [], runtime),
+        ),
       ),
     }
   },
@@ -224,6 +238,7 @@ export const publicFinanceService = {
   async getDocumentByReference(
     db: PostgresJsDatabase,
     reference: string,
+    runtime: PublicFinanceRuntimeOptions = {},
   ): Promise<PublicFinanceDocumentLookup | null> {
     const [invoiceMatch, paymentMatch] = await Promise.all([
       db
@@ -261,7 +276,7 @@ export const publicFinanceService = {
 
     return {
       bookingId: invoice.bookingId,
-      ...mapInvoiceDocument(invoice, renditions),
+      ...(await mapInvoiceDocument(invoice, renditions, runtime)),
     }
   },
 

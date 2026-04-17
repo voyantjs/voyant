@@ -31,7 +31,6 @@ describe("createStorageBackedInvoiceDocumentGenerator", () => {
     expect(result.metadata).toMatchObject({
       storageProvider: "local",
       url: "https://files.example/invoices/inv_123/rendition.html",
-      downloadUrl: "https://files.example/invoices/inv_123/rendition.html",
     })
 
     const bytes = await storage.get(result.storageKey ?? "")

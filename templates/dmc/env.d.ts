@@ -3,8 +3,10 @@ interface CloudflareBindings {
   RATE_LIMIT: KVNamespace
   CACHE: KVNamespace
 
-  // R2 (file storage, optional — when configured, /v1/uploads + /v1/media/* are served)
+  // R2 (public media storage, optional — when configured, /v1/uploads + /v1/media/* are served)
   MEDIA_BUCKET?: R2Bucket
+  // R2 (private document storage, optional)
+  DOCUMENTS_BUCKET?: R2Bucket
 
   // Hyperdrive (connection pooling)
   HYPERDRIVE: Hyperdrive

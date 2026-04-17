@@ -63,7 +63,6 @@ export interface StorageBackedInvoiceDocumentGeneratorOptions {
   storage: StorageProvider
   keyPrefix?: string | ((context: InvoiceDocumentGeneratorContext) => Promise<string> | string)
   serializer?: StorageBackedInvoiceDocumentSerializer
-  signedUrlExpiresIn?: number
 }
 
 export interface GeneratedInvoiceDocumentRecord {
@@ -208,11 +207,6 @@ export function createStorageBackedInvoiceDocumentGenerator(
       contentType: defaultInvoiceDocumentMimeType(format),
       metadata: toUploadMetadata(upload.metadata),
     })
-    const downloadUrl =
-      uploaded.url ||
-      (options.signedUrlExpiresIn
-        ? await options.storage.signedUrl(uploaded.key, options.signedUrlExpiresIn)
-        : "")
 
     return {
       format,
@@ -223,7 +217,6 @@ export function createStorageBackedInvoiceDocumentGenerator(
         ...(upload.metadata ?? {}),
         storageProvider: options.storage.name,
         ...(uploaded.url ? { url: uploaded.url } : {}),
-        ...(downloadUrl ? { downloadUrl } : {}),
       },
     }
   }

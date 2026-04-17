@@ -3,8 +3,10 @@ interface CloudflareBindings {
   RATE_LIMIT: KVNamespace
   CACHE: KVNamespace
 
-  // R2 (file storage)
+  // R2 (public media storage)
   MEDIA_BUCKET: R2Bucket
+  // R2 (private document storage)
+  DOCUMENTS_BUCKET: R2Bucket
 
   // Hyperdrive (connection pooling)
   HYPERDRIVE: Hyperdrive

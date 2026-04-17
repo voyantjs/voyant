@@ -211,6 +211,14 @@ export const contractRecordsService = {
       .where(eq(contractAttachments.contractId, contractId))
       .orderBy(desc(contractAttachments.createdAt))
   },
+  async getAttachmentById(db: PostgresJsDatabase, attachmentId: string) {
+    const [row] = await db
+      .select()
+      .from(contractAttachments)
+      .where(eq(contractAttachments.id, attachmentId))
+      .limit(1)
+    return row ?? null
+  },
   async createAttachment(
     db: PostgresJsDatabase,
     contractId: string,

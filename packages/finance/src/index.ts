@@ -7,7 +7,10 @@ import {
   createFinanceAdminDocumentRoutes,
   type FinanceDocumentRouteOptions,
 } from "./routes-documents.js"
-import { publicFinanceRoutes } from "./routes-public.js"
+import {
+  createPublicFinanceRoutes,
+  type PublicFinanceRouteOptions,
+} from "./routes-public.js"
 import {
   createFinanceAdminSettlementRoutes,
   type FinanceSettlementRouteOptions,
@@ -15,8 +18,12 @@ import {
 
 export type { FinanceRoutes } from "./routes.js"
 export type { PublicFinanceRoutes } from "./routes-public.js"
-export { publicFinanceRoutes } from "./routes-public.js"
-export { publicFinanceService } from "./service-public.js"
+export {
+  createPublicFinanceRoutes,
+  publicFinanceRoutes,
+  type PublicFinanceRouteOptions,
+} from "./routes-public.js"
+export { publicFinanceService, type PublicFinanceRuntimeOptions } from "./service-public.js"
 
 export const invoiceLinkable: LinkableDefinition = {
   module: "finance",
@@ -51,7 +58,8 @@ export const financeModule: Module = {
 }
 
 export interface FinanceHonoModuleOptions
-  extends FinanceDocumentRouteOptions,
+  extends PublicFinanceRouteOptions,
+    FinanceDocumentRouteOptions,
     FinanceSettlementRouteOptions {}
 
 export function createFinanceHonoModule(options: FinanceHonoModuleOptions = {}): HonoModule {
@@ -63,7 +71,7 @@ export function createFinanceHonoModule(options: FinanceHonoModuleOptions = {}):
   return {
     module: financeModule,
     adminRoutes,
-    publicRoutes: publicFinanceRoutes,
+    publicRoutes: createPublicFinanceRoutes(options),
     routes: adminRoutes,
   }
 }

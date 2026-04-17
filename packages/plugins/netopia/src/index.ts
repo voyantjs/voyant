@@ -14,6 +14,11 @@ export {
   netopiaHonoPlugin as createNetopiaAdapterBundle,
   netopiaHonoPlugin,
 } from "./plugin.js"
+export type {
+  NetopiaNotificationRuntime,
+  NetopiaNotificationRuntimeOptions,
+} from "./notification-runtime.js"
+export { buildNetopiaNotificationRuntime } from "./notification-runtime.js"
 export {
   deriveNetopiaOrderId,
   mapNetopiaPaymentStatus,

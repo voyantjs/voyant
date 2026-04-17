@@ -1,4 +1,4 @@
-import { parseJsonBody, requireUserId } from "@voyantjs/hono"
+import { ForbiddenApiError, handleApiError, parseJsonBody, requireUserId } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
@@ -160,7 +160,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     )
 
     if (companion === "forbidden") {
-      return c.json({ error: "Companion does not belong to this customer" }, 403)
+      return handleApiError(new ForbiddenApiError("Companion does not belong to this customer"), c)
     }
 
     if (!companion) {
@@ -179,7 +179,7 @@ export const publicCustomerPortalRoutes = new Hono<Env>()
     )
 
     if (result === "forbidden") {
-      return c.json({ error: "Companion does not belong to this customer" }, 403)
+      return handleApiError(new ForbiddenApiError("Companion does not belong to this customer"), c)
     }
 
     if (result === "not_found") {

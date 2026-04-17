@@ -22,6 +22,7 @@ import { pricingHonoModule } from "@voyantjs/pricing"
 import { productsBookingExtension, productsHonoModule } from "@voyantjs/products"
 import { resourcesHonoModule } from "@voyantjs/resources"
 import { sellabilityHonoModule } from "@voyantjs/sellability"
+import { createStorefrontHonoModule } from "@voyantjs/storefront"
 import { createStorefrontVerificationHonoModule } from "@voyantjs/storefront-verification"
 import { suppliersHonoModule } from "@voyantjs/suppliers"
 import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/transactions"
@@ -40,6 +41,7 @@ const storefrontVerificationHonoModule = createStorefrontVerificationHonoModule(
     subject: "Your verification code",
   },
 })
+const storefrontHonoModule = createStorefrontHonoModule()
 const checkoutHonoModule = createCheckoutHonoModule({
   resolveProviders: resolveNotificationProviders,
 })
@@ -83,6 +85,7 @@ export const app = createApp<CloudflareBindings>({
     bookingsHonoModule,
     financeHonoModule,
     legalHonoModule,
+    storefrontHonoModule,
     customerPortalHonoModule,
     storefrontVerificationHonoModule,
     checkoutHonoModule,

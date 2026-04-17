@@ -241,6 +241,9 @@ importers:
       '@voyantjs/sellability-react':
         specifier: workspace:*
         version: link:../../packages/sellability-react
+      '@voyantjs/storefront':
+        specifier: workspace:*
+        version: link:../../packages/storefront
       '@voyantjs/suppliers':
         specifier: workspace:*
         version: link:../../packages/suppliers
@@ -2768,6 +2771,9 @@ importers:
       '@voyantjs/sellability':
         specifier: workspace:*
         version: link:../../packages/sellability
+      '@voyantjs/storefront':
+        specifier: workspace:*
+        version: link:../../packages/storefront
       '@voyantjs/storefront-verification':
         specifier: workspace:*
         version: link:../../packages/storefront-verification
@@ -3045,6 +3051,9 @@ importers:
       '@voyantjs/sellability':
         specifier: workspace:*
         version: link:../../packages/sellability
+      '@voyantjs/storefront':
+        specifier: workspace:*
+        version: link:../../packages/storefront
       '@voyantjs/storefront-verification':
         specifier: workspace:*
         version: link:../../packages/storefront-verification

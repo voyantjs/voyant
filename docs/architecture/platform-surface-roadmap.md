@@ -15,6 +15,9 @@ For package and extension-surface classification, see
 For executable backend workload classification, see
 [Voyant Execution Architecture](./execution-architecture.md).
 
+For runtime cache backend guidance and cache-semantics rules, see
+[Voyant Caching Architecture](./caching-architecture.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

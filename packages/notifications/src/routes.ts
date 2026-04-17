@@ -1,6 +1,7 @@
 import type { EventBus, ModuleContainer } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 
 import { createNotificationService, notificationsService } from "./service.js"
 import type { BookingDocumentAttachmentResolver } from "./service-booking-documents.js"
@@ -78,15 +79,13 @@ function getRuntime(
 export function createNotificationsRoutes(options?: NotificationsRoutesOptions) {
   return new Hono<Env>()
     .get("/templates", async (c) => {
-      const query = notificationTemplateListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, notificationTemplateListQuerySchema)
       return c.json(await notificationsService.listTemplates(c.get("db"), query))
     })
     .post("/templates", async (c) => {
       const row = await notificationsService.createTemplate(
         c.get("db"),
-        insertNotificationTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertNotificationTemplateSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -99,15 +98,13 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
       const row = await notificationsService.updateTemplate(
         c.get("db"),
         c.req.param("id"),
-        updateNotificationTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateNotificationTemplateSchema),
       )
       if (!row) return c.json({ error: "Notification template not found" }, 404)
       return c.json({ data: row })
     })
     .get("/deliveries", async (c) => {
-      const query = notificationDeliveryListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, notificationDeliveryListQuerySchema)
       return c.json(await notificationsService.listDeliveries(c.get("db"), query))
     })
     .get("/deliveries/:id", async (c) => {
@@ -116,15 +113,13 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
       return c.json({ data: row })
     })
     .get("/reminder-rules", async (c) => {
-      const query = notificationReminderRuleListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, notificationReminderRuleListQuerySchema)
       return c.json(await notificationsService.listReminderRules(c.get("db"), query))
     })
     .post("/reminder-rules", async (c) => {
       const row = await notificationsService.createReminderRule(
         c.get("db"),
-        insertNotificationReminderRuleSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertNotificationReminderRuleSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -137,15 +132,13 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
       const row = await notificationsService.updateReminderRule(
         c.get("db"),
         c.req.param("id"),
-        updateNotificationReminderRuleSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateNotificationReminderRuleSchema),
       )
       if (!row) return c.json({ error: "Notification reminder rule not found" }, 404)
       return c.json({ data: row })
     })
     .get("/reminder-runs", async (c) => {
-      const query = notificationReminderRunListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, notificationReminderRunListQuerySchema)
       return c.json(await notificationsService.listReminderRuns(c.get("db"), query))
     })
     .get("/reminder-runs/:id", async (c) => {
@@ -176,7 +169,7 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
           c.get("db"),
           dispatcher,
           c.req.param("id"),
-          sendPaymentSessionNotificationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, sendPaymentSessionNotificationSchema),
         )
         if (!row) return c.json({ error: "Payment session not found" }, 404)
         return c.json({ data: row }, 201)
@@ -194,7 +187,7 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
           c.get("db"),
           dispatcher,
           c.req.param("id"),
-          sendInvoiceNotificationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, sendInvoiceNotificationSchema),
         )
         if (!row) return c.json({ error: "Invoice not found" }, 404)
         return c.json({ data: row }, 201)
@@ -261,7 +254,7 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
         const row = await notificationsService.sendNotification(
           c.get("db"),
           dispatcher,
-          sendNotificationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, sendNotificationSchema),
         )
         return c.json({ data: row }, 201)
       } catch (error) {

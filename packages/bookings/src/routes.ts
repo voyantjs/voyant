@@ -1,4 +1,10 @@
-import { parseJsonBody, requireUserId } from "@voyantjs/hono"
+import {
+  ForbiddenApiError,
+  handleApiError,
+  parseJsonBody,
+  requireUserId,
+  UnauthorizedApiError,
+} from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
@@ -99,7 +105,10 @@ async function authorizeBookingPiiAccess(
       outcome: "denied",
       reason: "missing_user",
     })
-    return { allowed: false as const, response: c.json({ error: "Unauthorized" }, 401) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new UnauthorizedApiError(), c),
+    }
   }
 
   const customAuthorizer = c.get("authorizeBookingPii")
@@ -120,7 +129,10 @@ async function authorizeBookingPiiAccess(
         outcome: "denied",
         reason: "custom_policy_denied",
       })
-      return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+      return {
+        allowed: false as const,
+        response: handleApiError(new ForbiddenApiError(), c),
+      }
     }
 
     return { allowed: true as const }
@@ -137,7 +149,10 @@ async function authorizeBookingPiiAccess(
       reason: "insufficient_scope",
       metadata: { actor: actor ?? null },
     })
-    return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new ForbiddenApiError(), c),
+    }
   }
 
   return { allowed: true as const }

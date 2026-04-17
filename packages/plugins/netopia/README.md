@@ -1,6 +1,6 @@
 # `@voyantjs/plugin-netopia`
 
-Netopia hosted-card payment support for Voyant finance.
+Netopia payment adapter for Voyant finance. It starts hosted-card collection flows, stores provider references on `payment_sessions`, and reconciles callback payloads back into Voyant finance state. The package is distributed as a plugin bundle, but the core role is a finance and checkout provider integration.
 
 This package sits on top of `@voyantjs/finance` and its `payment_sessions` model. It does not replace finance state. It starts a hosted Netopia checkout, stores provider references on the session, and reconciles callback payloads back into Voyant payments, captures, authorizations, invoices, and booking payment schedules.
 
@@ -53,7 +53,7 @@ Then include the returned extension in `createApp({ extensions: [...] })`.
 3. Redirect the customer to the returned provider `paymentURL`.
 4. Optionally send a payment-link or invoice notification as part of the collect flow.
 5. Netopia calls the callback route.
-6. The plugin completes, fails, or updates the session in finance.
+6. The adapter completes, fails, or updates the session in finance.
 
 ## Notes
 

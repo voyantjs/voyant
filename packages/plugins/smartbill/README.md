@@ -1,6 +1,6 @@
 # @voyantjs/plugin-smartbill
 
-SmartBill e-invoicing plugin for Voyant. Subscribes to invoice events and creates/cancels/syncs invoices via the SmartBill REST API for Romanian tax compliance.
+SmartBill e-invoicing adapter for Voyant. It subscribes to invoice events and creates, cancels, and syncs invoices via the SmartBill REST API for Romanian tax compliance. The package is distributed as a Voyant plugin bundle so it can be mounted directly in app composition.
 
 ## Install
 
@@ -27,14 +27,14 @@ const app = createApp({
 })
 ```
 
-By default the plugin wires up 3 subscribers (`invoice.issued`, `invoice.voided`, `invoice.external.sync.requested`) that create, cancel, and check payment status on SmartBill. All error handling is fire-and-forget per the EventBus contract.
+By default the bundle wires up 3 subscribers (`invoice.issued`, `invoice.voided`, `invoice.external.sync.requested`) that create, cancel, and check payment status on SmartBill. All error handling is fire-and-forget per the EventBus contract.
 
 ## Exports
 
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `smartbillPlugin(options)` |
+| `./plugin` | `smartbillPlugin(options)` plugin bundle factory |
 | `./client` | `createSmartbillClient` — `createInvoice`, `cancelInvoice`, `viewPdf`, `getPaymentStatus`, etc. |
 | `./types` | SmartBill invoice types |
 

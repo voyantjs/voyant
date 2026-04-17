@@ -1,6 +1,6 @@
 # @voyantjs/plugin-payload-cms
 
-Payload CMS sync plugin for Voyant. Subscribes to module events and mirrors documents into a Payload collection keyed by a `voyantId` field.
+Payload CMS sync adapter for Voyant. It subscribes to module events and mirrors documents into a Payload collection keyed by a `voyantId` field. The package is distributed as a Voyant plugin bundle so it can be mounted directly in app composition.
 
 ## Install
 
@@ -26,14 +26,14 @@ const app = createApp({
 })
 ```
 
-By default the plugin wires up 3 subscribers (`product.created`, `product.updated`, `product.deleted`) that upsert/delete documents keyed by `voyantId`. All error handling is fire-and-forget per the EventBus contract.
+By default the bundle wires up 3 subscribers (`product.created`, `product.updated`, `product.deleted`) that upsert/delete documents keyed by `voyantId`. All error handling is fire-and-forget per the EventBus contract.
 
 ## Exports
 
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `payloadCmsPlugin(options)` |
+| `./plugin` | `payloadCmsPlugin(options)` plugin bundle factory |
 | `./client` | `createPayloadClient` — `upsertByVoyantId`, `deleteByVoyantId`, `findByVoyantId` |
 | `./types` | Plugin option types |
 

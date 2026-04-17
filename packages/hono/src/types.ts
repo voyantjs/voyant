@@ -34,6 +34,7 @@ export interface VoyantBindings {
 export type VoyantDb = PostgresJsDatabase | NeonHttpDatabase
 export type VoyantVariables = CoreVoyantVariables & {
   db: VoyantDb
+  /** Shared app/runtime container for explicit service resolution. */
   container: ModuleContainer
   eventBus: EventBus
 }

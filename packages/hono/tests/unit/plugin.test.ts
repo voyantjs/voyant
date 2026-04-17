@@ -102,7 +102,7 @@ describe("createApp with plugins", () => {
     expect(r2.status).toBe(200)
   })
 
-  it("registers plugin module services in the container", async () => {
+  it("registers plugin runtime services in the shared container", async () => {
     const spy = { called: false }
     const mod: HonoModule = {
       module: { name: "svc", service: { ping: () => "pong" } },
@@ -200,7 +200,7 @@ describe("createApp with plugins", () => {
     expect(calls).toEqual(["plugin", "module", "extension"])
   })
 
-  it("exposes bootstrap-registered services through the shared container", async () => {
+  it("exposes bootstrap-registered runtime services through the shared container", async () => {
     const app = createApp({
       // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
       db: () => ({}) as any,

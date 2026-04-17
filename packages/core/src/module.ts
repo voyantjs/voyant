@@ -29,8 +29,14 @@ export interface Module {
   hooks?: Record<string, (...args: unknown[]) => Promise<void> | void>
 
   /**
-   * Optional service instance registered in the container under {@link name}.
-   * Other modules resolve it via `container.resolve<T>(name)`.
+   * Optional service instance registered in the shared app/runtime container
+   * under {@link name}.
+   *
+   * This is intended for explicit runtime wiring in routes, workflows,
+   * subscribers, or bootstrap-time registrations. Modules should prefer links
+   * and query for cross-module data, and workflows/orchestration for
+   * cross-module behavior, rather than treating the container as their default
+   * module-to-module integration surface.
    */
   service?: unknown
 

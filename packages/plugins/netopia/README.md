@@ -59,7 +59,8 @@ const netopiaFinanceExtension = createNetopiaFinanceAdapter()
 Then include the returned extension in `createApp({ extensions: [...] })`.
 
 If you want the packaged Hono bundle instead, use
-`createNetopiaAdapterBundle()` or the existing `netopiaHonoPlugin()` export.
+`createNetopiaAdapterBundle()` or `netopiaHonoPlugin()`. Both are optional
+distribution helpers over the adapter/extension surfaces above.
 
 ## Flow
 

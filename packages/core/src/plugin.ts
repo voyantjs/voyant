@@ -1,10 +1,12 @@
 /**
- * Plugins — distributable bundles that group modules, extensions, event
- * subscribers, and link definitions into a single unit.
+ * Plugins — optional distributable bundles that group modules, extensions,
+ * event subscribers, and link definitions into a single unit.
  *
  * A plugin is the unit of "distribution" in Voyant: a customer, vendor, or
  * integrator ships a plugin package and it can be registered alongside core
- * modules without touching the framework itself.
+ * modules without touching the framework itself. It is not the default runtime
+ * customization unit — modules, providers, extensions, and workflows should be
+ * preferred when a smaller seam fits.
  *
  * Core plugins are transport-agnostic — they contain {@link Module} and
  * {@link Extension} values (no HTTP routes). Transport adapters (such as

@@ -15,6 +15,7 @@ export {
   cors,
   db,
   errorBoundary,
+  handleApiError,
   LIVE_LIMITS,
   logger,
   rateLimit,
@@ -41,3 +42,9 @@ export type {
   VoyantRequestAuthContext,
   VoyantVariables,
 } from "./types.js"
+export {
+  normalizeValidationError,
+  parseJsonBody,
+  parseQuery,
+  RequestValidationError,
+} from "./validation.js"

@@ -4,7 +4,7 @@ import { Hono } from "hono"
 import { requireAuth } from "./middleware/auth.js"
 import { cors } from "./middleware/cors.js"
 import { db } from "./middleware/db.js"
-import { errorBoundary, requestId } from "./middleware/error-boundary.js"
+import { handleApiError, requestId } from "./middleware/error-boundary.js"
 import { logger } from "./middleware/logger.js"
 import { requireActor } from "./middleware/require-actor.js"
 import { expandHonoPlugins } from "./plugin.js"
@@ -32,6 +32,7 @@ export function createApp<TBindings extends VoyantBindings>(
   config: VoyantAppConfig<TBindings>,
 ): Hono<{ Bindings: TBindings; Variables: VoyantVariables }> {
   const app = new Hono<{ Bindings: TBindings; Variables: VoyantVariables }>()
+  app.onError(handleApiError)
 
   // Expand plugins into their constituent modules/extensions before mounting
   const expanded = config.plugins ? expandHonoPlugins(config.plugins) : null
@@ -95,9 +96,6 @@ export function createApp<TBindings extends VoyantBindings>(
 
   // Structured logger
   app.use("*", logger(config.logger))
-
-  // Global error boundary
-  app.use("*", errorBoundary)
 
   // CORS (allowlist via env CORS_ALLOWLIST)
   app.use("*", cors())

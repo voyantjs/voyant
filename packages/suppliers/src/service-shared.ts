@@ -9,7 +9,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
 import type { Supplier } from "./schema.js"
-import { suppliers } from "./schema.js"
+import { supplierDirectoryProjections, suppliers } from "./schema.js"
 import type {
   availabilityQuerySchema,
   insertAvailabilitySchema,
@@ -69,6 +69,11 @@ export type SupplierHydratedFields = {
 
 export type HydratedSupplier = Supplier & SupplierHydratedFields
 
+type SupplierDirectoryProjectionValues = Omit<
+  typeof supplierDirectoryProjections.$inferInsert,
+  "id" | "updatedAt"
+>
+
 function normalizeContactValue(kind: "email" | "phone" | "website", value: string) {
   if (kind === "email" || kind === "website") {
     return value.trim().toLowerCase()
@@ -118,6 +123,192 @@ export async function ensureSupplierExists(db: PostgresJsDatabase, supplierId: s
     .where(eq(suppliers.id, supplierId))
     .limit(1)
   return supplier ?? null
+}
+
+function emptySupplierHydratedFields(): SupplierHydratedFields {
+  return {
+    email: null,
+    phone: null,
+    website: null,
+    address: null,
+    city: null,
+    country: null,
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+  }
+}
+
+async function buildSupplierDirectoryProjectionRows(
+  db: PostgresJsDatabase,
+  supplierIds: string[],
+): Promise<SupplierDirectoryProjectionValues[]> {
+  if (supplierIds.length === 0) {
+    return []
+  }
+
+  const ids = [...new Set(supplierIds)]
+  const [contactPoints, addresses, namedContacts] = await Promise.all([
+    db
+      .select()
+      .from(identityContactPoints)
+      .where(
+        and(
+          eq(identityContactPoints.entityType, supplierEntityType),
+          inArray(identityContactPoints.entityId, ids),
+        ),
+      ),
+    db
+      .select()
+      .from(identityAddresses)
+      .where(
+        and(
+          eq(identityAddresses.entityType, supplierEntityType),
+          inArray(identityAddresses.entityId, ids),
+        ),
+      ),
+    db
+      .select()
+      .from(identityNamedContacts)
+      .where(
+        and(
+          eq(identityNamedContacts.entityType, supplierEntityType),
+          inArray(identityNamedContacts.entityId, ids),
+        ),
+      ),
+  ])
+
+  const contactPointMap = new Map<string, typeof contactPoints>()
+  const addressMap = new Map<string, typeof addresses>()
+  const namedContactMap = new Map<string, typeof namedContacts>()
+
+  for (const point of contactPoints) {
+    const bucket = contactPointMap.get(point.entityId) ?? []
+    bucket.push(point)
+    contactPointMap.set(point.entityId, bucket)
+  }
+
+  for (const address of addresses) {
+    const bucket = addressMap.get(address.entityId) ?? []
+    bucket.push(address)
+    addressMap.set(address.entityId, bucket)
+  }
+
+  for (const contact of namedContacts) {
+    const bucket = namedContactMap.get(contact.entityId) ?? []
+    bucket.push(contact)
+    namedContactMap.set(contact.entityId, bucket)
+  }
+
+  return ids.map((supplierId) => {
+    const entityContactPoints = contactPointMap.get(supplierId) ?? []
+    const entityAddresses = addressMap.get(supplierId) ?? []
+    const entityNamedContacts = namedContactMap.get(supplierId) ?? []
+
+    const pickContactValue = (kind: "email" | "phone" | "website") =>
+      entityContactPoints.find((point) => point.kind === kind && point.isPrimary)?.value ??
+      entityContactPoints.find((point) => point.kind === kind)?.value ??
+      null
+
+    const primaryAddress =
+      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
+    const primaryContact =
+      entityNamedContacts.find((contact) => contact.isPrimary) ?? entityNamedContacts[0] ?? null
+
+    return {
+      supplierId,
+      email: pickContactValue("email"),
+      phone: pickContactValue("phone"),
+      website: pickContactValue("website"),
+      address: primaryAddress ? formatAddress(primaryAddress) : null,
+      city: primaryAddress?.city ?? null,
+      country: primaryAddress?.country ?? null,
+      contactName: primaryContact?.name ?? null,
+      contactEmail: primaryContact?.email ?? null,
+      contactPhone: primaryContact?.phone ?? null,
+    }
+  })
+}
+
+export async function rebuildSupplierDirectoryProjection(
+  db: PostgresJsDatabase,
+  supplierId: string,
+) {
+  return rebuildSupplierDirectoryProjections(db, [supplierId])
+}
+
+export async function rebuildSupplierDirectoryProjections(
+  db: PostgresJsDatabase,
+  supplierIds: string[],
+) {
+  const ids = [...new Set(supplierIds)]
+  if (ids.length === 0) {
+    return
+  }
+
+  const rows = await buildSupplierDirectoryProjectionRows(db, ids)
+  await db
+    .delete(supplierDirectoryProjections)
+    .where(inArray(supplierDirectoryProjections.supplierId, ids))
+  await db.insert(supplierDirectoryProjections).values(rows)
+}
+
+async function ensureSupplierDirectoryProjectionMap(db: PostgresJsDatabase, supplierIds: string[]) {
+  const ids = [...new Set(supplierIds)]
+  if (ids.length === 0) {
+    return new Map<string, SupplierHydratedFields>()
+  }
+
+  const existing = await db
+    .select()
+    .from(supplierDirectoryProjections)
+    .where(inArray(supplierDirectoryProjections.supplierId, ids))
+
+  const map = new Map<string, SupplierHydratedFields>()
+  for (const projection of existing) {
+    map.set(projection.supplierId, {
+      email: projection.email,
+      phone: projection.phone,
+      website: projection.website,
+      address: projection.address,
+      city: projection.city,
+      country: projection.country,
+      contactName: projection.contactName,
+      contactEmail: projection.contactEmail,
+      contactPhone: projection.contactPhone,
+    })
+  }
+
+  const missingIds = ids.filter((id) => !map.has(id))
+  if (missingIds.length > 0) {
+    await rebuildSupplierDirectoryProjections(db, missingIds)
+    const rebuilt = await db
+      .select()
+      .from(supplierDirectoryProjections)
+      .where(inArray(supplierDirectoryProjections.supplierId, missingIds))
+
+    for (const projection of rebuilt) {
+      map.set(projection.supplierId, {
+        email: projection.email,
+        phone: projection.phone,
+        website: projection.website,
+        address: projection.address,
+        city: projection.city,
+        country: projection.country,
+        contactName: projection.contactName,
+        contactEmail: projection.contactEmail,
+        contactPhone: projection.contactPhone,
+      })
+    }
+  }
+
+  for (const id of ids) {
+    if (!map.has(id)) {
+      map.set(id, emptySupplierHydratedFields())
+    }
+  }
+
+  return map
 }
 
 export async function syncSupplierIdentity(
@@ -234,6 +425,7 @@ export async function syncSupplierIdentity(
     if (managedPrimaryContact) {
       await identityService.deleteNamedContact(db, managedPrimaryContact.id)
     }
+    await rebuildSupplierDirectoryProjection(db, supplierId)
     return
   }
 
@@ -255,6 +447,8 @@ export async function syncSupplierIdentity(
   } else {
     await identityService.createNamedContact(db, namedContactPayload)
   }
+
+  await rebuildSupplierDirectoryProjection(db, supplierId)
 }
 
 export async function hydrateSuppliers<
@@ -266,99 +460,16 @@ export async function hydrateSuppliers<
   },
 >(db: PostgresJsDatabase, rows: T[]): Promise<Array<T & SupplierHydratedFields>> {
   if (rows.length === 0) {
-    return rows.map((row) => ({
-      ...row,
-      email: null,
-      phone: null,
-      website: null,
-      address: null,
-      city: null,
-      country: null,
-      contactName: null,
-      contactEmail: null,
-      contactPhone: null,
-    }))
+    return rows.map((row) => ({ ...row, ...emptySupplierHydratedFields() }))
   }
 
   const ids = rows.map((row) => row.id)
-  const [contactPoints, addresses, namedContacts] = await Promise.all([
-    db
-      .select()
-      .from(identityContactPoints)
-      .where(
-        and(
-          eq(identityContactPoints.entityType, supplierEntityType),
-          inArray(identityContactPoints.entityId, ids),
-        ),
-      ),
-    db
-      .select()
-      .from(identityAddresses)
-      .where(
-        and(
-          eq(identityAddresses.entityType, supplierEntityType),
-          inArray(identityAddresses.entityId, ids),
-        ),
-      ),
-    db
-      .select()
-      .from(identityNamedContacts)
-      .where(
-        and(
-          eq(identityNamedContacts.entityType, supplierEntityType),
-          inArray(identityNamedContacts.entityId, ids),
-        ),
-      ),
-  ])
-
-  const contactPointMap = new Map<string, typeof contactPoints>()
-  const addressMap = new Map<string, typeof addresses>()
-  const namedContactMap = new Map<string, typeof namedContacts>()
-
-  for (const point of contactPoints) {
-    const bucket = contactPointMap.get(point.entityId) ?? []
-    bucket.push(point)
-    contactPointMap.set(point.entityId, bucket)
-  }
-
-  for (const address of addresses) {
-    const bucket = addressMap.get(address.entityId) ?? []
-    bucket.push(address)
-    addressMap.set(address.entityId, bucket)
-  }
-
-  for (const contact of namedContacts) {
-    const bucket = namedContactMap.get(contact.entityId) ?? []
-    bucket.push(contact)
-    namedContactMap.set(contact.entityId, bucket)
-  }
+  const projectionMap = await ensureSupplierDirectoryProjectionMap(db, ids)
 
   return rows.map((row) => {
-    const entityContactPoints = contactPointMap.get(row.id) ?? []
-    const entityAddresses = addressMap.get(row.id) ?? []
-    const entityNamedContacts = namedContactMap.get(row.id) ?? []
-
-    const pickContactValue = (kind: "email" | "phone" | "website") =>
-      entityContactPoints.find((point) => point.kind === kind && point.isPrimary)?.value ??
-      entityContactPoints.find((point) => point.kind === kind)?.value ??
-      null
-
-    const primaryAddress =
-      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
-    const primaryContact =
-      entityNamedContacts.find((contact) => contact.isPrimary) ?? entityNamedContacts[0] ?? null
-
     return {
       ...row,
-      email: pickContactValue("email"),
-      phone: pickContactValue("phone"),
-      website: pickContactValue("website"),
-      address: primaryAddress ? formatAddress(primaryAddress) : null,
-      city: primaryAddress?.city ?? null,
-      country: primaryAddress?.country ?? null,
-      contactName: primaryContact?.name ?? null,
-      contactEmail: primaryContact?.email ?? null,
-      contactPhone: primaryContact?.phone ?? null,
+      ...(projectionMap.get(row.id) ?? emptySupplierHydratedFields()),
     }
   })
 }

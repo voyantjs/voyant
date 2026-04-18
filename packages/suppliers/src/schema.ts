@@ -11,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core"
 
 export const supplierTypeEnum = pgEnum("supplier_type", [
@@ -85,6 +86,31 @@ export const suppliers = pgTable(
 export type Supplier = typeof suppliers.$inferSelect
 export type NewSupplier = typeof suppliers.$inferInsert
 
+// ---------- supplier_directory_projections ----------
+
+export const supplierDirectoryProjections = pgTable(
+  "supplier_directory_projections",
+  {
+    supplierId: typeIdRef("supplier_id")
+      .notNull()
+      .references(() => suppliers.id, { onDelete: "cascade" }),
+    email: text("email"),
+    phone: text("phone"),
+    website: text("website"),
+    address: text("address"),
+    city: text("city"),
+    country: text("country"),
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("uq_supplier_directory_projections_supplier").on(table.supplierId)],
+)
+
+export type SupplierDirectoryProjection = typeof supplierDirectoryProjections.$inferSelect
+export type NewSupplierDirectoryProjection = typeof supplierDirectoryProjections.$inferInsert
+
 // ---------- supplier_services ----------
 
 export const supplierServices = pgTable(
@@ -111,7 +137,7 @@ export const supplierServices = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_supplier_services_supplier").on(table.supplierId),
+    index("idx_supplier_services_supplier_created").on(table.supplierId, table.createdAt),
     index("idx_supplier_services_type").on(table.serviceType),
     index("idx_supplier_services_facility").on(table.facilityId),
   ],
@@ -149,7 +175,7 @@ export const supplierRates = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_supplier_rates_service").on(table.serviceId),
+    index("idx_supplier_rates_service_created").on(table.serviceId, table.createdAt),
     index("idx_supplier_rates_validity").on(table.validFrom, table.validTo),
   ],
 )
@@ -170,7 +196,7 @@ export const supplierNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_supplier_notes_supplier").on(table.supplierId)],
+  (table) => [index("idx_supplier_notes_supplier_created").on(table.supplierId, table.createdAt)],
 )
 
 export type SupplierNote = typeof supplierNotes.$inferSelect
@@ -191,7 +217,7 @@ export const supplierAvailability = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_supplier_availability_supplier").on(table.supplierId),
+    index("idx_supplier_availability_supplier_date").on(table.supplierId, table.date),
     index("idx_supplier_availability_date").on(table.date),
   ],
 )
@@ -218,7 +244,7 @@ export const supplierContracts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_supplier_contracts_supplier").on(table.supplierId),
+    index("idx_supplier_contracts_supplier_created").on(table.supplierId, table.createdAt),
     index("idx_supplier_contracts_status").on(table.status),
   ],
 )
@@ -233,11 +259,25 @@ export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
     fields: [suppliers.primaryFacilityId],
     references: [facilities.id],
   }),
+  directoryProjection: one(supplierDirectoryProjections, {
+    fields: [suppliers.id],
+    references: [supplierDirectoryProjections.supplierId],
+  }),
   services: many(supplierServices),
   notes: many(supplierNotes),
   availability: many(supplierAvailability),
   contracts: many(supplierContracts),
 }))
+
+export const supplierDirectoryProjectionsRelations = relations(
+  supplierDirectoryProjections,
+  ({ one }) => ({
+    supplier: one(suppliers, {
+      fields: [supplierDirectoryProjections.supplierId],
+      references: [suppliers.id],
+    }),
+  }),
+)
 
 export const supplierServicesRelations = relations(supplierServices, ({ one, many }) => ({
   supplier: one(suppliers, { fields: [supplierServices.supplierId], references: [suppliers.id] }),

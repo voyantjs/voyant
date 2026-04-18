@@ -9,7 +9,11 @@ import type {
 } from "@voyantjs/identity/validation"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
-import { ensureSupplierExists, supplierEntityType } from "./service-shared.js"
+import {
+  ensureSupplierExists,
+  rebuildSupplierDirectoryProjection,
+  supplierEntityType,
+} from "./service-shared.js"
 
 export function listContactPoints(db: PostgresJsDatabase, supplierId: string) {
   return identityService.listContactPointsForEntity(db, supplierEntityType, supplierId)
@@ -29,23 +33,38 @@ export async function createNamedContact(
     return null
   }
 
-  return identityService.createNamedContact(db, {
+  const row = await identityService.createNamedContact(db, {
     ...data,
     entityType: supplierEntityType,
     entityId: supplierId,
   })
+
+  if (row) {
+    await rebuildSupplierDirectoryProjection(db, supplierId)
+  }
+
+  return row
 }
 
-export function updateNamedContact(
+export async function updateNamedContact(
   db: PostgresJsDatabase,
   contactId: string,
   data: UpdateIdentityNamedContact,
 ) {
-  return identityService.updateNamedContact(db, contactId, data)
+  const row = await identityService.updateNamedContact(db, contactId, data)
+  if (row?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, row.entityId)
+  }
+  return row
 }
 
-export function deleteNamedContact(db: PostgresJsDatabase, contactId: string) {
-  return identityService.deleteNamedContact(db, contactId)
+export async function deleteNamedContact(db: PostgresJsDatabase, contactId: string) {
+  const existing = await identityService.getNamedContactById(db, contactId)
+  const row = await identityService.deleteNamedContact(db, contactId)
+  if (row && existing?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, existing.entityId)
+  }
+  return row
 }
 
 export async function createContactPoint(
@@ -58,23 +77,38 @@ export async function createContactPoint(
     return null
   }
 
-  return identityService.createContactPoint(db, {
+  const row = await identityService.createContactPoint(db, {
     ...data,
     entityType: supplierEntityType,
     entityId: supplierId,
   })
+
+  if (row) {
+    await rebuildSupplierDirectoryProjection(db, supplierId)
+  }
+
+  return row
 }
 
-export function updateContactPoint(
+export async function updateContactPoint(
   db: PostgresJsDatabase,
   contactPointId: string,
   data: UpdateIdentityContactPoint,
 ) {
-  return identityService.updateContactPoint(db, contactPointId, data)
+  const row = await identityService.updateContactPoint(db, contactPointId, data)
+  if (row?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, row.entityId)
+  }
+  return row
 }
 
-export function deleteContactPoint(db: PostgresJsDatabase, contactPointId: string) {
-  return identityService.deleteContactPoint(db, contactPointId)
+export async function deleteContactPoint(db: PostgresJsDatabase, contactPointId: string) {
+  const existing = await identityService.getContactPointById(db, contactPointId)
+  const row = await identityService.deleteContactPoint(db, contactPointId)
+  if (row && existing?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, existing.entityId)
+  }
+  return row
 }
 
 export function listAddresses(db: PostgresJsDatabase, supplierId: string) {
@@ -91,21 +125,36 @@ export async function createAddress(
     return null
   }
 
-  return identityService.createAddress(db, {
+  const row = await identityService.createAddress(db, {
     ...data,
     entityType: supplierEntityType,
     entityId: supplierId,
   })
+
+  if (row) {
+    await rebuildSupplierDirectoryProjection(db, supplierId)
+  }
+
+  return row
 }
 
-export function updateAddress(
+export async function updateAddress(
   db: PostgresJsDatabase,
   addressId: string,
   data: UpdateIdentityAddress,
 ) {
-  return identityService.updateAddress(db, addressId, data)
+  const row = await identityService.updateAddress(db, addressId, data)
+  if (row?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, row.entityId)
+  }
+  return row
 }
 
-export function deleteAddress(db: PostgresJsDatabase, addressId: string) {
-  return identityService.deleteAddress(db, addressId)
+export async function deleteAddress(db: PostgresJsDatabase, addressId: string) {
+  const existing = await identityService.getAddressById(db, addressId)
+  const row = await identityService.deleteAddress(db, addressId)
+  if (row && existing?.entityType === supplierEntityType) {
+    await rebuildSupplierDirectoryProjection(db, existing.entityId)
+  }
+  return row
 }

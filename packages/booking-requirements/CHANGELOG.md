@@ -1,5 +1,15 @@
 # @voyantjs/booking-requirements
 
+## 0.6.5
+
+### Patch Changes
+
+- 5b14025: Align booking requirements child-list indexes with the actual parent-and-sort query shapes used for product contact requirements, booking questions, question options, triggers, and booking answers.
+  - @voyantjs/core@0.6.5
+  - @voyantjs/db@0.6.5
+  - @voyantjs/hono@0.6.5
+  - @voyantjs/products@0.6.5
+
 ## 0.6.4
 
 ### Patch Changes

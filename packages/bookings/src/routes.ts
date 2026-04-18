@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@voyantjs/hono"
 import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
@@ -661,7 +662,7 @@ export const bookingRoutes = new Hono<Env>()
       const row = await pii.upsertParticipantTravelDetails(
         c.get("db"),
         participant.id,
-        upsertParticipantTravelDetailsSchema.parse(await c.req.json()),
+        await parseJsonBody(c, upsertParticipantTravelDetailsSchema),
         c.get("userId"),
       )
 

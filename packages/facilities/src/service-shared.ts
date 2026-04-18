@@ -1,10 +1,9 @@
-import { identityAddresses } from "@voyantjs/identity/schema"
 import { identityService } from "@voyantjs/identity/service"
-import { and, eq, inArray } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
-import { facilities } from "./schema.js"
+import { facilities, facilityAddressProjections } from "./schema.js"
 import type {
   facilityContactListQuerySchema,
   facilityFeatureListQuerySchema,
@@ -61,6 +60,18 @@ export const facilityEntityType = "facility"
 export const facilityBaseIdentitySource = "facilities.base"
 export const facilityContactIdentitySource = "facilities.contacts"
 
+type FacilityAddressFields = {
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  region: string | null
+  country: string | null
+  postalCode: string | null
+  latitude: number | null
+  longitude: number | null
+  address: string | null
+}
+
 export async function paginate<T extends object>(
   rowsQuery: Promise<T[]>,
   countQuery: Promise<Array<{ count: number }>>,
@@ -109,6 +120,20 @@ export function formatAddress(address: {
   ].filter(Boolean)
 
   return parts.length > 0 ? parts.join(", ") : null
+}
+
+function emptyFacilityAddressFields(): FacilityAddressFields {
+  return {
+    addressLine1: null,
+    addressLine2: null,
+    city: null,
+    region: null,
+    country: null,
+    postalCode: null,
+    latitude: null,
+    longitude: null,
+    address: null,
+  }
 }
 
 export type FacilityAddressInput = Pick<
@@ -170,6 +195,7 @@ export async function syncFacilityAddress(
     if (managedAddress) {
       await identityService.deleteAddress(db, managedAddress.id)
     }
+    await rebuildFacilityAddressProjection(db, facilityId)
     return
   }
 
@@ -197,6 +223,41 @@ export async function syncFacilityAddress(
   } else {
     await identityService.createAddress(db, payload)
   }
+
+  await rebuildFacilityAddressProjection(db, facilityId)
+}
+
+export async function rebuildFacilityAddressProjection(db: PostgresJsDatabase, facilityId: string) {
+  const entityAddresses = await identityService.listAddressesForEntity(
+    db,
+    facilityEntityType,
+    facilityId,
+  )
+  const primaryAddress =
+    entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
+
+  await db
+    .delete(facilityAddressProjections)
+    .where(eq(facilityAddressProjections.facilityId, facilityId))
+
+  if (!primaryAddress) {
+    return
+  }
+
+  await db.insert(facilityAddressProjections).values({
+    facilityId,
+    addressId: primaryAddress.id,
+    fullText: primaryAddress.fullText,
+    line1: primaryAddress.line1,
+    line2: primaryAddress.line2,
+    city: primaryAddress.city,
+    region: primaryAddress.region,
+    postalCode: primaryAddress.postalCode,
+    country: primaryAddress.country,
+    latitude: primaryAddress.latitude,
+    longitude: primaryAddress.longitude,
+    address: formatAddress(primaryAddress),
+  })
 }
 
 export async function hydrateFacilities<T extends { id: string }>(
@@ -204,55 +265,33 @@ export async function hydrateFacilities<T extends { id: string }>(
   rows: T[],
 ) {
   if (rows.length === 0) {
-    return rows.map((row) => ({
-      ...row,
-      addressLine1: null,
-      addressLine2: null,
-      city: null,
-      region: null,
-      country: null,
-      postalCode: null,
-      latitude: null,
-      longitude: null,
-      address: null,
-    }))
+    return rows.map((row) => ({ ...row, ...emptyFacilityAddressFields() }))
   }
 
   const ids = rows.map((row) => row.id)
-  const addresses = await db
+  const projections = await db
     .select()
-    .from(identityAddresses)
-    .where(
-      and(
-        eq(identityAddresses.entityType, facilityEntityType),
-        inArray(identityAddresses.entityId, ids),
-      ),
-    )
+    .from(facilityAddressProjections)
+    .where(inArray(facilityAddressProjections.facilityId, ids))
 
-  const addressMap = new Map<string, typeof addresses>()
-
-  for (const address of addresses) {
-    const bucket = addressMap.get(address.entityId) ?? []
-    bucket.push(address)
-    addressMap.set(address.entityId, bucket)
-  }
+  const projectionMap = new Map(
+    projections.map((projection) => [projection.facilityId, projection]),
+  )
 
   return rows.map((row) => {
-    const entityAddresses = addressMap.get(row.id) ?? []
-    const primaryAddress =
-      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
+    const projection = projectionMap.get(row.id)
 
     return {
       ...row,
-      addressLine1: primaryAddress?.line1 ?? null,
-      addressLine2: primaryAddress?.line2 ?? null,
-      city: primaryAddress?.city ?? null,
-      region: primaryAddress?.region ?? null,
-      country: primaryAddress?.country ?? null,
-      postalCode: primaryAddress?.postalCode ?? null,
-      latitude: primaryAddress?.latitude ?? null,
-      longitude: primaryAddress?.longitude ?? null,
-      address: primaryAddress ? formatAddress(primaryAddress) : null,
+      addressLine1: projection?.line1 ?? null,
+      addressLine2: projection?.line2 ?? null,
+      city: projection?.city ?? null,
+      region: projection?.region ?? null,
+      country: projection?.country ?? null,
+      postalCode: projection?.postalCode ?? null,
+      latitude: projection?.latitude ?? null,
+      longitude: projection?.longitude ?? null,
+      address: projection?.address ?? null,
     }
   })
 }

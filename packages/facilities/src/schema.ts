@@ -5,6 +5,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import {
   boolean,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -117,10 +118,36 @@ export const facilities = pgTable(
   },
   (table) => [
     index("idx_facilities_parent").on(table.parentFacilityId),
-    index("idx_facilities_owner").on(table.ownerType, table.ownerId),
-    index("idx_facilities_kind").on(table.kind),
-    index("idx_facilities_status").on(table.status),
+    index("idx_facilities_owner_updated").on(table.ownerType, table.ownerId, table.updatedAt),
+    index("idx_facilities_kind_updated").on(table.kind, table.updatedAt),
+    index("idx_facilities_status_updated").on(table.status, table.updatedAt),
     uniqueIndex("uidx_facilities_code").on(table.code),
+  ],
+)
+
+export const facilityAddressProjections = pgTable(
+  "facility_address_projections",
+  {
+    facilityId: typeIdRef("facility_id")
+      .primaryKey()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    addressId: text("address_id"),
+    fullText: text("full_text"),
+    line1: text("line1"),
+    line2: text("line2"),
+    city: text("city"),
+    region: text("region"),
+    postalCode: text("postal_code"),
+    country: text("country"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    address: text("address"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_facility_address_projections_country").on(table.country),
+    index("idx_facility_address_projections_city_country").on(table.city, table.country),
   ],
 )
 
@@ -259,6 +286,8 @@ export const propertyGroupMembers = pgTable(
 
 export type Facility = typeof facilities.$inferSelect
 export type NewFacility = typeof facilities.$inferInsert
+export type FacilityAddressProjection = typeof facilityAddressProjections.$inferSelect
+export type NewFacilityAddressProjection = typeof facilityAddressProjections.$inferInsert
 export type FacilityContact = IdentityNamedContact
 export type NewFacilityContact = NewIdentityNamedContact
 export type FacilityFeature = typeof facilityFeatures.$inferSelect
@@ -281,11 +310,25 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   childFacilities: many(facilities, { relationName: "facility_parent" }),
   features: many(facilityFeatures),
   operationSchedules: many(facilityOperationSchedules),
+  addressProjection: one(facilityAddressProjections, {
+    fields: [facilities.id],
+    references: [facilityAddressProjections.facilityId],
+  }),
   property: one(properties, {
     fields: [facilities.id],
     references: [properties.facilityId],
   }),
 }))
+
+export const facilityAddressProjectionsRelations = relations(
+  facilityAddressProjections,
+  ({ one }) => ({
+    facility: one(facilities, {
+      fields: [facilityAddressProjections.facilityId],
+      references: [facilities.id],
+    }),
+  }),
+)
 
 export const facilityFeaturesRelations = relations(facilityFeatures, ({ one }) => ({
   facility: one(facilities, {

@@ -1,3 +1,4 @@
+export type { CheckoutRouteRuntime, CheckoutRoutesOptions } from "./routes.js"
 export {
   buildCheckoutRouteRuntime,
   CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY,
@@ -6,7 +7,6 @@ export {
   createCheckoutHonoModule,
   createCheckoutRoutes,
 } from "./routes.js"
-export type { CheckoutRouteRuntime, CheckoutRoutesOptions } from "./routes.js"
 export type {
   BootstrappedCheckoutCollection,
   CheckoutBankTransferDetails,

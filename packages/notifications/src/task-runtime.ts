@@ -20,6 +20,9 @@ export function buildNotificationTaskRuntime(
   options: NotificationTaskRuntimeOptions = {},
 ): NotificationTaskRuntime {
   return {
-    providers: options.resolveProviders?.(env) ?? options.providers ?? createDefaultNotificationProviders(env),
+    providers:
+      options.resolveProviders?.(env) ??
+      options.providers ??
+      createDefaultNotificationProviders(env),
   }
 }

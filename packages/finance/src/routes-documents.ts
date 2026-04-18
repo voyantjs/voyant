@@ -1,4 +1,5 @@
 import type { EventBus, ModuleContainer } from "@voyantjs/core"
+import { parseOptionalJsonBody } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -88,7 +89,7 @@ export function createFinanceAdminDocumentRoutes(options: FinanceDocumentRouteOp
       const result = await financeDocumentsService.generateInvoiceDocument(
         c.get("db"),
         c.req.param("id"),
-        generateInvoiceDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
+        await parseOptionalJsonBody(c, generateInvoiceDocumentInputSchema),
         { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
@@ -109,7 +110,7 @@ export function createFinanceAdminDocumentRoutes(options: FinanceDocumentRouteOp
       const result = await financeDocumentsService.regenerateInvoiceDocument(
         c.get("db"),
         c.req.param("id"),
-        generateInvoiceDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
+        await parseOptionalJsonBody(c, generateInvoiceDocumentInputSchema),
         { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 

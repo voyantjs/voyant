@@ -1,7 +1,7 @@
 import type { EventBus, ModuleContainer } from "@voyantjs/core"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 
 import { createNotificationService, notificationsService } from "./service.js"
 import type { BookingDocumentAttachmentResolver } from "./service-booking-documents.js"
@@ -153,7 +153,7 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
         const result = await notificationsService.runDueReminders(
           c.get("db"),
           dispatcher,
-          runDueRemindersSchema.parse(await c.req.json().catch(() => ({}))),
+          await parseOptionalJsonBody(c, runDueRemindersSchema),
         )
         return c.json({ data: result })
       } catch (error) {
@@ -212,7 +212,7 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
           c.get("db"),
           dispatcher,
           c.req.param("id"),
-          sendBookingDocumentsNotificationSchema.parse(await c.req.json().catch(() => ({}))),
+          await parseOptionalJsonBody(c, sendBookingDocumentsNotificationSchema),
           {
             attachmentResolver: runtime.documentAttachmentResolver,
             eventBus: runtime.eventBus,

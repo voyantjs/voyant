@@ -1,4 +1,5 @@
 import type { EventBus, ModuleContainer } from "@voyantjs/core"
+import { parseOptionalJsonBody } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import {
@@ -45,7 +46,7 @@ export function createFinanceAdminSettlementRoutes(options: FinanceSettlementRou
     const result = await financeSettlementService.pollInvoiceSettlement(
       c.get("db"),
       c.req.param("id"),
-      pollInvoiceSettlementInputSchema.parse(await c.req.json().catch(() => ({}))),
+      await parseOptionalJsonBody(c, pollInvoiceSettlementInputSchema),
       {
         bindings: c.env,
         invoiceSettlementPollers: runtime.invoiceSettlementPollers,

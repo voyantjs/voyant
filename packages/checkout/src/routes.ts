@@ -1,6 +1,6 @@
 import type { Module, ModuleContainer } from "@voyantjs/core"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "@voyantjs/hono"
 import type { HonoModule } from "@voyantjs/hono/module"
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import { createNotificationService } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -54,9 +54,7 @@ export type CheckoutRouteRuntime = {
 
 export const CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY = "providers.checkout.runtime"
 
-export function createCheckoutRoutes(
-  options: CheckoutRoutesOptions = {},
-) {
+export function createCheckoutRoutes(options: CheckoutRoutesOptions = {}) {
   function getRuntime(
     bindings: Record<string, unknown>,
     resolveFromContainer?: (key: string) => CheckoutRouteRuntime | undefined,
@@ -73,7 +71,7 @@ export function createCheckoutRoutes(
         const plan = await previewCheckoutCollection(
           c.get("db"),
           c.req.param("bookingId"),
-          previewCheckoutCollectionSchema.parse(await c.req.json().catch(() => ({}))),
+          await parseOptionalJsonBody(c, previewCheckoutCollectionSchema),
           options.policy,
         )
 
@@ -155,9 +153,7 @@ export const checkoutModule: Module = {
   name: "checkout",
 }
 
-export function createCheckoutHonoModule(
-  options: CheckoutRoutesOptions = {},
-): HonoModule {
+export function createCheckoutHonoModule(options: CheckoutRoutesOptions = {}): HonoModule {
   const module: Module = {
     ...checkoutModule,
     bootstrap: ({ bindings, container }) => {

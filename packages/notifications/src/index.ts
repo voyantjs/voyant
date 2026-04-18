@@ -32,12 +32,6 @@ export {
   NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
 } from "./routes.js"
 export type {
-  NotificationTaskEnv,
-  NotificationTaskRuntime,
-  NotificationTaskRuntimeOptions,
-} from "./task-runtime.js"
-export { buildNotificationTaskRuntime } from "./task-runtime.js"
-export type {
   NewNotificationDelivery,
   NewNotificationReminderRule,
   NewNotificationReminderRun,
@@ -48,7 +42,6 @@ export type {
   NotificationsHonoModule,
   NotificationTemplate,
 } from "./schema.js"
-
 export {
   notificationChannelEnum,
   notificationDeliveries,
@@ -77,6 +70,12 @@ export type {
   SendBookingDocumentsRuntimeOptions,
 } from "./service-booking-documents.js"
 export { bookingDocumentNotificationsService } from "./service-booking-documents.js"
+export type {
+  NotificationTaskEnv,
+  NotificationTaskRuntime,
+  NotificationTaskRuntimeOptions,
+} from "./task-runtime.js"
+export { buildNotificationTaskRuntime } from "./task-runtime.js"
 export { sendDueNotificationReminders } from "./tasks/index.js"
 export type {
   NotificationAttachment,

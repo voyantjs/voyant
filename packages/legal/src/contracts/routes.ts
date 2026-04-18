@@ -1,5 +1,5 @@
 import type { EventBus, ModuleContainer } from "@voyantjs/core"
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -277,7 +277,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const result = await contractsService.generateContractDocument(
         c.get("db"),
         c.req.param("id"),
-        generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
+        await parseOptionalJsonBody(c, generateContractDocumentInputSchema),
         { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
@@ -307,7 +307,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const result = await contractsService.regenerateContractDocument(
         c.get("db"),
         c.req.param("id"),
-        generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
+        await parseOptionalJsonBody(c, generateContractDocumentInputSchema),
         { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 

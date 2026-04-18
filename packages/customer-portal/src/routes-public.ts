@@ -1,8 +1,13 @@
+import type { ModuleContainer } from "@voyantjs/core"
 import { parseJsonBody } from "@voyantjs/hono"
-import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
 
+import {
+  buildCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+  type CustomerPortalRouteRuntime,
+} from "./route-runtime.js"
 import { publicCustomerPortalService } from "./service-public.js"
 import {
   bootstrapCustomerPortalSchema,
@@ -16,26 +21,17 @@ type Env = {
   Bindings: Record<string, unknown>
   Variables: {
     db: PostgresJsDatabase
+    container?: ModuleContainer
     userId?: string
   }
 }
 
-function getRuntimeEnv(c: Context<Env>) {
-  const processEnv =
-    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
-
-  return {
-    ...processEnv,
-    ...(c.env ?? {}),
-  } as Record<string, string | undefined>
-}
-
 function resolveOptionalKms(c: Context<Env>) {
-  try {
-    return createKmsProviderFromEnv(getRuntimeEnv(c))
-  } catch {
-    return null
-  }
+  const runtime = c.var.container?.resolve<CustomerPortalRouteRuntime>(
+    CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+  )
+
+  return (runtime ?? buildCustomerPortalRouteRuntime(c.env)).getOptionalKmsProvider()
 }
 
 function unauthorized<T extends Env>(c: Context<T>) {

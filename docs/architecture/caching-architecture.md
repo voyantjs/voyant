@@ -12,6 +12,10 @@ The goal is simple:
 
 Caching should be a performance optimization, not part of the correctness model.
 
+For active guidance on transactions, row locks, and when a first-class locking
+surface is still deferred, see
+[`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md).
+
 ## Core Rules
 
 ### 1. Cache is not coordination

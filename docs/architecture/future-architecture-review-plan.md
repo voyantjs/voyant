@@ -53,6 +53,11 @@ Do not do first:
 
 ### 2. Locking and concurrency control as a first-class subsystem
 
+Status:
+
+- promoted into active guidance
+- see [`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md)
+
 Why second:
 
 - it is the most likely operational pressure point once workflows and daemons

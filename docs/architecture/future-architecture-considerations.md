@@ -37,6 +37,8 @@ The following item has moved into active architecture guidance:
 - advanced constraint and index policy
   see [`data-model-schema-authoring.md`](./data-model-schema-authoring.md) and
   [`index-and-constraint-policy.md`](./index-and-constraint-policy.md)
+- locking and concurrency control policy
+  see [`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md)
 
 ## Deferred Areas
 
@@ -75,29 +77,7 @@ Why deferred:
   blocker
 - it depends on real workload evidence
 
-### 3. Locking and concurrency control as a first-class subsystem
-
-Voyant already uses ordinary database locking where needed.
-
-A future first-class locking surface may be needed for:
-
-- workflow concurrency control
-- daemon ownership
-- long-running integration coordination
-- distributed runtime safety
-
-Likely backends would be:
-
-- memory for local/dev
-- postgres
-- redis
-
-Why deferred:
-
-- the current system should stay simpler until concrete distributed concurrency
-  problems justify a formal locking layer
-
-### 4. Event priority and durable queued event processing
+### 3. Event priority and durable queued event processing
 
 The event envelope and taxonomy are worth standardizing now.
 
@@ -112,7 +92,7 @@ Why deferred:
 - in-process event delivery is still enough for the current baseline
 - priority only becomes meaningful once durable queued execution exists
 
-### 5. Asymmetric signing / JWKS-style auth distribution
+### 4. Asymmetric signing / JWKS-style auth distribution
 
 Voyant’s current shared-secret session model is sufficient for the present auth
 surface.

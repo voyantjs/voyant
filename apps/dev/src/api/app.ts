@@ -26,11 +26,10 @@ import { sellabilityHonoModule } from "@voyantjs/sellability"
 import { createStorefrontHonoModule } from "@voyantjs/storefront"
 import { suppliersHonoModule } from "@voyantjs/suppliers"
 import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/transactions"
-
+import { resolveNotificationProviders } from "../lib/notifications"
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { getDbFromHyperdrive } from "./lib/db"
 import { createMediaStorage, guessMimeType, resolveDocumentDownloadUrl } from "./lib/storage"
-import { resolveNotificationProviders } from "../lib/notifications"
 
 const notificationsHonoModule = createNotificationsHonoModule({
   resolveProviders: resolveNotificationProviders,

@@ -7,8 +7,8 @@ import {
   FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
   type FinanceRouteRuntime,
 } from "./route-runtime.js"
-import { financeDocumentsService } from "./service-documents.js"
 import { financeService } from "./service.js"
+import { financeDocumentsService } from "./service-documents.js"
 import { generateInvoiceDocumentInputSchema } from "./validation.js"
 
 type Env = {

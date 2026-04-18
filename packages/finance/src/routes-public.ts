@@ -43,8 +43,7 @@ export function createPublicFinanceRoutes(options: PublicFinanceRouteOptions = {
         c.get("db"),
         parseQuery(c, publicFinanceDocumentLookupQuerySchema).reference,
         {
-          resolveDocumentDownloadUrl: (storageKey) =>
-            resolveDocumentDownloadUrl(c.env, storageKey),
+          resolveDocumentDownloadUrl: (storageKey) => resolveDocumentDownloadUrl(c.env, storageKey),
         },
       )
 
@@ -55,8 +54,7 @@ export function createPublicFinanceRoutes(options: PublicFinanceRouteOptions = {
         c.get("db"),
         c.req.param("bookingId"),
         {
-          resolveDocumentDownloadUrl: (storageKey) =>
-            resolveDocumentDownloadUrl(c.env, storageKey),
+          resolveDocumentDownloadUrl: (storageKey) => resolveDocumentDownloadUrl(c.env, storageKey),
         },
       )
 
@@ -114,9 +112,7 @@ export function createPublicFinanceRoutes(options: PublicFinanceRouteOptions = {
           await parseJsonBody(c, publicStartPaymentSessionSchema),
         )
 
-        return session
-          ? c.json({ data: session }, 201)
-          : notFound(c, "Booking guarantee not found")
+        return session ? c.json({ data: session }, 201) : notFound(c, "Booking guarantee not found")
       } catch (error) {
         return c.json({ error: paymentConflictError(error) }, 409)
       }

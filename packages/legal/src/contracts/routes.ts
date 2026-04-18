@@ -354,7 +354,10 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: row })
     })
     .get("/attachments/:attachmentId/download", async (c) => {
-      const attachment = await contractsService.getAttachmentById(c.get("db"), c.req.param("attachmentId"))
+      const attachment = await contractsService.getAttachmentById(
+        c.get("db"),
+        c.req.param("attachmentId"),
+      )
       if (!attachment) return c.json({ error: "Attachment not found" }, 404)
 
       let location: string | null = null

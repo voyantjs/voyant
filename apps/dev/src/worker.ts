@@ -58,7 +58,12 @@ const sendPaymentReminders = hatchet.workflow({
 sendPaymentReminders.task({
   name: "run",
   fn: async (input: { now?: string | null }) => {
-    return sendDueNotificationReminders(getDb(), process.env, input, getNotificationTaskRuntime(process.env))
+    return sendDueNotificationReminders(
+      getDb(),
+      process.env,
+      input,
+      getNotificationTaskRuntime(process.env),
+    )
   },
 })
 

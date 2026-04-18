@@ -1,5 +1,13 @@
 # @voyantjs/identity
 
+## 0.6.1
+
+### Patch Changes
+
+- @voyantjs/core@0.6.1
+- @voyantjs/db@0.6.1
+- @voyantjs/hono@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes

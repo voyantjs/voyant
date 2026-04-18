@@ -1,6 +1,7 @@
 # @voyantjs/hono
 
-Hono transport adapter for Voyant. Provides `createApp()`, middleware, auth helpers, and plugin expansion for mounting Voyant modules behind a Hono app.
+Hono transport adapter for Voyant. Provides `createApp()`, middleware, auth
+helpers, and plugin expansion for mounting Voyant modules behind a Hono app.
 
 ## Install
 
@@ -17,9 +18,18 @@ const app = createApp({
   db: (env) => getDb(env),
   auth: { handler, resolve },
   modules: [crmModule, productsModule, bookingsModule],
-  plugins: [payloadCmsPlugin({ /* ... */ })],
+  extensions: [smartbillFinanceExtension],
+  plugins: [
+    payloadCmsPlugin({
+      /* optional distribution bundle */
+    }),
+  ],
 })
 ```
+
+Use `modules`, `extensions`, and provider-backed route helpers as the default
+composition surface. Use `plugins` when you want to register a reusable
+distribution bundle that packages those pieces together.
 
 The middleware chain is: container → requestId → logger → errorBoundary → CORS → health → auth handler → requireAuth → db → actor guards → module routes.
 

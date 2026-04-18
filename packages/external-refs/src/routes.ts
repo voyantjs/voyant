@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -18,9 +19,7 @@ type Env = {
 
 export const externalRefsRoutes = new Hono<Env>()
   .get("/refs", async (c) => {
-    const query = externalRefListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, externalRefListQuerySchema)
     return c.json(await externalRefsService.listExternalRefs(c.get("db"), query))
   })
   .post("/refs", async (c) => {
@@ -28,7 +27,7 @@ export const externalRefsRoutes = new Hono<Env>()
       {
         data: await externalRefsService.createExternalRef(
           c.get("db"),
-          insertExternalRefSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertExternalRefSchema),
         ),
       },
       201,
@@ -43,7 +42,7 @@ export const externalRefsRoutes = new Hono<Env>()
     const row = await externalRefsService.updateExternalRef(
       c.get("db"),
       c.req.param("id"),
-      updateExternalRefSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateExternalRefSchema),
     )
     if (!row) return c.json({ error: "External reference not found" }, 404)
     return c.json({ data: row })
@@ -56,7 +55,7 @@ export const externalRefsRoutes = new Hono<Env>()
   .get("/entities/:entityType/:entityId/refs", async (c) => {
     const params = c.req.param()
     const query = externalRefListQuerySchema.parse({
-      ...Object.fromEntries(new URL(c.req.url).searchParams),
+      ...parseQuery(c, externalRefListQuerySchema.partial()),
       entityType: params.entityType,
       entityId: params.entityId,
     })
@@ -64,7 +63,7 @@ export const externalRefsRoutes = new Hono<Env>()
   })
   .post("/entities/:entityType/:entityId/refs", async (c) => {
     const params = c.req.param()
-    const body = insertExternalRefForEntitySchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, insertExternalRefForEntitySchema)
     return c.json(
       {
         data: await externalRefsService.createExternalRef(c.get("db"), {

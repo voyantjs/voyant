@@ -1,0 +1,117 @@
+import { act, renderHook, waitFor } from "@testing-library/react"
+import type { ReactNode } from "react"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+
+import {
+  DEFAULT_ADMIN_LOCALE,
+  LocaleProvider,
+  resolveAdminLocale,
+  useLocale,
+} from "../../src/providers/locale.js"
+
+const fallbackStorageState = new Map<string, string>()
+
+function getTestStorage(): Storage {
+  const storage = globalThis.localStorage as Partial<Storage> | undefined
+  if (
+    storage &&
+    typeof storage.clear === "function" &&
+    typeof storage.getItem === "function" &&
+    typeof storage.key === "function" &&
+    typeof storage.removeItem === "function" &&
+    typeof storage.setItem === "function"
+  ) {
+    return storage as Storage
+  }
+
+  const fallbackStorage: Storage = {
+    get length() {
+      return fallbackStorageState.size
+    },
+    clear() {
+      fallbackStorageState.clear()
+    },
+    getItem(key) {
+      return fallbackStorageState.get(key) ?? null
+    },
+    key(index) {
+      return [...fallbackStorageState.keys()][index] ?? null
+    },
+    removeItem(key) {
+      fallbackStorageState.delete(key)
+    },
+    setItem(key, value) {
+      fallbackStorageState.set(key, value)
+    },
+  }
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: fallbackStorage,
+  })
+
+  return fallbackStorage
+}
+
+beforeEach(() => {
+  getTestStorage().clear()
+  document.documentElement.lang = "en"
+  Object.defineProperty(window.navigator, "language", {
+    configurable: true,
+    value: "ro-RO",
+  })
+})
+
+afterEach(() => {
+  getTestStorage().clear()
+})
+
+describe("LocaleProvider", () => {
+  it("resolves the browser locale against supported locales", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <LocaleProvider>{children}</LocaleProvider>
+    )
+    const { result } = renderHook(() => useLocale(), { wrapper })
+    expect(result.current.resolvedLocale).toBe("ro")
+  })
+
+  it("updates document.documentElement.lang when locale changes", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <LocaleProvider defaultLocale="en">{children}</LocaleProvider>
+    )
+    const { result } = renderHook(() => useLocale(), { wrapper })
+
+    expect(document.documentElement.lang).toBe("en")
+
+    act(() => {
+      result.current.setLocale("ro")
+    })
+
+    return waitFor(() => {
+      expect(document.documentElement.lang).toBe("ro")
+      expect(window.localStorage.getItem("admin-locale")).toBe("ro")
+    })
+  })
+
+  it("persists timezone changes when storage is enabled", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <LocaleProvider defaultTimeZone="Europe/Bucharest">{children}</LocaleProvider>
+    )
+    const { result } = renderHook(() => useLocale(), { wrapper })
+
+    act(() => {
+      result.current.setTimeZone("Europe/London")
+    })
+
+    return waitFor(() => {
+      expect(result.current.timeZone).toBe("Europe/London")
+      expect(window.localStorage.getItem("admin-timezone")).toBe("Europe/London")
+    })
+  })
+})
+
+describe("resolveAdminLocale", () => {
+  it("falls back to the default locale for unsupported values", () => {
+    expect(resolveAdminLocale("fr-FR")).toBe(DEFAULT_ADMIN_LOCALE)
+  })
+})

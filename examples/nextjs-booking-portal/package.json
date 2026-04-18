@@ -17,6 +17,7 @@
     "@voyantjs/customer-portal-react": "workspace:*",
     "@voyantjs/finance": "workspace:*",
     "@voyantjs/finance-react": "workspace:*",
+    "@voyantjs/storefront-react": "workspace:*",
     "next": "^15.5.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

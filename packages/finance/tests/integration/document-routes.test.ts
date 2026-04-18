@@ -150,16 +150,30 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
     expect(renditions.filter((entry) => entry.status === "stale")).toHaveLength(1)
     expect(documentEvents).toEqual([
       expect.objectContaining({
-        invoiceId: invoice.id,
-        invoiceType: "invoice",
-        format: "pdf",
-        regenerated: false,
+        name: "invoice.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          invoiceId: invoice.id,
+          invoiceType: "invoice",
+          format: "pdf",
+          regenerated: false,
+        }),
       }),
       expect.objectContaining({
-        invoiceId: invoice.id,
-        invoiceType: "invoice",
-        format: "pdf",
-        regenerated: true,
+        name: "invoice.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          invoiceId: invoice.id,
+          invoiceType: "invoice",
+          format: "pdf",
+          regenerated: true,
+        }),
       }),
     ])
   })

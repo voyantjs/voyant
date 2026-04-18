@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import { type Env, notFound } from "./routes-shared.js"
@@ -21,7 +22,7 @@ export const publicFinanceRoutes = new Hono<Env>()
   .post("/vouchers/validate", async (c) => {
     const result = await publicFinanceService.validateVoucher(
       c.get("db"),
-      publicValidateVoucherSchema.parse(await c.req.json()),
+      await parseJsonBody(c, publicValidateVoucherSchema),
     )
 
     return c.json({ data: result })
@@ -29,9 +30,7 @@ export const publicFinanceRoutes = new Hono<Env>()
   .get("/documents/by-reference", async (c) => {
     const document = await publicFinanceService.getDocumentByReference(
       c.get("db"),
-      publicFinanceDocumentLookupQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      ).reference,
+      parseQuery(c, publicFinanceDocumentLookupQuerySchema).reference,
     )
 
     return document ? c.json({ data: document }) : notFound(c, "Finance document not found")
@@ -56,7 +55,7 @@ export const publicFinanceRoutes = new Hono<Env>()
     const options = await publicFinanceService.getBookingPaymentOptions(
       c.get("db"),
       c.req.param("bookingId"),
-      publicPaymentOptionsQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+      parseQuery(c, publicPaymentOptionsQuerySchema),
     )
 
     return options ? c.json({ data: options }) : notFound(c, "Booking payment options not found")
@@ -75,7 +74,7 @@ export const publicFinanceRoutes = new Hono<Env>()
         c.get("db"),
         c.req.param("bookingId"),
         c.req.param("scheduleId"),
-        publicStartPaymentSessionSchema.parse(await c.req.json()),
+        await parseJsonBody(c, publicStartPaymentSessionSchema),
       )
 
       return session
@@ -91,7 +90,7 @@ export const publicFinanceRoutes = new Hono<Env>()
         c.get("db"),
         c.req.param("bookingId"),
         c.req.param("guaranteeId"),
-        publicStartPaymentSessionSchema.parse(await c.req.json()),
+        await parseJsonBody(c, publicStartPaymentSessionSchema),
       )
 
       return session ? c.json({ data: session }, 201) : notFound(c, "Booking guarantee not found")
@@ -104,7 +103,7 @@ export const publicFinanceRoutes = new Hono<Env>()
       const session = await publicFinanceService.startInvoicePaymentSession(
         c.get("db"),
         c.req.param("invoiceId"),
-        publicStartPaymentSessionSchema.parse(await c.req.json()),
+        await parseJsonBody(c, publicStartPaymentSessionSchema),
       )
 
       return session ? c.json({ data: session }, 201) : notFound(c, "Invoice not found")

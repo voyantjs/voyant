@@ -51,6 +51,7 @@ export function createStorefrontHonoModule(
 ): HonoModule {
   return {
     module: storefrontModule,
+    publicPath: "/",
     publicRoutes: createStorefrontPublicRoutes(options),
   }
 }

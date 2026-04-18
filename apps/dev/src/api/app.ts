@@ -3,7 +3,7 @@ import { bookingRequirementsHonoModule } from "@voyantjs/booking-requirements"
 import { bookingsHonoModule, bookingsSupplierExtension } from "@voyantjs/bookings"
 import { createCheckoutHonoModule } from "@voyantjs/checkout"
 import { crmBookingExtension, crmHonoModule } from "@voyantjs/crm"
-import { customerPortalHonoModule } from "@voyantjs/customer-portal"
+import { createCustomerPortalHonoModule } from "@voyantjs/customer-portal"
 import { distributionBookingExtension, distributionHonoModule } from "@voyantjs/distribution"
 import { externalRefsHonoModule } from "@voyantjs/external-refs"
 import { extrasHonoModule } from "@voyantjs/extras"
@@ -15,7 +15,6 @@ import { hospitalityHonoModule } from "@voyantjs/hospitality"
 import { identityHonoModule } from "@voyantjs/identity"
 import { marketsHonoModule } from "@voyantjs/markets"
 import {
-  createDefaultNotificationProviders,
   createNotificationsHonoModule,
 } from "@voyantjs/notifications"
 import { octoHonoModule } from "@voyantjs/octo"
@@ -23,21 +22,31 @@ import { pricingHonoModule } from "@voyantjs/pricing"
 import { productsBookingExtension, productsHonoModule } from "@voyantjs/products"
 import { resourcesHonoModule } from "@voyantjs/resources"
 import { sellabilityHonoModule } from "@voyantjs/sellability"
+import { createStorefrontHonoModule } from "@voyantjs/storefront"
 import { suppliersHonoModule } from "@voyantjs/suppliers"
 import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/transactions"
 
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { getDbFromHyperdrive } from "./lib/db"
 import { createMediaStorage, guessMimeType } from "./lib/storage"
-
-const resolveNotificationProviders = (env: Record<string, unknown>) =>
-  createDefaultNotificationProviders(env, { emailProvider: "resend" })
+import { resolveNotificationProviders } from "../lib/notifications"
 
 const notificationsHonoModule = createNotificationsHonoModule({
   resolveProviders: resolveNotificationProviders,
 })
+const storefrontHonoModule = createStorefrontHonoModule()
 const checkoutHonoModule = createCheckoutHonoModule({
   resolveProviders: resolveNotificationProviders,
+})
+const customerPortalHonoModule = createCustomerPortalHonoModule({
+  resolveDocumentDownloadUrl: async (bindings, storageKey) => {
+    const storage = createMediaStorage(bindings as CloudflareBindings)
+    if (!storage) {
+      return null
+    }
+
+    return storage.signedUrl(storageKey, 300)
+  },
 })
 
 export const app = createApp<CloudflareBindings>({
@@ -65,6 +74,7 @@ export const app = createApp<CloudflareBindings>({
     productsHonoModule,
     bookingsHonoModule,
     financeHonoModule,
+    storefrontHonoModule,
     customerPortalHonoModule,
     checkoutHonoModule,
   ],

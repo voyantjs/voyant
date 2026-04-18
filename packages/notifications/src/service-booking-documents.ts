@@ -360,13 +360,20 @@ export const bookingDocumentNotificationsService = {
       return { status: "send_failed" as const }
     }
 
-    await runtime.eventBus?.emit("booking.documents.sent", {
-      bookingId: booking.id,
-      recipient: to,
-      deliveryId: delivery.id,
-      provider: delivery.provider ?? null,
-      documentKeys: documents.map((document) => document.key),
-    } satisfies BookingDocumentsSentEvent)
+    await runtime.eventBus?.emit(
+      "booking.documents.sent",
+      {
+        bookingId: booking.id,
+        recipient: to,
+        deliveryId: delivery.id,
+        provider: delivery.provider ?? null,
+        documentKeys: documents.map((document) => document.key),
+      } satisfies BookingDocumentsSentEvent,
+      {
+        category: "domain",
+        source: "service",
+      },
+    )
 
     return {
       status: "sent" as const,

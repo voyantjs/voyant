@@ -21,8 +21,9 @@ export interface JobOptions {
  * step delegation — a Hatchet adapter can bridge enqueue/schedule calls to
  * the Hatchet API.
  *
- * Templates wire their chosen adapter into the container as `"jobs"`.
- * Framework code that needs to kick off async work does so via
+ * Templates wire their chosen adapter into the shared app/runtime container as
+ * `"jobs"`. Framework code that needs to kick off async work does so via
+ * explicit runtime resolution such as
  * `container.resolve<JobRunner>("jobs").enqueue(...)`.
  */
 export interface JobRunner {

@@ -1,9 +1,9 @@
 /**
- * A lightweight module container providing per-request service resolution.
+ * A lightweight shared app/runtime container for explicit service resolution.
  *
- * Modules register services at app boot; routes resolve them per request.
- * The container is intentionally minimal (Map-based) — for richer DI
- * (scoping, factory lifetimes) a template can wrap or replace it.
+ * Routes, workflows, subscribers, and bootstraps use this container to resolve
+ * app-owned runtime services. It is intentionally minimal (Map-based) — for
+ * richer DI (scoping, factory lifetimes) a template can wrap or replace it.
  */
 export interface ModuleContainer {
   /** Register a service by name. Overwrites any existing registration. */

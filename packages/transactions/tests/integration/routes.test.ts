@@ -520,6 +520,10 @@ describe.skipIf(!DB_AVAILABLE)("Transactions routes (integration)", () => {
         `/offer-participants/${participant.id}/travel-details`,
       )
       expect(denied.status).toBe(403)
+      expect(await denied.json()).toMatchObject({
+        error: "Forbidden",
+        code: "forbidden",
+      })
 
       const rows = await db
         .select()

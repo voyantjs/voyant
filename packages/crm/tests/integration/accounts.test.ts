@@ -109,6 +109,24 @@ describe.skipIf(!DB_AVAILABLE)("Account routes", () => {
       })
       expect(res.status).toBe(404)
     })
+
+    it("creates an organization note", async () => {
+      const createRes = await app.request("/organizations", {
+        method: "POST",
+        ...json({ name: "Notes Org" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/organizations/${created.id}/notes`, {
+        method: "POST",
+        ...json({ content: "Call back next week" }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.content).toBe("Call back next week")
+      expect(body.data.authorUserId).toBe("test-user-id")
+    })
   })
 
   describe("People", () => {
@@ -189,6 +207,24 @@ describe.skipIf(!DB_AVAILABLE)("Account routes", () => {
         method: "GET",
       })
       expect(res.status).toBe(404)
+    })
+
+    it("creates a person note", async () => {
+      const createRes = await app.request("/people", {
+        method: "POST",
+        ...json({ firstName: "Note", lastName: "Person" }),
+      })
+      const { data: created } = await createRes.json()
+
+      const res = await app.request(`/people/${created.id}/notes`, {
+        method: "POST",
+        ...json({ content: "Prefers email outreach" }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.content).toBe("Prefers email outreach")
+      expect(body.data.authorUserId).toBe("test-user-id")
     })
   })
 })

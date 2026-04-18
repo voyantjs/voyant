@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import {
   batchIdsSchema,
@@ -34,9 +35,7 @@ const batchUpdateAvailabilityCloseoutSchema = createBatchUpdateSchema(
 
 export const availabilityCoreRoutes = new Hono<Env>()
   .get("/rules", async (c) => {
-    const query = availabilityRuleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilityRuleListQuerySchema)
     return c.json(await availabilityService.listRules(c.get("db"), query))
   })
   .post("/rules", async (c) =>
@@ -44,14 +43,14 @@ export const availabilityCoreRoutes = new Hono<Env>()
       {
         data: await availabilityService.createRule(
           c.get("db"),
-          insertAvailabilityRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilityRuleSchema),
         ),
       },
       201,
     ),
   )
   .post("/rules/batch-update", async (c) => {
-    const body = batchUpdateAvailabilityRuleSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilityRuleSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -62,7 +61,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     )
   })
   .post("/rules/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -79,7 +78,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     const row = await availabilityService.updateRule(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilityRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilityRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability rule not found")
   })
@@ -88,9 +87,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Availability rule not found")
   })
   .get("/start-times", async (c) => {
-    const query = availabilityStartTimeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilityStartTimeListQuerySchema)
     return c.json(await availabilityService.listStartTimes(c.get("db"), query))
   })
   .post("/start-times", async (c) =>
@@ -98,14 +95,14 @@ export const availabilityCoreRoutes = new Hono<Env>()
       {
         data: await availabilityService.createStartTime(
           c.get("db"),
-          insertAvailabilityStartTimeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilityStartTimeSchema),
         ),
       },
       201,
     ),
   )
   .post("/start-times/batch-update", async (c) => {
-    const body = batchUpdateAvailabilityStartTimeSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilityStartTimeSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -116,7 +113,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     )
   })
   .post("/start-times/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -133,7 +130,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     const row = await availabilityService.updateStartTime(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilityStartTimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilityStartTimeSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability start time not found")
   })
@@ -142,9 +139,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Availability start time not found")
   })
   .get("/slots", async (c) => {
-    const query = availabilitySlotListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilitySlotListQuerySchema)
     return c.json(await availabilityService.listSlots(c.get("db"), query))
   })
   .post("/slots", async (c) =>
@@ -152,14 +147,14 @@ export const availabilityCoreRoutes = new Hono<Env>()
       {
         data: await availabilityService.createSlot(
           c.get("db"),
-          insertAvailabilitySlotSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilitySlotSchema),
         ),
       },
       201,
     ),
   )
   .post("/slots/batch-update", async (c) => {
-    const body = batchUpdateAvailabilitySlotSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilitySlotSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -170,7 +165,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     )
   })
   .post("/slots/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -187,7 +182,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     const row = await availabilityService.updateSlot(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilitySlotSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilitySlotSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability slot not found")
   })
@@ -196,9 +191,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Availability slot not found")
   })
   .get("/closeouts", async (c) => {
-    const query = availabilityCloseoutListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilityCloseoutListQuerySchema)
     return c.json(await availabilityService.listCloseouts(c.get("db"), query))
   })
   .post("/closeouts", async (c) =>
@@ -206,14 +199,14 @@ export const availabilityCoreRoutes = new Hono<Env>()
       {
         data: await availabilityService.createCloseout(
           c.get("db"),
-          insertAvailabilityCloseoutSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilityCloseoutSchema),
         ),
       },
       201,
     ),
   )
   .post("/closeouts/batch-update", async (c) => {
-    const body = batchUpdateAvailabilityCloseoutSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilityCloseoutSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -224,7 +217,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     )
   })
   .post("/closeouts/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -241,7 +234,7 @@ export const availabilityCoreRoutes = new Hono<Env>()
     const row = await availabilityService.updateCloseout(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilityCloseoutSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilityCloseoutSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability closeout not found")
   })

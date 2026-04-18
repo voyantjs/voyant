@@ -1,12 +1,18 @@
-import type { EventBus } from "@voyantjs/core"
+import type { EventBus, ModuleContainer } from "@voyantjs/core"
 import { Hono } from "hono"
 
+import {
+  buildFinanceRouteRuntime,
+  FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
+  type FinanceRouteRuntime,
+} from "./route-runtime.js"
 import { financeSettlementService, type InvoiceSettlementPoller } from "./service-settlement.js"
 import { pollInvoiceSettlementInputSchema } from "./validation.js"
 
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: import("drizzle-orm/postgres-js").PostgresJsDatabase
     userId?: string
   }
@@ -21,32 +27,29 @@ export interface FinanceSettlementRouteOptions {
   resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }
 
-function resolveInvoiceSettlementPollers(
+function getRuntime(
   options: FinanceSettlementRouteOptions | undefined,
   bindings: Record<string, unknown>,
+  resolveFromContainer?: (key: string) => FinanceRouteRuntime | undefined,
 ) {
   return (
-    options?.resolveInvoiceSettlementPollers?.(bindings) ?? options?.invoiceSettlementPollers ?? {}
+    resolveFromContainer?.(FINANCE_ROUTE_RUNTIME_CONTAINER_KEY) ??
+    buildFinanceRouteRuntime(bindings, options)
   )
-}
-
-function resolveEventBus(
-  options: FinanceSettlementRouteOptions | undefined,
-  bindings: Record<string, unknown>,
-) {
-  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
 }
 
 export function createFinanceAdminSettlementRoutes(options: FinanceSettlementRouteOptions = {}) {
   return new Hono<Env>().post("/invoices/:id/poll-settlement", async (c) => {
+    const runtime = getRuntime(options, c.env, (key) => c.var.container?.resolve(key))
+
     const result = await financeSettlementService.pollInvoiceSettlement(
       c.get("db"),
       c.req.param("id"),
       pollInvoiceSettlementInputSchema.parse(await c.req.json().catch(() => ({}))),
       {
         bindings: c.env,
-        invoiceSettlementPollers: resolveInvoiceSettlementPollers(options, c.env),
-        eventBus: resolveEventBus(options, c.env),
+        invoiceSettlementPollers: runtime.invoiceSettlementPollers,
+        eventBus: runtime.eventBus,
       },
     )
 

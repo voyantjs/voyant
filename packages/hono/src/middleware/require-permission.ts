@@ -1,7 +1,9 @@
 import type { VoyantPermission } from "@voyantjs/core"
 import type { MiddlewareHandler } from "hono"
 
+import { requireUserId } from "../auth/require-user.js"
 import type { DbFactory, VoyantAuthIntegration, VoyantBindings, VoyantVariables } from "../types.js"
+import { ForbiddenApiError } from "../validation.js"
 
 function hasScope(scopes: string[] | null | undefined, permission: VoyantPermission): boolean {
   if (!scopes || scopes.length === 0) return false
@@ -38,10 +40,7 @@ export function requirePermission<TBindings extends VoyantBindings>(
       return next()
     }
 
-    const userId = c.get("userId")
-    if (!userId) {
-      return c.json({ error: "Unauthorized" }, 401)
-    }
+    const userId = requireUserId(c)
 
     if (!opts?.auth?.hasPermission) {
       return c.json({ error: "No auth permission checker configured" }, 500)
@@ -65,7 +64,7 @@ export function requirePermission<TBindings extends VoyantBindings>(
     })
 
     if (!allowed) {
-      return c.json({ error: "Forbidden" }, 403)
+      throw new ForbiddenApiError()
     }
 
     return next()

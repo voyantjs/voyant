@@ -1,3 +1,4 @@
+import { parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import { type Env, notFound } from "./routes-shared.js"
 import { publicPricingService } from "./service-public.js"
@@ -11,7 +12,7 @@ export const publicPricingRoutes = new Hono<Env>()
     const snapshot = await publicPricingService.getProductPricingSnapshot(
       c.get("db"),
       c.req.param("productId"),
-      publicProductPricingQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+      parseQuery(c, publicProductPricingQuerySchema),
     )
 
     return snapshot ? c.json({ data: snapshot }) : notFound(c, "Public pricing snapshot not found")
@@ -20,9 +21,7 @@ export const publicPricingRoutes = new Hono<Env>()
     const snapshot = await publicPricingService.getAvailabilitySnapshot(
       c.get("db"),
       c.req.param("productId"),
-      publicAvailabilitySnapshotQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      ),
+      parseQuery(c, publicAvailabilitySnapshotQuerySchema),
     )
 
     return snapshot ? c.json(snapshot) : notFound(c, "Public availability snapshot not found")

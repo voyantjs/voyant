@@ -9,6 +9,8 @@ export interface AdminUser {
   email: string
   firstName?: string | null
   lastName?: string | null
+  locale?: string | null
+  timeZone?: string | null
   /** Legacy combined name field. `firstName`/`lastName` take precedence. */
   name?: string
   avatar?: string | null
@@ -23,6 +25,8 @@ export type NavItemStatus = typeof COMING_SOON | typeof BETA
  * or elsewhere) so templates control the icon set.
  */
 export interface NavItem {
+  /** Stable identifier for extension merging and UI keys. */
+  id?: string
   title: string
   url: string
   icon?: React.ComponentType<{ className?: string }>
@@ -34,6 +38,7 @@ export interface NavItem {
 }
 
 export interface NavSubItem {
+  id?: string
   title: string
   url: string
   icon?: React.ComponentType<{ className?: string }>

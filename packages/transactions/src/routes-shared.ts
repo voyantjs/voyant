@@ -1,3 +1,4 @@
+import { ForbiddenApiError, handleApiError, UnauthorizedApiError } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Context } from "hono"
@@ -122,7 +123,10 @@ export async function authorizeTransactionPiiAccess(
   const userId = c.get("userId")
   if (!userId) {
     await logTransactionPiiAccess(c, { ...input, outcome: "denied", reason: "missing_user" })
-    return { allowed: false as const, response: c.json({ error: "Unauthorized" }, 401) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new UnauthorizedApiError(), c),
+    }
   }
 
   const customAuthorizer = c.get("authorizeTransactionPii")
@@ -143,7 +147,10 @@ export async function authorizeTransactionPiiAccess(
         outcome: "denied",
         reason: "custom_policy_denied",
       })
-      return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+      return {
+        allowed: false as const,
+        response: handleApiError(new ForbiddenApiError(), c),
+      }
     }
 
     return { allowed: true as const }
@@ -157,7 +164,10 @@ export async function authorizeTransactionPiiAccess(
       reason: "insufficient_scope",
       metadata: { actor: c.get("actor") ?? null },
     })
-    return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new ForbiddenApiError(), c),
+    }
   }
 
   return { allowed: true as const }

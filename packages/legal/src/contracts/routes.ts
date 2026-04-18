@@ -1,7 +1,12 @@
-import type { EventBus } from "@voyantjs/core"
+import type { EventBus, ModuleContainer } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
+import {
+  buildContractsRouteRuntime,
+  CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
+  type ContractsRouteRuntime,
+} from "./route-runtime.js"
 import { contractsService } from "./service.js"
 import {
   contractListQuerySchema,
@@ -25,6 +30,7 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
@@ -43,18 +49,15 @@ export interface ContractsRouteOptions {
   resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
 }
 
-function resolveDocumentGenerator(
+function getRuntime(
   options: ContractsRouteOptions | undefined,
   bindings: Record<string, unknown>,
+  resolveFromContainer?: (key: string) => ContractsRouteRuntime | undefined,
 ) {
-  return options?.resolveDocumentGenerator?.(bindings) ?? options?.documentGenerator
-}
-
-function resolveEventBus(
-  options: ContractsRouteOptions | undefined,
-  bindings: Record<string, unknown>,
-) {
-  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
+  return (
+    resolveFromContainer?.(CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY) ??
+    buildContractsRouteRuntime(bindings, options)
+  )
 }
 
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {
@@ -240,7 +243,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: { rendered } })
     })
     .post("/:id/generate-document", async (c) => {
-      const generator = resolveDocumentGenerator(options, c.env)
+      const runtime = getRuntime(options, c.env, (key) => c.var.container?.resolve(key))
+      const generator = runtime.documentGenerator
       if (!generator) {
         return c.json({ error: "Contract document generator is not configured" }, 501)
       }
@@ -249,7 +253,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
         c.get("db"),
         c.req.param("id"),
         generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
+        { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
@@ -269,7 +273,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result }, 201)
     })
     .post("/:id/regenerate-document", async (c) => {
-      const generator = resolveDocumentGenerator(options, c.env)
+      const runtime = getRuntime(options, c.env, (key) => c.var.container?.resolve(key))
+      const generator = runtime.documentGenerator
       if (!generator) {
         return c.json({ error: "Contract document generator is not configured" }, 501)
       }
@@ -278,7 +283,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
         c.get("db"),
         c.req.param("id"),
         generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
+        { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)

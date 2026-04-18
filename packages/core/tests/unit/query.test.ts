@@ -123,6 +123,7 @@ describe("queryGraph — base fetch", () => {
     expect(fetcher.list).toHaveBeenCalledWith({
       filters: undefined,
       pagination: undefined,
+      context: undefined,
     })
   })
 
@@ -145,6 +146,24 @@ describe("queryGraph — base fetch", () => {
     expect(fetcher.list).toHaveBeenCalledWith({
       filters: { country: "FR" },
       pagination: { skip: 1, take: 1 },
+      context: undefined,
+    })
+  })
+
+  it("passes query context through to the base fetcher", async () => {
+    const fetcher = makeFetcher([{ id: "pers_a", name: "Alice" }])
+    const ctx = createQueryContext({ person: fetcher }, [], makeLinkService({}))
+
+    await queryGraph(ctx, {
+      entity: "person",
+      fields: ["id"],
+      context: { locale: "ro", market: "ro" },
+    })
+
+    expect(fetcher.list).toHaveBeenCalledWith({
+      filters: undefined,
+      pagination: undefined,
+      context: { locale: "ro", market: "ro" },
     })
   })
 
@@ -207,6 +226,30 @@ describe("queryGraph — relation traversal", () => {
     expect((alice?.product as EntityRecord[]).map((p) => p.id).sort()).toEqual(["prod_1", "prod_2"])
     expect(bob?.product as EntityRecord[]).toHaveLength(1)
     expect((bob?.product as EntityRecord[])[0]?.id).toBe("prod_3")
+  })
+
+  it("passes query context through to related entity hydration", async () => {
+    const personFetcher = makeFetcher([{ id: "pers_a", name: "Alice" }])
+    const productFetcher = makeFetcher([{ id: "prod_1", title: "Safari" }])
+    const linkService = makeLinkService({
+      [personProductLink.tableName]: [makeRow("lnk_1", "pers_a", "prod_1")],
+    })
+    const ctx = createQueryContext(
+      { person: personFetcher, product: productFetcher },
+      [personProductLink],
+      linkService,
+    )
+
+    await queryGraph(ctx, {
+      entity: "person",
+      fields: ["id", "product.*"],
+      context: { locale: "en", market: "uk" },
+    })
+
+    expect(productFetcher.list).toHaveBeenCalledWith({
+      ids: ["prod_1"],
+      context: { locale: "en", market: "uk" },
+    })
   })
 
   it("attaches an empty list when no links exist for a record", async () => {

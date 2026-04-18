@@ -3,6 +3,44 @@
 This roadmap turns downstream integration friction into an upstream package and
 API plan for Voyant itself.
 
+For the umbrella architecture doctrine and the remaining cleanup backlog, see
+[Voyant Extensibility Rubric](./extensibility-rubric.md) and
+[Voyant Extensibility Gap Analysis](./extensibility-gap-analysis.md).
+
+For schema and migration conventions across modules, see
+[Voyant Data Model And Schema Authoring](./data-model-schema-authoring.md).
+
+For HTTP route conventions across the admin and public API surfaces, see
+[Voyant API Route Authoring](./api-route-authoring.md).
+
+For package and extension-surface classification, see
+[Voyant Module, Provider, Extension, And Plugin Taxonomy](./module-provider-plugin-taxonomy.md).
+
+For executable backend workload classification, see
+[Voyant Execution Architecture](./execution-architecture.md).
+
+For runtime cache backend guidance and cache-semantics rules, see
+[Voyant Caching Architecture](./caching-architecture.md).
+
+For public-media and private-document storage rules, see
+[Voyant Storage Architecture](./storage-architecture.md).
+
+For canonical notification delivery and provider-resolution rules, see
+[Voyant Notifications Architecture](./notifications-architecture.md).
+
+For shared authentication, identity, and actor-context rules, see
+[Voyant Auth And Identity Architecture](./auth-identity-architecture.md).
+
+For the shared admin runtime, extension surface, and localization model, see
+[Voyant Admin Architecture](./admin-architecture.md).
+
+For customer-facing storefront and public-contract rules, see
+[Voyant Storefront And Public Contract Architecture](./storefront-architecture.md).
+
+For deferred later-stage architecture ideas that should stay visible without
+becoming active requirements yet, see
+[Voyant Future Architecture Considerations](./future-architecture-considerations.md).
+
 ## Principles
 
 - Do not preserve Payload semantics as a long-term public contract.

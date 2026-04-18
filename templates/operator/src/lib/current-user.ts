@@ -5,6 +5,8 @@ export type CurrentUser = {
   email: string
   firstName: string | null
   lastName: string | null
+  locale: string
+  timezone: string | null
   isSuperAdmin: boolean
   isSupportUser: boolean
   createdAt: string

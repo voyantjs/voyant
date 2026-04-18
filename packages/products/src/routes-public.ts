@@ -1,3 +1,4 @@
+import { parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -19,15 +20,11 @@ type Env = {
 
 export const publicProductRoutes = new Hono<Env>()
   .get("/", async (c) => {
-    const query = publicCatalogProductListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogProductListQuerySchema)
     return c.json(await publicProductsService.listCatalogProducts(c.get("db"), query))
   })
   .get("/slug/:slug", async (c) => {
-    const query = publicCatalogProductLookupBySlugQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogProductLookupBySlugQuerySchema)
     const row = await publicProductsService.getCatalogProductBySlug(
       c.get("db"),
       c.req.param("slug"),
@@ -41,27 +38,19 @@ export const publicProductRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .get("/categories", async (c) => {
-    const query = publicCatalogCategoryListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogCategoryListQuerySchema)
     return c.json(await publicProductsService.listCatalogCategories(c.get("db"), query))
   })
   .get("/tags", async (c) => {
-    const query = publicCatalogTagListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogTagListQuerySchema)
     return c.json(await publicProductsService.listCatalogTags(c.get("db"), query))
   })
   .get("/destinations", async (c) => {
-    const query = publicCatalogDestinationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogDestinationListQuerySchema)
     return c.json(await publicProductsService.listCatalogDestinations(c.get("db"), query))
   })
   .get("/:id", async (c) => {
-    const query = publicCatalogProductLookupBySlugQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogProductLookupBySlugQuerySchema)
     const row = await publicProductsService.getCatalogProductById(
       c.get("db"),
       c.req.param("id"),
@@ -75,9 +64,7 @@ export const publicProductRoutes = new Hono<Env>()
     return c.json({ data: row })
   })
   .get("/:id/brochure", async (c) => {
-    const query = publicCatalogProductLookupBySlugQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, publicCatalogProductLookupBySlugQuerySchema)
     const row = await publicProductsService.getCatalogProductBrochure(
       c.get("db"),
       c.req.param("id"),

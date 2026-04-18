@@ -356,15 +356,22 @@ export const financeDocumentsService = {
       return { status: "not_found" }
     }
 
-    await runtime.eventBus?.emit("invoice.document.generated", {
-      invoiceId: prepared.invoice.id,
-      invoiceStatus: prepared.invoice.status,
-      invoiceType: prepared.invoice.invoiceType,
-      renditionId: rendition.id,
-      format: rendition.format,
-      renderedBodyFormat: prepared.renderedBodyFormat,
-      regenerated: options.regenerated ?? false,
-    } satisfies InvoiceDocumentGeneratedEvent)
+    await runtime.eventBus?.emit(
+      "invoice.document.generated",
+      {
+        invoiceId: prepared.invoice.id,
+        invoiceStatus: prepared.invoice.status,
+        invoiceType: prepared.invoice.invoiceType,
+        renditionId: rendition.id,
+        format: rendition.format,
+        renderedBodyFormat: prepared.renderedBodyFormat,
+        regenerated: options.regenerated ?? false,
+      } satisfies InvoiceDocumentGeneratedEvent,
+      {
+        category: "internal",
+        source: "service",
+      },
+    )
 
     return {
       status: "generated",

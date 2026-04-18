@@ -72,7 +72,12 @@ describe("registerPlugins", () => {
 
     await bus.emit("booking.created", { id: "b1" })
     expect(handler).toHaveBeenCalledOnce()
-    expect(handler).toHaveBeenCalledWith({ id: "b1" })
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "booking.created",
+        data: { id: "b1" },
+      }),
+    )
   })
 
   it("subscriptions can be unsubscribed", async () => {
@@ -125,7 +130,17 @@ describe("registerPlugins", () => {
     })
     registerPlugins([p1, p2], { eventBus: bus })
     await bus.emit("e", "hi")
-    expect(h1).toHaveBeenCalledWith("hi")
-    expect(h2).toHaveBeenCalledWith("hi")
+    expect(h1).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "e",
+        data: "hi",
+      }),
+    )
+    expect(h2).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "e",
+        data: "hi",
+      }),
+    )
   })
 })

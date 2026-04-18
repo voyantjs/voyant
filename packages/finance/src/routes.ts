@@ -1,3 +1,4 @@
+import { parseJsonBody, requireUserId } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import type { publicFinanceRoutes } from "./routes-public.js"
@@ -894,17 +895,13 @@ export const financeRoutes = new Hono<Env>()
 
   // POST /invoices/:id/notes — Add note
   .post("/invoices/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
 
     const row = await financeService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertFinanceNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFinanceNoteSchema),
     )
 
     if (!row) {

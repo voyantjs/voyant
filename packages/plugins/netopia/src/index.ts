@@ -7,10 +7,18 @@ export {
 } from "./client.js"
 export {
   createNetopiaFinanceExtension,
+  createNetopiaFinanceExtension as createNetopiaFinanceAdapter,
   createNetopiaFinanceRoutes,
+  NETOPIA_RUNTIME_CONTAINER_KEY,
   netopiaFinanceExtension,
+  netopiaHonoPlugin as createNetopiaAdapterBundle,
   netopiaHonoPlugin,
 } from "./plugin.js"
+export type {
+  NetopiaNotificationRuntime,
+  NetopiaNotificationRuntimeOptions,
+} from "./notification-runtime.js"
+export { buildNetopiaNotificationRuntime } from "./notification-runtime.js"
 export {
   deriveNetopiaOrderId,
   mapNetopiaPaymentStatus,
@@ -44,6 +52,8 @@ export {
   netopiaPaymentInstrumentSchema,
   netopiaPaymentOptionsSchema,
   netopiaProductLineSchema,
+  netopiaRuntimeOptionsSchema,
   netopiaStartPaymentSessionSchema,
   netopiaWebhookPayloadSchema,
+  resolvedNetopiaRuntimeOptionsSchema,
 } from "./validation.js"

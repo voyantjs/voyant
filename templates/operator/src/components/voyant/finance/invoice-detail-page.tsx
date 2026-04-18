@@ -12,6 +12,7 @@ import {
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 
+import { AdminWidgetSlotRenderer } from "@/components/admin/admin-widget-slot"
 import { Badge, Button } from "@/components/ui"
 
 import { CreditNoteDialog } from "./credit-note-dialog"
@@ -65,6 +66,11 @@ export function InvoiceDetailPage({ id }: { id: string }) {
     )
   }
 
+  const lineItems = lineItemsData?.data ?? []
+  const payments = paymentsData?.data ?? []
+  const creditNotes = creditNotesData?.data ?? []
+  const notes = notesData?.data ?? []
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center gap-4">
@@ -106,6 +112,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           </Button>
         </div>
       </div>
+      <AdminWidgetSlotRenderer slot="invoice.details.header" props={{ invoice }} />
 
       <InvoiceInfoCards
         invoice={invoice}
@@ -116,9 +123,13 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           })
         }
       />
+      <AdminWidgetSlotRenderer
+        slot="invoice.details.after-summary"
+        props={{ invoice, lineItems, payments, creditNotes, notes }}
+      />
 
       <InvoiceLineItemsCard
-        lineItems={lineItemsData?.data ?? []}
+        lineItems={lineItems}
         onCreate={() => {
           setEditingLineItem(undefined)
           setLineItemDialogOpen(true)
@@ -134,20 +145,17 @@ export function InvoiceDetailPage({ id }: { id: string }) {
         }}
       />
 
-      <InvoicePaymentsCard
-        payments={paymentsData?.data ?? []}
-        onCreate={() => setPaymentDialogOpen(true)}
-      />
+      <InvoicePaymentsCard payments={payments} onCreate={() => setPaymentDialogOpen(true)} />
 
       <InvoiceCreditNotesCard
-        creditNotes={creditNotesData?.data ?? []}
+        creditNotes={creditNotes}
         onCreate={() => setCreditNoteDialogOpen(true)}
       />
 
       <InvoiceNotesCard
         noteContent={noteContent}
         isAdding={addNoteMutation.isPending}
-        notes={notesData?.data ?? []}
+        notes={notes}
         onNoteChange={setNoteContent}
         onAddNote={() =>
           addNoteMutation.mutate(

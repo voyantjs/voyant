@@ -1,7 +1,9 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
+import { ZodError } from "zod"
 
 import { createPayloadClient, type PayloadClientOptions } from "./client.js"
 import type { PayloadDocBody, VoyantEntityEvent } from "./types.js"
+import { payloadCmsPluginOptionsSchema } from "./validation.js"
 
 /**
  * Event names the plugin subscribes to. Defaults match the `<resource>.<pastTenseAction>`
@@ -74,23 +76,24 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
  * EventBus contract, so a Payload outage never blocks the emitter.
  */
 export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
-  const client = createPayloadClient(options)
-  const mapEvent = options.mapEvent ?? defaultMapEvent
-  const logger = options.logger ?? console
+  const validatedOptions = parsePayloadCmsPluginOptions(options)
+  const client = createPayloadClient(validatedOptions)
+  const mapEvent = validatedOptions.mapEvent ?? defaultMapEvent
+  const logger = validatedOptions.logger ?? console
   const eventNames = {
-    created: options.events?.created ?? "product.created",
-    updated: options.events?.updated ?? "product.updated",
-    deleted: options.events?.deleted ?? "product.deleted",
+    created: validatedOptions.events?.created ?? "product.created",
+    updated: validatedOptions.events?.updated ?? "product.updated",
+    deleted: validatedOptions.events?.deleted ?? "product.deleted",
   }
 
   const subscribers: Subscriber[] = [
     {
       event: eventNames.created,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.upsertByVoyantId(options.collection, event.id, mapEvent(event))
+          await client.upsertByVoyantId(validatedOptions.collection, event.id, mapEvent(event))
         } catch (err) {
           logger.error(
             `[payload-cms] upsert on "${eventNames.created}" failed for ${event.id}`,
@@ -101,11 +104,11 @@ export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
     },
     {
       event: eventNames.updated,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.upsertByVoyantId(options.collection, event.id, mapEvent(event))
+          await client.upsertByVoyantId(validatedOptions.collection, event.id, mapEvent(event))
         } catch (err) {
           logger.error(
             `[payload-cms] upsert on "${eventNames.updated}" failed for ${event.id}`,
@@ -116,11 +119,11 @@ export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
     },
     {
       event: eventNames.deleted,
-      handler: async (data) => {
-        const event = coerceEvent(data)
+      handler: async (envelope) => {
+        const event = coerceEvent(envelope.data)
         if (!event) return
         try {
-          await client.deleteByVoyantId(options.collection, event.id)
+          await client.deleteByVoyantId(validatedOptions.collection, event.id)
         } catch (err) {
           logger.error(
             `[payload-cms] delete on "${eventNames.deleted}" failed for ${event.id}`,
@@ -135,5 +138,22 @@ export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
     name: "payload-cms",
     version: "0.1.0",
     subscribers,
+  }
+}
+
+function parsePayloadCmsPluginOptions(options: PayloadCmsPluginOptions): PayloadCmsPluginOptions {
+  try {
+    return payloadCmsPluginOptionsSchema.parse(options)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const detail = error.issues
+        .map((issue) => {
+          const path = issue.path.join(".") || "options"
+          return `${path}: ${issue.message}`
+        })
+        .join("; ")
+      throw new Error(`Invalid Payload CMS plugin options: ${detail}`)
+    }
+    throw error
   }
 }

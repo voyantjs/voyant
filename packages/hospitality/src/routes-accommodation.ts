@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import type { Env } from "./routes-shared.js"
 import { notFound } from "./routes-shared.js"
@@ -28,7 +29,7 @@ import {
 
 export const hospitalityAccommodationRoutes = new Hono<Env>()
   .get("/room-types", async (c) => {
-    const query = roomTypeListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, roomTypeListQuerySchema)
     return c.json(await hospitalityService.listRoomTypes(c.get("db"), query))
   })
   .post("/room-types", async (c) => {
@@ -36,7 +37,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomType(
           c.get("db"),
-          insertRoomTypeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomTypeSchema),
         ),
       },
       201,
@@ -51,7 +52,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomType(
       c.get("db"),
       c.req.param("id"),
-      updateRoomTypeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomTypeSchema),
     )
     if (!row) return c.json(notFound("Room type"), 404)
     return c.json({ data: row })
@@ -62,9 +63,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/room-type-bed-configs", async (c) => {
-    const query = roomTypeBedConfigListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, roomTypeBedConfigListQuerySchema)
     return c.json(await hospitalityService.listRoomTypeBedConfigs(c.get("db"), query))
   })
   .post("/room-type-bed-configs", async (c) => {
@@ -72,7 +71,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomTypeBedConfig(
           c.get("db"),
-          insertRoomTypeBedConfigSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomTypeBedConfigSchema),
         ),
       },
       201,
@@ -87,7 +86,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomTypeBedConfig(
       c.get("db"),
       c.req.param("id"),
-      updateRoomTypeBedConfigSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomTypeBedConfigSchema),
     )
     if (!row) return c.json(notFound("Room type bed config"), 404)
     return c.json({ data: row })
@@ -98,7 +97,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/room-units", async (c) => {
-    const query = roomUnitListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, roomUnitListQuerySchema)
     return c.json(await hospitalityService.listRoomUnits(c.get("db"), query))
   })
   .post("/room-units", async (c) => {
@@ -106,7 +105,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomUnit(
           c.get("db"),
-          insertRoomUnitSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomUnitSchema),
         ),
       },
       201,
@@ -121,7 +120,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomUnit(
       c.get("db"),
       c.req.param("id"),
-      updateRoomUnitSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomUnitSchema),
     )
     if (!row) return c.json(notFound("Room unit"), 404)
     return c.json({ data: row })
@@ -132,7 +131,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/meal-plans", async (c) => {
-    const query = mealPlanListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, mealPlanListQuerySchema)
     return c.json(await hospitalityService.listMealPlans(c.get("db"), query))
   })
   .post("/meal-plans", async (c) => {
@@ -140,7 +139,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createMealPlan(
           c.get("db"),
-          insertMealPlanSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertMealPlanSchema),
         ),
       },
       201,
@@ -155,7 +154,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateMealPlan(
       c.get("db"),
       c.req.param("id"),
-      updateMealPlanSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMealPlanSchema),
     )
     if (!row) return c.json(notFound("Meal plan"), 404)
     return c.json({ data: row })
@@ -166,7 +165,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/rate-plans", async (c) => {
-    const query = ratePlanListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, ratePlanListQuerySchema)
     return c.json(await hospitalityService.listRatePlans(c.get("db"), query))
   })
   .post("/rate-plans", async (c) => {
@@ -174,7 +173,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRatePlan(
           c.get("db"),
-          insertRatePlanSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRatePlanSchema),
         ),
       },
       201,
@@ -189,7 +188,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRatePlan(
       c.get("db"),
       c.req.param("id"),
-      updateRatePlanSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRatePlanSchema),
     )
     if (!row) return c.json(notFound("Rate plan"), 404)
     return c.json({ data: row })
@@ -200,9 +199,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/rate-plan-room-types", async (c) => {
-    const query = ratePlanRoomTypeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, ratePlanRoomTypeListQuerySchema)
     return c.json(await hospitalityService.listRatePlanRoomTypes(c.get("db"), query))
   })
   .post("/rate-plan-room-types", async (c) => {
@@ -210,7 +207,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRatePlanRoomType(
           c.get("db"),
-          insertRatePlanRoomTypeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRatePlanRoomTypeSchema),
         ),
       },
       201,
@@ -225,7 +222,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRatePlanRoomType(
       c.get("db"),
       c.req.param("id"),
-      updateRatePlanRoomTypeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRatePlanRoomTypeSchema),
     )
     if (!row) return c.json(notFound("Rate plan room type"), 404)
     return c.json({ data: row })
@@ -236,9 +233,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/room-type-rates", async (c) => {
-    const query = roomTypeRateListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, roomTypeRateListQuerySchema)
     return c.json(await hospitalityService.listRoomTypeRates(c.get("db"), query))
   })
   .post("/room-type-rates", async (c) => {
@@ -246,7 +241,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomTypeRate(
           c.get("db"),
-          insertRoomTypeRateSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomTypeRateSchema),
         ),
       },
       201,
@@ -261,7 +256,7 @@ export const hospitalityAccommodationRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomTypeRate(
       c.get("db"),
       c.req.param("id"),
-      updateRoomTypeRateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomTypeRateSchema),
     )
     if (!row) return c.json(notFound("Room type rate"), 404)
     return c.json({ data: row })

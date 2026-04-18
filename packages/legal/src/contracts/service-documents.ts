@@ -388,15 +388,22 @@ export const contractDocumentsService = {
       return { status: "not_found" }
     }
 
-    await runtime.eventBus?.emit("contract.document.generated", {
-      contractId: prepared.contract.id,
-      contractStatus: prepared.contract.status,
-      attachmentId: attachment.id,
-      attachmentKind: attachment.kind,
-      attachmentName: attachment.name,
-      renderedBodyFormat: prepared.renderedBodyFormat,
-      regenerated: options.regenerated ?? false,
-    } satisfies ContractDocumentGeneratedEvent)
+    await runtime.eventBus?.emit(
+      "contract.document.generated",
+      {
+        contractId: prepared.contract.id,
+        contractStatus: prepared.contract.status,
+        attachmentId: attachment.id,
+        attachmentKind: attachment.kind,
+        attachmentName: attachment.name,
+        renderedBodyFormat: prepared.renderedBodyFormat,
+        regenerated: options.regenerated ?? false,
+      } satisfies ContractDocumentGeneratedEvent,
+      {
+        category: "internal",
+        source: "service",
+      },
+    )
 
     return {
       status: "generated",

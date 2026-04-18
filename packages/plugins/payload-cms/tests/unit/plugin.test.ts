@@ -47,6 +47,15 @@ describe("payloadCmsPlugin", () => {
     expect(names).toEqual(["departure.created", "departure.updated", "departure.deleted"])
   })
 
+  it("fails fast on invalid plugin options", () => {
+    expect(() =>
+      payloadCmsPlugin({
+        ...baseOptions,
+        apiUrl: "not-a-url",
+      }),
+    ).toThrowError(/Invalid Payload CMS plugin options/)
+  })
+
   it("pushes product.created to Payload as an upsert", async () => {
     const fetchMock = vi
       .fn<PayloadFetch>()

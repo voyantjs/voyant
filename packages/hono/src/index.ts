@@ -5,6 +5,7 @@ export {
   extractBearerToken,
   generateNumericCode,
   randomBytesHex,
+  requireUserId,
   sha256Base64Url,
   sha256Hex,
   unsignCookie,
@@ -15,6 +16,7 @@ export {
   cors,
   db,
   errorBoundary,
+  handleApiError,
   LIVE_LIMITS,
   logger,
   rateLimit,
@@ -37,6 +39,16 @@ export type {
   VoyantBindings,
   VoyantDb,
   VoyantExecutionContext,
+  VoyantQueryRuntime,
   VoyantRequestAuthContext,
   VoyantVariables,
 } from "./types.js"
+export {
+  ApiHttpError,
+  ForbiddenApiError,
+  normalizeValidationError,
+  parseJsonBody,
+  parseQuery,
+  RequestValidationError,
+  UnauthorizedApiError,
+} from "./validation.js"

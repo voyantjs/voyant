@@ -1,3 +1,10 @@
+import {
+  ForbiddenApiError,
+  handleApiError,
+  parseJsonBody,
+  requireUserId,
+  UnauthorizedApiError,
+} from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
@@ -98,7 +105,10 @@ async function authorizeBookingPiiAccess(
       outcome: "denied",
       reason: "missing_user",
     })
-    return { allowed: false as const, response: c.json({ error: "Unauthorized" }, 401) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new UnauthorizedApiError(), c),
+    }
   }
 
   const customAuthorizer = c.get("authorizeBookingPii")
@@ -119,7 +129,10 @@ async function authorizeBookingPiiAccess(
         outcome: "denied",
         reason: "custom_policy_denied",
       })
-      return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+      return {
+        allowed: false as const,
+        response: handleApiError(new ForbiddenApiError(), c),
+      }
     }
 
     return { allowed: true as const }
@@ -136,7 +149,10 @@ async function authorizeBookingPiiAccess(
       reason: "insufficient_scope",
       metadata: { actor: actor ?? null },
     })
-    return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new ForbiddenApiError(), c),
+    }
   }
 
   return { allowed: true as const }
@@ -1025,16 +1041,12 @@ export const bookingRoutes = new Hono<Env>()
 
   // 28. POST /:id/notes — Add note
   .post("/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
     const row = await bookingsService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertBookingNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingNoteSchema),
     )
 
     if (!row) {

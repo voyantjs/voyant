@@ -41,6 +41,23 @@ describe("resolveNetopiaRuntimeOptions", () => {
   it("throws when required config is missing", () => {
     expect(() => resolveNetopiaRuntimeOptions({})).toThrow(/NETOPIA_URL/)
   })
+
+  it("throws when configured runtime values are invalid", () => {
+    expect(() =>
+      resolveNetopiaRuntimeOptions(
+        {
+          NETOPIA_URL: "https://secure.mobilpay.ro/pay",
+          NETOPIA_API_KEY: "api-key",
+          NETOPIA_POS_SIGNATURE: "pos-signature",
+          NETOPIA_NOTIFY_URL: "https://api.example.com/netopia/callback",
+          NETOPIA_REDIRECT_URL: "https://app.example.com/checkout/return",
+        },
+        {
+          successStatuses: [3.5] as unknown as number[],
+        },
+      ),
+    ).toThrow(/Invalid Netopia runtime options/)
+  })
 })
 
 describe("createNetopiaClient.startCardPayment", () => {

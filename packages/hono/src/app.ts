@@ -1,24 +1,50 @@
-import { createContainer } from "@voyantjs/core"
+import { createContainer, createEventBus, createQueryRunner } from "@voyantjs/core"
 import { Hono } from "hono"
 
 import { requireAuth } from "./middleware/auth.js"
 import { cors } from "./middleware/cors.js"
 import { db } from "./middleware/db.js"
-import { errorBoundary, requestId } from "./middleware/error-boundary.js"
+import { handleApiError, requestId } from "./middleware/error-boundary.js"
 import { logger } from "./middleware/logger.js"
 import { requireActor } from "./middleware/require-actor.js"
 import { expandHonoPlugins } from "./plugin.js"
 import type { VoyantAppConfig, VoyantBindings, VoyantVariables } from "./types.js"
 
+function resolveSurfaceMountPath(
+  prefix: string,
+  path: string | undefined,
+  fallback: string,
+): string {
+  const normalized = path?.trim()
+
+  if (!normalized) {
+    return `${prefix}/${fallback}`
+  }
+
+  if (normalized === "/") {
+    return prefix
+  }
+
+  return `${prefix}/${normalized.replace(/^\/+|\/+$/g, "")}`
+}
+
 export function createApp<TBindings extends VoyantBindings>(
   config: VoyantAppConfig<TBindings>,
 ): Hono<{ Bindings: TBindings; Variables: VoyantVariables }> {
   const app = new Hono<{ Bindings: TBindings; Variables: VoyantVariables }>()
+  app.onError(handleApiError)
 
   // Expand plugins into their constituent modules/extensions before mounting
   const expanded = config.plugins ? expandHonoPlugins(config.plugins) : null
   const allModules = [...(config.modules ?? []), ...(expanded?.modules ?? [])]
   const allExtensions = [...(config.extensions ?? []), ...(expanded?.extensions ?? [])]
+  const eventBus = config.eventBus ?? createEventBus()
+  const query =
+    typeof config.query === "function"
+      ? config.query
+      : config.query
+        ? createQueryRunner(config.query)
+        : undefined
 
   // Module container — registered services are resolvable from routes
   const container = createContainer()
@@ -27,8 +53,41 @@ export function createApp<TBindings extends VoyantBindings>(
       container.register(mod.module.name, mod.module.service)
     }
   }
+  for (const sub of expanded?.subscribers ?? []) {
+    eventBus.subscribe(sub.event, sub.handler)
+  }
+
+  let bootstrapPromise: Promise<void> | null = null
+  function ensureRuntimeBootstrapped(bindings: TBindings) {
+    if (!bootstrapPromise) {
+      bootstrapPromise = (async () => {
+        const ctx = { bindings, container, eventBus }
+
+        for (const plugin of config.plugins ?? []) {
+          await plugin.bootstrap?.(ctx)
+        }
+        for (const mod of allModules) {
+          await mod.module.bootstrap?.(ctx)
+        }
+        for (const ext of allExtensions) {
+          await ext.extension.bootstrap?.(ctx)
+        }
+      })()
+    }
+
+    return bootstrapPromise
+  }
+
   app.use("*", async (c, next) => {
     c.set("container", container)
+    c.set("eventBus", eventBus)
+    if (config.link) {
+      c.set("link", config.link)
+    }
+    if (query) {
+      c.set("query", query)
+    }
+    await ensureRuntimeBootstrapped(c.env)
     return next()
   })
 
@@ -37,9 +96,6 @@ export function createApp<TBindings extends VoyantBindings>(
 
   // Structured logger
   app.use("*", logger(config.logger))
-
-  // Global error boundary
-  app.use("*", errorBoundary)
 
   // CORS (allowlist via env CORS_ALLOWLIST)
   app.use("*", cors())
@@ -72,7 +128,10 @@ export function createApp<TBindings extends VoyantBindings>(
       app.route(`/v1/admin/${mod.module.name}`, mod.adminRoutes)
     }
     if (mod.publicRoutes) {
-      app.route(`/v1/public/${mod.module.name}`, mod.publicRoutes)
+      app.route(
+        resolveSurfaceMountPath("/v1/public", mod.publicPath, mod.module.name),
+        mod.publicRoutes,
+      )
     }
     if (mod.routes) {
       app.route(`/v1/${mod.module.name}`, mod.routes)
@@ -85,7 +144,10 @@ export function createApp<TBindings extends VoyantBindings>(
       app.route(`/v1/admin/${ext.extension.module}`, ext.adminRoutes)
     }
     if (ext.publicRoutes) {
-      app.route(`/v1/public/${ext.extension.module}`, ext.publicRoutes)
+      app.route(
+        resolveSurfaceMountPath("/v1/public", ext.publicPath, ext.extension.module),
+        ext.publicRoutes,
+      )
     }
     if (ext.routes) {
       app.route(`/v1/${ext.extension.module}`, ext.routes)

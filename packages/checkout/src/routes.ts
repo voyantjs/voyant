@@ -1,5 +1,6 @@
-import type { Module } from "@voyantjs/core"
+import type { Module, ModuleContainer } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { NotificationProvider } from "@voyantjs/notifications"
 import { createNotificationService } from "@voyantjs/notifications"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -24,33 +25,46 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
 }
 
+export type CheckoutRoutesOptions = {
+  policy?: CheckoutPolicyOptions
+  providers?: ReadonlyArray<NotificationProvider>
+  resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
+  paymentStarters?: Record<string, CheckoutPaymentStarter>
+  resolvePaymentStarters?: (
+    bindings: Record<string, unknown>,
+  ) => Record<string, CheckoutPaymentStarter>
+  bankTransferDetails?: CheckoutBankTransferDetails | null
+  resolveBankTransferDetails?: (
+    bindings: Record<string, unknown>,
+  ) => CheckoutBankTransferDetails | null
+}
+
+export type CheckoutRouteRuntime = {
+  bindings: Record<string, unknown>
+  providers: ReadonlyArray<NotificationProvider>
+  paymentStarters: Record<string, CheckoutPaymentStarter>
+  bankTransferDetails: CheckoutBankTransferDetails | null
+}
+
+export const CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY = "providers.checkout.runtime"
+
 export function createCheckoutRoutes(
-  options: {
-    policy?: CheckoutPolicyOptions
-    providers?: ReadonlyArray<NotificationProvider>
-    resolveProviders?: (bindings: Record<string, unknown>) => ReadonlyArray<NotificationProvider>
-    paymentStarters?: Record<string, CheckoutPaymentStarter>
-    resolvePaymentStarters?: (
-      bindings: Record<string, unknown>,
-    ) => Record<string, CheckoutPaymentStarter>
-    bankTransferDetails?: CheckoutBankTransferDetails | null
-    resolveBankTransferDetails?: (
-      bindings: Record<string, unknown>,
-    ) => CheckoutBankTransferDetails | null
-  } = {},
+  options: CheckoutRoutesOptions = {},
 ) {
-  function createCheckoutRuntime(bindings: Record<string, unknown>) {
-    return {
-      bindings,
-      paymentStarters: options.resolvePaymentStarters?.(bindings) ?? options.paymentStarters ?? {},
-      bankTransferDetails:
-        options.resolveBankTransferDetails?.(bindings) ?? options.bankTransferDetails ?? null,
-    }
+  function getRuntime(
+    bindings: Record<string, unknown>,
+    resolveFromContainer?: (key: string) => CheckoutRouteRuntime | undefined,
+  ) {
+    return (
+      resolveFromContainer?.(CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY) ??
+      buildCheckoutRouteRuntime(bindings, options)
+    )
   }
 
   return new Hono<Env>()
@@ -76,16 +90,15 @@ export function createCheckoutRoutes(
     })
     .post("/v1/checkout/bookings/:bookingId/initiate-collection", async (c) => {
       try {
-        const dispatcher = createNotificationService(
-          options.resolveProviders?.(c.env) ?? options.providers ?? [],
-        )
+        const runtime = getRuntime(c.env, (key) => c.var.container?.resolve(key))
+        const dispatcher = createNotificationService(runtime.providers)
         const result = await initiateCheckoutCollection(
           c.get("db"),
           c.req.param("bookingId"),
-          initiateCheckoutCollectionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, initiateCheckoutCollectionSchema),
           options.policy,
           dispatcher,
-          createCheckoutRuntime(c.env),
+          runtime,
         )
 
         if (!result) {
@@ -104,15 +117,14 @@ export function createCheckoutRoutes(
     })
     .post("/v1/checkout/collections/bootstrap", async (c) => {
       try {
-        const dispatcher = createNotificationService(
-          options.resolveProviders?.(c.env) ?? options.providers ?? [],
-        )
+        const runtime = getRuntime(c.env, (key) => c.var.container?.resolve(key))
+        const dispatcher = createNotificationService(runtime.providers)
         const result = await bootstrapCheckoutCollection(
           c.get("db"),
-          bootstrapCheckoutCollectionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, bootstrapCheckoutCollectionSchema),
           options.policy,
           dispatcher,
-          createCheckoutRuntime(c.env),
+          runtime,
         )
 
         if (!result) {
@@ -133,9 +145,7 @@ export function createCheckoutRoutes(
 
 export function createCheckoutAdminRoutes() {
   return new Hono<Env>().get("/bookings/:bookingId/reminder-runs", async (c) => {
-    const query = checkoutReminderRunListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, checkoutReminderRunListQuerySchema)
 
     return c.json(await listBookingReminderRuns(c.get("db"), c.req.param("bookingId"), query))
   })
@@ -146,11 +156,34 @@ export const checkoutModule: Module = {
 }
 
 export function createCheckoutHonoModule(
-  options?: Parameters<typeof createCheckoutRoutes>[0],
+  options: CheckoutRoutesOptions = {},
 ): HonoModule {
+  const module: Module = {
+    ...checkoutModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildCheckoutRouteRuntime(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
   return {
-    module: checkoutModule,
+    module,
     routes: createCheckoutRoutes(options),
     adminRoutes: createCheckoutAdminRoutes(),
+  }
+}
+
+export function buildCheckoutRouteRuntime(
+  bindings: Record<string, unknown>,
+  options: CheckoutRoutesOptions = {},
+): CheckoutRouteRuntime {
+  return {
+    bindings,
+    providers: options.resolveProviders?.(bindings) ?? options.providers ?? [],
+    paymentStarters: options.resolvePaymentStarters?.(bindings) ?? options.paymentStarters ?? {},
+    bankTransferDetails:
+      options.resolveBankTransferDetails?.(bindings) ?? options.bankTransferDetails ?? null,
   }
 }

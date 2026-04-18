@@ -162,6 +162,10 @@ Rule:
 
 Cache read-heavy derived data, not primary mutable business state.
 
+For the boundary between cacheable read models and explicit derived
+projections, see
+[`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md).
+
 ### 9. Keep code tolerant of misses
 
 Every cache usage should assume:

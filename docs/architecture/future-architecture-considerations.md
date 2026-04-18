@@ -48,24 +48,16 @@ The following items have moved into active architecture guidance:
 - link metadata and relationship policy
   see
   [`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md)
+- cross-module indexing and projection policy
+  see
+  [`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md)
 
 ## Deferred Areas
 
-### 1. Cross-module indexing and projection infrastructure
+There are currently no deferred architecture items in the active review set.
 
-Application-layer link/query traversal is the right current default.
-
-At larger scale, Voyant may need a more explicit projection/indexing layer for:
-
-- faster cross-module filtering
-- search-oriented linked reads
-- denormalized query performance
-
-Why deferred:
-
-- this is a scale/performance optimization problem, not a baseline architecture
-  blocker
-- it depends on real workload evidence
+Future additions should only be added here when they meet the deferral rules
+above and are not yet justified as active guidance.
 
 ## Review Guidance
 

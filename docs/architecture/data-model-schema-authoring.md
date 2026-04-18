@@ -87,6 +87,11 @@ For the current pair-first link baseline and the threshold for richer
 relationship records, see
 [`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md).
 
+If linked reads eventually need denormalized support, keep that as an explicit
+derived read-model concern rather than baking it into schema coupling by
+default. See
+[`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md).
+
 ### 4. Keep schema definitions and relations separate
 
 Prefer splitting schema authoring into:

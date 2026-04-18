@@ -185,6 +185,12 @@ Do not do first:
 
 ### 6. Cross-module indexing and projection infrastructure
 
+Status:
+
+- promoted into active guidance
+- see
+  [`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md)
+
 Why last:
 
 - it is the broadest and most expensive deferred area

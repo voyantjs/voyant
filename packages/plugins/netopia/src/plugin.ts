@@ -1,5 +1,5 @@
 import type { Extension, ModuleContainer } from "@voyantjs/core"
-import { defineHonoPlugin, type HonoPlugin } from "@voyantjs/hono"
+import { defineHonoPlugin, type HonoPlugin, parseJsonBody } from "@voyantjs/hono"
 import type { HonoExtension } from "@voyantjs/hono/module"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -71,7 +71,7 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
   return new Hono<Env>()
     .post("/providers/netopia/payment-sessions/:sessionId/start", async (c) => {
       try {
-        const data = netopiaStartPaymentSessionSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaStartPaymentSessionSchema)
         const runtime = getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
         const result = await netopiaService.startPaymentSession(
           c.get("db"),
@@ -99,7 +99,7 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
       "/providers/netopia/bookings/:bookingId/payment-schedules/:scheduleId/collect",
       async (c) => {
         try {
-          const data = netopiaCollectBookingScheduleSchema.parse(await c.req.json())
+          const data = await parseJsonBody(c, netopiaCollectBookingScheduleSchema)
           const runtime = getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
           const result = await netopiaService.collectBookingSchedule(
             c.get("db"),
@@ -121,7 +121,7 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
     )
     .post("/providers/netopia/bookings/:bookingId/guarantees/:guaranteeId/collect", async (c) => {
       try {
-        const data = netopiaCollectBookingGuaranteeSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaCollectBookingGuaranteeSchema)
         const runtime = getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
         const result = await netopiaService.collectBookingGuarantee(
           c.get("db"),
@@ -142,7 +142,7 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
     })
     .post("/providers/netopia/invoices/:invoiceId/collect", async (c) => {
       try {
-        const data = netopiaCollectInvoiceSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaCollectInvoiceSchema)
         const runtime = getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
         const result = await netopiaService.collectInvoice(
           c.get("db"),
@@ -161,7 +161,7 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
       }
     })
     .post("/providers/netopia/callback", async (c) => {
-      const payload = netopiaWebhookPayloadSchema.parse(await c.req.json())
+      const payload = await parseJsonBody(c, netopiaWebhookPayloadSchema)
       const runtime = getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
       const result = await netopiaService.handleCallback(c.get("db"), payload, runtime)
       return c.json({ data: result })

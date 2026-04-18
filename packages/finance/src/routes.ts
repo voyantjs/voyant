@@ -473,7 +473,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingItemTaxLine(
       c.get("db"),
       c.req.param("bookingItemId"),
-      insertBookingItemTaxLineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemTaxLineSchema),
     )
 
     if (!row) {
@@ -487,7 +487,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingItemTaxLine(
       c.get("db"),
       c.req.param("taxLineId"),
-      updateBookingItemTaxLineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemTaxLineSchema),
     )
 
     if (!row) {
@@ -524,7 +524,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingItemCommission(
       c.get("db"),
       c.req.param("bookingItemId"),
-      insertBookingItemCommissionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemCommissionSchema),
     )
 
     if (!row) {
@@ -538,7 +538,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingItemCommission(
       c.get("db"),
       c.req.param("commissionId"),
-      updateBookingItemCommissionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemCommissionSchema),
     )
 
     if (!row) {

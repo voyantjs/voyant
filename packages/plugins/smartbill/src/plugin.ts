@@ -1,7 +1,8 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 
-import { createSmartbillClient, type SmartbillClientOptions } from "./client.js"
-import { mapVoyantInvoiceToSmartbill, type SmartbillMappingOptions } from "./mapping.js"
+import type { SmartbillClientOptions } from "./client.js"
+import type { mapVoyantInvoiceToSmartbill, SmartbillMappingOptions } from "./mapping.js"
+import { createSmartbillSyncRuntime } from "./runtime.js"
 import type { VoyantInvoiceEvent } from "./types.js"
 
 /**
@@ -67,23 +68,7 @@ function coerceEvent(data: unknown): VoyantInvoiceEvent | null {
  * EventBus contract, so a SmartBill outage never blocks the emitter.
  */
 export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
-  const client = createSmartbillClient(options)
-  const logger = options.logger ?? console
-  const mappingOptions: SmartbillMappingOptions = {
-    companyVatCode: options.companyVatCode,
-    seriesName: options.seriesName,
-    language: options.language,
-    isTaxIncluded: options.isTaxIncluded,
-    art311SpecialRegime: options.art311SpecialRegime,
-  }
-  const mapEvent =
-    options.mapEvent ??
-    ((ev: VoyantInvoiceEvent) => mapVoyantInvoiceToSmartbill(ev, mappingOptions))
-  const eventNames = {
-    issued: options.events?.issued ?? "invoice.issued",
-    voided: options.events?.voided ?? "invoice.voided",
-    syncRequested: options.events?.syncRequested ?? "invoice.external.sync.requested",
-  }
+  const { client, logger, mapEvent, eventNames } = createSmartbillSyncRuntime(options)
 
   const subscribers: Subscriber[] = [
     {

@@ -52,6 +52,7 @@ export const notificationReminderTargetTypeEnum = pgEnum("notification_reminder_
 ])
 
 export const notificationReminderRunStatusEnum = pgEnum("notification_reminder_run_status", [
+  "queued",
   "processing",
   "sent",
   "skipped",

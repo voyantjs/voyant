@@ -35,7 +35,7 @@ function normalizeReminderRun(row: {
   organizationId: string | null
   paymentSessionId: string | null
   notificationDeliveryId: string | null
-  status: "processing" | "sent" | "skipped" | "failed"
+  status: "queued" | "processing" | "sent" | "skipped" | "failed"
   recipient: string | null
   scheduledFor: Date | string
   processedAt: Date | string

@@ -74,9 +74,10 @@ export type {
   NotificationTaskEnv,
   NotificationTaskRuntime,
   NotificationTaskRuntimeOptions,
+  ReminderDeliveryJob,
 } from "./task-runtime.js"
 export { buildNotificationTaskRuntime } from "./task-runtime.js"
-export { sendDueNotificationReminders } from "./tasks/index.js"
+export { deliverQueuedNotificationReminder, sendDueNotificationReminders } from "./tasks/index.js"
 export type {
   NotificationAttachment,
   NotificationChannel,

@@ -8,14 +8,20 @@ export type NotificationTaskEnv = {
   EMAIL_FROM?: unknown
 }
 
+export type ReminderDeliveryJob = {
+  reminderRunId: string
+}
+
 export type NotificationTaskRuntime = {
   providers: ReadonlyArray<NotificationProvider>
   reminderSweepLockManager?: ExecutionLockManager
+  enqueueReminderDelivery?: (job: ReminderDeliveryJob) => Promise<void>
 }
 
 export type NotificationTaskRuntimeOptions = {
   providers?: ReadonlyArray<NotificationProvider>
   reminderSweepLockManager?: ExecutionLockManager
+  enqueueReminderDelivery?: (job: ReminderDeliveryJob) => Promise<void>
   resolveProviders?: (env: NotificationTaskEnv) => ReadonlyArray<NotificationProvider>
 }
 
@@ -29,5 +35,6 @@ export function buildNotificationTaskRuntime(
       options.providers ??
       createDefaultNotificationProviders(env),
     reminderSweepLockManager: options.reminderSweepLockManager,
+    enqueueReminderDelivery: options.enqueueReminderDelivery,
   }
 }

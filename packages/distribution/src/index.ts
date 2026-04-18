@@ -20,6 +20,7 @@ export type {
   Channel,
   ChannelBookingLink,
   ChannelCommissionRule,
+  ChannelContactProjection,
   ChannelContract,
   ChannelInventoryAllotment,
   ChannelInventoryAllotmentTarget,
@@ -39,6 +40,7 @@ export type {
   NewChannel,
   NewChannelBookingLink,
   NewChannelCommissionRule,
+  NewChannelContactProjection,
   NewChannelContract,
   NewChannelInventoryAllotment,
   NewChannelInventoryAllotmentTarget,
@@ -59,6 +61,7 @@ export type {
 export {
   channelBookingLinks,
   channelCommissionRules,
+  channelContactProjections,
   channelContracts,
   channelInventoryAllotments,
   channelInventoryAllotmentTargets,

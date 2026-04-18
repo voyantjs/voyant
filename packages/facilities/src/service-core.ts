@@ -1,15 +1,13 @@
-import { identityAddresses } from "@voyantjs/identity/schema"
 import { and, desc, eq, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
-import { facilities } from "./schema.js"
+import { facilities, facilityAddressProjections } from "./schema.js"
 import type {
   CreateFacilityInput,
   FacilityListQuery,
   UpdateFacilityInput,
 } from "./service-shared.js"
 import {
-  facilityEntityType,
   formatAddress,
   hydrateFacilities,
   paginate,
@@ -29,10 +27,9 @@ export async function listFacilities(db: PostgresJsDatabase, query: FacilityList
     conditions.push(
       sql`exists (
         select 1
-        from ${identityAddresses}
-        where ${identityAddresses.entityType} = ${facilityEntityType}
-          and ${identityAddresses.entityId} = ${facilities.id}
-          and ${identityAddresses.country} = ${query.country}
+        from ${facilityAddressProjections}
+        where ${facilityAddressProjections.facilityId} = ${facilities.id}
+          and ${facilityAddressProjections.country} = ${query.country}
       )`,
     )
   }
@@ -45,14 +42,13 @@ export async function listFacilities(db: PostgresJsDatabase, query: FacilityList
         or ${facilities.description} ilike ${term}
         or exists (
           select 1
-          from ${identityAddresses}
-          where ${identityAddresses.entityType} = ${facilityEntityType}
-            and ${identityAddresses.entityId} = ${facilities.id}
+          from ${facilityAddressProjections}
+          where ${facilityAddressProjections.facilityId} = ${facilities.id}
             and (
-              ${identityAddresses.fullText} ilike ${term}
-              or ${identityAddresses.line1} ilike ${term}
-              or ${identityAddresses.city} ilike ${term}
-              or ${identityAddresses.country} ilike ${term}
+              ${facilityAddressProjections.fullText} ilike ${term}
+              or ${facilityAddressProjections.line1} ilike ${term}
+              or ${facilityAddressProjections.city} ilike ${term}
+              or ${facilityAddressProjections.country} ilike ${term}
             )
         )
       )`,

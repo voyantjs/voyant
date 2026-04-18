@@ -16,6 +16,7 @@ import {
   ensureFacilityExists,
   facilityContactIdentitySource,
   facilityEntityType,
+  rebuildFacilityAddressProjection,
 } from "./service-shared.js"
 
 export function listContactPoints(db: PostgresJsDatabase, facilityId: string) {
@@ -61,19 +62,42 @@ export async function createAddress(
   const facility = await ensureFacilityExists(db, facilityId)
   if (!facility) return null
 
-  return identityService.createAddress(db, {
+  const row = await identityService.createAddress(db, {
     ...data,
     entityType: facilityEntityType,
     entityId: facilityId,
   })
+
+  await rebuildFacilityAddressProjection(db, facilityId)
+
+  return row
 }
 
-export function updateAddress(db: PostgresJsDatabase, id: string, data: UpdateIdentityAddress) {
-  return identityService.updateAddress(db, id, data)
+export async function updateAddress(
+  db: PostgresJsDatabase,
+  id: string,
+  data: UpdateIdentityAddress,
+) {
+  const existing = await identityService.getAddressById(db, id)
+  if (!existing) return null
+
+  const row = await identityService.updateAddress(db, id, data)
+  if (row) {
+    await rebuildFacilityAddressProjection(db, row.entityId)
+  }
+
+  return row
 }
 
-export function deleteAddress(db: PostgresJsDatabase, id: string) {
-  return identityService.deleteAddress(db, id)
+export async function deleteAddress(db: PostgresJsDatabase, id: string) {
+  const existing = await identityService.getAddressById(db, id)
+  const row = await identityService.deleteAddress(db, id)
+
+  if (row && existing?.entityType === facilityEntityType) {
+    await rebuildFacilityAddressProjection(db, existing.entityId)
+  }
+
+  return row
 }
 
 export async function listFacilityContacts(

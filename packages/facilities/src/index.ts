@@ -17,10 +17,12 @@ export const facilitiesHonoModule: HonoModule = {
 
 export type {
   Facility,
+  FacilityAddressProjection,
   FacilityContact,
   FacilityFeature,
   FacilityOperationSchedule,
   NewFacility,
+  NewFacilityAddressProjection,
   NewFacilityContact,
   NewFacilityFeature,
   NewFacilityOperationSchedule,
@@ -33,6 +35,7 @@ export type {
 } from "./schema.js"
 export {
   facilities,
+  facilityAddressProjections,
   facilityFeatures,
   facilityOperationSchedules,
   properties,

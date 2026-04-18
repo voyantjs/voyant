@@ -39,6 +39,9 @@ The following item has moved into active architecture guidance:
   [`index-and-constraint-policy.md`](./index-and-constraint-policy.md)
 - locking and concurrency control policy
   see [`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md)
+- event delivery and durable execution policy
+  see
+  [`event-delivery-and-durable-execution-policy.md`](./event-delivery-and-durable-execution-policy.md)
 
 ## Deferred Areas
 
@@ -77,22 +80,7 @@ Why deferred:
   blocker
 - it depends on real workload evidence
 
-### 3. Event priority and durable queued event processing
-
-The event envelope and taxonomy are worth standardizing now.
-
-A later-stage enhancement may add:
-
-- durable queued event processing
-- event priority
-- backend-specific delivery/runtime guarantees
-
-Why deferred:
-
-- in-process event delivery is still enough for the current baseline
-- priority only becomes meaningful once durable queued execution exists
-
-### 4. Asymmetric signing / JWKS-style auth distribution
+### 3. Asymmetric signing / JWKS-style auth distribution
 
 Voyant’s current shared-secret session model is sufficient for the present auth
 surface.

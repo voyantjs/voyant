@@ -88,6 +88,12 @@ Do not do first:
 
 ### 3. Event priority and durable queued event processing
 
+Status:
+
+- promoted into active guidance
+- see
+  [`event-delivery-and-durable-execution-policy.md`](./event-delivery-and-durable-execution-policy.md)
+
 Why third:
 
 - it depends on concrete execution pressure, not just event taxonomy

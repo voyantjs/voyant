@@ -13,6 +13,10 @@ The goal is simple:
 Notifications should be an infrastructure module, not a collection of package-
 local delivery patterns.
 
+For active guidance on event emission semantics and when delivery should move to
+durable jobs or workflows, see
+[`event-delivery-and-durable-execution-policy.md`](./event-delivery-and-durable-execution-policy.md).
+
 ## Core Rules
 
 ### 1. Keep one canonical send model

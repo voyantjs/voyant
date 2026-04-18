@@ -21,9 +21,9 @@ export const bookingGroups = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_groups_kind").on(table.kind),
-    index("idx_booking_groups_product").on(table.productId),
-    index("idx_booking_groups_option_unit").on(table.optionUnitId),
+    index("idx_booking_groups_kind_created").on(table.kind, table.createdAt),
+    index("idx_booking_groups_product_created").on(table.productId, table.createdAt),
+    index("idx_booking_groups_option_unit_created").on(table.optionUnitId, table.createdAt),
   ],
 )
 
@@ -42,7 +42,7 @@ export const bookingGroupMembers = pgTable(
   },
   (table) => [
     uniqueIndex("booking_group_members_booking_unique").on(table.bookingId),
-    index("idx_booking_group_members_group").on(table.groupId),
+    index("idx_booking_group_members_group_created").on(table.groupId, table.createdAt),
   ],
 )
 

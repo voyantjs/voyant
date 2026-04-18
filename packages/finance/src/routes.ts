@@ -906,16 +906,14 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/invoice-number-series", async (c) => {
-    const query = invoiceNumberSeriesListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, invoiceNumberSeriesListQuerySchema)
     return c.json(await financeService.listInvoiceNumberSeries(c.get("db"), query))
   })
 
   .post("/invoice-number-series", async (c) => {
     const row = await financeService.createInvoiceNumberSeries(
       c.get("db"),
-      insertInvoiceNumberSeriesSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceNumberSeriesSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -930,7 +928,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceNumberSeries(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceNumberSeriesSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceNumberSeriesSchema),
     )
     if (!row) return c.json({ error: "Invoice number series not found" }, 404)
     return c.json({ data: row })
@@ -960,16 +958,14 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/invoice-templates", async (c) => {
-    const query = invoiceTemplateListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, invoiceTemplateListQuerySchema)
     return c.json(await financeService.listInvoiceTemplates(c.get("db"), query))
   })
 
   .post("/invoice-templates", async (c) => {
     const row = await financeService.createInvoiceTemplate(
       c.get("db"),
-      insertInvoiceTemplateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceTemplateSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -984,7 +980,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceTemplate(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceTemplateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceTemplateSchema),
     )
     if (!row) return c.json({ error: "Invoice template not found" }, 404)
     return c.json({ data: row })
@@ -1001,16 +997,14 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/tax-regimes", async (c) => {
-    const query = taxRegimeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, taxRegimeListQuerySchema)
     return c.json(await financeService.listTaxRegimes(c.get("db"), query))
   })
 
   .post("/tax-regimes", async (c) => {
     const row = await financeService.createTaxRegime(
       c.get("db"),
-      insertTaxRegimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertTaxRegimeSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -1025,7 +1019,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateTaxRegime(
       c.get("db"),
       c.req.param("id"),
-      updateTaxRegimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateTaxRegimeSchema),
     )
     if (!row) return c.json({ error: "Tax regime not found" }, 404)
     return c.json({ data: row })

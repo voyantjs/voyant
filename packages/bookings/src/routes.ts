@@ -1,6 +1,7 @@
 import {
   ForbiddenApiError,
   handleApiError,
+  normalizeValidationError,
   parseJsonBody,
   parseQuery,
   requireUserId,
@@ -370,25 +371,34 @@ export const bookingRoutes = new Hono<Env>()
 
   // 4. POST / — Create booking (manual/backoffice only)
   .post("/", async (c) => {
-    const payload = await c.req.json()
-    const parsed = createBookingSchema.safeParse(payload)
-
-    if (!parsed.success) {
+    try {
       return c.json(
         {
-          error: parsed.error.issues[0]?.message ?? "Invalid booking create payload",
-          details: parsed.error.flatten(),
+          data: await bookingsService.createBooking(
+            c.get("db"),
+            await parseJsonBody(c, createBookingSchema, {
+              invalidBodyMessage: "Invalid booking create payload",
+            }),
+            c.get("userId"),
+          ),
         },
-        400,
+        201,
       )
-    }
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
 
-    return c.json(
-      {
-        data: await bookingsService.createBooking(c.get("db"), parsed.data, c.get("userId")),
-      },
-      201,
-    )
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
   })
 
   // 5. PATCH /:id — Update booking

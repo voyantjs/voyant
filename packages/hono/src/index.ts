@@ -25,8 +25,18 @@ export {
   requirePermission,
 } from "./middleware/index.js"
 export type { HonoExtension, HonoModule } from "./module.js"
-export type { ExpandedHonoPlugins, HonoPlugin } from "./plugin.js"
-export { defineHonoPlugin, expandHonoPlugins } from "./plugin.js"
+export type {
+  ExpandedHonoBundles,
+  ExpandedHonoPlugins,
+  HonoBundle,
+  HonoPlugin,
+} from "./plugin.js"
+export {
+  defineHonoBundle,
+  defineHonoPlugin,
+  expandHonoBundles,
+  expandHonoPlugins,
+} from "./plugin.js"
 export type {
   DbFactory,
   LogEntry,

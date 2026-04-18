@@ -14,7 +14,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Hono } from "hono"
 
 import type { HonoExtension, HonoModule } from "./module.js"
-import type { HonoPlugin } from "./plugin.js"
+import type { HonoBundle } from "./plugin.js"
 
 export interface VoyantExecutionContext {
   waitUntil?: (promise: Promise<unknown>) => void
@@ -98,7 +98,7 @@ export interface VoyantAppConfig<TBindings extends VoyantBindings = VoyantBindin
   db: DbFactory<TBindings>
   modules?: HonoModule[]
   extensions?: HonoExtension[]
-  plugins?: HonoPlugin[]
+  plugins?: HonoBundle[]
   eventBus?: EventBus
   link?: LinkService
   query?: QueryGraphContext | VoyantQueryRuntime

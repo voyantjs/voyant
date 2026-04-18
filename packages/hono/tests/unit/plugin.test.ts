@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from "vitest"
 
 import { createApp } from "../../src/app.js"
 import type { HonoExtension, HonoModule } from "../../src/module.js"
-import { defineHonoPlugin, expandHonoPlugins } from "../../src/plugin.js"
+import {
+  defineHonoBundle,
+  defineHonoPlugin,
+  expandHonoBundles,
+  expandHonoPlugins,
+} from "../../src/plugin.js"
 import type { VoyantBindings } from "../../src/types.js"
 
 const TEST_ENV: VoyantBindings = { DATABASE_URL: "postgres://test" }
@@ -23,6 +28,13 @@ function makeModule(name: string, surface: "admin" | "public"): HonoModule {
 }
 
 describe("expandHonoPlugins", () => {
+  it("supports the bundle aliases", () => {
+    const bundle = defineHonoBundle({ name: "bundle", modules: [makeModule("bundle", "admin")] })
+    const result = expandHonoBundles([bundle])
+    expect(result.modules).toHaveLength(1)
+    expect(result.modules[0]?.module.name).toBe("bundle")
+  })
+
   it("returns empty collections for no plugins", () => {
     const result = expandHonoPlugins([])
     expect(result.modules).toEqual([])
@@ -42,7 +54,7 @@ describe("expandHonoPlugins", () => {
   it("throws on duplicate plugin names", () => {
     const p1 = defineHonoPlugin({ name: "dup" })
     const p2 = defineHonoPlugin({ name: "dup" })
-    expect(() => expandHonoPlugins([p1, p2])).toThrow(/Duplicate plugin name/)
+    expect(() => expandHonoPlugins([p1, p2])).toThrow(/Duplicate (plugin|bundle) name/)
   })
 
   it("defineHonoPlugin returns the plugin unchanged", () => {
@@ -131,7 +143,7 @@ describe("createApp with plugins", () => {
         db: () => ({}) as any,
         plugins: [p1, p2],
       }),
-    ).toThrow(/Duplicate plugin name/)
+    ).toThrow(/Duplicate (plugin|bundle) name/)
   })
 
   it("wires plugin subscribers to the app event bus", async () => {

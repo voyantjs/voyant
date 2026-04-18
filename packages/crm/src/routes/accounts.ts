@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   insertAddressSchema,
   insertContactPointSchema,
@@ -37,9 +38,7 @@ const personEntity = "person" as const
 export const accountRoutes = new Hono<Env>()
   // Organizations
   .get("/organizations", async (c) => {
-    const query = organizationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, organizationListQuerySchema)
     return c.json(await crmService.listOrganizations(c.get("db"), query))
   })
   .post("/organizations", async (c) => {
@@ -47,7 +46,7 @@ export const accountRoutes = new Hono<Env>()
       {
         data: await crmService.createOrganization(
           c.get("db"),
-          insertOrganizationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrganizationSchema),
         ),
       },
       201,
@@ -62,7 +61,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.updateOrganization(
       c.get("db"),
       c.req.param("id"),
-      updateOrganizationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrganizationSchema),
     )
     if (!row) return c.json({ error: "Organization not found" }, 404)
     return c.json({ data: row })
@@ -84,7 +83,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           organizationEntity,
           c.req.param("id"),
-          insertContactPointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertContactPointSchema),
         ),
       },
       201,
@@ -102,7 +101,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           organizationEntity,
           c.req.param("id"),
-          insertAddressSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAddressSchema),
         ),
       },
       201,
@@ -120,13 +119,13 @@ export const accountRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertOrganizationNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertOrganizationNoteSchema),
     )
     if (!row) return c.json({ error: "Organization not found" }, 404)
     return c.json({ data: row }, 201)
   })
   .patch("/organization-notes/:id", async (c) => {
-    const body = updateOrganizationNoteSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, updateOrganizationNoteSchema)
     const row = await crmService.updateOrganizationNote(
       c.get("db"),
       c.req.param("id"),

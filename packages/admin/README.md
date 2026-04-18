@@ -16,6 +16,7 @@ import { ThemeProvider, useTheme } from "@voyantjs/voyant-admin/providers/theme"
 import { makeQueryClient } from "@voyantjs/voyant-admin/providers/query-client"
 import { getInitials, getDisplayName } from "@voyantjs/voyant-admin/lib/initials"
 import {
+  createAdminExtensionRegistry,
   defineAdminExtension,
   resolveAdminNavigation,
 } from "@voyantjs/voyant-admin"
@@ -62,7 +63,8 @@ export const financeExtension = defineAdminExtension({
 
 Templates can merge those contributions into their base navigation with
 `resolveAdminNavigation(...)` and expose widget slots with
-`resolveAdminWidgets(...)`.
+`resolveAdminWidgets(...)`. When a template wants one explicit source-controlled
+registry, compose it with `createAdminExtensionRegistry(...)`.
 
 ## License
 

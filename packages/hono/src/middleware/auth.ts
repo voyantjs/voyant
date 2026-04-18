@@ -66,7 +66,12 @@ export function requireAuth<TBindings extends VoyantBindings>(
     if (isPublicAuth || isHealthCheck) return next()
 
     for (const pp of publicPaths) {
-      if (p === pp || p.startsWith(`${pp}/`)) return next()
+      if (p === pp || p.startsWith(`${pp}/`)) {
+        if (p.startsWith("/v1/public/")) {
+          c.set("actor", "customer")
+        }
+        return next()
+      }
     }
 
     const authHeader = c.req.header("authorization") || c.req.header("Authorization")

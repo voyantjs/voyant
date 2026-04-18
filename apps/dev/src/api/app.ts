@@ -56,14 +56,8 @@ const checkoutHonoModule = createCheckoutHonoModule({
   resolveProviders: resolveNotificationProviders,
 })
 const customerPortalHonoModule = createCustomerPortalHonoModule({
-  resolveDocumentDownloadUrl: async (bindings, storageKey) => {
-    const storage = createMediaStorage(bindings as CloudflareBindings)
-    if (!storage) {
-      return null
-    }
-
-    return storage.signedUrl(storageKey, 300)
-  },
+  resolveDocumentDownloadUrl: (bindings, storageKey) =>
+    resolveDocumentDownloadUrl(bindings as CloudflareBindings, storageKey),
 })
 
 const financeModule = createFinanceHonoModule({
@@ -73,7 +67,7 @@ const financeModule = createFinanceHonoModule({
 
 export const app = createApp<CloudflareBindings>({
   db: (env) => getDbFromHyperdrive(env),
-  publicPaths: ["/v1/customer-portal/contact-exists", "/v1/checkout"],
+  publicPaths: ["/v1/public/customer-portal/contact-exists", "/v1/public/checkout"],
   modules: [
     crmHonoModule,
     availabilityHonoModule,

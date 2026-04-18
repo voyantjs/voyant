@@ -254,7 +254,7 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
         format: "pdf",
         status: "failed",
         errorMessage: "renderer timeout",
-        metadata: { downloadUrl: "https://example.com/failed.pdf" },
+        metadata: { url: "https://example.com/failed.pdf" },
       },
       {
         invoiceId: invoice.id,
@@ -263,7 +263,7 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
         generatedAt: new Date("2025-06-02T12:00:00.000Z"),
         fileSize: 1024,
         checksum: "sha256:ready",
-        metadata: { downloadUrl: "https://example.com/invoice-ready.pdf" },
+        metadata: { url: "https://example.com/invoice-ready.pdf" },
       },
     ])
 
@@ -312,7 +312,7 @@ describe.skipIf(!DB_AVAILABLE)("Public finance routes", () => {
       format: "pdf",
       status: "ready",
       generatedAt: new Date("2025-06-04T08:00:00.000Z"),
-      metadata: { downloadUrl: "https://example.com/proforma-by-reference.pdf" },
+      metadata: { url: "https://example.com/proforma-by-reference.pdf" },
     })
 
     await db.insert(payments).values({

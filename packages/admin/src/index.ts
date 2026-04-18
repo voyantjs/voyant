@@ -20,6 +20,7 @@ export {
   type AdminUiRouteContribution,
   type AdminWidgetContribution,
   type AdminWidgetSlot,
+  createAdminExtensionRegistry,
   defineAdminExtension,
   type ResolveAdminNavigationOptions,
   type ResolveAdminWidgetsOptions,

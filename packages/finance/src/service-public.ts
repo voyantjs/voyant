@@ -78,41 +78,7 @@ function maybeUrl(value: string | null | undefined) {
 }
 
 function getMetadataDownloadUrl(record: Record<string, unknown> | null) {
-  const directKeys = [
-    "downloadUrl",
-    "download_url",
-    "signedUrl",
-    "signed_url",
-    "publicUrl",
-    "public_url",
-    "fileUrl",
-    "file_url",
-    "url",
-  ]
-
-  for (const key of directKeys) {
-    const value = getMetadataString(record, key)
-    const url = maybeUrl(value)
-    if (url) {
-      return url
-    }
-  }
-
-  const artifact = record?.artifact
-  if (artifact && typeof artifact === "object" && !Array.isArray(artifact)) {
-    const nested = artifact as Record<string, unknown>
-    for (const key of ["downloadUrl", "download_url", "signedUrl", "publicUrl", "url"]) {
-      const value = nested[key]
-      if (typeof value === "string") {
-        const url = maybeUrl(value)
-        if (url) {
-          return url
-        }
-      }
-    }
-  }
-
-  return null
+  return maybeUrl(getMetadataString(record, "url"))
 }
 
 function toPublicPaymentSession(
@@ -159,10 +125,7 @@ async function mapInvoiceDocument(
     selectedRendition?.storageKey && runtime.resolveDocumentDownloadUrl
       ? await runtime.resolveDocumentDownloadUrl(selectedRendition.storageKey)
       : null
-  const downloadUrl =
-    resolvedDownloadUrl ??
-    getMetadataDownloadUrl(metadata) ??
-    maybeUrl(selectedRendition?.storageKey ?? null)
+  const downloadUrl = resolvedDownloadUrl ?? getMetadataDownloadUrl(metadata)
 
   return {
     invoiceId: invoice.id,

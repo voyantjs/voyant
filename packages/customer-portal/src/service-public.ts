@@ -545,7 +545,7 @@ async function listLegalDocumentsForBooking(
     const downloadUrl =
       attachment.storageKey && options.resolveDocumentDownloadUrl
         ? await options.resolveDocumentDownloadUrl(attachment.storageKey)
-        : getMetadataString(metadata, ["url", "downloadUrl"])
+        : getMetadataString(metadata, ["url"])
     if (!downloadUrl || bestAttachmentByContractId.has(attachment.contractId)) {
       continue
     }
@@ -575,17 +575,7 @@ async function listLegalDocumentsForBooking(
 }
 
 function resolveFinanceDocumentDownloadUrl(metadata: Record<string, unknown> | null) {
-  return getMetadataString(metadata, [
-    "downloadUrl",
-    "download_url",
-    "signedUrl",
-    "signed_url",
-    "publicUrl",
-    "public_url",
-    "fileUrl",
-    "file_url",
-    "url",
-  ])
+  return getMetadataString(metadata, ["url"])
 }
 
 function selectBookingSummaryProductTitle(

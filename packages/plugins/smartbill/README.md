@@ -6,7 +6,7 @@ Architecturally, this package is primarily:
 
 - a SmartBill e-invoicing adapter
 - a subscriber bundle for finance invoice events
-- an optional plugin bundle for distribution
+- an optional packaged bundle when an app wants one installable entrypoint
 
 It subscribes to invoice events and creates, cancels, or syncs invoices via the
 SmartBill REST API for Romanian tax compliance.
@@ -36,9 +36,9 @@ const app = createApp({
 })
 ```
 
-The exported value is an optional distribution bundle. At runtime, the package
-behaves primarily as a subscriber-driven SmartBill sync adapter. By default it
-wires up 3 subscribers (`invoice.issued`, `invoice.voided`,
+`smartbillPlugin(...)` is the packaged distribution helper. At runtime, the
+package behaves primarily as a subscriber-driven SmartBill sync adapter. By
+default it wires up 3 subscribers (`invoice.issued`, `invoice.voided`,
 `invoice.external.sync.requested`) that create, cancel, and check payment
 status on SmartBill. All error handling is fire-and-forget per the EventBus
 contract.
@@ -48,9 +48,9 @@ contract.
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `smartbillPlugin(options)` |
+| `./plugin` | `smartbillPlugin(options)` — packaged adapter/subscriber bundle |
 | `./client` | `createSmartbillClient` — `createInvoice`, `cancelInvoice`, `viewPdf`, `getPaymentStatus`, etc. |
-| `./types` | SmartBill invoice types |
+| `./types` | SmartBill adapter and bundle types |
 
 ## License
 

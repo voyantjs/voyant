@@ -902,7 +902,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
         paidCents: 12000,
         balanceDueCents: 12000,
         documentStatus: "ready",
-        downloadUrl: `https://signed.example.com/finance/${invoice.id}/proforma-1001.pdf`,
+        url: `https://signed.example.com/finance/${invoice.id}/proforma-1001.pdf`,
       }),
     ])
     expect(detail.financials.payments).toEqual([

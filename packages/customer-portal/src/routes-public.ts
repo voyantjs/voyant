@@ -8,6 +8,7 @@ import {
   CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
   type PublicCustomerPortalRouteRuntime,
 } from "./route-runtime.js"
+import { customerPortalRoutes } from "./routes.js"
 import { publicCustomerPortalService } from "./service-public.js"
 import {
   bootstrapCustomerPortalSchema,
@@ -63,6 +64,7 @@ export function createPublicCustomerPortalRoutes(options: PublicCustomerPortalRo
     getRuntime(c).resolveDocumentDownloadUrl?.(storageKey) ?? null
 
   return new Hono<Env>()
+    .route("/", customerPortalRoutes)
     .get("/me", async (c) => {
       const userId = requireUserId(c)
 

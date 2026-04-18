@@ -20,8 +20,9 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 
 ## Routes
 
-- `POST /v1/checkout/bookings/:bookingId/collection-plan`
-- `POST /v1/checkout/bookings/:bookingId/initiate-collection`
+- `POST /v1/public/checkout/bookings/:bookingId/collection-plan`
+- `POST /v1/public/checkout/bookings/:bookingId/initiate-collection`
+- `POST /v1/public/checkout/collections/bootstrap`
 - `GET /v1/admin/checkout/bookings/:bookingId/reminder-runs`
 
 ## Notes
@@ -33,7 +34,7 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
   `resolveBankTransferDetails`
 - email-provider choice remains app-owned
 - projects can override the default collection policy when mounting checkout
-- `createCheckoutHonoModule()` now mounts checkout through Voyant's module
-  system while preserving the legacy `/v1/checkout/*` public path
+- `createCheckoutHonoModule()` mounts checkout under Voyant's shared
+  `/v1/public/*` surface instead of a separate legacy namespace
 - third parties can still ship provider integrations as plugin bundles, but
   checkout itself stays provider-agnostic

@@ -60,6 +60,18 @@ export function defineAdminExtension<T extends AdminExtension>(extension: T): T 
   return extension
 }
 
+/**
+ * Compose an explicit admin extension registry for a template or app shell.
+ *
+ * The admin surface stays source-controlled and typed while still routing
+ * all contributions through the shared admin runtime package.
+ */
+export function createAdminExtensionRegistry(
+  ...extensions: ReadonlyArray<AdminExtension>
+): ReadonlyArray<AdminExtension> {
+  return extensions
+}
+
 type OrderedValue<T> = {
   index: number
   order: number

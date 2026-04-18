@@ -63,7 +63,7 @@ describe("createCheckoutRoutes", () => {
     app.route("/", routes)
 
     const res = await app.request(
-      "/v1/checkout/bookings/book_123/initiate-collection",
+      "/bookings/book_123/initiate-collection",
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -139,7 +139,7 @@ describe("createCheckoutRoutes", () => {
     })
     app.route("/", routes)
 
-    const res = await app.request("/v1/checkout/collections/bootstrap", {
+    const res = await app.request("/collections/bootstrap", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

@@ -23,7 +23,7 @@ import {
 
 export function getCustomerPortalContactExists(client: FetchWithValidationOptions, email: string) {
   return fetchWithValidation(
-    withQueryParams("/v1/customer-portal/contact-exists", { email }),
+    withQueryParams("/v1/public/customer-portal/contact-exists", { email }),
     customerPortalContactExistsResponseSchema,
     client,
   )
@@ -34,7 +34,7 @@ export function getCustomerPortalPhoneContactExists(
   phone: string,
 ) {
   return fetchWithValidation(
-    withQueryParams("/v1/customer-portal/contact-exists/phone", { phone }),
+    withQueryParams("/v1/public/customer-portal/contact-exists/phone", { phone }),
     customerPortalPhoneContactExistsResponseSchema,
     client,
   )

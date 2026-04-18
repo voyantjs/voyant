@@ -6,7 +6,7 @@ Architecturally, this package is primarily:
 
 - a Sanity sync adapter
 - a subscriber bundle that mirrors Voyant module records into Sanity
-- an optional plugin bundle for distribution
+- an optional packaged bundle when an app wants one installable entrypoint
 
 It subscribes to module events and mirrors documents into a Sanity dataset keyed
 by a `voyantId` field.
@@ -36,8 +36,8 @@ const app = createApp({
 })
 ```
 
-Uses GROQ for reads and Sanity Mutations API for writes. The exported value is
-an optional distribution bundle; at runtime the package is primarily a
+Uses GROQ for reads and Sanity Mutations API for writes. `sanityCmsPlugin(...)`
+is the packaged distribution helper; at runtime the package is primarily a
 subscriber-driven Sanity sync adapter. Default `apiVersion` is `"2024-01-01"`.
 By default it wires up 3 subscribers
 (`product.created`, `product.updated`, `product.deleted`).
@@ -47,9 +47,9 @@ By default it wires up 3 subscribers
 | Entry | Description |
 | --- | --- |
 | `.` | Barrel re-exports |
-| `./plugin` | `sanityCmsPlugin(options)` |
+| `./plugin` | `sanityCmsPlugin(options)` — packaged adapter/subscriber bundle |
 | `./client` | `createSanityClient` — `upsertByVoyantId`, `deleteByVoyantId`, `findByVoyantId` |
-| `./types` | Plugin option types |
+| `./types` | Adapter and bundle option types |
 
 ## License
 

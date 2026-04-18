@@ -1,5 +1,15 @@
 # @voyantjs/facilities
 
+## 0.6.6
+
+### Patch Changes
+
+- 6d115a9: Align facilities root indexes with the main list filters and add a facilities-owned address projection so facility reads no longer query identity addresses directly.
+  - @voyantjs/core@0.6.6
+  - @voyantjs/db@0.6.6
+  - @voyantjs/hono@0.6.6
+  - @voyantjs/identity@0.6.6
+
 ## 0.6.5
 
 ### Patch Changes

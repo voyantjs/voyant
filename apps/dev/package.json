@@ -36,6 +36,7 @@
     "@voyantjs/bookings": "workspace:*",
     "@voyantjs/bookings-react": "workspace:*",
     "@voyantjs/checkout": "workspace:*",
+    "@voyantjs/core": "workspace:*",
     "@voyantjs/crm": "workspace:*",
     "@voyantjs/crm-react": "workspace:*",
     "@voyantjs/customer-portal": "workspace:*",

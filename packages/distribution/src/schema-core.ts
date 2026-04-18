@@ -27,10 +27,23 @@ export const channels = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channels_kind").on(table.kind),
-    index("idx_channels_status").on(table.status),
+    index("idx_channels_kind_created").on(table.kind, table.createdAt),
+    index("idx_channels_status_created").on(table.status, table.createdAt),
   ],
 )
+
+export const channelContactProjections = pgTable("channel_contact_projections", {
+  channelId: typeIdRef("channel_id")
+    .primaryKey()
+    .references(() => channels.id, { onDelete: "cascade" }),
+  websiteContactPointId: text("website_contact_point_id"),
+  primaryNamedContactId: text("primary_named_contact_id"),
+  website: text("website"),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
 
 export const channelContracts = pgTable(
   "channel_contracts",
@@ -157,6 +170,8 @@ export const channelWebhookEvents = pgTable(
 
 export type Channel = typeof channels.$inferSelect
 export type NewChannel = typeof channels.$inferInsert
+export type ChannelContactProjection = typeof channelContactProjections.$inferSelect
+export type NewChannelContactProjection = typeof channelContactProjections.$inferInsert
 export type ChannelContract = typeof channelContracts.$inferSelect
 export type NewChannelContract = typeof channelContracts.$inferInsert
 export type ChannelCommissionRule = typeof channelCommissionRules.$inferSelect

@@ -1,4 +1,3 @@
-import { identityContactPoints, identityNamedContacts } from "@voyantjs/identity/schema"
 import { identityService } from "@voyantjs/identity/service"
 import type {
   InsertContactPointForEntity,
@@ -14,6 +13,7 @@ import type { Channel } from "./schema.js"
 import {
   channelBookingLinks,
   channelCommissionRules,
+  channelContactProjections,
   channelContracts,
   channelInventoryAllotments,
   channelInventoryAllotmentTargets,
@@ -186,6 +186,14 @@ type ChannelHydratedFields = {
   contactEmail: string | null
 }
 
+function emptyChannelHydratedFields(): ChannelHydratedFields {
+  return {
+    website: null,
+    contactName: null,
+    contactEmail: null,
+  }
+}
+
 async function paginate<T extends object>(
   rowsQuery: Promise<T[]>,
   countQuery: Promise<Array<{ count: number }>>,
@@ -302,6 +310,7 @@ async function syncChannelIdentity(
       await identityService.deleteNamedContact(db, managedPrimaryContact.id)
     }
 
+    await rebuildChannelContactProjection(db, channelId)
     return
   }
 
@@ -322,6 +331,8 @@ async function syncChannelIdentity(
   } else {
     await identityService.createNamedContact(db, namedContactPayload)
   }
+
+  await rebuildChannelContactProjection(db, channelId)
 }
 
 async function deleteChannelIdentity(db: PostgresJsDatabase, channelId: string) {
@@ -334,6 +345,39 @@ async function deleteChannelIdentity(db: PostgresJsDatabase, channelId: string) 
     ...contactPoints.map((point) => identityService.deleteContactPoint(db, point.id)),
     ...namedContacts.map((contact) => identityService.deleteNamedContact(db, contact.id)),
   ])
+
+  await rebuildChannelContactProjection(db, channelId)
+}
+
+async function rebuildChannelContactProjection(db: PostgresJsDatabase, channelId: string) {
+  const [contactPoints, namedContacts] = await Promise.all([
+    identityService.listContactPointsForEntity(db, channelEntityType, channelId),
+    identityService.listNamedContactsForEntity(db, channelEntityType, channelId),
+  ])
+
+  const primaryWebsite =
+    contactPoints.find((point) => point.kind === "website" && point.isPrimary) ??
+    contactPoints.find((point) => point.kind === "website") ??
+    null
+  const primaryContact =
+    namedContacts.find((contact) => contact.isPrimary) ?? namedContacts[0] ?? null
+
+  await db
+    .delete(channelContactProjections)
+    .where(eq(channelContactProjections.channelId, channelId))
+
+  if (!primaryWebsite && !primaryContact) {
+    return
+  }
+
+  await db.insert(channelContactProjections).values({
+    channelId,
+    websiteContactPointId: primaryWebsite?.id ?? null,
+    primaryNamedContactId: primaryContact?.id ?? null,
+    website: primaryWebsite?.value ?? null,
+    contactName: primaryContact?.name ?? null,
+    contactEmail: primaryContact?.email ?? null,
+  })
 }
 
 async function hydrateChannels<T extends { id: string }>(
@@ -341,66 +385,25 @@ async function hydrateChannels<T extends { id: string }>(
   rows: T[],
 ): Promise<Array<T & ChannelHydratedFields>> {
   if (rows.length === 0) {
-    return rows.map((row) => ({
-      ...row,
-      website: null,
-      contactName: null,
-      contactEmail: null,
-    }))
+    return rows.map((row) => ({ ...row, ...emptyChannelHydratedFields() }))
   }
 
   const ids = rows.map((row) => row.id)
-  const [contactPoints, namedContacts] = await Promise.all([
-    db
-      .select()
-      .from(identityContactPoints)
-      .where(
-        and(
-          eq(identityContactPoints.entityType, channelEntityType),
-          inArray(identityContactPoints.entityId, ids),
-        ),
-      ),
-    db
-      .select()
-      .from(identityNamedContacts)
-      .where(
-        and(
-          eq(identityNamedContacts.entityType, channelEntityType),
-          inArray(identityNamedContacts.entityId, ids),
-        ),
-      ),
-  ])
+  const projections = await db
+    .select()
+    .from(channelContactProjections)
+    .where(inArray(channelContactProjections.channelId, ids))
 
-  const contactPointMap = new Map<string, typeof contactPoints>()
-  const namedContactMap = new Map<string, typeof namedContacts>()
-
-  for (const point of contactPoints) {
-    const bucket = contactPointMap.get(point.entityId) ?? []
-    bucket.push(point)
-    contactPointMap.set(point.entityId, bucket)
-  }
-
-  for (const contact of namedContacts) {
-    const bucket = namedContactMap.get(contact.entityId) ?? []
-    bucket.push(contact)
-    namedContactMap.set(contact.entityId, bucket)
-  }
+  const projectionMap = new Map(projections.map((projection) => [projection.channelId, projection]))
 
   return rows.map((row) => {
-    const entityContactPoints = contactPointMap.get(row.id) ?? []
-    const entityNamedContacts = namedContactMap.get(row.id) ?? []
-    const primaryWebsite =
-      entityContactPoints.find((point) => point.kind === "website" && point.isPrimary) ??
-      entityContactPoints.find((point) => point.kind === "website") ??
-      null
-    const primaryContact =
-      entityNamedContacts.find((contact) => contact.isPrimary) ?? entityNamedContacts[0] ?? null
+    const projection = projectionMap.get(row.id)
 
     return {
       ...row,
-      website: primaryWebsite?.value ?? null,
-      contactName: primaryContact?.name ?? null,
-      contactEmail: primaryContact?.email ?? null,
+      website: projection?.website ?? null,
+      contactName: projection?.contactName ?? null,
+      contactEmail: projection?.contactEmail ?? null,
     }
   })
 }
@@ -492,19 +495,42 @@ export const distributionService = {
     const channel = await ensureChannelExists(db, channelId)
     if (!channel) return null
 
-    return identityService.createContactPoint(db, {
+    const row = await identityService.createContactPoint(db, {
       ...data,
       entityType: channelEntityType,
       entityId: channelId,
     })
+
+    await rebuildChannelContactProjection(db, channelId)
+
+    return row
   },
 
-  updateChannelContactPoint(db: PostgresJsDatabase, id: string, data: UpdateIdentityContactPoint) {
-    return identityService.updateContactPoint(db, id, data)
+  async updateChannelContactPoint(
+    db: PostgresJsDatabase,
+    id: string,
+    data: UpdateIdentityContactPoint,
+  ) {
+    const existing = await identityService.getContactPointById(db, id)
+    if (!existing) return null
+
+    const row = await identityService.updateContactPoint(db, id, data)
+    if (row?.entityType === channelEntityType) {
+      await rebuildChannelContactProjection(db, row.entityId)
+    }
+
+    return row
   },
 
-  deleteChannelContactPoint(db: PostgresJsDatabase, id: string) {
-    return identityService.deleteContactPoint(db, id)
+  async deleteChannelContactPoint(db: PostgresJsDatabase, id: string) {
+    const existing = await identityService.getContactPointById(db, id)
+    const row = await identityService.deleteContactPoint(db, id)
+
+    if (row && existing?.entityType === channelEntityType) {
+      await rebuildChannelContactProjection(db, existing.entityId)
+    }
+
+    return row
   },
 
   async listChannelContacts(db: PostgresJsDatabase, channelId: string) {
@@ -521,19 +547,38 @@ export const distributionService = {
     const channel = await ensureChannelExists(db, channelId)
     if (!channel) return null
 
-    return identityService.createNamedContact(db, {
+    const row = await identityService.createNamedContact(db, {
       ...data,
       entityType: channelEntityType,
       entityId: channelId,
     })
+
+    await rebuildChannelContactProjection(db, channelId)
+
+    return row
   },
 
-  updateChannelContact(db: PostgresJsDatabase, id: string, data: UpdateIdentityNamedContact) {
-    return identityService.updateNamedContact(db, id, data)
+  async updateChannelContact(db: PostgresJsDatabase, id: string, data: UpdateIdentityNamedContact) {
+    const existing = await identityService.getNamedContactById(db, id)
+    if (!existing) return null
+
+    const row = await identityService.updateNamedContact(db, id, data)
+    if (row?.entityType === channelEntityType) {
+      await rebuildChannelContactProjection(db, row.entityId)
+    }
+
+    return row
   },
 
-  deleteChannelContact(db: PostgresJsDatabase, id: string) {
-    return identityService.deleteNamedContact(db, id)
+  async deleteChannelContact(db: PostgresJsDatabase, id: string) {
+    const existing = await identityService.getNamedContactById(db, id)
+    const row = await identityService.deleteNamedContact(db, id)
+
+    if (row && existing?.entityType === channelEntityType) {
+      await rebuildChannelContactProjection(db, existing.entityId)
+    }
+
+    return row
   },
 
   async listContracts(db: PostgresJsDatabase, query: ChannelContractListQuery) {

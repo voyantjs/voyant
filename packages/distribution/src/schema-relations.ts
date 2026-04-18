@@ -10,6 +10,7 @@ import {
 import {
   channelBookingLinks,
   channelCommissionRules,
+  channelContactProjections,
   channelContracts,
   channelProductMappings,
   channels,
@@ -30,7 +31,7 @@ import {
   channelInventoryReleaseRules,
 } from "./schema-inventory"
 
-export const channelsRelations = relations(channels, ({ many }) => ({
+export const channelsRelations = relations(channels, ({ many, one }) => ({
   contracts: many(channelContracts),
   productMappings: many(channelProductMappings),
   bookingLinks: many(channelBookingLinks),
@@ -41,7 +42,21 @@ export const channelsRelations = relations(channels, ({ many }) => ({
   settlementPolicies: many(channelSettlementPolicies),
   reconciliationPolicies: many(channelReconciliationPolicies),
   remittanceExceptions: many(channelRemittanceExceptions),
+  contactProjection: one(channelContactProjections, {
+    fields: [channels.id],
+    references: [channelContactProjections.channelId],
+  }),
 }))
+
+export const channelContactProjectionsRelations = relations(
+  channelContactProjections,
+  ({ one }) => ({
+    channel: one(channels, {
+      fields: [channelContactProjections.channelId],
+      references: [channels.id],
+    }),
+  }),
+)
 
 export const channelContractsRelations = relations(channelContracts, ({ one, many }) => ({
   channel: one(channels, { fields: [channelContracts.channelId], references: [channels.id] }),

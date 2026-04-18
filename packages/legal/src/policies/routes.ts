@@ -36,7 +36,7 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- policies ----------
 
   .get("/", async (c) => {
-    const query = await parseQuery(c, policyListQuerySchema)
+    const query = parseQuery(c, policyListQuerySchema)
     return c.json(await policiesService.listPolicies(c.get("db"), query))
   })
 
@@ -49,7 +49,7 @@ export const policiesAdminRoutes = new Hono<Env>()
   })
 
   .get("/resolve", async (c) => {
-    const input = await parseQuery(c, resolvePolicyInputSchema)
+    const input = parseQuery(c, resolvePolicyInputSchema)
     const result = await policiesService.resolvePolicy(c.get("db"), input)
     if (!result) return c.json({ data: null })
     return c.json({ data: result })
@@ -168,7 +168,7 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- assignments ----------
 
   .get("/assignments", async (c) => {
-    const query = await parseQuery(c, policyAssignmentListQuerySchema)
+    const query = parseQuery(c, policyAssignmentListQuerySchema)
     return c.json(await policiesService.listPolicyAssignments(c.get("db"), query))
   })
 
@@ -199,7 +199,7 @@ export const policiesAdminRoutes = new Hono<Env>()
   // ---------- acceptances ----------
 
   .get("/acceptances", async (c) => {
-    const query = await parseQuery(c, policyAcceptanceListQuerySchema)
+    const query = parseQuery(c, policyAcceptanceListQuerySchema)
     return c.json(await policiesService.listPolicyAcceptances(c.get("db"), query))
   })
 

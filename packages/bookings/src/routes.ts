@@ -904,7 +904,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createSupplierStatus(
       c.get("db"),
       c.req.param("id"),
-      insertSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertSupplierStatusSchema),
       c.get("userId"),
     )
 
@@ -920,7 +920,7 @@ export const bookingRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("statusId"),
-      updateSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierStatusSchema),
       c.get("userId"),
     )
 
@@ -943,7 +943,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.issueFulfillment(
       c.get("db"),
       c.req.param("id"),
-      insertBookingFulfillmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingFulfillmentSchema),
       c.get("userId"),
     )
 
@@ -959,7 +959,7 @@ export const bookingRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("fulfillmentId"),
-      updateBookingFulfillmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingFulfillmentSchema),
       c.get("userId"),
     )
 
@@ -984,7 +984,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.recordRedemption(
       c.get("db"),
       c.req.param("id"),
-      recordBookingRedemptionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, recordBookingRedemptionSchema),
       c.get("userId"),
     )
 
@@ -1033,7 +1033,7 @@ export const bookingRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertBookingNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingNoteSchema),
     )
 
     if (!row) {
@@ -1057,7 +1057,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createDocument(
       c.get("db"),
       c.req.param("id"),
-      insertBookingDocumentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingDocumentSchema),
     )
 
     if (!row) {

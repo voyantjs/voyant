@@ -1,5 +1,16 @@
 # @voyantjs/suppliers
 
+## 0.6.4
+
+### Patch Changes
+
+- d6c4022: Align supplier child-list indexes with the actual parent-and-sort query shapes used for services, rates, notes, availability, and contracts, and add a supplier-owned directory projection so supplier reads no longer hydrate identity data from three cross-module tables on every list and detail fetch.
+  - @voyantjs/core@0.6.4
+  - @voyantjs/db@0.6.4
+  - @voyantjs/facilities@0.6.4
+  - @voyantjs/hono@0.6.4
+  - @voyantjs/identity@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes

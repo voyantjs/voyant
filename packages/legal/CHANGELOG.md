@@ -1,5 +1,18 @@
 # @voyantjs/legal
 
+## 0.6.4
+
+### Patch Changes
+
+- Updated dependencies [d6c4022]
+  - @voyantjs/core@0.6.4
+  - @voyantjs/crm@0.6.4
+  - @voyantjs/db@0.6.4
+  - @voyantjs/hono@0.6.4
+  - @voyantjs/voyant-storage@0.6.4
+  - @voyantjs/suppliers@0.6.4
+  - @voyantjs/utils@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @voyantjs/distribution
 
+## 0.6.4
+
+### Patch Changes
+
+- Updated dependencies [d6c4022]
+  - @voyantjs/availability@0.6.4
+  - @voyantjs/core@0.6.4
+  - @voyantjs/db@0.6.4
+  - @voyantjs/hono@0.6.4
+  - @voyantjs/identity@0.6.4
+  - @voyantjs/products@0.6.4
+  - @voyantjs/suppliers@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes

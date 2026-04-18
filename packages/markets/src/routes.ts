@@ -39,7 +39,7 @@ type Env = {
 
 export const marketsRoutes = new Hono<Env>()
   .get("/markets", async (c) => {
-    const query = parseQuery(c, marketListQuerySchema)
+    const query = await parseQuery(c, marketListQuerySchema)
     return c.json(await marketsService.listMarkets(c.get("db"), query))
   })
   .post("/markets", async (c) => {
@@ -73,7 +73,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/market-locales", async (c) => {
-    const query = parseQuery(c, marketLocaleListQuerySchema)
+    const query = await parseQuery(c, marketLocaleListQuerySchema)
     return c.json(await marketsService.listMarketLocales(c.get("db"), query))
   })
   .post("/markets/:id/locales", async (c) => {
@@ -100,7 +100,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/market-currencies", async (c) => {
-    const query = parseQuery(c, marketCurrencyListQuerySchema)
+    const query = await parseQuery(c, marketCurrencyListQuerySchema)
     return c.json(await marketsService.listMarketCurrencies(c.get("db"), query))
   })
   .post("/markets/:id/currencies", async (c) => {
@@ -127,7 +127,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/fx-rate-sets", async (c) => {
-    const query = parseQuery(c, fxRateSetListQuerySchema)
+    const query = await parseQuery(c, fxRateSetListQuerySchema)
     return c.json(await marketsService.listFxRateSets(c.get("db"), query))
   })
   .post("/fx-rate-sets", async (c) => {
@@ -161,7 +161,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/exchange-rates", async (c) => {
-    const query = parseQuery(c, exchangeRateListQuerySchema)
+    const query = await parseQuery(c, exchangeRateListQuerySchema)
     return c.json(await marketsService.listExchangeRates(c.get("db"), query))
   })
   .post("/fx-rate-sets/:id/exchange-rates", async (c) => {
@@ -188,7 +188,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/price-catalogs", async (c) => {
-    const query = parseQuery(c, marketPriceCatalogListQuerySchema)
+    const query = await parseQuery(c, marketPriceCatalogListQuerySchema)
     return c.json(await marketsService.listMarketPriceCatalogs(c.get("db"), query))
   })
   .post("/price-catalogs", async (c) => {
@@ -219,7 +219,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/product-rules", async (c) => {
-    const query = parseQuery(c, marketProductRuleListQuerySchema)
+    const query = await parseQuery(c, marketProductRuleListQuerySchema)
     return c.json(await marketsService.listMarketProductRules(c.get("db"), query))
   })
   .post("/product-rules", async (c) => {
@@ -250,7 +250,7 @@ export const marketsRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/channel-rules", async (c) => {
-    const query = parseQuery(c, marketChannelRuleListQuerySchema)
+    const query = await parseQuery(c, marketChannelRuleListQuerySchema)
     return c.json(await marketsService.listMarketChannelRules(c.get("db"), query))
   })
   .post("/channel-rules", async (c) => {

@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -20,9 +21,7 @@ type Env = {
 
 export const opportunityRoutes = new Hono<Env>()
   .get("/opportunities", async (c) => {
-    const query = opportunityListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, opportunityListQuerySchema)
     return c.json(await crmService.listOpportunities(c.get("db"), query))
   })
   .post("/opportunities", async (c) => {
@@ -30,7 +29,7 @@ export const opportunityRoutes = new Hono<Env>()
       {
         data: await crmService.createOpportunity(
           c.get("db"),
-          insertOpportunitySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOpportunitySchema),
         ),
       },
       201,
@@ -45,7 +44,7 @@ export const opportunityRoutes = new Hono<Env>()
     const row = await crmService.updateOpportunity(
       c.get("db"),
       c.req.param("id"),
-      updateOpportunitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOpportunitySchema),
     )
     if (!row) return c.json({ error: "Opportunity not found" }, 404)
     return c.json({ data: row })
@@ -66,7 +65,7 @@ export const opportunityRoutes = new Hono<Env>()
         data: await crmService.createOpportunityParticipant(
           c.get("db"),
           c.req.param("id"),
-          insertOpportunityParticipantSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOpportunityParticipantSchema),
         ),
       },
       201,
@@ -88,7 +87,7 @@ export const opportunityRoutes = new Hono<Env>()
         data: await crmService.createOpportunityProduct(
           c.get("db"),
           c.req.param("id"),
-          insertOpportunityProductSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOpportunityProductSchema),
         ),
       },
       201,
@@ -98,7 +97,7 @@ export const opportunityRoutes = new Hono<Env>()
     const row = await crmService.updateOpportunityProduct(
       c.get("db"),
       c.req.param("id"),
-      updateOpportunityProductSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOpportunityProductSchema),
     )
     if (!row) return c.json({ error: "Opportunity product not found" }, 404)
     return c.json({ data: row })

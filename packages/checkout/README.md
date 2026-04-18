@@ -26,7 +26,7 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 
 ## Notes
 
-- payment-provider plugins like Netopia remain optional
+- payment-provider adapters like Netopia remain optional
 - provider startup is injected through `paymentStarters` or
   `resolvePaymentStarters`
 - bank-transfer instructions are injected through `bankTransferDetails` or
@@ -35,3 +35,5 @@ This package sits above `@voyantjs/finance` and `@voyantjs/notifications`. It do
 - projects can override the default collection policy when mounting checkout
 - `createCheckoutHonoModule()` now mounts checkout through Voyant's module
   system while preserving the legacy `/v1/checkout/*` public path
+- third parties can still ship provider integrations as plugin bundles, but
+  checkout itself stays provider-agnostic

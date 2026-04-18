@@ -88,6 +88,25 @@ export async function parseJsonBody<T>(
   return validate(schema, input, options?.invalidBodyMessage)
 }
 
+export async function parseOptionalJsonBody<T>(
+  c: Context,
+  schema: ZodType<T>,
+  options?: {
+    defaultValue?: unknown
+    invalidBodyMessage?: string
+  },
+): Promise<T> {
+  let input: unknown
+
+  try {
+    input = await c.req.json()
+  } catch {
+    input = options?.defaultValue ?? {}
+  }
+
+  return validate(schema, input, options?.invalidBodyMessage)
+}
+
 export function parseQuery<T>(
   c: Context,
   schema: ZodType<T>,

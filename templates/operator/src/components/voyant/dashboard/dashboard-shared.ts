@@ -40,7 +40,7 @@ export function getDashboardProductsQueryOptions() {
 export function getDashboardSuppliersQueryOptions() {
   return queryOptions({
     queryKey: ["dashboard-suppliers"],
-    queryFn: () => api.get<{ data: SupplierRow[]; total: number }>("/v1/admin/suppliers?limit=100"),
+    queryFn: () => api.get<{ data: SupplierRow[]; total: number }>("/v1/suppliers?limit=100"),
     staleTime: 60_000,
   })
 }

@@ -6,10 +6,14 @@ import {
   Scripts,
   useRouteContext,
 } from "@tanstack/react-router"
+import { RefreshCcw } from "lucide-react"
 import type { ReactNode } from "react"
-import { Toaster } from "@/components/ui"
+import { Button, Toaster } from "@/components/ui"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
 import { Providers } from "../components/providers"
+import { ApiError } from "../lib/api-client"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -33,6 +37,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   // shellComponent is always SSR'd — renders the <html> document shell
   shellComponent: RootShell,
   component: RootComponent,
+  errorComponent: RootErrorBoundary,
 })
 
 function RootShell({ children }: { children: ReactNode }) {
@@ -60,5 +65,40 @@ function RootComponent() {
       <Outlet />
       <Toaster />
     </Providers>
+  )
+}
+
+function RootErrorBoundary({ error, reset }: { error: unknown; reset: () => void }) {
+  const message =
+    error instanceof ApiError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : "Something went wrong while loading this page."
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <Empty className="max-w-xl border border-border bg-card p-8">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <RefreshCcw className="size-5" />
+          </EmptyMedia>
+          <EmptyTitle>Something went wrong</EmptyTitle>
+        </EmptyHeader>
+        <EmptyContent>
+          <Alert variant="destructive" className="text-left">
+            <AlertTitle>Request failed</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => reset()}>Try again</Button>
+            <Button variant="outline" onClick={() => window.location.assign("/")}>
+              Go to dashboard
+            </Button>
+          </div>
+        </EmptyContent>
+      </Empty>
+      <Toaster />
+    </div>
   )
 }

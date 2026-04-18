@@ -175,6 +175,10 @@ Rule:
 
 Do not overload user-session auth to cover every non-user access pattern.
 
+For the current token-signing baseline and the threshold for eventual JWKS-style
+distribution, see
+[`token-signing-and-key-distribution-policy.md`](./token-signing-and-key-distribution-policy.md).
+
 ## Product Guidance
 
 ### 11. Templates should compose the auth surface, not redefine it
@@ -220,6 +224,8 @@ When adding auth-sensitive functionality in Voyant:
 5. Reuse shared identity/profile storage for runtime preferences and customer
    identity data where appropriate.
 6. Do not rebuild auth semantics inside the module itself.
+7. Keep token-format and verification details inside shared auth/runtime
+   surfaces.
 
 ## Non-Goals
 

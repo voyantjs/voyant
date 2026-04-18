@@ -32,7 +32,7 @@ it into an active architecture requirement.
 
 ## Promoted Since Drafting
 
-The following item has moved into active architecture guidance:
+The following items have moved into active architecture guidance:
 
 - advanced constraint and index policy
   see [`data-model-schema-authoring.md`](./data-model-schema-authoring.md) and
@@ -42,6 +42,9 @@ The following item has moved into active architecture guidance:
 - event delivery and durable execution policy
   see
   [`event-delivery-and-durable-execution-policy.md`](./event-delivery-and-durable-execution-policy.md)
+- token signing and key distribution policy
+  see
+  [`token-signing-and-key-distribution-policy.md`](./token-signing-and-key-distribution-policy.md)
 
 ## Deferred Areas
 
@@ -79,21 +82,6 @@ Why deferred:
 - this is a scale/performance optimization problem, not a baseline architecture
   blocker
 - it depends on real workload evidence
-
-### 3. Asymmetric signing / JWKS-style auth distribution
-
-Voyant’s current shared-secret session model is sufficient for the present auth
-surface.
-
-Future work may be justified when Voyant needs:
-
-- cross-service token verification at scale
-- external token consumers
-- formal key rotation and JWKS distribution
-
-Why deferred:
-
-- current Better Auth and session usage do not require this complexity yet
 
 ## Review Guidance
 

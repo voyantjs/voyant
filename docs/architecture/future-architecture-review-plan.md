@@ -120,6 +120,12 @@ Do not do first:
 
 ### 4. Asymmetric signing / JWKS-style auth distribution
 
+Status:
+
+- promoted into active guidance
+- see
+  [`token-signing-and-key-distribution-policy.md`](./token-signing-and-key-distribution-policy.md)
+
 Why fourth:
 
 - it introduces real security and operational surface area

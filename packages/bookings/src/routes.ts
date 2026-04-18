@@ -1,10 +1,14 @@
-import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
+import {
+  BOOKING_ROUTE_RUNTIME_CONTAINER_KEY,
+  type BookingRouteRuntime,
+  buildBookingRouteRuntime,
+} from "./route-runtime.js"
 import { bookingGroupRoutes } from "./routes-groups.js"
 import type { publicBookingRoutes } from "./routes-public.js"
-import { type Env, getRuntimeEnv } from "./routes-shared.js"
+import type { Env } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
 import { bookingsService } from "./service.js"
 import { bookingGroupsService } from "./service-groups.js"
@@ -154,6 +158,38 @@ function handleKmsConfigError(c: Context<Env>, error: unknown) {
   }
 
   return c.json({ error: "Booking PII encryption is not configured" }, 500)
+}
+
+function getRouteRuntime(c: Context<Env>): BookingRouteRuntime {
+  try {
+    return (
+      c.var.container?.resolve<BookingRouteRuntime>(BOOKING_ROUTE_RUNTIME_CONTAINER_KEY) ??
+      buildBookingRouteRuntime(c.env)
+    )
+  } catch {
+    return buildBookingRouteRuntime(c.env)
+  }
+}
+
+function createAuditedBookingPiiService(c: Context<Env>, bookingId: string) {
+  const runtime = getRouteRuntime(c)
+
+  return createBookingPiiService({
+    kms: runtime.getKmsProvider(),
+    onAudit: async (event) => {
+      await logBookingPiiAccess(c, {
+        bookingId,
+        participantId: event.participantId,
+        action:
+          event.action === "encrypt"
+            ? "update"
+            : event.action === "decrypt"
+              ? "read"
+              : event.action,
+        outcome: "allowed",
+      })
+    },
+  })
 }
 
 // ==========================================================================
@@ -552,22 +588,7 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const details = await pii.getParticipantTravelDetails(
         c.get("db"),
         participant.id,
@@ -636,22 +657,7 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const row = await pii.upsertParticipantTravelDetails(
         c.get("db"),
         participant.id,
@@ -713,22 +719,7 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const row = await pii.deleteParticipantTravelDetails(
         c.get("db"),
         participant.id,

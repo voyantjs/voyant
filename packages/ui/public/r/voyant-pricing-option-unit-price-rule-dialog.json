@@ -3,20 +3,8 @@
   "name": "voyant-pricing-option-unit-price-rule-dialog",
   "title": "Option Unit Price Rule Dialog",
   "description": "Create/edit dialog for per-unit option pricing rules with linked option rule and pricing category lookups.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/pricing/option-unit-price-rule-dialog.tsx",

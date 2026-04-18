@@ -3,15 +3,8 @@
   "name": "voyant-bookings-notes",
   "title": "Booking Notes",
   "description": "Notes composer and timeline for a booking detail page.",
-  "dependencies": [
-    "@voyantjs/bookings-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "card",
-    "textarea"
-  ],
+  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+  "registryDependencies": ["button", "card", "textarea"],
   "files": [
     {
       "path": "registry/bookings/booking-notes.tsx",

@@ -1,10 +1,7 @@
 import { createContainer } from "@voyantjs/core"
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY,
-  createCheckoutHonoModule,
-} from "../../src/index.js"
+import { CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY, createCheckoutHonoModule } from "../../src/index.js"
 
 describe("createCheckoutHonoModule", () => {
   it("registers checkout route runtime during bootstrap", () => {

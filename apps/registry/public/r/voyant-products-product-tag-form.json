@@ -3,15 +3,8 @@
   "name": "voyant-products-product-tag-form",
   "title": "Product Tag Form",
   "description": "Create/edit form for product tags, wired to products-react tag mutations.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "input",
-    "label"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "input", "label"],
   "files": [
     {
       "path": "registry/products/product-tag-form.tsx",

@@ -3,17 +3,8 @@
   "name": "voyant-pricing-option-price-rules-page",
   "title": "Option Price Rules Page",
   "description": "Server-paginated CRUD table for option price rules with hydrated product and pricing labels.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "table",
-    "voyant-pricing-option-price-rule-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["badge", "button", "table", "voyant-pricing-option-price-rule-dialog"],
   "files": [
     {
       "path": "registry/pricing/option-price-rules-page.tsx",

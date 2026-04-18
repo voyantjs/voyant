@@ -3,11 +3,7 @@
   "name": "voyant-products-product-availability-section",
   "title": "Product Availability Section",
   "description": "Shared departures and recurring schedules surface for a single product.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/availability",
-    "@voyantjs/availability-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/availability", "@voyantjs/availability-react"],
   "registryDependencies": [
     "badge",
     "button",

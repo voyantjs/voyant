@@ -3,10 +3,7 @@
   "name": "voyant-crm-activities-page",
   "title": "Activities Page",
   "description": "CRM activities timeline page with status and type filters.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/crm-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
   "registryDependencies": [
     "badge",
     "button",

@@ -3,10 +3,7 @@
   "name": "voyant-bookings-booking-item-list",
   "title": "Booking Item List",
   "description": "Booking items section for a booking detail page, including create, edit, and delete actions.",
-  "dependencies": [
-    "@voyantjs/bookings-react",
-    "lucide-react"
-  ],
+  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
   "registryDependencies": [
     "badge",
     "button",

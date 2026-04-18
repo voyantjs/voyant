@@ -3,16 +3,8 @@
   "name": "voyant-identity-contact-points-tab",
   "title": "Identity Contact Points Tab",
   "description": "Server-paginated CRUD table for entity contact points.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/identity-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "data-table",
-    "voyant-identity-contact-point-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+  "registryDependencies": ["badge", "button", "data-table", "voyant-identity-contact-point-dialog"],
   "files": [
     {
       "path": "registry/identity/contact-points-tab.tsx",

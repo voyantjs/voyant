@@ -3,12 +3,8 @@
   "name": "voyant-sellability-product-option-combobox",
   "title": "Sellability Product Option Combobox",
   "description": "Scoped product option picker for option-level sellability policies.",
-  "dependencies": [
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "combobox"
-  ],
+  "dependencies": ["@voyantjs/products-react"],
+  "registryDependencies": ["combobox"],
   "files": [
     {
       "path": "registry/sellability/product-option-combobox.tsx",

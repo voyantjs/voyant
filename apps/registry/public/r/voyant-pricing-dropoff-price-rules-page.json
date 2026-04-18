@@ -3,17 +3,8 @@
   "name": "voyant-pricing-dropoff-price-rules-page",
   "title": "Dropoff Price Rules Page",
   "description": "Server-paginated CRUD table for dropoff-point pricing rules attached to option price rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "table",
-    "voyant-pricing-dropoff-price-rule-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["badge", "button", "table", "voyant-pricing-dropoff-price-rule-dialog"],
   "files": [
     {
       "path": "registry/pricing/dropoff-price-rules-page.tsx",

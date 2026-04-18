@@ -3,10 +3,7 @@
   "name": "voyant-sellability-page",
   "title": "Sellability Page",
   "description": "Server-paginated sellability policy manager with scope and status filters.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/sellability-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/sellability-react"],
   "registryDependencies": [
     "badge",
     "button",

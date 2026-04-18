@@ -3,19 +3,8 @@
   "name": "voyant-pricing-cancellation-policy-rule-dialog",
   "title": "Cancellation Fee Rule Dialog",
   "description": "Create/edit dialog for ordered cancellation fee rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/pricing/cancellation-policy-rule-dialog.tsx",

@@ -3,18 +3,8 @@
   "name": "voyant-hospitality-meal-plan-dialog",
   "title": "Meal Plan Dialog",
   "description": "Modal form for creating and editing hospitality meal plans.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/hospitality-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
   "files": [
     {
       "path": "registry/hospitality/meal-plan-dialog.tsx",

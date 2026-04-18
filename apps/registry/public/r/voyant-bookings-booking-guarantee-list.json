@@ -3,16 +3,8 @@
   "name": "voyant-bookings-booking-guarantee-list",
   "title": "Booking Guarantee List",
   "description": "Guarantee section for booking detail page with inline CRUD.",
-  "dependencies": [
-    "@voyantjs/finance-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "card",
-    "voyant-bookings-booking-guarantee-dialog"
-  ],
+  "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+  "registryDependencies": ["badge", "button", "card", "voyant-bookings-booking-guarantee-dialog"],
   "files": [
     {
       "path": "registry/bookings/booking-guarantee-list.tsx",

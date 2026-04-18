@@ -3,11 +3,7 @@
   "name": "voyant-pricing-price-catalog-dialog",
   "title": "Price Catalog Dialog",
   "description": "Create/edit dialog for price catalogs, wired to pricing-react mutations.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/utils"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/utils"],
   "registryDependencies": [
     "button",
     "combobox",

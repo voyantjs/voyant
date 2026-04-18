@@ -3,16 +3,8 @@
   "name": "voyant-legal-attachment-dialog",
   "title": "Contract Attachment Dialog",
   "description": "Create and edit dialog for legal contract attachments.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/legal-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/legal-react"],
+  "registryDependencies": ["button", "dialog", "input", "label"],
   "files": [
     {
       "path": "registry/legal/attachment-dialog.tsx",

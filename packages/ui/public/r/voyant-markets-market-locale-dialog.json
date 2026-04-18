@@ -3,16 +3,8 @@
   "name": "voyant-markets-market-locale-dialog",
   "title": "Market Locale Dialog",
   "description": "Create/edit dialog for market locale records.",
-  "dependencies": [
-    "@voyantjs/markets-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "input",
-    "label",
-    "switch"
-  ],
+  "dependencies": ["@voyantjs/markets-react", "lucide-react"],
+  "registryDependencies": ["dialog", "input", "label", "switch"],
   "files": [
     {
       "path": "registry/markets/market-locale-dialog.tsx",

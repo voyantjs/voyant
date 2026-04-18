@@ -3,16 +3,8 @@
   "name": "voyant-products-product-versions-section",
   "title": "Product Versions Section",
   "description": "Version snapshot history for a single product.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "card",
-    "dialog",
-    "voyant-products-product-version-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "card", "dialog", "voyant-products-product-version-dialog"],
   "files": [
     {
       "path": "registry/products/product-versions-section.tsx",

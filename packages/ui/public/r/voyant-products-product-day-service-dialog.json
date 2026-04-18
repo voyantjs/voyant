@@ -3,13 +3,8 @@
   "name": "voyant-products-product-day-service-dialog",
   "title": "Product Day Service Dialog",
   "description": "Modal wrapper around Product Day Service Form with create/edit modes.",
-  "dependencies": [
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "voyant-products-product-day-service-form"
-  ],
+  "dependencies": ["@voyantjs/products-react"],
+  "registryDependencies": ["dialog", "voyant-products-product-day-service-form"],
   "files": [
     {
       "path": "registry/products/product-day-service-dialog.tsx",

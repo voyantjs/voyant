@@ -3,20 +3,8 @@
   "name": "voyant-pricing-option-start-time-rule-dialog",
   "title": "Option Start Time Rule Dialog",
   "description": "Create/edit dialog for option start time pricing adjustments and overrides.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/pricing/option-start-time-rule-dialog.tsx",

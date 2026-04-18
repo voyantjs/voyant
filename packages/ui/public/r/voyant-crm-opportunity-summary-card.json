@@ -3,13 +3,8 @@
   "name": "voyant-crm-opportunity-summary-card",
   "title": "Opportunity Summary Card",
   "description": "Summary card for an opportunity detail view with value, stage, and status.",
-  "dependencies": [
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "card"
-  ],
+  "dependencies": ["lucide-react"],
+  "registryDependencies": ["badge", "card"],
   "files": [
     {
       "path": "registry/crm/opportunity-summary-card.tsx",

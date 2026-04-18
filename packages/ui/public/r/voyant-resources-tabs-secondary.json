@@ -3,9 +3,7 @@
   "name": "voyant-resources-tabs-secondary",
   "title": "Resources Secondary Tabs",
   "description": "Tab panels for slot assignments and closeouts with bulk actions and data tables.",
-  "dependencies": [
-    "@voyantjs/resources-react"
-  ],
+  "dependencies": ["@voyantjs/resources-react"],
   "registryDependencies": [
     "tabs",
     "table",

@@ -3,12 +3,8 @@
   "name": "voyant-resources-section-header",
   "title": "Resources Section Header",
   "description": "Reusable section header with title, description, and create action for resource management screens.",
-  "dependencies": [
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "button"
-  ],
+  "dependencies": ["lucide-react"],
+  "registryDependencies": ["button"],
   "files": [
     {
       "path": "registry/resources/resources-section-header.tsx",

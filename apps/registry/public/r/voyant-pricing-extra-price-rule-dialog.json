@@ -3,20 +3,8 @@
   "name": "voyant-pricing-extra-price-rule-dialog",
   "title": "Extra Price Rule Dialog",
   "description": "Create/edit dialog for extra pricing rules attached to option price rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/pricing/extra-price-rule-dialog.tsx",

@@ -1,10 +1,7 @@
 import { createContainer, createEventBus } from "@voyantjs/core"
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  createFinanceHonoModule,
-  FINANCE_ROUTE_RUNTIME_CONTAINER_KEY,
-} from "../../src/index.js"
+import { createFinanceHonoModule, FINANCE_ROUTE_RUNTIME_CONTAINER_KEY } from "../../src/index.js"
 
 describe("createFinanceHonoModule", () => {
   it("registers finance route runtime during bootstrap", () => {

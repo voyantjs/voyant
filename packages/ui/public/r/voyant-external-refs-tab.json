@@ -3,10 +3,7 @@
   "name": "voyant-external-refs-tab",
   "title": "External Refs Tab",
   "description": "Server-paginated CRUD table for external references scoped to an entity.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/external-refs-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/external-refs-react"],
   "registryDependencies": [
     "badge",
     "button",

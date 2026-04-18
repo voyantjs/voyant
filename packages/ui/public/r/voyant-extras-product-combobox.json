@@ -3,12 +3,8 @@
   "name": "voyant-extras-product-combobox",
   "title": "Product Combobox",
   "description": "Remote-search product picker backed by products-react.",
-  "dependencies": [
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "combobox"
-  ],
+  "dependencies": ["@voyantjs/products-react"],
+  "registryDependencies": ["combobox"],
   "files": [
     {
       "path": "registry/extras/product-combobox.tsx",

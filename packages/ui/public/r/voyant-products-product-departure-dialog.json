@@ -3,13 +3,8 @@
   "name": "voyant-products-product-departure-dialog",
   "title": "Product Departure Dialog",
   "description": "Modal wrapper around Product Departure Form with create/edit modes.",
-  "dependencies": [
-    "@voyantjs/availability-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "voyant-products-product-departure-form"
-  ],
+  "dependencies": ["@voyantjs/availability-react"],
+  "registryDependencies": ["dialog", "voyant-products-product-departure-form"],
   "files": [
     {
       "path": "registry/products/product-departure-dialog.tsx",

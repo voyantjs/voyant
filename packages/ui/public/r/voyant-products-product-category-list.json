@@ -3,10 +3,7 @@
   "name": "voyant-products-product-category-list",
   "title": "Product Category List",
   "description": "Searchable CRUD table for product categories, including parent hierarchy and active state.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
   "registryDependencies": [
     "badge",
     "button",

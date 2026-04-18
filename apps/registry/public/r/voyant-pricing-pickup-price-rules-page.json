@@ -3,17 +3,8 @@
   "name": "voyant-pricing-pickup-price-rules-page",
   "title": "Pickup Price Rules Page",
   "description": "Server-paginated CRUD table for pickup-point pricing rules attached to option price rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "table",
-    "voyant-pricing-pickup-price-rule-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["badge", "button", "table", "voyant-pricing-pickup-price-rule-dialog"],
   "files": [
     {
       "path": "registry/pricing/pickup-price-rules-page.tsx",

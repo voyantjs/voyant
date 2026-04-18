@@ -1,4 +1,4 @@
-import { parseJsonBody, requireUserId } from "@voyantjs/hono"
+import { parseJsonBody, parseQuery, requireUserId } from "@voyantjs/hono"
 import {
   insertAddressSchema,
   insertContactPointSchema,
@@ -38,9 +38,7 @@ const personEntity = "person" as const
 export const accountRoutes = new Hono<Env>()
   // Organizations
   .get("/organizations", async (c) => {
-    const query = organizationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, organizationListQuerySchema)
     return c.json(await crmService.listOrganizations(c.get("db"), query))
   })
   .post("/organizations", async (c) => {
@@ -143,7 +141,7 @@ export const accountRoutes = new Hono<Env>()
 
   // People
   .get("/people", async (c) => {
-    const query = personListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, personListQuerySchema)
     return c.json(await crmService.listPeople(c.get("db"), query))
   })
   .post("/people", async (c) => {
@@ -240,9 +238,7 @@ export const accountRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/people/:id/communications", async (c) => {
-    const query = communicationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, communicationListQuerySchema)
     return c.json({
       data: await crmService.listCommunications(c.get("db"), c.req.param("id"), query),
     })

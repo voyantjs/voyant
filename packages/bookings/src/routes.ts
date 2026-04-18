@@ -2,6 +2,7 @@ import {
   ForbiddenApiError,
   handleApiError,
   parseJsonBody,
+  parseQuery,
   requireUserId,
   UnauthorizedApiError,
 } from "@voyantjs/hono"
@@ -220,7 +221,7 @@ export const bookingRoutes = new Hono<Env>()
 
   // 1. GET / — List bookings
   .get("/", async (c) => {
-    const query = bookingListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, bookingListQuerySchema)
     return c.json(await bookingsService.listBookings(c.get("db"), query))
   })
 
@@ -228,9 +229,7 @@ export const bookingRoutes = new Hono<Env>()
   .get("/overview", async (c) => {
     const overview = await publicBookingsService.getOverviewByLookup(
       c.get("db"),
-      internalBookingOverviewLookupQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      ),
+      parseQuery(c, internalBookingOverviewLookupQuerySchema),
     )
 
     if (!overview) {

@@ -1,6 +1,7 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 
-import { createPayloadClient, type PayloadClientOptions } from "./client.js"
+import type { PayloadClientOptions } from "./client.js"
+import { createPayloadSyncRuntime } from "./runtime.js"
 import type { PayloadDocBody, VoyantEntityEvent } from "./types.js"
 
 /**
@@ -48,11 +49,6 @@ export interface PayloadCmsPluginOptions extends PayloadClientOptions {
   logger?: PayloadLogger
 }
 
-function defaultMapEvent(event: VoyantEntityEvent): PayloadDocBody {
-  const { id: _id, ...rest } = event
-  return rest
-}
-
 function coerceEvent(data: unknown): VoyantEntityEvent | null {
   if (data == null || typeof data !== "object") return null
   const maybe = data as Record<string, unknown>
@@ -74,14 +70,7 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
  * EventBus contract, so a Payload outage never blocks the emitter.
  */
 export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
-  const client = createPayloadClient(options)
-  const mapEvent = options.mapEvent ?? defaultMapEvent
-  const logger = options.logger ?? console
-  const eventNames = {
-    created: options.events?.created ?? "product.created",
-    updated: options.events?.updated ?? "product.updated",
-    deleted: options.events?.deleted ?? "product.deleted",
-  }
+  const { client, mapEvent, logger, eventNames } = createPayloadSyncRuntime(options)
 
   const subscribers: Subscriber[] = [
     {

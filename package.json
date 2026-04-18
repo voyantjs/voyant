@@ -18,6 +18,7 @@
     "verify:package-exports": "tsx scripts/verify-package-exports.ts",
     "verify:publish-tarballs": "node scripts/verify-package-tarballs.mjs",
     "prepare": "husky",
+    "seed:operator": "pnpm -C apps/scripts seed:operator",
     "typecheck": "turbo run typecheck --continue",
     "test": "node scripts/run-tests.cjs",
     "test:bookings:integration": "node scripts/run-bookings-integration-tests.mjs",

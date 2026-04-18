@@ -1,0 +1,27 @@
+{
+  "name": "@voyantjs/scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:operator": "tsx src/seed-operator.ts"
+  },
+  "dependencies": {
+    "@voyantjs/availability": "workspace:*",
+    "@voyantjs/bookings": "workspace:*",
+    "@voyantjs/crm": "workspace:*",
+    "@voyantjs/db": "workspace:*",
+    "@voyantjs/finance": "workspace:*",
+    "@voyantjs/products": "workspace:*",
+    "@voyantjs/suppliers": "workspace:*",
+    "@voyantjs/transactions": "workspace:*",
+    "dotenv": "^17.4.0",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}

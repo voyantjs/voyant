@@ -49,6 +49,7 @@ export const bookingItems = pgTable(
   },
   (table) => [
     index("idx_booking_items_booking").on(table.bookingId),
+    index("idx_booking_items_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_items_status").on(table.status),
   ],
 )
@@ -83,6 +84,7 @@ export const bookingAllocations = pgTable(
   },
   (table) => [
     index("idx_booking_allocations_booking").on(table.bookingId),
+    index("idx_booking_allocations_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_allocations_item").on(table.bookingItemId),
     index("idx_booking_allocations_slot").on(table.availabilitySlotId),
     index("idx_booking_allocations_status").on(table.status),
@@ -114,6 +116,7 @@ export const bookingFulfillments = pgTable(
   },
   (table) => [
     index("idx_booking_fulfillments_booking").on(table.bookingId),
+    index("idx_booking_fulfillments_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_fulfillments_item").on(table.bookingItemId),
     index("idx_booking_fulfillments_participant").on(table.participantId),
     index("idx_booking_fulfillments_status").on(table.status),
@@ -142,6 +145,11 @@ export const bookingRedemptionEvents = pgTable(
   },
   (table) => [
     index("idx_booking_redemption_events_booking").on(table.bookingId),
+    index("idx_booking_redemption_events_booking_redeemed_created").on(
+      table.bookingId,
+      table.redeemedAt,
+      table.createdAt,
+    ),
     index("idx_booking_redemption_events_item").on(table.bookingItemId),
     index("idx_booking_redemption_events_participant").on(table.participantId),
     index("idx_booking_redemption_events_redeemed_at").on(table.redeemedAt),
@@ -164,6 +172,11 @@ export const bookingItemParticipants = pgTable(
   },
   (table) => [
     index("idx_booking_item_participants_item").on(table.bookingItemId),
+    index("idx_booking_item_participants_item_primary_created").on(
+      table.bookingItemId,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_booking_item_participants_participant").on(table.participantId),
   ],
 )

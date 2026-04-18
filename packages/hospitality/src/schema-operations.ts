@@ -46,8 +46,8 @@ export const stayOperations = pgTable(
   (table) => [
     uniqueIndex("uidx_stay_operations_stay_booking_item").on(table.stayBookingItemId),
     index("idx_stay_operations_property_created").on(table.propertyId, table.createdAt),
-    index("idx_stay_operations_room_unit").on(table.roomUnitId),
-    index("idx_stay_operations_status").on(table.operationStatus),
+    index("idx_stay_operations_room_unit_created").on(table.roomUnitId, table.createdAt),
+    index("idx_stay_operations_status_created").on(table.operationStatus, table.createdAt),
   ],
 )
 
@@ -67,8 +67,7 @@ export const stayCheckpoints = pgTable(
   },
   (table) => [
     index("idx_stay_checkpoints_operation_occurred_at").on(table.stayOperationId, table.occurredAt),
-    index("idx_stay_checkpoints_type").on(table.checkpointType),
-    index("idx_stay_checkpoints_occurred_at").on(table.occurredAt),
+    index("idx_stay_checkpoints_type_occurred_at").on(table.checkpointType, table.occurredAt),
   ],
 )
 
@@ -99,9 +98,11 @@ export const stayServicePosts = pgTable(
       table.stayOperationId,
       table.serviceDate,
     ),
-    index("idx_stay_service_posts_booking_item").on(table.bookingItemId),
-    index("idx_stay_service_posts_service_date").on(table.serviceDate),
-    index("idx_stay_service_posts_kind").on(table.kind),
+    index("idx_stay_service_posts_booking_item_service_date").on(
+      table.bookingItemId,
+      table.serviceDate,
+    ),
+    index("idx_stay_service_posts_kind_service_date").on(table.kind, table.serviceDate),
   ],
 )
 
@@ -123,7 +124,7 @@ export const stayFolios = pgTable(
   },
   (table) => [
     index("idx_stay_folios_operation_opened_at").on(table.stayOperationId, table.openedAt),
-    index("idx_stay_folios_status").on(table.status),
+    index("idx_stay_folios_status_opened_at").on(table.status, table.openedAt),
   ],
 )
 
@@ -151,8 +152,7 @@ export const stayFolioLines = pgTable(
   },
   (table) => [
     index("idx_stay_folio_lines_folio_posted_at").on(table.stayFolioId, table.postedAt),
-    index("idx_stay_folio_lines_service_post").on(table.servicePostId),
-    index("idx_stay_folio_lines_posted_at").on(table.postedAt),
+    index("idx_stay_folio_lines_service_post_posted_at").on(table.servicePostId, table.postedAt),
   ],
 )
 

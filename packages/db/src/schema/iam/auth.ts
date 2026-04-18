@@ -120,6 +120,7 @@ export const authMember = pgTable(
   (table) => [
     index("idx_member_user_id").on(table.userId),
     index("idx_member_organization_id").on(table.organizationId),
+    index("idx_member_user_organization").on(table.userId, table.organizationId),
   ],
 )
 

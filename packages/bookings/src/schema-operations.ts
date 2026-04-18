@@ -28,6 +28,7 @@ export const bookingSupplierStatuses = pgTable(
   },
   (table) => [
     index("idx_booking_supplier_statuses_booking").on(table.bookingId),
+    index("idx_booking_supplier_statuses_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_supplier_statuses_service").on(table.supplierServiceId),
   ],
 )
@@ -45,7 +46,10 @@ export const bookingActivityLog = pgTable(
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_booking_activity_log_booking").on(table.bookingId)],
+  (table) => [
+    index("idx_booking_activity_log_booking").on(table.bookingId),
+    index("idx_booking_activity_log_booking_created").on(table.bookingId, table.createdAt),
+  ],
 )
 
 export const bookingSessionStates = pgTable(
@@ -81,7 +85,10 @@ export const bookingNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_booking_notes_booking").on(table.bookingId)],
+  (table) => [
+    index("idx_booking_notes_booking").on(table.bookingId),
+    index("idx_booking_notes_booking_created").on(table.bookingId, table.createdAt),
+  ],
 )
 
 export const bookingDocuments = pgTable(
@@ -103,6 +110,7 @@ export const bookingDocuments = pgTable(
   },
   (table) => [
     index("idx_booking_documents_booking").on(table.bookingId),
+    index("idx_booking_documents_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_documents_participant").on(table.participantId),
   ],
 )

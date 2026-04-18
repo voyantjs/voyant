@@ -117,8 +117,9 @@ export const facilities = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_facilities_parent").on(table.parentFacilityId),
+    index("idx_facilities_parent_updated").on(table.parentFacilityId, table.updatedAt),
     index("idx_facilities_owner_updated").on(table.ownerType, table.ownerId, table.updatedAt),
+    index("idx_facilities_owner_id_updated").on(table.ownerId, table.updatedAt),
     index("idx_facilities_kind_updated").on(table.kind, table.updatedAt),
     index("idx_facilities_status_updated").on(table.status, table.updatedAt),
     uniqueIndex("uidx_facilities_code").on(table.code),
@@ -174,7 +175,17 @@ export const facilityFeatures = pgTable(
       table.sortOrder,
       table.name,
     ),
-    index("idx_facility_features_category").on(table.category),
+    index("idx_facility_features_category_sort_name").on(
+      table.category,
+      table.sortOrder,
+      table.name,
+    ),
+    index("idx_facility_features_facility_category_sort_name").on(
+      table.facilityId,
+      table.category,
+      table.sortOrder,
+      table.name,
+    ),
   ],
 )
 
@@ -201,7 +212,7 @@ export const facilityOperationSchedules = pgTable(
       table.dayOfWeek,
       table.validFrom,
     ),
-    index("idx_facility_operation_schedules_day").on(table.dayOfWeek),
+    index("idx_facility_operation_schedules_day_valid").on(table.dayOfWeek, table.validFrom),
   ],
 )
 
@@ -226,8 +237,9 @@ export const properties = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_properties_facility").on(table.facilityId),
-    index("idx_properties_type").on(table.propertyType),
-    index("idx_properties_group").on(table.groupName),
+    index("idx_properties_updated").on(table.updatedAt),
+    index("idx_properties_type_updated").on(table.propertyType, table.updatedAt),
+    index("idx_properties_group_updated").on(table.groupName, table.updatedAt),
   ],
 )
 
@@ -252,8 +264,9 @@ export const propertyGroups = pgTable(
   },
   (table) => [
     index("idx_property_groups_parent_updated").on(table.parentGroupId, table.updatedAt),
-    index("idx_property_groups_type").on(table.groupType),
-    index("idx_property_groups_status").on(table.status),
+    index("idx_property_groups_updated").on(table.updatedAt),
+    index("idx_property_groups_type_updated").on(table.groupType, table.updatedAt),
+    index("idx_property_groups_status_updated").on(table.status, table.updatedAt),
     uniqueIndex("uidx_property_groups_code").on(table.code),
   ],
 )
@@ -278,8 +291,9 @@ export const propertyGroupMembers = pgTable(
   },
   (table) => [
     index("idx_property_group_members_group_updated").on(table.groupId, table.updatedAt),
-    index("idx_property_group_members_property").on(table.propertyId),
-    index("idx_property_group_members_role").on(table.membershipRole),
+    index("idx_property_group_members_updated").on(table.updatedAt),
+    index("idx_property_group_members_property_updated").on(table.propertyId, table.updatedAt),
+    index("idx_property_group_members_role_updated").on(table.membershipRole, table.updatedAt),
     uniqueIndex("uidx_property_group_members_pair").on(table.groupId, table.propertyId),
   ],
 )

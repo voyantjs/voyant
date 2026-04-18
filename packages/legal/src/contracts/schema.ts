@@ -76,6 +76,14 @@ export const contractTemplates = pgTable(
     index("idx_contract_templates_scope").on(table.scope),
     index("idx_contract_templates_language").on(table.language),
     index("idx_contract_templates_active").on(table.active),
+    index("idx_contract_templates_scope_updated").on(table.scope, table.updatedAt),
+    index("idx_contract_templates_language_updated").on(table.language, table.updatedAt),
+    index("idx_contract_templates_active_updated").on(table.active, table.updatedAt),
+    index("idx_contract_templates_scope_active_updated").on(
+      table.scope,
+      table.active,
+      table.updatedAt,
+    ),
     uniqueIndex("uq_contract_templates_slug").on(table.slug),
   ],
 )
@@ -135,6 +143,9 @@ export const contractNumberSeries = pgTable(
     uniqueIndex("uq_contract_number_series_code").on(table.code),
     index("idx_contract_number_series_scope").on(table.scope),
     index("idx_contract_number_series_active").on(table.active),
+    index("idx_contract_number_series_scope_updated").on(table.scope, table.updatedAt),
+    index("idx_contract_number_series_active_updated").on(table.active, table.updatedAt),
+    index("idx_contract_number_series_updated").on(table.updatedAt),
   ],
 )
 
@@ -199,6 +210,13 @@ export const contracts = pgTable(
     index("idx_contracts_supplier").on(table.supplierId),
     index("idx_contracts_booking").on(table.bookingId),
     index("idx_contracts_order").on(table.orderId),
+    index("idx_contracts_scope_created").on(table.scope, table.createdAt),
+    index("idx_contracts_status_created").on(table.status, table.createdAt),
+    index("idx_contracts_person_created").on(table.personId, table.createdAt),
+    index("idx_contracts_organization_created").on(table.organizationId, table.createdAt),
+    index("idx_contracts_supplier_created").on(table.supplierId, table.createdAt),
+    index("idx_contracts_booking_created").on(table.bookingId, table.createdAt),
+    index("idx_contracts_order_created").on(table.orderId, table.createdAt),
     index("idx_contracts_contract_number").on(table.contractNumber),
   ],
 )
@@ -231,6 +249,7 @@ export const contractSignatures = pgTable(
   },
   (table) => [
     index("idx_contract_signatures_contract").on(table.contractId),
+    index("idx_contract_signatures_contract_signed").on(table.contractId, table.signedAt),
     index("idx_contract_signatures_person").on(table.personId),
     index("idx_contract_signatures_method").on(table.method),
   ],
@@ -257,7 +276,10 @@ export const contractAttachments = pgTable(
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_contract_attachments_contract").on(table.contractId)],
+  (table) => [
+    index("idx_contract_attachments_contract").on(table.contractId),
+    index("idx_contract_attachments_contract_created").on(table.contractId, table.createdAt),
+  ],
 )
 
 export type ContractAttachment = typeof contractAttachments.$inferSelect

@@ -65,6 +65,19 @@ export const identityContactPoints = pgTable(
   },
   (table) => [
     index("idx_identity_contact_points_entity").on(table.entityType, table.entityId),
+    index("idx_identity_contact_points_entity_primary_created").on(
+      table.entityType,
+      table.entityId,
+      table.isPrimary,
+      table.createdAt,
+    ),
+    index("idx_identity_contact_points_entity_kind_primary_created").on(
+      table.entityType,
+      table.entityId,
+      table.kind,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_identity_contact_points_kind").on(table.kind),
     index("idx_identity_contact_points_normalized").on(table.normalizedValue),
     uniqueIndex("uidx_identity_contact_points_entity_kind_value").on(
@@ -101,6 +114,12 @@ export const identityAddresses = pgTable(
   },
   (table) => [
     index("idx_identity_addresses_entity").on(table.entityType, table.entityId),
+    index("idx_identity_addresses_entity_primary_created").on(
+      table.entityType,
+      table.entityId,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_identity_addresses_label").on(table.label),
   ],
 )
@@ -124,6 +143,19 @@ export const identityNamedContacts = pgTable(
   },
   (table) => [
     index("idx_identity_named_contacts_entity").on(table.entityType, table.entityId),
+    index("idx_identity_named_contacts_entity_primary_created").on(
+      table.entityType,
+      table.entityId,
+      table.isPrimary,
+      table.createdAt,
+    ),
+    index("idx_identity_named_contacts_entity_role_primary_created").on(
+      table.entityType,
+      table.entityId,
+      table.role,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_identity_named_contacts_role").on(table.role),
     index("idx_identity_named_contacts_primary").on(table.isPrimary),
   ],

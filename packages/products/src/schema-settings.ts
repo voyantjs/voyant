@@ -37,7 +37,9 @@ export const productActivationSettings = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_product_activation_settings_product").on(table.productId),
+    index("idx_product_activation_settings_created").on(table.createdAt),
     index("idx_product_activation_settings_mode").on(table.activationMode),
+    index("idx_product_activation_settings_mode_created").on(table.activationMode, table.createdAt),
   ],
 )
 
@@ -59,7 +61,14 @@ export const productTicketSettings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("uidx_product_ticket_settings_product").on(table.productId)],
+  (table) => [
+    uniqueIndex("uidx_product_ticket_settings_product").on(table.productId),
+    index("idx_product_ticket_settings_created").on(table.createdAt),
+    index("idx_product_ticket_settings_fulfillment_created").on(
+      table.fulfillmentMode,
+      table.createdAt,
+    ),
+  ],
 )
 
 export const productVisibilitySettings = pgTable(
@@ -76,7 +85,16 @@ export const productVisibilitySettings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("uidx_product_visibility_settings_product").on(table.productId)],
+  (table) => [
+    uniqueIndex("uidx_product_visibility_settings_product").on(table.productId),
+    index("idx_product_visibility_settings_created").on(table.createdAt),
+    index("idx_product_visibility_settings_searchable_created").on(
+      table.isSearchable,
+      table.createdAt,
+    ),
+    index("idx_product_visibility_settings_bookable_created").on(table.isBookable, table.createdAt),
+    index("idx_product_visibility_settings_featured_product").on(table.isFeatured, table.productId),
+  ],
 )
 
 export const productCapabilities = pgTable(
@@ -95,6 +113,12 @@ export const productCapabilities = pgTable(
   (table) => [
     index("idx_product_capabilities_product").on(table.productId),
     index("idx_product_capabilities_capability").on(table.capability),
+    index("idx_product_capabilities_capability_created").on(table.capability, table.createdAt),
+    index("idx_product_capabilities_enabled_capability_created").on(
+      table.enabled,
+      table.capability,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_product_capabilities_product_capability").on(
       table.productId,
       table.capability,
@@ -116,6 +140,17 @@ export const productDeliveryFormats = pgTable(
   },
   (table) => [
     index("idx_product_delivery_formats_product").on(table.productId),
+    index("idx_product_delivery_formats_default_created").on(table.isDefault, table.createdAt),
+    index("idx_product_delivery_formats_product_default_created").on(
+      table.productId,
+      table.isDefault,
+      table.createdAt,
+    ),
+    index("idx_product_delivery_formats_format_default_created").on(
+      table.format,
+      table.isDefault,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_product_delivery_formats_product_format").on(table.productId, table.format),
   ],
 )
@@ -147,7 +182,20 @@ export const productFeatures = pgTable(
   },
   (table) => [
     index("idx_product_features_product").on(table.productId),
+    index("idx_product_features_sort").on(table.sortOrder, table.createdAt),
+    index("idx_product_features_product_sort").on(
+      table.productId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_product_features_type").on(table.featureType),
+    index("idx_product_features_type_sort").on(table.featureType, table.sortOrder, table.createdAt),
+    index("idx_product_features_product_type_sort").on(
+      table.productId,
+      table.featureType,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -164,7 +212,11 @@ export const productFaqs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_product_faqs_product").on(table.productId)],
+  (table) => [
+    index("idx_product_faqs_product").on(table.productId),
+    index("idx_product_faqs_sort").on(table.sortOrder, table.createdAt),
+    index("idx_product_faqs_product_sort").on(table.productId, table.sortOrder, table.createdAt),
+  ],
 )
 
 export const productLocations = pgTable(
@@ -190,7 +242,26 @@ export const productLocations = pgTable(
   },
   (table) => [
     index("idx_product_locations_product").on(table.productId),
+    index("idx_product_locations_sort").on(table.sortOrder, table.createdAt),
+    index("idx_product_locations_product_sort").on(
+      table.productId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_product_locations_type").on(table.locationType),
+    index("idx_product_locations_type_product").on(table.locationType, table.productId),
+    index("idx_product_locations_type_sort").on(
+      table.locationType,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_product_locations_product_type_sort").on(
+      table.productId,
+      table.locationType,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_product_locations_country_product").on(table.countryCode, table.productId),
   ],
 )
 
@@ -221,6 +292,12 @@ export const productTranslations = pgTable(
   (table) => [
     index("idx_product_translations_product").on(table.productId),
     index("idx_product_translations_language").on(table.languageTag),
+    index("idx_product_translations_product_language_created").on(
+      table.productId,
+      table.languageTag,
+      table.createdAt,
+    ),
+    index("idx_product_translations_language_created").on(table.languageTag, table.createdAt),
     uniqueIndex("uidx_product_translations_product_language").on(
       table.productId,
       table.languageTag,
@@ -245,6 +322,15 @@ export const productOptionTranslations = pgTable(
   (table) => [
     index("idx_product_option_translations_option").on(table.optionId),
     index("idx_product_option_translations_language").on(table.languageTag),
+    index("idx_product_option_translations_option_language_created").on(
+      table.optionId,
+      table.languageTag,
+      table.createdAt,
+    ),
+    index("idx_product_option_translations_language_created").on(
+      table.languageTag,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_product_option_translations_option_language").on(
       table.optionId,
       table.languageTag,
@@ -269,6 +355,12 @@ export const optionUnitTranslations = pgTable(
   (table) => [
     index("idx_option_unit_translations_unit").on(table.unitId),
     index("idx_option_unit_translations_language").on(table.languageTag),
+    index("idx_option_unit_translations_unit_language_created").on(
+      table.unitId,
+      table.languageTag,
+      table.createdAt,
+    ),
+    index("idx_option_unit_translations_language_created").on(table.languageTag, table.createdAt),
     uniqueIndex("uidx_option_unit_translations_unit_language").on(table.unitId, table.languageTag),
   ],
 )

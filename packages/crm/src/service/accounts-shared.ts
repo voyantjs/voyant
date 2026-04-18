@@ -9,7 +9,7 @@ import type {
 import { and, eq, inArray } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
-
+import { personDirectoryProjections } from "../schema.js"
 import type {
   communicationListQuerySchema,
   insertCommunicationLogSchema,
@@ -64,6 +64,22 @@ export type PersonHydratedFields = {
   country: string | null
 }
 
+type PersonDirectoryProjectionValues = Omit<
+  typeof personDirectoryProjections.$inferInsert,
+  "updatedAt"
+>
+
+function emptyPersonHydratedFields(): PersonHydratedFields {
+  return {
+    email: null,
+    phone: null,
+    website: null,
+    address: null,
+    city: null,
+    country: null,
+  }
+}
+
 export function personBaseFields(data: CreatePersonInput | UpdatePersonInput) {
   return {
     organizationId: data.organizationId,
@@ -81,6 +97,147 @@ export function personBaseFields(data: CreatePersonInput | UpdatePersonInput) {
     birthday: data.birthday,
     notes: data.notes,
   }
+}
+
+async function buildPersonDirectoryProjectionRows(
+  db: PostgresJsDatabase,
+  personIds: string[],
+): Promise<PersonDirectoryProjectionValues[]> {
+  if (personIds.length === 0) {
+    return []
+  }
+
+  const ids = [...new Set(personIds)]
+  const [contactPoints, addresses] = await Promise.all([
+    db
+      .select()
+      .from(identityContactPoints)
+      .where(
+        and(
+          eq(identityContactPoints.entityType, personEntityType),
+          inArray(identityContactPoints.entityId, ids),
+        ),
+      ),
+    db
+      .select()
+      .from(identityAddresses)
+      .where(
+        and(
+          eq(identityAddresses.entityType, personEntityType),
+          inArray(identityAddresses.entityId, ids),
+        ),
+      ),
+  ])
+
+  const contactPointMap = new Map<string, typeof contactPoints>()
+  const addressMap = new Map<string, typeof addresses>()
+
+  for (const point of contactPoints) {
+    const bucket = contactPointMap.get(point.entityId) ?? []
+    bucket.push(point)
+    contactPointMap.set(point.entityId, bucket)
+  }
+
+  for (const address of addresses) {
+    const bucket = addressMap.get(address.entityId) ?? []
+    bucket.push(address)
+    addressMap.set(address.entityId, bucket)
+  }
+
+  return ids.map((personId) => {
+    const entityContactPoints = contactPointMap.get(personId) ?? []
+    const entityAddresses = addressMap.get(personId) ?? []
+
+    const findPrimaryContactPoint = (kind: "email" | "phone" | "website") =>
+      entityContactPoints.find((point) => point.kind === kind && point.isPrimary)?.value ??
+      entityContactPoints.find((point) => point.kind === kind)?.value ??
+      null
+
+    const primaryAddress =
+      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
+
+    return {
+      personId,
+      email: findPrimaryContactPoint("email"),
+      phone: findPrimaryContactPoint("phone"),
+      website: findPrimaryContactPoint("website"),
+      address: primaryAddress ? formatAddress(primaryAddress) : null,
+      city: primaryAddress?.city ?? null,
+      country: primaryAddress?.country ?? null,
+    }
+  })
+}
+
+export async function rebuildPersonDirectoryProjection(db: PostgresJsDatabase, personId: string) {
+  return rebuildPersonDirectoryProjections(db, [personId])
+}
+
+export async function rebuildPersonDirectoryProjections(
+  db: PostgresJsDatabase,
+  personIds: string[],
+) {
+  const ids = [...new Set(personIds)]
+  if (ids.length === 0) {
+    return
+  }
+
+  const rows = await buildPersonDirectoryProjectionRows(db, ids)
+  await db
+    .delete(personDirectoryProjections)
+    .where(inArray(personDirectoryProjections.personId, ids))
+  await db.insert(personDirectoryProjections).values(rows)
+}
+
+async function ensurePersonDirectoryProjectionMap(db: PostgresJsDatabase, personIds: string[]) {
+  const ids = [...new Set(personIds)]
+  if (ids.length === 0) {
+    return new Map<string, PersonHydratedFields>()
+  }
+
+  const existing = await db
+    .select()
+    .from(personDirectoryProjections)
+    .where(inArray(personDirectoryProjections.personId, ids))
+
+  const map = new Map<string, PersonHydratedFields>()
+  for (const projection of existing) {
+    map.set(projection.personId, {
+      email: projection.email,
+      phone: projection.phone,
+      website: projection.website,
+      address: projection.address,
+      city: projection.city,
+      country: projection.country,
+    })
+  }
+
+  const missingIds = ids.filter((id) => !map.has(id))
+  if (missingIds.length > 0) {
+    await rebuildPersonDirectoryProjections(db, missingIds)
+    const rebuilt = await db
+      .select()
+      .from(personDirectoryProjections)
+      .where(inArray(personDirectoryProjections.personId, missingIds))
+
+    for (const projection of rebuilt) {
+      map.set(projection.personId, {
+        email: projection.email,
+        phone: projection.phone,
+        website: projection.website,
+        address: projection.address,
+        city: projection.city,
+        country: projection.country,
+      })
+    }
+  }
+
+  for (const id of ids) {
+    if (!map.has(id)) {
+      map.set(id, emptyPersonHydratedFields())
+    }
+  }
+
+  return map
 }
 
 export async function syncPersonIdentity(
@@ -150,6 +307,7 @@ export async function syncPersonIdentity(
     if (managedAddress) {
       await identityService.deleteAddress(db, managedAddress.id)
     }
+    await rebuildPersonDirectoryProjection(db, personId)
     return
   }
 
@@ -170,6 +328,8 @@ export async function syncPersonIdentity(
   } else {
     await identityService.createAddress(db, addressPayload)
   }
+
+  await rebuildPersonDirectoryProjection(db, personId)
 }
 
 export async function deletePersonIdentity(db: PostgresJsDatabase, personId: string) {
@@ -191,72 +351,17 @@ export async function hydratePeople<T extends { id: string }>(
   if (rows.length === 0) {
     return rows.map((row) => ({
       ...row,
-      email: null,
-      phone: null,
-      website: null,
-      address: null,
-      city: null,
-      country: null,
+      ...emptyPersonHydratedFields(),
     }))
   }
 
   const ids = rows.map((row) => row.id)
-  const [contactPoints, addresses] = await Promise.all([
-    db
-      .select()
-      .from(identityContactPoints)
-      .where(
-        and(
-          eq(identityContactPoints.entityType, personEntityType),
-          inArray(identityContactPoints.entityId, ids),
-        ),
-      ),
-    db
-      .select()
-      .from(identityAddresses)
-      .where(
-        and(
-          eq(identityAddresses.entityType, personEntityType),
-          inArray(identityAddresses.entityId, ids),
-        ),
-      ),
-  ])
-
-  const contactPointMap = new Map<string, typeof contactPoints>()
-  const addressMap = new Map<string, typeof addresses>()
-
-  for (const point of contactPoints) {
-    const bucket = contactPointMap.get(point.entityId) ?? []
-    bucket.push(point)
-    contactPointMap.set(point.entityId, bucket)
-  }
-
-  for (const address of addresses) {
-    const bucket = addressMap.get(address.entityId) ?? []
-    bucket.push(address)
-    addressMap.set(address.entityId, bucket)
-  }
+  const projectionMap = await ensurePersonDirectoryProjectionMap(db, ids)
 
   return rows.map((row) => {
-    const entityContactPoints = contactPointMap.get(row.id) ?? []
-    const entityAddresses = addressMap.get(row.id) ?? []
-
-    const findPrimaryContactPoint = (kind: "email" | "phone" | "website") =>
-      entityContactPoints.find((point) => point.kind === kind && point.isPrimary) ??
-      entityContactPoints.find((point) => point.kind === kind) ??
-      null
-
-    const primaryAddress =
-      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
-
     return {
       ...row,
-      email: findPrimaryContactPoint("email")?.value ?? null,
-      phone: findPrimaryContactPoint("phone")?.value ?? null,
-      website: findPrimaryContactPoint("website")?.value ?? null,
-      address: primaryAddress ? formatAddress(primaryAddress) : null,
-      city: primaryAddress?.city ?? null,
-      country: primaryAddress?.country ?? null,
+      ...(projectionMap.get(row.id) ?? emptyPersonHydratedFields()),
     }
   })
 }

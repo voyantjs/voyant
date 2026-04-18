@@ -44,7 +44,8 @@ export const storefrontVerificationChallenges = pgTable(
       table.channel,
       table.destination,
       table.purpose,
-      table.status,
+      table.updatedAt,
+      table.createdAt,
     ),
   ],
 )

@@ -35,10 +35,16 @@ export const externalRefs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_external_refs_entity").on(table.entityType, table.entityId),
-    index("idx_external_refs_source").on(table.sourceSystem, table.objectType),
+    index("idx_external_refs_updated").on(table.updatedAt),
+    index("idx_external_refs_entity_updated").on(table.entityType, table.entityId, table.updatedAt),
+    index("idx_external_refs_source_updated").on(
+      table.sourceSystem,
+      table.objectType,
+      table.updatedAt,
+    ),
+    index("idx_external_refs_namespace_updated").on(table.namespace, table.updatedAt),
     index("idx_external_refs_external_id").on(table.externalId),
-    index("idx_external_refs_status").on(table.status),
+    index("idx_external_refs_status_updated").on(table.status, table.updatedAt),
     uniqueIndex("uidx_external_refs_entity_source_external").on(
       table.entityType,
       table.entityId,

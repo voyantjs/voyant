@@ -77,9 +77,10 @@ export const suppliers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_suppliers_type").on(table.type),
-    index("idx_suppliers_status").on(table.status),
-    index("idx_suppliers_primary_facility").on(table.primaryFacilityId),
+    index("idx_suppliers_created").on(table.createdAt),
+    index("idx_suppliers_type_created").on(table.type, table.createdAt),
+    index("idx_suppliers_status_created").on(table.status, table.createdAt),
+    index("idx_suppliers_primary_facility_created").on(table.primaryFacilityId, table.createdAt),
   ],
 )
 

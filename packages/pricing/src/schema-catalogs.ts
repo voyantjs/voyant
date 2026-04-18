@@ -30,9 +30,10 @@ export const priceCatalogs = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_price_catalogs_code").on(table.code),
-    index("idx_price_catalogs_currency").on(table.currencyCode),
-    index("idx_price_catalogs_type").on(table.catalogType),
-    index("idx_price_catalogs_active").on(table.active),
+    index("idx_price_catalogs_name").on(table.name),
+    index("idx_price_catalogs_currency_name").on(table.currencyCode, table.name),
+    index("idx_price_catalogs_type_name").on(table.catalogType, table.name),
+    index("idx_price_catalogs_active_name").on(table.active, table.name),
   ],
 )
 
@@ -58,8 +59,13 @@ export const priceSchedules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_price_schedules_catalog").on(table.priceCatalogId),
-    index("idx_price_schedules_active").on(table.active),
+    index("idx_price_schedules_priority_name").on(table.priority, table.name),
+    index("idx_price_schedules_catalog_priority_name").on(
+      table.priceCatalogId,
+      table.priority,
+      table.name,
+    ),
+    index("idx_price_schedules_active_priority_name").on(table.active, table.priority, table.name),
     uniqueIndex("uidx_price_schedules_catalog_code").on(table.priceCatalogId, table.code),
   ],
 )

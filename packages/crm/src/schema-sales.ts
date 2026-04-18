@@ -32,6 +32,8 @@ export const pipelines = pgTable(
   },
   (table) => [
     index("idx_pipelines_entity").on(table.entityType),
+    index("idx_pipelines_sort").on(table.sortOrder, table.createdAt),
+    index("idx_pipelines_entity_sort").on(table.entityType, table.sortOrder, table.createdAt),
     uniqueIndex("uidx_pipelines_entity_name").on(table.entityType, table.name),
   ],
 )
@@ -54,6 +56,8 @@ export const stages = pgTable(
   },
   (table) => [
     index("idx_stages_pipeline").on(table.pipelineId),
+    index("idx_stages_sort").on(table.sortOrder, table.createdAt),
+    index("idx_stages_pipeline_sort").on(table.pipelineId, table.sortOrder, table.createdAt),
     uniqueIndex("uidx_stages_pipeline_name").on(table.pipelineId, table.name),
   ],
 )
@@ -94,6 +98,12 @@ export const opportunities = pgTable(
     index("idx_opportunities_stage").on(table.stageId),
     index("idx_opportunities_owner").on(table.ownerId),
     index("idx_opportunities_status").on(table.status),
+    index("idx_opportunities_person_updated").on(table.personId, table.updatedAt),
+    index("idx_opportunities_org_updated").on(table.organizationId, table.updatedAt),
+    index("idx_opportunities_pipeline_updated").on(table.pipelineId, table.updatedAt),
+    index("idx_opportunities_stage_updated").on(table.stageId, table.updatedAt),
+    index("idx_opportunities_owner_updated").on(table.ownerId, table.updatedAt),
+    index("idx_opportunities_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -113,6 +123,11 @@ export const opportunityParticipants = pgTable(
   },
   (table) => [
     index("idx_opportunity_participants_opportunity").on(table.opportunityId),
+    index("idx_opportunity_participants_opportunity_primary").on(
+      table.opportunityId,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_opportunity_participants_person").on(table.personId),
     uniqueIndex("uidx_opportunity_participants_unique").on(table.opportunityId, table.personId),
   ],
@@ -139,6 +154,7 @@ export const opportunityProducts = pgTable(
   },
   (table) => [
     index("idx_opportunity_products_opportunity").on(table.opportunityId),
+    index("idx_opportunity_products_opportunity_created").on(table.opportunityId, table.createdAt),
     index("idx_opportunity_products_product").on(table.productId),
     index("idx_opportunity_products_supplier_service").on(table.supplierServiceId),
   ],
@@ -165,6 +181,8 @@ export const quotes = pgTable(
   (table) => [
     index("idx_quotes_opportunity").on(table.opportunityId),
     index("idx_quotes_status").on(table.status),
+    index("idx_quotes_opportunity_updated").on(table.opportunityId, table.updatedAt),
+    index("idx_quotes_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -187,6 +205,7 @@ export const quoteLines = pgTable(
   },
   (table) => [
     index("idx_quote_lines_quote").on(table.quoteId),
+    index("idx_quote_lines_quote_created").on(table.quoteId, table.createdAt),
     index("idx_quote_lines_product").on(table.productId),
     index("idx_quote_lines_supplier_service").on(table.supplierServiceId),
   ],

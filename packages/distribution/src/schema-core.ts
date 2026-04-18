@@ -27,6 +27,7 @@ export const channels = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    index("idx_channels_created").on(table.createdAt),
     index("idx_channels_kind_created").on(table.kind, table.createdAt),
     index("idx_channels_status_created").on(table.status, table.createdAt),
   ],
@@ -66,9 +67,9 @@ export const channelContracts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_contracts_channel").on(table.channelId),
-    index("idx_channel_contracts_supplier").on(table.supplierId),
-    index("idx_channel_contracts_status").on(table.status),
+    index("idx_channel_contracts_channel_created").on(table.channelId, table.createdAt),
+    index("idx_channel_contracts_supplier_created").on(table.supplierId, table.createdAt),
+    index("idx_channel_contracts_status_created").on(table.status, table.createdAt),
   ],
 )
 
@@ -92,9 +93,9 @@ export const channelCommissionRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_commission_rules_contract").on(table.contractId),
-    index("idx_channel_commission_rules_product").on(table.productId),
-    index("idx_channel_commission_rules_scope").on(table.scope),
+    index("idx_channel_commission_rules_contract_created").on(table.contractId, table.createdAt),
+    index("idx_channel_commission_rules_product_created").on(table.productId, table.createdAt),
+    index("idx_channel_commission_rules_scope_created").on(table.scope, table.createdAt),
   ],
 )
 
@@ -116,9 +117,9 @@ export const channelProductMappings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_product_mappings_channel").on(table.channelId),
-    index("idx_channel_product_mappings_product").on(table.productId),
-    index("idx_channel_product_mappings_active").on(table.active),
+    index("idx_channel_product_mappings_channel_created").on(table.channelId, table.createdAt),
+    index("idx_channel_product_mappings_product_created").on(table.productId, table.createdAt),
+    index("idx_channel_product_mappings_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -139,9 +140,12 @@ export const channelBookingLinks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_booking_links_channel").on(table.channelId),
-    index("idx_channel_booking_links_booking").on(table.bookingId),
-    index("idx_channel_booking_links_external_booking").on(table.externalBookingId),
+    index("idx_channel_booking_links_channel_created").on(table.channelId, table.createdAt),
+    index("idx_channel_booking_links_booking_created").on(table.bookingId, table.createdAt),
+    index("idx_channel_booking_links_external_booking_created").on(
+      table.externalBookingId,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -162,8 +166,9 @@ export const channelWebhookEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_webhook_events_channel").on(table.channelId),
-    index("idx_channel_webhook_events_status").on(table.status),
+    index("idx_channel_webhook_events_channel_received").on(table.channelId, table.receivedAt),
+    index("idx_channel_webhook_events_status_received").on(table.status, table.receivedAt),
+    index("idx_channel_webhook_events_event_type_received").on(table.eventType, table.receivedAt),
     index("idx_channel_webhook_events_external_event").on(table.externalEventId),
   ],
 )

@@ -55,10 +55,12 @@ export const stayBookingItems = pgTable(
   },
   (table) => [
     index("idx_stay_booking_items_booking_item").on(table.bookingItemId),
+    index("idx_stay_booking_items_check_in").on(table.checkInDate),
     index("idx_stay_booking_items_property_check_in").on(table.propertyId, table.checkInDate),
-    index("idx_stay_booking_items_room_type").on(table.roomTypeId),
-    index("idx_stay_booking_items_room_unit").on(table.roomUnitId),
-    index("idx_stay_booking_items_rate_plan").on(table.ratePlanId),
+    index("idx_stay_booking_items_room_type_check_in").on(table.roomTypeId, table.checkInDate),
+    index("idx_stay_booking_items_room_unit_check_in").on(table.roomUnitId, table.checkInDate),
+    index("idx_stay_booking_items_rate_plan_check_in").on(table.ratePlanId, table.checkInDate),
+    index("idx_stay_booking_items_status_check_in").on(table.status, table.checkInDate),
     uniqueIndex("uidx_stay_booking_items_booking_item").on(table.bookingItemId),
   ],
 )
@@ -110,9 +112,9 @@ export const roomBlocks = pgTable(
   },
   (table) => [
     index("idx_room_blocks_property_starts_on").on(table.propertyId, table.startsOn),
-    index("idx_room_blocks_room_type").on(table.roomTypeId),
-    index("idx_room_blocks_room_unit").on(table.roomUnitId),
-    index("idx_room_blocks_status").on(table.status),
+    index("idx_room_blocks_room_type_starts_on").on(table.roomTypeId, table.startsOn),
+    index("idx_room_blocks_room_unit_starts_on").on(table.roomUnitId, table.startsOn),
+    index("idx_room_blocks_status_starts_on").on(table.status, table.startsOn),
     index("idx_room_blocks_dates").on(table.startsOn, table.endsOn),
   ],
 )
@@ -133,12 +135,15 @@ export const roomUnitStatusEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    index("idx_room_unit_status_events_effective_from").on(table.effectiveFrom),
     index("idx_room_unit_status_events_room_unit_effective_from").on(
       table.roomUnitId,
       table.effectiveFrom,
     ),
-    index("idx_room_unit_status_events_status").on(table.statusCode),
-    index("idx_room_unit_status_events_effective_from").on(table.effectiveFrom),
+    index("idx_room_unit_status_events_status_effective_from").on(
+      table.statusCode,
+      table.effectiveFrom,
+    ),
   ],
 )
 
@@ -162,9 +167,9 @@ export const maintenanceBlocks = pgTable(
   },
   (table) => [
     index("idx_maintenance_blocks_property_starts_on").on(table.propertyId, table.startsOn),
-    index("idx_maintenance_blocks_room_type").on(table.roomTypeId),
-    index("idx_maintenance_blocks_room_unit").on(table.roomUnitId),
-    index("idx_maintenance_blocks_status").on(table.status),
+    index("idx_maintenance_blocks_room_type_starts_on").on(table.roomTypeId, table.startsOn),
+    index("idx_maintenance_blocks_room_unit_starts_on").on(table.roomUnitId, table.startsOn),
+    index("idx_maintenance_blocks_status_starts_on").on(table.status, table.startsOn),
     index("idx_maintenance_blocks_dates").on(table.startsOn, table.endsOn),
   ],
 )
@@ -195,15 +200,32 @@ export const housekeepingTasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    index("idx_housekeeping_tasks_priority_due_at").on(table.priority, table.dueAt),
     index("idx_housekeeping_tasks_property_priority_due_at").on(
       table.propertyId,
       table.priority,
       table.dueAt,
     ),
-    index("idx_housekeeping_tasks_room_unit").on(table.roomUnitId),
-    index("idx_housekeeping_tasks_stay_booking_item").on(table.stayBookingItemId),
-    index("idx_housekeeping_tasks_status").on(table.status),
-    index("idx_housekeeping_tasks_due_at").on(table.dueAt),
+    index("idx_housekeeping_tasks_room_unit_priority_due_at").on(
+      table.roomUnitId,
+      table.priority,
+      table.dueAt,
+    ),
+    index("idx_housekeeping_tasks_stay_booking_item_priority_due_at").on(
+      table.stayBookingItemId,
+      table.priority,
+      table.dueAt,
+    ),
+    index("idx_housekeeping_tasks_status_priority_due_at").on(
+      table.status,
+      table.priority,
+      table.dueAt,
+    ),
+    index("idx_housekeeping_tasks_task_type_priority_due_at").on(
+      table.taskType,
+      table.priority,
+      table.dueAt,
+    ),
   ],
 )
 

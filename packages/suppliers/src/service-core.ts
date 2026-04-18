@@ -1,18 +1,13 @@
-import {
-  identityAddresses,
-  identityContactPoints,
-  identityNamedContacts,
-} from "@voyantjs/identity/schema"
 import { and, eq, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
-import { suppliers } from "./schema.js"
+import { supplierDirectoryProjections, suppliers } from "./schema.js"
 import type {
   CreateSupplierInput,
   SupplierListQuery,
   UpdateSupplierInput,
 } from "./service-shared.js"
-import { hydrateSuppliers, supplierEntityType, syncSupplierIdentity } from "./service-shared.js"
+import { hydrateSuppliers, syncSupplierIdentity } from "./service-shared.js"
 
 export async function listSuppliers(db: PostgresJsDatabase, query: SupplierListQuery) {
   const conditions = []
@@ -37,34 +32,18 @@ export async function listSuppliers(db: PostgresJsDatabase, query: SupplierListQ
         or
         exists (
           select 1
-          from ${identityContactPoints}
-          where ${identityContactPoints.entityType} = ${supplierEntityType}
-            and ${identityContactPoints.entityId} = ${suppliers.id}
+          from ${supplierDirectoryProjections}
+          where ${supplierDirectoryProjections.supplierId} = ${suppliers.id}
             and (
-              ${identityContactPoints.value} ilike ${term}
-              or ${identityContactPoints.normalizedValue} ilike ${term}
-            )
-        )
-        or exists (
-          select 1
-          from ${identityNamedContacts}
-          where ${identityNamedContacts.entityType} = ${supplierEntityType}
-            and ${identityNamedContacts.entityId} = ${suppliers.id}
-            and (
-              ${identityNamedContacts.name} ilike ${term}
-              or ${identityNamedContacts.email} ilike ${term}
-              or ${identityNamedContacts.phone} ilike ${term}
-            )
-        )
-        or exists (
-          select 1
-          from ${identityAddresses}
-          where ${identityAddresses.entityType} = ${supplierEntityType}
-            and ${identityAddresses.entityId} = ${suppliers.id}
-            and (
-              ${identityAddresses.fullText} ilike ${term}
-              or ${identityAddresses.city} ilike ${term}
-              or ${identityAddresses.country} ilike ${term}
+              ${supplierDirectoryProjections.email} ilike ${term}
+              or ${supplierDirectoryProjections.phone} ilike ${term}
+              or ${supplierDirectoryProjections.website} ilike ${term}
+              or ${supplierDirectoryProjections.address} ilike ${term}
+              or ${supplierDirectoryProjections.city} ilike ${term}
+              or ${supplierDirectoryProjections.country} ilike ${term}
+              or ${supplierDirectoryProjections.contactName} ilike ${term}
+              or ${supplierDirectoryProjections.contactEmail} ilike ${term}
+              or ${supplierDirectoryProjections.contactPhone} ilike ${term}
             )
         )
       )`,

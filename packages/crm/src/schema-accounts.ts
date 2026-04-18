@@ -1,5 +1,14 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import { date, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import {
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
 
 import {
   communicationChannelEnum,
@@ -34,6 +43,9 @@ export const organizations = pgTable(
     index("idx_organizations_name").on(table.name),
     index("idx_organizations_owner").on(table.ownerId),
     index("idx_organizations_status").on(table.status),
+    index("idx_organizations_owner_updated").on(table.ownerId, table.updatedAt),
+    index("idx_organizations_relation_updated").on(table.relation, table.updatedAt),
+    index("idx_organizations_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -66,7 +78,28 @@ export const people = pgTable(
     index("idx_people_owner").on(table.ownerId),
     index("idx_people_status").on(table.status),
     index("idx_people_name").on(table.firstName, table.lastName),
+    index("idx_people_org_updated").on(table.organizationId, table.updatedAt),
+    index("idx_people_owner_updated").on(table.ownerId, table.updatedAt),
+    index("idx_people_relation_updated").on(table.relation, table.updatedAt),
+    index("idx_people_status_updated").on(table.status, table.updatedAt),
   ],
+)
+
+export const personDirectoryProjections = pgTable(
+  "person_directory_projections",
+  {
+    personId: typeIdRef("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    email: text("email"),
+    phone: text("phone"),
+    website: text("website"),
+    address: text("address"),
+    city: text("city"),
+    country: text("country"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("uq_person_directory_projections_person").on(table.personId)],
 )
 
 export const personNotes = pgTable(
@@ -80,7 +113,10 @@ export const personNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_person_notes_person").on(table.personId)],
+  (table) => [
+    index("idx_person_notes_person").on(table.personId),
+    index("idx_person_notes_person_created").on(table.personId, table.createdAt),
+  ],
 )
 
 export type PersonNote = typeof personNotes.$inferSelect
@@ -97,7 +133,10 @@ export const organizationNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_organization_notes_org").on(table.organizationId)],
+  (table) => [
+    index("idx_organization_notes_org").on(table.organizationId),
+    index("idx_organization_notes_org_created").on(table.organizationId, table.createdAt),
+  ],
 )
 
 export type OrganizationNote = typeof organizationNotes.$inferSelect
@@ -122,6 +161,17 @@ export const communicationLog = pgTable(
   },
   (table) => [
     index("idx_communication_log_person").on(table.personId),
+    index("idx_communication_log_person_created").on(table.personId, table.createdAt),
+    index("idx_communication_log_person_channel_created").on(
+      table.personId,
+      table.channel,
+      table.createdAt,
+    ),
+    index("idx_communication_log_person_direction_created").on(
+      table.personId,
+      table.direction,
+      table.createdAt,
+    ),
     index("idx_communication_log_org").on(table.organizationId),
     index("idx_communication_log_channel").on(table.channel),
   ],
@@ -130,14 +180,18 @@ export const communicationLog = pgTable(
 export type CommunicationLogEntry = typeof communicationLog.$inferSelect
 export type NewCommunicationLogEntry = typeof communicationLog.$inferInsert
 
-export const segments = pgTable("segments", {
-  id: typeId("segments"),
-  name: text("name").notNull(),
-  description: text("description"),
-  conditions: jsonb("conditions").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+export const segments = pgTable(
+  "segments",
+  {
+    id: typeId("segments"),
+    name: text("name").notNull(),
+    description: text("description"),
+    conditions: jsonb("conditions").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_segments_created").on(table.createdAt)],
+)
 
 export type Segment = typeof segments.$inferSelect
 export type NewSegment = typeof segments.$inferInsert
@@ -167,3 +221,5 @@ export type Organization = typeof organizations.$inferSelect
 export type NewOrganization = typeof organizations.$inferInsert
 export type Person = typeof people.$inferSelect
 export type NewPerson = typeof people.$inferInsert
+export type PersonDirectoryProjection = typeof personDirectoryProjections.$inferSelect
+export type NewPersonDirectoryProjection = typeof personDirectoryProjections.$inferInsert

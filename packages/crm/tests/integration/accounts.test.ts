@@ -143,6 +143,34 @@ describe.skipIf(!DB_AVAILABLE)("Account routes", () => {
       expect(body.data.id).toBeTruthy()
     })
 
+    it("hydrates inline person identity fields on create and list reads", async () => {
+      const createRes = await app.request("/people", {
+        method: "POST",
+        ...json({
+          firstName: "Identity",
+          lastName: "Person",
+          email: "identity@example.com",
+          phone: "+40123456789",
+          website: "https://example.com",
+          address: "Main Street 1",
+          city: "Bucharest",
+          country: "RO",
+        }),
+      })
+
+      expect(createRes.status).toBe(201)
+      const createBody = await createRes.json()
+      expect(createBody.data.email).toBe("identity@example.com")
+      expect(createBody.data.city).toBe("Bucharest")
+
+      const listRes = await app.request("/people", { method: "GET" })
+
+      expect(listRes.status).toBe(200)
+      const listBody = await listRes.json()
+      expect(listBody.data[0]?.email).toBe("identity@example.com")
+      expect(listBody.data[0]?.country).toBe("RO")
+    })
+
     it("lists people", async () => {
       await app.request("/people", {
         method: "POST",

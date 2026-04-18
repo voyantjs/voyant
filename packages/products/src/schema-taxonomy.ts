@@ -29,6 +29,8 @@ export const productTypes = pgTable(
   (table) => [
     uniqueIndex("uidx_product_types_code").on(table.code),
     index("idx_product_types_active").on(table.active),
+    index("idx_product_types_sort_name").on(table.sortOrder, table.name),
+    index("idx_product_types_active_sort_name").on(table.active, table.sortOrder, table.name),
   ],
 )
 
@@ -53,6 +55,13 @@ export const productCategories = pgTable(
     uniqueIndex("uidx_product_categories_slug").on(table.slug),
     index("idx_product_categories_parent").on(table.parentId),
     index("idx_product_categories_active").on(table.active),
+    index("idx_product_categories_sort_name").on(table.sortOrder, table.name),
+    index("idx_product_categories_active_sort_name").on(table.active, table.sortOrder, table.name),
+    index("idx_product_categories_parent_sort_name").on(
+      table.parentId,
+      table.sortOrder,
+      table.name,
+    ),
   ],
 )
 
@@ -92,6 +101,10 @@ export const destinations = pgTable(
     uniqueIndex("uidx_destinations_code").on(table.code),
     index("idx_destinations_parent").on(table.parentId),
     index("idx_destinations_active").on(table.active),
+    index("idx_destinations_sort_slug").on(table.sortOrder, table.slug),
+    index("idx_destinations_active_sort_slug").on(table.active, table.sortOrder, table.slug),
+    index("idx_destinations_type_sort_slug").on(table.destinationType, table.sortOrder, table.slug),
+    index("idx_destinations_parent_sort_slug").on(table.parentId, table.sortOrder, table.slug),
   ],
 )
 
@@ -116,6 +129,12 @@ export const destinationTranslations = pgTable(
   (table) => [
     uniqueIndex("uidx_destination_translations_locale").on(table.destinationId, table.languageTag),
     index("idx_destination_translations_language").on(table.languageTag),
+    index("idx_destination_translations_destination_language_created").on(
+      table.destinationId,
+      table.languageTag,
+      table.createdAt,
+    ),
+    index("idx_destination_translations_language_created").on(table.languageTag, table.createdAt),
   ],
 )
 
@@ -137,6 +156,7 @@ export const productCategoryProducts = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.productId, table.categoryId] }),
+    index("idx_pcp_product_sort").on(table.productId, table.sortOrder),
     index("idx_pcp_category").on(table.categoryId),
   ],
 )
@@ -173,6 +193,7 @@ export const productDestinations = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.productId, table.destinationId] }),
-    index("idx_product_destinations_destination").on(table.destinationId),
+    index("idx_product_destinations_product_sort").on(table.productId, table.sortOrder),
+    index("idx_product_destinations_destination_sort").on(table.destinationId, table.sortOrder),
   ],
 )

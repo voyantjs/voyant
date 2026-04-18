@@ -55,8 +55,9 @@ export const markets = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_markets_code").on(table.code),
-    index("idx_markets_status").on(table.status),
-    index("idx_markets_country").on(table.countryCode),
+    index("idx_markets_updated").on(table.updatedAt),
+    index("idx_markets_status_updated").on(table.status, table.updatedAt),
+    index("idx_markets_country_updated").on(table.countryCode, table.updatedAt),
   ],
 )
 
@@ -75,8 +76,22 @@ export const marketLocales = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_market_locales_market").on(table.marketId),
-    index("idx_market_locales_language").on(table.languageTag),
+    index("idx_market_locales_sort_created").on(table.sortOrder, table.createdAt),
+    index("idx_market_locales_market_sort_created").on(
+      table.marketId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_market_locales_language_sort_created").on(
+      table.languageTag,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_market_locales_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_market_locales_market_language").on(table.marketId, table.languageTag),
   ],
 )
@@ -98,8 +113,22 @@ export const marketCurrencies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_market_currencies_market").on(table.marketId),
-    index("idx_market_currencies_code").on(table.currencyCode),
+    index("idx_market_currencies_sort_created").on(table.sortOrder, table.createdAt),
+    index("idx_market_currencies_market_sort_created").on(
+      table.marketId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_market_currencies_code_sort_created").on(
+      table.currencyCode,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_market_currencies_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_market_currencies_market_code").on(table.marketId, table.currencyCode),
   ],
 )
@@ -118,9 +147,9 @@ export const fxRateSets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_fx_rate_sets_base_currency").on(table.baseCurrency),
+    index("idx_fx_rate_sets_base_currency_effective").on(table.baseCurrency, table.effectiveAt),
     index("idx_fx_rate_sets_effective_at").on(table.effectiveAt),
-    index("idx_fx_rate_sets_source").on(table.source),
+    index("idx_fx_rate_sets_source_effective").on(table.source, table.effectiveAt),
   ],
 )
 
@@ -139,7 +168,9 @@ export const exchangeRates = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_exchange_rates_rate_set").on(table.fxRateSetId),
+    index("idx_exchange_rates_rate_set_created").on(table.fxRateSetId, table.createdAt),
+    index("idx_exchange_rates_base_currency_created").on(table.baseCurrency, table.createdAt),
+    index("idx_exchange_rates_quote_currency_created").on(table.quoteCurrency, table.createdAt),
     index("idx_exchange_rates_pair").on(table.baseCurrency, table.quoteCurrency),
     uniqueIndex("uidx_exchange_rates_set_pair").on(
       table.fxRateSetId,
@@ -166,9 +197,9 @@ export const marketPriceCatalogs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_market_price_catalogs_market").on(table.marketId),
-    index("idx_market_price_catalogs_catalog").on(table.priceCatalogId),
-    index("idx_market_price_catalogs_active").on(table.active),
+    index("idx_market_price_catalogs_market_created").on(table.marketId, table.createdAt),
+    index("idx_market_price_catalogs_catalog_created").on(table.priceCatalogId, table.createdAt),
+    index("idx_market_price_catalogs_active_created").on(table.active, table.createdAt),
     uniqueIndex("uidx_market_price_catalogs_market_catalog").on(
       table.marketId,
       table.priceCatalogId,
@@ -199,11 +230,12 @@ export const marketProductRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_market_product_rules_market").on(table.marketId),
-    index("idx_market_product_rules_product").on(table.productId),
-    index("idx_market_product_rules_option").on(table.optionId),
+    index("idx_market_product_rules_market_created").on(table.marketId, table.createdAt),
+    index("idx_market_product_rules_product_created").on(table.productId, table.createdAt),
+    index("idx_market_product_rules_option_created").on(table.optionId, table.createdAt),
     index("idx_market_product_rules_catalog").on(table.priceCatalogId),
-    index("idx_market_product_rules_active").on(table.active),
+    index("idx_market_product_rules_sellability_created").on(table.sellability, table.createdAt),
+    index("idx_market_product_rules_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -227,10 +259,11 @@ export const marketChannelRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_market_channel_rules_market").on(table.marketId),
-    index("idx_market_channel_rules_channel").on(table.channelId),
+    index("idx_market_channel_rules_market_created").on(table.marketId, table.createdAt),
+    index("idx_market_channel_rules_channel_created").on(table.channelId, table.createdAt),
     index("idx_market_channel_rules_catalog").on(table.priceCatalogId),
-    index("idx_market_channel_rules_active").on(table.active),
+    index("idx_market_channel_rules_sellability_created").on(table.sellability, table.createdAt),
+    index("idx_market_channel_rules_active_created").on(table.active, table.createdAt),
   ],
 )
 

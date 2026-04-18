@@ -33,8 +33,16 @@ export const groundExecutionEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_execution_events_dispatch").on(table.dispatchId),
-    index("idx_ground_execution_events_type").on(table.eventType),
+    index("idx_ground_execution_events_dispatch_occurred_created").on(
+      table.dispatchId,
+      table.occurredAt,
+      table.createdAt,
+    ),
+    index("idx_ground_execution_events_type_occurred_created").on(
+      table.eventType,
+      table.occurredAt,
+      table.createdAt,
+    ),
     index("idx_ground_execution_events_occurred_at").on(table.occurredAt),
   ],
 )
@@ -62,11 +70,20 @@ export const groundDispatchAssignments = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_dispatch_assignments_dispatch").on(table.dispatchId),
-    index("idx_ground_dispatch_assignments_operator").on(table.operatorId),
-    index("idx_ground_dispatch_assignments_vehicle").on(table.vehicleId),
-    index("idx_ground_dispatch_assignments_driver").on(table.driverId),
-    index("idx_ground_dispatch_assignments_source").on(table.assignmentSource),
+    index("idx_ground_dispatch_assignments_dispatch_assigned").on(
+      table.dispatchId,
+      table.assignedAt,
+    ),
+    index("idx_ground_dispatch_assignments_operator_assigned").on(
+      table.operatorId,
+      table.assignedAt,
+    ),
+    index("idx_ground_dispatch_assignments_vehicle_assigned").on(table.vehicleId, table.assignedAt),
+    index("idx_ground_dispatch_assignments_driver_assigned").on(table.driverId, table.assignedAt),
+    index("idx_ground_dispatch_assignments_source_assigned").on(
+      table.assignmentSource,
+      table.assignedAt,
+    ),
   ],
 )
 
@@ -91,9 +108,8 @@ export const groundDispatchLegs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_dispatch_legs_dispatch").on(table.dispatchId),
-    index("idx_ground_dispatch_legs_sequence").on(table.sequence),
-    index("idx_ground_dispatch_legs_type").on(table.legType),
+    index("idx_ground_dispatch_legs_dispatch_sequence").on(table.dispatchId, table.sequence),
+    index("idx_ground_dispatch_legs_type_sequence").on(table.legType, table.sequence),
   ],
 )
 
@@ -112,8 +128,11 @@ export const groundDispatchPassengers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_dispatch_passengers_dispatch").on(table.dispatchId),
-    index("idx_ground_dispatch_passengers_participant").on(table.participantId),
+    index("idx_ground_dispatch_passengers_dispatch_created").on(table.dispatchId, table.createdAt),
+    index("idx_ground_dispatch_passengers_participant_created").on(
+      table.participantId,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -137,10 +156,11 @@ export const groundDriverShifts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_driver_shifts_driver").on(table.driverId),
-    index("idx_ground_driver_shifts_operator").on(table.operatorId),
-    index("idx_ground_driver_shifts_facility").on(table.facilityId),
-    index("idx_ground_driver_shifts_status").on(table.status),
+    index("idx_ground_driver_shifts_starts_at").on(table.startsAt),
+    index("idx_ground_driver_shifts_driver_starts_at").on(table.driverId, table.startsAt),
+    index("idx_ground_driver_shifts_operator_starts_at").on(table.operatorId, table.startsAt),
+    index("idx_ground_driver_shifts_facility_starts_at").on(table.facilityId, table.startsAt),
+    index("idx_ground_driver_shifts_status_starts_at").on(table.status, table.startsAt),
   ],
 )
 
@@ -164,9 +184,12 @@ export const groundServiceIncidents = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_service_incidents_dispatch").on(table.dispatchId),
-    index("idx_ground_service_incidents_severity").on(table.severity),
-    index("idx_ground_service_incidents_resolution").on(table.resolutionStatus),
+    index("idx_ground_service_incidents_dispatch_opened").on(table.dispatchId, table.openedAt),
+    index("idx_ground_service_incidents_severity_opened").on(table.severity, table.openedAt),
+    index("idx_ground_service_incidents_resolution_opened").on(
+      table.resolutionStatus,
+      table.openedAt,
+    ),
   ],
 )
 
@@ -192,9 +215,8 @@ export const groundDispatchCheckpoints = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_dispatch_checkpoints_dispatch").on(table.dispatchId),
-    index("idx_ground_dispatch_checkpoints_sequence").on(table.sequence),
-    index("idx_ground_dispatch_checkpoints_status").on(table.status),
+    index("idx_ground_dispatch_checkpoints_dispatch_sequence").on(table.dispatchId, table.sequence),
+    index("idx_ground_dispatch_checkpoints_status_sequence").on(table.status, table.sequence),
   ],
 )
 

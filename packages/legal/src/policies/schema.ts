@@ -82,6 +82,8 @@ export const policies = pgTable(
   (table) => [
     index("idx_policies_kind").on(table.kind),
     index("idx_policies_language").on(table.language),
+    index("idx_policies_kind_updated").on(table.kind, table.updatedAt),
+    index("idx_policies_language_updated").on(table.language, table.updatedAt),
     uniqueIndex("uq_policies_slug").on(table.slug),
   ],
 )
@@ -148,6 +150,11 @@ export const policyRules = pgTable(
   },
   (table) => [
     index("idx_policy_rules_version").on(table.policyVersionId),
+    index("idx_policy_rules_version_sort_created").on(
+      table.policyVersionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_policy_rules_type").on(table.ruleType),
     index("idx_policy_rules_sort").on(table.sortOrder),
   ],
@@ -187,6 +194,41 @@ export const policyAssignments = pgTable(
     index("idx_policy_assignments_market").on(table.marketId),
     index("idx_policy_assignments_organization").on(table.organizationId),
     index("idx_policy_assignments_priority").on(table.priority),
+    index("idx_policy_assignments_policy_priority_created").on(
+      table.policyId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_scope_priority_created").on(
+      table.scope,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_product_priority_created").on(
+      table.productId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_channel_priority_created").on(
+      table.channelId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_supplier_priority_created").on(
+      table.supplierId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_market_priority_created").on(
+      table.marketId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_policy_assignments_organization_priority_created").on(
+      table.organizationId,
+      table.priority,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -220,6 +262,10 @@ export const policyAcceptances = pgTable(
     index("idx_policy_acceptances_booking").on(table.bookingId),
     index("idx_policy_acceptances_order").on(table.orderId),
     index("idx_policy_acceptances_offer").on(table.offerId),
+    index("idx_policy_acceptances_version_accepted").on(table.policyVersionId, table.acceptedAt),
+    index("idx_policy_acceptances_person_accepted").on(table.personId, table.acceptedAt),
+    index("idx_policy_acceptances_booking_accepted").on(table.bookingId, table.acceptedAt),
+    index("idx_policy_acceptances_order_accepted").on(table.orderId, table.acceptedAt),
   ],
 )
 

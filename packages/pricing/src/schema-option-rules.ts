@@ -53,12 +53,14 @@ export const optionPriceRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_price_rules_product").on(table.productId),
-    index("idx_option_price_rules_option").on(table.optionId),
-    index("idx_option_price_rules_catalog").on(table.priceCatalogId),
-    index("idx_option_price_rules_schedule").on(table.priceScheduleId),
-    index("idx_option_price_rules_policy").on(table.cancellationPolicyId),
-    index("idx_option_price_rules_active").on(table.active),
+    index("idx_option_price_rules_updated").on(table.updatedAt),
+    index("idx_option_price_rules_product_updated").on(table.productId, table.updatedAt),
+    index("idx_option_price_rules_option_updated").on(table.optionId, table.updatedAt),
+    index("idx_option_price_rules_catalog_updated").on(table.priceCatalogId, table.updatedAt),
+    index("idx_option_price_rules_schedule_updated").on(table.priceScheduleId, table.updatedAt),
+    index("idx_option_price_rules_policy_updated").on(table.cancellationPolicyId, table.updatedAt),
+    index("idx_option_price_rules_pricing_mode_updated").on(table.pricingMode, table.updatedAt),
+    index("idx_option_price_rules_active_updated").on(table.active, table.updatedAt),
     uniqueIndex("uidx_option_price_rules_option_code").on(table.optionId, table.code),
   ],
 )
@@ -88,11 +90,31 @@ export const optionUnitPriceRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_unit_price_rules_rule").on(table.optionPriceRuleId),
-    index("idx_option_unit_price_rules_option").on(table.optionId),
-    index("idx_option_unit_price_rules_unit").on(table.unitId),
-    index("idx_option_unit_price_rules_category").on(table.pricingCategoryId),
-    index("idx_option_unit_price_rules_active").on(table.active),
+    index("idx_option_unit_price_rules_rule_sort_created").on(
+      table.optionPriceRuleId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_option_unit_price_rules_option_sort_created").on(
+      table.optionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_option_unit_price_rules_unit_sort_created").on(
+      table.unitId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_option_unit_price_rules_category_sort_created").on(
+      table.pricingCategoryId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_option_unit_price_rules_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -116,9 +138,11 @@ export const optionStartTimeRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_start_time_rules_rule").on(table.optionPriceRuleId),
-    index("idx_option_start_time_rules_option").on(table.optionId),
-    index("idx_option_start_time_rules_start_time").on(table.startTimeId),
+    index("idx_option_start_time_rules_created").on(table.createdAt),
+    index("idx_option_start_time_rules_rule_created").on(table.optionPriceRuleId, table.createdAt),
+    index("idx_option_start_time_rules_option_created").on(table.optionId, table.createdAt),
+    index("idx_option_start_time_rules_start_time_created").on(table.startTimeId, table.createdAt),
+    index("idx_option_start_time_rules_active_created").on(table.active, table.createdAt),
     uniqueIndex("uidx_option_start_time_rules_rule_start_time").on(
       table.optionPriceRuleId,
       table.startTimeId,
@@ -143,8 +167,16 @@ export const optionUnitTiers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_unit_tiers_rule").on(table.optionUnitPriceRuleId),
-    index("idx_option_unit_tiers_active").on(table.active),
+    index("idx_option_unit_tiers_rule_sort_min_quantity").on(
+      table.optionUnitPriceRuleId,
+      table.sortOrder,
+      table.minQuantity,
+    ),
+    index("idx_option_unit_tiers_active_sort_min_quantity").on(
+      table.active,
+      table.sortOrder,
+      table.minQuantity,
+    ),
   ],
 )
 
@@ -167,9 +199,26 @@ export const pickupPriceRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_pickup_price_rules_rule").on(table.optionPriceRuleId),
-    index("idx_pickup_price_rules_option").on(table.optionId),
-    index("idx_pickup_price_rules_pickup").on(table.pickupPointId),
+    index("idx_pickup_price_rules_rule_sort_created").on(
+      table.optionPriceRuleId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_price_rules_option_sort_created").on(
+      table.optionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_price_rules_pickup_sort_created").on(
+      table.pickupPointId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_price_rules_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_pickup_price_rules_rule_pickup").on(
       table.optionPriceRuleId,
       table.pickupPointId,
@@ -198,9 +247,26 @@ export const dropoffPriceRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_dropoff_price_rules_rule").on(table.optionPriceRuleId),
-    index("idx_dropoff_price_rules_option").on(table.optionId),
-    index("idx_dropoff_price_rules_facility").on(table.facilityId),
+    index("idx_dropoff_price_rules_rule_sort_created").on(
+      table.optionPriceRuleId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_dropoff_price_rules_option_sort_created").on(
+      table.optionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_dropoff_price_rules_facility_sort_created").on(
+      table.facilityId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_dropoff_price_rules_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -225,10 +291,31 @@ export const extraPriceRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_extra_price_rules_rule").on(table.optionPriceRuleId),
-    index("idx_extra_price_rules_option").on(table.optionId),
-    index("idx_extra_price_rules_product_extra").on(table.productExtraId),
-    index("idx_extra_price_rules_option_extra_config").on(table.optionExtraConfigId),
+    index("idx_extra_price_rules_rule_sort_created").on(
+      table.optionPriceRuleId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_extra_price_rules_option_sort_created").on(
+      table.optionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_extra_price_rules_product_extra_sort_created").on(
+      table.productExtraId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_extra_price_rules_option_extra_config_sort_created").on(
+      table.optionExtraConfigId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_extra_price_rules_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 

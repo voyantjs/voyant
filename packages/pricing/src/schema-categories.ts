@@ -35,11 +35,24 @@ export const pricingCategories = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_pricing_categories_product").on(table.productId),
-    index("idx_pricing_categories_option").on(table.optionId),
-    index("idx_pricing_categories_unit").on(table.unitId),
-    index("idx_pricing_categories_type").on(table.categoryType),
-    index("idx_pricing_categories_active").on(table.active),
+    index("idx_pricing_categories_sort_name").on(table.sortOrder, table.name),
+    index("idx_pricing_categories_product_sort_name").on(
+      table.productId,
+      table.sortOrder,
+      table.name,
+    ),
+    index("idx_pricing_categories_option_sort_name").on(
+      table.optionId,
+      table.sortOrder,
+      table.name,
+    ),
+    index("idx_pricing_categories_unit_sort_name").on(table.unitId, table.sortOrder, table.name),
+    index("idx_pricing_categories_type_sort_name").on(
+      table.categoryType,
+      table.sortOrder,
+      table.name,
+    ),
+    index("idx_pricing_categories_active_sort_name").on(table.active, table.sortOrder, table.name),
     uniqueIndex("uidx_pricing_categories_option_code").on(table.optionId, table.code),
   ],
 )
@@ -63,8 +76,20 @@ export const pricingCategoryDependencies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_pricing_category_dependencies_category").on(table.pricingCategoryId),
-    index("idx_pricing_category_dependencies_master").on(table.masterPricingCategoryId),
+    index("idx_pricing_category_dependencies_created").on(table.createdAt),
+    index("idx_pricing_category_dependencies_category_created").on(
+      table.pricingCategoryId,
+      table.createdAt,
+    ),
+    index("idx_pricing_category_dependencies_master_created").on(
+      table.masterPricingCategoryId,
+      table.createdAt,
+    ),
+    index("idx_pricing_category_dependencies_type_created").on(
+      table.dependencyType,
+      table.createdAt,
+    ),
+    index("idx_pricing_category_dependencies_active_created").on(table.active, table.createdAt),
     uniqueIndex("uidx_pricing_category_dependencies_pair_type").on(
       table.pricingCategoryId,
       table.masterPricingCategoryId,

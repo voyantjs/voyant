@@ -49,10 +49,11 @@ export const resources = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_resources_supplier").on(table.supplierId),
-    index("idx_resources_facility").on(table.facilityId),
-    index("idx_resources_kind").on(table.kind),
-    index("idx_resources_active").on(table.active),
+    index("idx_resources_created").on(table.createdAt),
+    index("idx_resources_supplier_created").on(table.supplierId, table.createdAt),
+    index("idx_resources_facility_created").on(table.facilityId, table.createdAt),
+    index("idx_resources_kind_created").on(table.kind, table.createdAt),
+    index("idx_resources_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -70,9 +71,10 @@ export const resourcePools = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_resource_pools_product").on(table.productId),
-    index("idx_resource_pools_kind").on(table.kind),
-    index("idx_resource_pools_active").on(table.active),
+    index("idx_resource_pools_created").on(table.createdAt),
+    index("idx_resource_pools_product_created").on(table.productId, table.createdAt),
+    index("idx_resource_pools_kind_created").on(table.kind, table.createdAt),
+    index("idx_resource_pools_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -89,8 +91,9 @@ export const resourcePoolMembers = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    index("idx_resource_pool_members_created").on(table.createdAt),
     index("idx_resource_pool_members_pool_created").on(table.poolId, table.createdAt),
-    index("idx_resource_pool_members_resource").on(table.resourceId),
+    index("idx_resource_pool_members_resource_created").on(table.resourceId, table.createdAt),
   ],
 )
 
@@ -116,9 +119,21 @@ export const resourceRequirements = pgTable(
       table.priority,
       table.createdAt,
     ),
-    index("idx_resource_requirements_product").on(table.productId),
-    index("idx_resource_requirements_rule").on(table.availabilityRuleId),
-    index("idx_resource_requirements_start_time").on(table.startTimeId),
+    index("idx_resource_requirements_product_priority_created").on(
+      table.productId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_resource_requirements_rule_priority_created").on(
+      table.availabilityRuleId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_resource_requirements_start_time_priority_created").on(
+      table.startTimeId,
+      table.priority,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -138,9 +153,10 @@ export const resourceSlotAssignments = pgTable(
   },
   (table) => [
     index("idx_resource_slot_assignments_slot_assigned").on(table.slotId, table.assignedAt),
-    index("idx_resource_slot_assignments_pool").on(table.poolId),
-    index("idx_resource_slot_assignments_resource").on(table.resourceId),
-    index("idx_resource_slot_assignments_booking").on(table.bookingId),
+    index("idx_resource_slot_assignments_pool_assigned").on(table.poolId, table.assignedAt),
+    index("idx_resource_slot_assignments_resource_assigned").on(table.resourceId, table.assignedAt),
+    index("idx_resource_slot_assignments_booking_assigned").on(table.bookingId, table.assignedAt),
+    index("idx_resource_slot_assignments_status_assigned").on(table.status, table.assignedAt),
   ],
 )
 
@@ -160,7 +176,7 @@ export const resourceCloseouts = pgTable(
   },
   (table) => [
     index("idx_resource_closeouts_resource_created").on(table.resourceId, table.createdAt),
-    index("idx_resource_closeouts_date").on(table.dateLocal),
+    index("idx_resource_closeouts_date_created").on(table.dateLocal, table.createdAt),
   ],
 )
 

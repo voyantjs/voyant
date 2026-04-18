@@ -18,7 +18,10 @@ export const productDays = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_product_days_product").on(table.productId)],
+  (table) => [
+    index("idx_product_days_product").on(table.productId),
+    index("idx_product_days_product_day_number").on(table.productId, table.dayNumber),
+  ],
 )
 
 export type ProductDay = typeof productDays.$inferSelect
@@ -44,6 +47,7 @@ export const productDayServices = pgTable(
   },
   (table) => [
     index("idx_product_day_services_day").on(table.dayId),
+    index("idx_product_day_services_day_sort").on(table.dayId, table.sortOrder),
     index("idx_product_day_services_supplier_service").on(table.supplierServiceId),
   ],
 )
@@ -64,7 +68,10 @@ export const productVersions = pgTable(
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_product_versions_product").on(table.productId)],
+  (table) => [
+    index("idx_product_versions_product").on(table.productId),
+    index("idx_product_versions_product_version").on(table.productId, table.versionNumber),
+  ],
 )
 
 export type ProductVersion = typeof productVersions.$inferSelect
@@ -81,7 +88,10 @@ export const productNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_product_notes_product").on(table.productId)],
+  (table) => [
+    index("idx_product_notes_product").on(table.productId),
+    index("idx_product_notes_product_created").on(table.productId, table.createdAt),
+  ],
 )
 
 export type ProductNote = typeof productNotes.$inferSelect
@@ -114,6 +124,28 @@ export const productMedia = pgTable(
     index("idx_product_media_product").on(table.productId),
     index("idx_product_media_day").on(table.dayId),
     index("idx_product_media_product_day").on(table.productId, table.dayId),
+    index("idx_product_media_product_cover_sort").on(
+      table.productId,
+      table.isCover,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_product_media_product_day_cover_sort").on(
+      table.productId,
+      table.dayId,
+      table.isCover,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_product_media_product_brochure_current_version").on(
+      table.productId,
+      table.isBrochure,
+      table.dayId,
+      table.isBrochureCurrent,
+      table.brochureVersion,
+      table.updatedAt,
+      table.createdAt,
+    ),
   ],
 )
 

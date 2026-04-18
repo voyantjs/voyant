@@ -50,4 +50,32 @@ describe.skipIf(!DB_AVAILABLE)("Supplier routes", () => {
     const body = await res.json()
     expect(body.data).toBeInstanceOf(Array)
   })
+
+  it("searches suppliers through the supplier directory projection", async () => {
+    const createRes = await app.request("/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Projection Tours",
+        type: "experience",
+        status: "active",
+        email: "ops@projection.example",
+        address: "Projection Street 1",
+        city: "Cluj-Napoca",
+        country: "RO",
+        contactName: "Projection Ops",
+        contactEmail: "contact@projection.example",
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+
+    const res = await app.request("/?search=projection%20ops", { method: "GET" })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.name).toBe("Projection Tours")
+    expect(body.data[0]?.contactEmail).toBe("contact@projection.example")
+  })
 })

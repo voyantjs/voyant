@@ -28,8 +28,10 @@ export const cancellationPolicies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_cancellation_policies_active").on(table.active),
-    index("idx_cancellation_policies_default").on(table.isDefault),
+    index("idx_cancellation_policies_updated").on(table.updatedAt),
+    index("idx_cancellation_policies_type_updated").on(table.policyType, table.updatedAt),
+    index("idx_cancellation_policies_active_updated").on(table.active, table.updatedAt),
+    index("idx_cancellation_policies_default_updated").on(table.isDefault, table.updatedAt),
     uniqueIndex("uidx_cancellation_policies_code").on(table.code),
   ],
 )
@@ -52,8 +54,17 @@ export const cancellationPolicyRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_cancellation_policy_rules_policy").on(table.cancellationPolicyId),
-    index("idx_cancellation_policy_rules_active").on(table.active),
+    index("idx_cancellation_policy_rules_created").on(table.createdAt),
+    index("idx_cancellation_policy_rules_policy_sort_created").on(
+      table.cancellationPolicyId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_cancellation_policy_rules_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 

@@ -38,12 +38,19 @@ export const channelInventoryAllotments = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_inventory_allotments_channel").on(table.channelId),
-    index("idx_channel_inventory_allotments_contract").on(table.contractId),
-    index("idx_channel_inventory_allotments_product").on(table.productId),
-    index("idx_channel_inventory_allotments_option").on(table.optionId),
-    index("idx_channel_inventory_allotments_start_time").on(table.startTimeId),
-    index("idx_channel_inventory_allotments_active").on(table.active),
+    index("idx_channel_inventory_allotments_updated").on(table.updatedAt),
+    index("idx_channel_inventory_allotments_channel_updated").on(table.channelId, table.updatedAt),
+    index("idx_channel_inventory_allotments_contract_updated").on(
+      table.contractId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_allotments_product_updated").on(table.productId, table.updatedAt),
+    index("idx_channel_inventory_allotments_option_updated").on(table.optionId, table.updatedAt),
+    index("idx_channel_inventory_allotments_start_time_updated").on(
+      table.startTimeId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_allotments_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -68,11 +75,24 @@ export const channelInventoryAllotmentTargets = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_inventory_allotment_targets_allotment").on(table.allotmentId),
-    index("idx_channel_inventory_allotment_targets_slot").on(table.slotId),
-    index("idx_channel_inventory_allotment_targets_start_time").on(table.startTimeId),
-    index("idx_channel_inventory_allotment_targets_date").on(table.dateLocal),
-    index("idx_channel_inventory_allotment_targets_active").on(table.active),
+    index("idx_channel_inventory_allotment_targets_updated").on(table.updatedAt),
+    index("idx_channel_inventory_allotment_targets_allotment_updated").on(
+      table.allotmentId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_allotment_targets_slot_updated").on(table.slotId, table.updatedAt),
+    index("idx_channel_inventory_allotment_targets_start_time_updated").on(
+      table.startTimeId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_allotment_targets_date_updated").on(
+      table.dateLocal,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_allotment_targets_active_updated").on(
+      table.active,
+      table.updatedAt,
+    ),
   ],
 )
 
@@ -94,8 +114,15 @@ export const channelInventoryReleaseRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_inventory_release_rules_allotment").on(table.allotmentId),
-    index("idx_channel_inventory_release_rules_mode").on(table.releaseMode),
+    index("idx_channel_inventory_release_rules_updated").on(table.updatedAt),
+    index("idx_channel_inventory_release_rules_allotment_updated").on(
+      table.allotmentId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_release_rules_mode_updated").on(
+      table.releaseMode,
+      table.updatedAt,
+    ),
   ],
 )
 
@@ -123,10 +150,27 @@ export const channelInventoryReleaseExecutions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_inventory_release_executions_allotment").on(table.allotmentId),
-    index("idx_channel_inventory_release_executions_rule").on(table.releaseRuleId),
-    index("idx_channel_inventory_release_executions_target").on(table.targetId),
-    index("idx_channel_inventory_release_executions_status").on(table.status),
+    index("idx_channel_inventory_release_executions_updated").on(table.updatedAt),
+    index("idx_channel_inventory_release_executions_allotment_updated").on(
+      table.allotmentId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_release_executions_rule_updated").on(
+      table.releaseRuleId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_release_executions_target_updated").on(
+      table.targetId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_release_executions_slot_updated").on(
+      table.slotId,
+      table.updatedAt,
+    ),
+    index("idx_channel_inventory_release_executions_status_updated").on(
+      table.status,
+      table.updatedAt,
+    ),
   ],
 )
 

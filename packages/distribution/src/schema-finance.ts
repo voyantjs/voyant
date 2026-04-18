@@ -42,9 +42,10 @@ export const channelSettlementRuns = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_settlement_runs_channel").on(table.channelId),
-    index("idx_channel_settlement_runs_contract").on(table.contractId),
-    index("idx_channel_settlement_runs_status").on(table.status),
+    index("idx_channel_settlement_runs_updated").on(table.updatedAt),
+    index("idx_channel_settlement_runs_channel_updated").on(table.channelId, table.updatedAt),
+    index("idx_channel_settlement_runs_contract_updated").on(table.contractId, table.updatedAt),
+    index("idx_channel_settlement_runs_status_updated").on(table.status, table.updatedAt),
     index("idx_channel_settlement_runs_period").on(table.periodStart, table.periodEnd),
   ],
 )
@@ -75,10 +76,14 @@ export const channelSettlementItems = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_settlement_items_run").on(table.settlementRunId),
-    index("idx_channel_settlement_items_booking_link").on(table.bookingLinkId),
-    index("idx_channel_settlement_items_booking").on(table.bookingId),
-    index("idx_channel_settlement_items_status").on(table.status),
+    index("idx_channel_settlement_items_updated").on(table.updatedAt),
+    index("idx_channel_settlement_items_run_updated").on(table.settlementRunId, table.updatedAt),
+    index("idx_channel_settlement_items_booking_link_updated").on(
+      table.bookingLinkId,
+      table.updatedAt,
+    ),
+    index("idx_channel_settlement_items_booking_updated").on(table.bookingId, table.updatedAt),
+    index("idx_channel_settlement_items_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -104,9 +109,10 @@ export const channelReconciliationRuns = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_reconciliation_runs_channel").on(table.channelId),
-    index("idx_channel_reconciliation_runs_contract").on(table.contractId),
-    index("idx_channel_reconciliation_runs_status").on(table.status),
+    index("idx_channel_reconciliation_runs_updated").on(table.updatedAt),
+    index("idx_channel_reconciliation_runs_channel_updated").on(table.channelId, table.updatedAt),
+    index("idx_channel_reconciliation_runs_contract_updated").on(table.contractId, table.updatedAt),
+    index("idx_channel_reconciliation_runs_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -133,11 +139,21 @@ export const channelReconciliationItems = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_reconciliation_items_run").on(table.reconciliationRunId),
-    index("idx_channel_reconciliation_items_booking_link").on(table.bookingLinkId),
-    index("idx_channel_reconciliation_items_booking").on(table.bookingId),
-    index("idx_channel_reconciliation_items_issue").on(table.issueType),
-    index("idx_channel_reconciliation_items_resolution").on(table.resolutionStatus),
+    index("idx_channel_reconciliation_items_updated").on(table.updatedAt),
+    index("idx_channel_reconciliation_items_run_updated").on(
+      table.reconciliationRunId,
+      table.updatedAt,
+    ),
+    index("idx_channel_reconciliation_items_booking_link_updated").on(
+      table.bookingLinkId,
+      table.updatedAt,
+    ),
+    index("idx_channel_reconciliation_items_booking_updated").on(table.bookingId, table.updatedAt),
+    index("idx_channel_reconciliation_items_issue_updated").on(table.issueType, table.updatedAt),
+    index("idx_channel_reconciliation_items_resolution_updated").on(
+      table.resolutionStatus,
+      table.updatedAt,
+    ),
   ],
 )
 
@@ -166,10 +182,17 @@ export const channelRemittanceExceptions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_remittance_exceptions_channel").on(table.channelId),
-    index("idx_channel_remittance_exceptions_settlement_item").on(table.settlementItemId),
-    index("idx_channel_remittance_exceptions_reconciliation_item").on(table.reconciliationItemId),
-    index("idx_channel_remittance_exceptions_status").on(table.status),
+    index("idx_channel_remittance_exceptions_updated").on(table.updatedAt),
+    index("idx_channel_remittance_exceptions_channel_updated").on(table.channelId, table.updatedAt),
+    index("idx_channel_remittance_exceptions_settlement_item_updated").on(
+      table.settlementItemId,
+      table.updatedAt,
+    ),
+    index("idx_channel_remittance_exceptions_reconciliation_item_updated").on(
+      table.reconciliationItemId,
+      table.updatedAt,
+    ),
+    index("idx_channel_remittance_exceptions_status_updated").on(table.status, table.updatedAt),
   ],
 )
 
@@ -189,8 +212,12 @@ export const channelSettlementApprovals = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_settlement_approvals_run").on(table.settlementRunId),
-    index("idx_channel_settlement_approvals_status").on(table.status),
+    index("idx_channel_settlement_approvals_updated").on(table.updatedAt),
+    index("idx_channel_settlement_approvals_run_updated").on(
+      table.settlementRunId,
+      table.updatedAt,
+    ),
+    index("idx_channel_settlement_approvals_status_updated").on(table.status, table.updatedAt),
   ],
 )
 

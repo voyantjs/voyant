@@ -47,9 +47,15 @@ export const groundTransferPreferences = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_transfer_preferences_booking").on(table.bookingId),
-    index("idx_ground_transfer_preferences_booking_item").on(table.bookingItemId),
-    index("idx_ground_transfer_preferences_service_level").on(table.serviceLevel),
+    index("idx_ground_transfer_preferences_booking_created").on(table.bookingId, table.createdAt),
+    index("idx_ground_transfer_preferences_booking_item_created").on(
+      table.bookingItemId,
+      table.createdAt,
+    ),
+    index("idx_ground_transfer_preferences_service_level_created").on(
+      table.serviceLevel,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -83,14 +89,42 @@ export const groundDispatches = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_dispatches_preference").on(table.transferPreferenceId),
-    index("idx_ground_dispatches_booking").on(table.bookingId),
-    index("idx_ground_dispatches_booking_item").on(table.bookingItemId),
-    index("idx_ground_dispatches_operator").on(table.operatorId),
-    index("idx_ground_dispatches_vehicle").on(table.vehicleId),
-    index("idx_ground_dispatches_driver").on(table.driverId),
-    index("idx_ground_dispatches_status").on(table.status),
-    index("idx_ground_dispatches_service_date").on(table.serviceDate),
+    index("idx_ground_dispatches_preference_service_date_created").on(
+      table.transferPreferenceId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_booking_service_date_created").on(
+      table.bookingId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_booking_item_service_date_created").on(
+      table.bookingItemId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_operator_service_date_created").on(
+      table.operatorId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_vehicle_service_date_created").on(
+      table.vehicleId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_driver_service_date_created").on(
+      table.driverId,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_status_service_date_created").on(
+      table.status,
+      table.serviceDate,
+      table.createdAt,
+    ),
+    index("idx_ground_dispatches_service_date_created").on(table.serviceDate, table.createdAt),
   ],
 )
 

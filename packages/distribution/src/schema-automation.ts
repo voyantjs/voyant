@@ -32,10 +32,11 @@ export const channelSettlementPolicies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_settlement_policies_channel").on(table.channelId),
-    index("idx_channel_settlement_policies_contract").on(table.contractId),
-    index("idx_channel_settlement_policies_frequency").on(table.frequency),
-    index("idx_channel_settlement_policies_active").on(table.active),
+    index("idx_channel_settlement_policies_updated").on(table.updatedAt),
+    index("idx_channel_settlement_policies_channel_updated").on(table.channelId, table.updatedAt),
+    index("idx_channel_settlement_policies_contract_updated").on(table.contractId, table.updatedAt),
+    index("idx_channel_settlement_policies_frequency_updated").on(table.frequency, table.updatedAt),
+    index("idx_channel_settlement_policies_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -62,10 +63,20 @@ export const channelReconciliationPolicies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_reconciliation_policies_channel").on(table.channelId),
-    index("idx_channel_reconciliation_policies_contract").on(table.contractId),
-    index("idx_channel_reconciliation_policies_frequency").on(table.frequency),
-    index("idx_channel_reconciliation_policies_active").on(table.active),
+    index("idx_channel_reconciliation_policies_updated").on(table.updatedAt),
+    index("idx_channel_reconciliation_policies_channel_updated").on(
+      table.channelId,
+      table.updatedAt,
+    ),
+    index("idx_channel_reconciliation_policies_contract_updated").on(
+      table.contractId,
+      table.updatedAt,
+    ),
+    index("idx_channel_reconciliation_policies_frequency_updated").on(
+      table.frequency,
+      table.updatedAt,
+    ),
+    index("idx_channel_reconciliation_policies_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -86,9 +97,10 @@ export const channelReleaseSchedules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_channel_release_schedules_rule").on(table.releaseRuleId),
-    index("idx_channel_release_schedules_kind").on(table.scheduleKind),
-    index("idx_channel_release_schedules_active").on(table.active),
+    index("idx_channel_release_schedules_updated").on(table.updatedAt),
+    index("idx_channel_release_schedules_rule_updated").on(table.releaseRuleId, table.updatedAt),
+    index("idx_channel_release_schedules_kind_updated").on(table.scheduleKind, table.updatedAt),
+    index("idx_channel_release_schedules_active_updated").on(table.active, table.updatedAt),
   ],
 )
 

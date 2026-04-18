@@ -48,9 +48,21 @@ export const stayRules = pgTable(
       table.priority,
       table.createdAt,
     ),
-    index("idx_stay_rules_rate_plan").on(table.ratePlanId),
-    index("idx_stay_rules_room_type").on(table.roomTypeId),
-    index("idx_stay_rules_active").on(table.active),
+    index("idx_stay_rules_rate_plan_priority_created").on(
+      table.ratePlanId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_stay_rules_room_type_priority_created").on(
+      table.roomTypeId,
+      table.priority,
+      table.createdAt,
+    ),
+    index("idx_stay_rules_active_priority_created").on(
+      table.active,
+      table.priority,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -78,8 +90,8 @@ export const roomInventory = pgTable(
   },
   (table) => [
     index("idx_room_inventory_property_date").on(table.propertyId, table.date),
-    index("idx_room_inventory_room_type").on(table.roomTypeId),
-    index("idx_room_inventory_date").on(table.date),
+    index("idx_room_inventory_room_type_date").on(table.roomTypeId, table.date),
+    index("idx_room_inventory_stop_sell_date").on(table.stopSell, table.date),
     uniqueIndex("uidx_room_inventory_room_type_date").on(table.roomTypeId, table.date),
   ],
 )
@@ -106,8 +118,7 @@ export const ratePlanInventoryOverrides = pgTable(
   },
   (table) => [
     index("idx_rate_plan_inventory_overrides_rate_plan_date").on(table.ratePlanId, table.date),
-    index("idx_rate_plan_inventory_overrides_room_type").on(table.roomTypeId),
-    index("idx_rate_plan_inventory_overrides_date").on(table.date),
+    index("idx_rate_plan_inventory_overrides_room_type_date").on(table.roomTypeId, table.date),
     uniqueIndex("uidx_rate_plan_inventory_overrides_unique").on(
       table.ratePlanId,
       table.roomTypeId,
@@ -139,9 +150,9 @@ export const roomTypeRates = pgTable(
   },
   (table) => [
     index("idx_room_type_rates_rate_plan_created").on(table.ratePlanId, table.createdAt),
-    index("idx_room_type_rates_room_type").on(table.roomTypeId),
-    index("idx_room_type_rates_price_schedule").on(table.priceScheduleId),
-    index("idx_room_type_rates_active").on(table.active),
+    index("idx_room_type_rates_room_type_created").on(table.roomTypeId, table.createdAt),
+    index("idx_room_type_rates_price_schedule_created").on(table.priceScheduleId, table.createdAt),
+    index("idx_room_type_rates_active_created").on(table.active, table.createdAt),
     uniqueIndex("uidx_room_type_rates_plan_room_schedule").on(
       table.ratePlanId,
       table.roomTypeId,

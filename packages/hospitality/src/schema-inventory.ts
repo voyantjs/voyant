@@ -50,8 +50,12 @@ export const roomTypes = pgTable(
   },
   (table) => [
     index("idx_room_types_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
-    index("idx_room_types_active").on(table.active),
-    index("idx_room_types_inventory_mode").on(table.inventoryMode),
+    index("idx_room_types_active_sort_name").on(table.active, table.sortOrder, table.name),
+    index("idx_room_types_inventory_mode_sort_name").on(
+      table.inventoryMode,
+      table.sortOrder,
+      table.name,
+    ),
     uniqueIndex("uidx_room_types_property_code").on(table.propertyId, table.code),
   ],
 )
@@ -76,7 +80,11 @@ export const roomTypeBedConfigs = pgTable(
       table.isPrimary,
       table.createdAt,
     ),
-    index("idx_room_type_bed_configs_primary").on(table.isPrimary),
+    index("idx_room_type_bed_configs_bed_type_primary_created").on(
+      table.bedType,
+      table.isPrimary,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -109,8 +117,12 @@ export const roomUnits = pgTable(
       table.roomNumber,
       table.code,
     ),
-    index("idx_room_units_room_type").on(table.roomTypeId),
-    index("idx_room_units_status").on(table.status),
+    index("idx_room_units_room_type_room_number_code").on(
+      table.roomTypeId,
+      table.roomNumber,
+      table.code,
+    ),
+    index("idx_room_units_status_room_number_code").on(table.status, table.roomNumber, table.code),
     uniqueIndex("uidx_room_units_property_code").on(table.propertyId, table.code),
   ],
 )
@@ -137,7 +149,7 @@ export const mealPlans = pgTable(
   },
   (table) => [
     index("idx_meal_plans_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
-    index("idx_meal_plans_active").on(table.active),
+    index("idx_meal_plans_active_sort_name").on(table.active, table.sortOrder, table.name),
     uniqueIndex("uidx_meal_plans_property_code").on(table.propertyId, table.code),
   ],
 )
@@ -169,11 +181,11 @@ export const ratePlans = pgTable(
   },
   (table) => [
     index("idx_rate_plans_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
-    index("idx_rate_plans_meal_plan").on(table.mealPlanId),
+    index("idx_rate_plans_meal_plan_sort_name").on(table.mealPlanId, table.sortOrder, table.name),
     index("idx_rate_plans_catalog").on(table.priceCatalogId),
     index("idx_rate_plans_policy").on(table.cancellationPolicyId),
-    index("idx_rate_plans_market").on(table.marketId),
-    index("idx_rate_plans_active").on(table.active),
+    index("idx_rate_plans_market_sort_name").on(table.marketId, table.sortOrder, table.name),
+    index("idx_rate_plans_active_sort_name").on(table.active, table.sortOrder, table.name),
     uniqueIndex("uidx_rate_plans_property_code").on(table.propertyId, table.code),
   ],
 )
@@ -202,10 +214,23 @@ export const ratePlanRoomTypes = pgTable(
       table.sortOrder,
       table.createdAt,
     ),
-    index("idx_rate_plan_room_types_room_type").on(table.roomTypeId),
-    index("idx_rate_plan_room_types_product").on(table.productId),
+    index("idx_rate_plan_room_types_room_type_sort_created").on(
+      table.roomTypeId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_rate_plan_room_types_product_sort_created").on(
+      table.productId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_rate_plan_room_types_option").on(table.optionId),
     index("idx_rate_plan_room_types_unit").on(table.unitId),
+    index("idx_rate_plan_room_types_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_rate_plan_room_types_pair").on(table.ratePlanId, table.roomTypeId),
   ],
 )

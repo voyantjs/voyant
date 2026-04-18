@@ -27,9 +27,18 @@ export const groundOperators = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_ground_operators_supplier").on(table.supplierId),
-    index("idx_ground_operators_facility").on(table.facilityId),
-    index("idx_ground_operators_active").on(table.active),
+    index("idx_ground_operators_name_created").on(table.name, table.createdAt),
+    index("idx_ground_operators_supplier_name_created").on(
+      table.supplierId,
+      table.name,
+      table.createdAt,
+    ),
+    index("idx_ground_operators_facility_name_created").on(
+      table.facilityId,
+      table.name,
+      table.createdAt,
+    ),
+    index("idx_ground_operators_active_name_created").on(table.active, table.name, table.createdAt),
   ],
 )
 
@@ -56,9 +65,10 @@ export const groundVehicles = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_ground_vehicles_resource").on(table.resourceId),
-    index("idx_ground_vehicles_operator").on(table.operatorId),
-    index("idx_ground_vehicles_category").on(table.category),
-    index("idx_ground_vehicles_active").on(table.active),
+    index("idx_ground_vehicles_created").on(table.createdAt),
+    index("idx_ground_vehicles_operator_created").on(table.operatorId, table.createdAt),
+    index("idx_ground_vehicles_category_created").on(table.category, table.createdAt),
+    index("idx_ground_vehicles_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -81,8 +91,9 @@ export const groundDrivers = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_ground_drivers_resource").on(table.resourceId),
-    index("idx_ground_drivers_operator").on(table.operatorId),
-    index("idx_ground_drivers_active").on(table.active),
+    index("idx_ground_drivers_created").on(table.createdAt),
+    index("idx_ground_drivers_operator_created").on(table.operatorId, table.createdAt),
+    index("idx_ground_drivers_active_created").on(table.active, table.createdAt),
   ],
 )
 

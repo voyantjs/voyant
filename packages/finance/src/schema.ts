@@ -254,12 +254,19 @@ export const paymentInstruments = pgTable(
   },
   (table) => [
     index("idx_payment_instruments_owner_type").on(table.ownerType),
+    index("idx_payment_instruments_owner_type_updated").on(table.ownerType, table.updatedAt),
     index("idx_payment_instruments_person").on(table.personId),
+    index("idx_payment_instruments_person_updated").on(table.personId, table.updatedAt),
     index("idx_payment_instruments_organization").on(table.organizationId),
+    index("idx_payment_instruments_organization_updated").on(table.organizationId, table.updatedAt),
     index("idx_payment_instruments_supplier").on(table.supplierId),
+    index("idx_payment_instruments_supplier_updated").on(table.supplierId, table.updatedAt),
     index("idx_payment_instruments_channel").on(table.channelId),
+    index("idx_payment_instruments_channel_updated").on(table.channelId, table.updatedAt),
     index("idx_payment_instruments_status").on(table.status),
+    index("idx_payment_instruments_status_updated").on(table.status, table.updatedAt),
     index("idx_payment_instruments_type").on(table.instrumentType),
+    index("idx_payment_instruments_type_updated").on(table.instrumentType, table.updatedAt),
   ],
 )
 
@@ -331,13 +338,24 @@ export const paymentSessions = pgTable(
   },
   (table) => [
     index("idx_payment_sessions_target").on(table.targetType, table.targetId),
+    index("idx_payment_sessions_target_created").on(table.targetType, table.createdAt),
     index("idx_payment_sessions_booking").on(table.bookingId),
+    index("idx_payment_sessions_booking_created").on(table.bookingId, table.createdAt),
     index("idx_payment_sessions_order").on(table.orderId),
+    index("idx_payment_sessions_order_created").on(table.orderId, table.createdAt),
     index("idx_payment_sessions_invoice").on(table.invoiceId),
+    index("idx_payment_sessions_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_payment_sessions_schedule").on(table.bookingPaymentScheduleId),
+    index("idx_payment_sessions_schedule_created").on(
+      table.bookingPaymentScheduleId,
+      table.createdAt,
+    ),
     index("idx_payment_sessions_guarantee").on(table.bookingGuaranteeId),
+    index("idx_payment_sessions_guarantee_created").on(table.bookingGuaranteeId, table.createdAt),
     index("idx_payment_sessions_status").on(table.status),
+    index("idx_payment_sessions_status_created").on(table.status, table.createdAt),
     index("idx_payment_sessions_provider").on(table.provider),
+    index("idx_payment_sessions_provider_created").on(table.provider, table.createdAt),
     index("idx_payment_sessions_provider_session").on(table.providerSessionId),
     index("idx_payment_sessions_expires_at").on(table.expiresAt),
     uniqueIndex("uidx_payment_sessions_idempotency").on(table.idempotencyKey),
@@ -383,11 +401,23 @@ export const paymentAuthorizations = pgTable(
   },
   (table) => [
     index("idx_payment_authorizations_booking").on(table.bookingId),
+    index("idx_payment_authorizations_booking_created").on(table.bookingId, table.createdAt),
     index("idx_payment_authorizations_order").on(table.orderId),
+    index("idx_payment_authorizations_order_created").on(table.orderId, table.createdAt),
     index("idx_payment_authorizations_invoice").on(table.invoiceId),
+    index("idx_payment_authorizations_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_payment_authorizations_guarantee").on(table.bookingGuaranteeId),
+    index("idx_payment_authorizations_guarantee_created").on(
+      table.bookingGuaranteeId,
+      table.createdAt,
+    ),
     index("idx_payment_authorizations_instrument").on(table.paymentInstrumentId),
+    index("idx_payment_authorizations_instrument_created").on(
+      table.paymentInstrumentId,
+      table.createdAt,
+    ),
     index("idx_payment_authorizations_status").on(table.status),
+    index("idx_payment_authorizations_status_created").on(table.status, table.createdAt),
   ],
 )
 
@@ -418,8 +448,14 @@ export const paymentCaptures = pgTable(
   },
   (table) => [
     index("idx_payment_captures_authorization").on(table.paymentAuthorizationId),
+    index("idx_payment_captures_authorization_created").on(
+      table.paymentAuthorizationId,
+      table.createdAt,
+    ),
     index("idx_payment_captures_invoice").on(table.invoiceId),
+    index("idx_payment_captures_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_payment_captures_status").on(table.status),
+    index("idx_payment_captures_status_created").on(table.status, table.createdAt),
   ],
 )
 
@@ -445,6 +481,11 @@ export const bookingPaymentSchedules = pgTable(
   },
   (table) => [
     index("idx_booking_payment_schedules_booking").on(table.bookingId),
+    index("idx_booking_payment_schedules_booking_due_created").on(
+      table.bookingId,
+      table.dueDate,
+      table.createdAt,
+    ),
     index("idx_booking_payment_schedules_item").on(table.bookingItemId),
     index("idx_booking_payment_schedules_status").on(table.status),
     index("idx_booking_payment_schedules_due_date").on(table.dueDate),
@@ -491,6 +532,7 @@ export const bookingGuarantees = pgTable(
   },
   (table) => [
     index("idx_booking_guarantees_booking").on(table.bookingId),
+    index("idx_booking_guarantees_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_guarantees_schedule").on(table.bookingPaymentScheduleId),
     index("idx_booking_guarantees_item").on(table.bookingItemId),
     index("idx_booking_guarantees_instrument").on(table.paymentInstrumentId),
@@ -524,6 +566,11 @@ export const bookingItemTaxLines = pgTable(
   },
   (table) => [
     index("idx_booking_item_tax_lines_item").on(table.bookingItemId),
+    index("idx_booking_item_tax_lines_item_sort_created").on(
+      table.bookingItemId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_booking_item_tax_lines_scope").on(table.scope),
   ],
 )
@@ -553,6 +600,7 @@ export const bookingItemCommissions = pgTable(
   },
   (table) => [
     index("idx_booking_item_commissions_item").on(table.bookingItemId),
+    index("idx_booking_item_commissions_item_created").on(table.bookingItemId, table.createdAt),
     index("idx_booking_item_commissions_channel").on(table.channelId),
     index("idx_booking_item_commissions_status").on(table.status),
   ],
@@ -605,9 +653,11 @@ export const invoices = pgTable(
   },
   (table) => [
     index("idx_invoices_booking").on(table.bookingId),
+    index("idx_invoices_booking_created").on(table.bookingId, table.createdAt),
     index("idx_invoices_person").on(table.personId),
     index("idx_invoices_organization").on(table.organizationId),
     index("idx_invoices_status").on(table.status),
+    index("idx_invoices_status_created").on(table.status, table.createdAt),
     index("idx_invoices_fx_rate_set").on(table.fxRateSetId),
     index("idx_invoices_number").on(table.invoiceNumber),
     index("idx_invoices_due_date").on(table.dueDate),
@@ -639,6 +689,7 @@ export const invoiceLineItems = pgTable(
   },
   (table) => [
     index("idx_invoice_line_items_invoice").on(table.invoiceId),
+    index("idx_invoice_line_items_invoice_sort").on(table.invoiceId, table.sortOrder),
     index("idx_invoice_line_items_booking_item").on(table.bookingItemId),
   ],
 )
@@ -685,6 +736,7 @@ export const payments = pgTable(
   },
   (table) => [
     index("idx_payments_invoice").on(table.invoiceId),
+    index("idx_payments_invoice_date").on(table.invoiceId, table.paymentDate),
     index("idx_payments_fx_rate_set").on(table.fxRateSetId),
     index("idx_payments_instrument").on(table.paymentInstrumentId),
     index("idx_payments_authorization").on(table.paymentAuthorizationId),
@@ -723,6 +775,7 @@ export const creditNotes = pgTable(
   },
   (table) => [
     index("idx_credit_notes_invoice").on(table.invoiceId),
+    index("idx_credit_notes_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_credit_notes_fx_rate_set").on(table.fxRateSetId),
     index("idx_credit_notes_number").on(table.creditNoteNumber),
   ],
@@ -749,7 +802,10 @@ export const creditNoteLineItems = pgTable(
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_credit_note_line_items_credit_note").on(table.creditNoteId)],
+  (table) => [
+    index("idx_credit_note_line_items_credit_note").on(table.creditNoteId),
+    index("idx_credit_note_line_items_credit_note_sort").on(table.creditNoteId, table.sortOrder),
+  ],
 )
 
 export type CreditNoteLineItem = typeof creditNoteLineItems.$inferSelect
@@ -788,10 +844,13 @@ export const supplierPayments = pgTable(
   },
   (table) => [
     index("idx_supplier_payments_booking").on(table.bookingId),
+    index("idx_supplier_payments_booking_created").on(table.bookingId, table.createdAt),
     index("idx_supplier_payments_supplier").on(table.supplierId),
+    index("idx_supplier_payments_supplier_created").on(table.supplierId, table.createdAt),
     index("idx_supplier_payments_fx_rate_set").on(table.fxRateSetId),
     index("idx_supplier_payments_instrument").on(table.paymentInstrumentId),
     index("idx_supplier_payments_status").on(table.status),
+    index("idx_supplier_payments_status_created").on(table.status, table.createdAt),
     index("idx_supplier_payments_date").on(table.paymentDate),
   ],
 )
@@ -812,7 +871,10 @@ export const financeNotes = pgTable(
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("idx_finance_notes_invoice").on(table.invoiceId)],
+  (table) => [
+    index("idx_finance_notes_invoice").on(table.invoiceId),
+    index("idx_finance_notes_invoice_created").on(table.invoiceId, table.createdAt),
+  ],
 )
 
 export type FinanceNote = typeof financeNotes.$inferSelect
@@ -840,6 +902,8 @@ export const invoiceNumberSeries = pgTable(
   (table) => [
     index("idx_invoice_number_series_scope").on(table.scope),
     index("idx_invoice_number_series_active").on(table.active),
+    index("idx_invoice_number_series_scope_updated").on(table.scope, table.updatedAt),
+    index("idx_invoice_number_series_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -867,9 +931,13 @@ export const invoiceTemplates = pgTable(
   },
   (table) => [
     index("idx_invoice_templates_language").on(table.language),
+    index("idx_invoice_templates_language_updated").on(table.language, table.updatedAt),
     index("idx_invoice_templates_jurisdiction").on(table.jurisdiction),
+    index("idx_invoice_templates_jurisdiction_updated").on(table.jurisdiction, table.updatedAt),
     index("idx_invoice_templates_default").on(table.isDefault),
+    index("idx_invoice_templates_default_updated").on(table.isDefault, table.updatedAt),
     index("idx_invoice_templates_active").on(table.active),
+    index("idx_invoice_templates_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -902,6 +970,7 @@ export const invoiceRenditions = pgTable(
   },
   (table) => [
     index("idx_invoice_renditions_invoice").on(table.invoiceId),
+    index("idx_invoice_renditions_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_invoice_renditions_template").on(table.templateId),
     index("idx_invoice_renditions_status").on(table.status),
     index("idx_invoice_renditions_format").on(table.format),
@@ -930,8 +999,11 @@ export const taxRegimes = pgTable(
   },
   (table) => [
     index("idx_tax_regimes_code").on(table.code),
+    index("idx_tax_regimes_code_updated").on(table.code, table.updatedAt),
     index("idx_tax_regimes_jurisdiction").on(table.jurisdiction),
+    index("idx_tax_regimes_jurisdiction_updated").on(table.jurisdiction, table.updatedAt),
     index("idx_tax_regimes_active").on(table.active),
+    index("idx_tax_regimes_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -960,6 +1032,7 @@ export const invoiceExternalRefs = pgTable(
   },
   (table) => [
     index("idx_invoice_external_refs_invoice").on(table.invoiceId),
+    index("idx_invoice_external_refs_invoice_created").on(table.invoiceId, table.createdAt),
     index("idx_invoice_external_refs_provider").on(table.provider),
     uniqueIndex("uq_invoice_external_refs_invoice_provider").on(table.invoiceId, table.provider),
   ],

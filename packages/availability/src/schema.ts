@@ -50,10 +50,11 @@ export const availabilityRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_rules_product").on(table.productId),
-    index("idx_availability_rules_option").on(table.optionId),
-    index("idx_availability_rules_facility").on(table.facilityId),
-    index("idx_availability_rules_active").on(table.active),
+    index("idx_availability_rules_updated").on(table.updatedAt),
+    index("idx_availability_rules_product_updated").on(table.productId, table.updatedAt),
+    index("idx_availability_rules_option_updated").on(table.optionId, table.updatedAt),
+    index("idx_availability_rules_facility_updated").on(table.facilityId, table.updatedAt),
+    index("idx_availability_rules_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -73,10 +74,26 @@ export const availabilityStartTimes = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_start_times_product").on(table.productId),
-    index("idx_availability_start_times_option").on(table.optionId),
-    index("idx_availability_start_times_facility").on(table.facilityId),
-    index("idx_availability_start_times_active").on(table.active),
+    index("idx_availability_start_times_product_sort_created").on(
+      table.productId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_availability_start_times_option_sort_created").on(
+      table.optionId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_availability_start_times_facility_sort_created").on(
+      table.facilityId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_availability_start_times_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -113,13 +130,13 @@ export const availabilitySlots = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_slots_product").on(table.productId),
-    index("idx_availability_slots_option").on(table.optionId),
-    index("idx_availability_slots_facility").on(table.facilityId),
-    index("idx_availability_slots_rule").on(table.availabilityRuleId),
-    index("idx_availability_slots_start_time").on(table.startTimeId),
-    index("idx_availability_slots_date").on(table.dateLocal),
-    index("idx_availability_slots_status").on(table.status),
+    index("idx_availability_slots_product_starts_at").on(table.productId, table.startsAt),
+    index("idx_availability_slots_option_starts_at").on(table.optionId, table.startsAt),
+    index("idx_availability_slots_facility_starts_at").on(table.facilityId, table.startsAt),
+    index("idx_availability_slots_rule_starts_at").on(table.availabilityRuleId, table.startsAt),
+    index("idx_availability_slots_start_time_starts_at").on(table.startTimeId, table.startsAt),
+    index("idx_availability_slots_date_starts_at").on(table.dateLocal, table.startsAt),
+    index("idx_availability_slots_status_starts_at").on(table.status, table.startsAt),
   ],
 )
 
@@ -135,9 +152,9 @@ export const availabilityCloseouts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_closeouts_product").on(table.productId),
-    index("idx_availability_closeouts_slot").on(table.slotId),
-    index("idx_availability_closeouts_date").on(table.dateLocal),
+    index("idx_availability_closeouts_product_created").on(table.productId, table.createdAt),
+    index("idx_availability_closeouts_slot_created").on(table.slotId, table.createdAt),
+    index("idx_availability_closeouts_date_created").on(table.dateLocal, table.createdAt),
   ],
 )
 
@@ -155,9 +172,10 @@ export const availabilityPickupPoints = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_pickup_points_product").on(table.productId),
-    index("idx_availability_pickup_points_facility").on(table.facilityId),
-    index("idx_availability_pickup_points_active").on(table.active),
+    index("idx_availability_pickup_points_created").on(table.createdAt),
+    index("idx_availability_pickup_points_product_created").on(table.productId, table.createdAt),
+    index("idx_availability_pickup_points_facility_created").on(table.facilityId, table.createdAt),
+    index("idx_availability_pickup_points_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -177,8 +195,12 @@ export const availabilitySlotPickups = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_availability_slot_pickups_slot").on(table.slotId),
-    index("idx_availability_slot_pickups_pickup_point").on(table.pickupPointId),
+    index("idx_availability_slot_pickups_created").on(table.createdAt),
+    index("idx_availability_slot_pickups_slot_created").on(table.slotId, table.createdAt),
+    index("idx_availability_slot_pickups_pickup_point_created").on(
+      table.pickupPointId,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -203,10 +225,12 @@ export const productMeetingConfigs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_product_meeting_configs_product").on(table.productId),
-    index("idx_product_meeting_configs_option").on(table.optionId),
-    index("idx_product_meeting_configs_facility").on(table.facilityId),
-    index("idx_product_meeting_configs_active").on(table.active),
+    index("idx_product_meeting_configs_updated").on(table.updatedAt),
+    index("idx_product_meeting_configs_product_updated").on(table.productId, table.updatedAt),
+    index("idx_product_meeting_configs_option_updated").on(table.optionId, table.updatedAt),
+    index("idx_product_meeting_configs_facility_updated").on(table.facilityId, table.updatedAt),
+    index("idx_product_meeting_configs_mode_updated").on(table.mode, table.updatedAt),
+    index("idx_product_meeting_configs_active_updated").on(table.active, table.updatedAt),
   ],
 )
 
@@ -226,9 +250,18 @@ export const pickupGroups = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_pickup_groups_meeting_config").on(table.meetingConfigId),
-    index("idx_pickup_groups_kind").on(table.kind),
-    index("idx_pickup_groups_active").on(table.active),
+    index("idx_pickup_groups_sort_created").on(table.sortOrder, table.createdAt),
+    index("idx_pickup_groups_meeting_config_sort_created").on(
+      table.meetingConfigId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_groups_kind_sort_created").on(table.kind, table.sortOrder, table.createdAt),
+    index("idx_pickup_groups_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -250,9 +283,22 @@ export const pickupLocations = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_pickup_locations_group").on(table.groupId),
-    index("idx_pickup_locations_facility").on(table.facilityId),
-    index("idx_pickup_locations_active").on(table.active),
+    index("idx_pickup_locations_sort_created").on(table.sortOrder, table.createdAt),
+    index("idx_pickup_locations_group_sort_created").on(
+      table.groupId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_locations_facility_sort_created").on(
+      table.facilityId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_pickup_locations_active_sort_created").on(
+      table.active,
+      table.sortOrder,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -278,10 +324,14 @@ export const locationPickupTimes = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_location_pickup_times_pickup_location").on(table.pickupLocationId),
-    index("idx_location_pickup_times_slot").on(table.slotId),
-    index("idx_location_pickup_times_start_time").on(table.startTimeId),
-    index("idx_location_pickup_times_active").on(table.active),
+    index("idx_location_pickup_times_created").on(table.createdAt),
+    index("idx_location_pickup_times_pickup_location_created").on(
+      table.pickupLocationId,
+      table.createdAt,
+    ),
+    index("idx_location_pickup_times_slot_created").on(table.slotId, table.createdAt),
+    index("idx_location_pickup_times_start_time_created").on(table.startTimeId, table.createdAt),
+    index("idx_location_pickup_times_active_created").on(table.active, table.createdAt),
   ],
 )
 
@@ -300,8 +350,12 @@ export const customPickupAreas = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_custom_pickup_areas_meeting_config").on(table.meetingConfigId),
-    index("idx_custom_pickup_areas_active").on(table.active),
+    index("idx_custom_pickup_areas_created").on(table.createdAt),
+    index("idx_custom_pickup_areas_meeting_config_created").on(
+      table.meetingConfigId,
+      table.createdAt,
+    ),
+    index("idx_custom_pickup_areas_active_created").on(table.active, table.createdAt),
   ],
 )
 

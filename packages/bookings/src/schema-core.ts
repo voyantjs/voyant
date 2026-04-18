@@ -43,6 +43,7 @@ export const bookings = pgTable(
   },
   (table) => [
     index("idx_bookings_status").on(table.status),
+    index("idx_bookings_status_created").on(table.status, table.createdAt),
     index("idx_bookings_person").on(table.personId),
     index("idx_bookings_organization").on(table.organizationId),
     index("idx_bookings_source_type").on(table.sourceType),
@@ -74,6 +75,16 @@ export const bookingParticipants = pgTable(
   },
   (table) => [
     index("idx_booking_participants_booking").on(table.bookingId),
+    index("idx_booking_participants_booking_primary_created").on(
+      table.bookingId,
+      table.isPrimary,
+      table.createdAt,
+    ),
+    index("idx_booking_participants_booking_type_created").on(
+      table.bookingId,
+      table.participantType,
+      table.createdAt,
+    ),
     index("idx_booking_participants_type").on(table.participantType),
     index("idx_booking_participants_person").on(table.personId),
   ],

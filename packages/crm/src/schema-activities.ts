@@ -39,6 +39,9 @@ export const activities = pgTable(
     index("idx_activities_owner").on(table.ownerId),
     index("idx_activities_status").on(table.status),
     index("idx_activities_type").on(table.type),
+    index("idx_activities_owner_updated").on(table.ownerId, table.updatedAt),
+    index("idx_activities_status_updated").on(table.status, table.updatedAt),
+    index("idx_activities_type_updated").on(table.type, table.updatedAt),
   ],
 )
 
@@ -56,6 +59,7 @@ export const activityLinks = pgTable(
   },
   (table) => [
     index("idx_activity_links_activity").on(table.activityId),
+    index("idx_activity_links_activity_role").on(table.activityId, table.role, table.createdAt),
     index("idx_activity_links_entity").on(table.entityType, table.entityId),
   ],
 )
@@ -75,6 +79,11 @@ export const activityParticipants = pgTable(
   },
   (table) => [
     index("idx_activity_participants_activity").on(table.activityId),
+    index("idx_activity_participants_activity_primary").on(
+      table.activityId,
+      table.isPrimary,
+      table.createdAt,
+    ),
     uniqueIndex("uidx_activity_participants_unique").on(table.activityId, table.personId),
   ],
 )
@@ -95,6 +104,7 @@ export const customFieldDefinitions = pgTable(
   },
   (table) => [
     index("idx_custom_field_definitions_entity").on(table.entityType),
+    index("idx_custom_field_definitions_entity_label").on(table.entityType, table.label),
     uniqueIndex("uidx_custom_field_definitions_key").on(table.entityType, table.key),
   ],
 )
@@ -120,6 +130,13 @@ export const customFieldValues = pgTable(
   },
   (table) => [
     index("idx_custom_field_values_entity").on(table.entityType, table.entityId),
+    index("idx_custom_field_values_entity_type_updated").on(table.entityType, table.updatedAt),
+    index("idx_custom_field_values_entity_updated").on(
+      table.entityType,
+      table.entityId,
+      table.updatedAt,
+    ),
+    index("idx_custom_field_values_definition_updated").on(table.definitionId, table.updatedAt),
     uniqueIndex("uidx_custom_field_values_unique").on(
       table.definitionId,
       table.entityType,

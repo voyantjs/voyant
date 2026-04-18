@@ -50,6 +50,19 @@ export const products = pgTable(
     index("idx_products_status").on(table.status),
     index("idx_products_facility").on(table.facilityId),
     index("idx_products_product_type").on(table.productTypeId),
+    index("idx_products_status_created").on(table.status, table.createdAt),
+    index("idx_products_booking_mode_created").on(table.bookingMode, table.createdAt),
+    index("idx_products_capacity_mode_created").on(table.capacityMode, table.createdAt),
+    index("idx_products_visibility_created").on(table.visibility, table.createdAt),
+    index("idx_products_activated_created").on(table.activated, table.createdAt),
+    index("idx_products_facility_created").on(table.facilityId, table.createdAt),
+    index("idx_products_product_type_created").on(table.productTypeId, table.createdAt),
+    index("idx_products_public_created").on(
+      table.status,
+      table.activated,
+      table.visibility,
+      table.createdAt,
+    ),
   ],
 )
 
@@ -76,6 +89,7 @@ export const productOptions = pgTable(
   },
   (table) => [
     index("idx_product_options_product").on(table.productId),
+    index("idx_product_options_product_sort").on(table.productId, table.sortOrder, table.createdAt),
     index("idx_product_options_status").on(table.status),
     index("idx_product_options_default").on(table.isDefault),
     uniqueIndex("uidx_product_options_product_code").on(table.productId, table.code),
@@ -110,6 +124,7 @@ export const optionUnits = pgTable(
   },
   (table) => [
     index("idx_option_units_option").on(table.optionId),
+    index("idx_option_units_option_sort").on(table.optionId, table.sortOrder, table.createdAt),
     index("idx_option_units_type").on(table.unitType),
     uniqueIndex("uidx_option_units_option_code").on(table.optionId, table.code),
   ],

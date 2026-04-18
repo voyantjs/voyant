@@ -57,8 +57,9 @@ export const productExtras = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_product_extras_product").on(table.productId),
-    index("idx_product_extras_active").on(table.active),
+    index("idx_product_extras_sort_name").on(table.sortOrder, table.name),
+    index("idx_product_extras_product_sort_name").on(table.productId, table.sortOrder, table.name),
+    index("idx_product_extras_active_sort_name").on(table.active, table.sortOrder, table.name),
     uniqueIndex("uidx_product_extras_product_code").on(table.productId, table.code),
   ],
 )
@@ -86,9 +87,22 @@ export const optionExtraConfigs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_extra_configs_option").on(table.optionId),
-    index("idx_option_extra_configs_extra").on(table.productExtraId),
-    index("idx_option_extra_configs_active").on(table.active),
+    index("idx_option_extra_configs_sort_default").on(table.sortOrder, table.isDefault),
+    index("idx_option_extra_configs_option_sort_default").on(
+      table.optionId,
+      table.sortOrder,
+      table.isDefault,
+    ),
+    index("idx_option_extra_configs_extra_sort_default").on(
+      table.productExtraId,
+      table.sortOrder,
+      table.isDefault,
+    ),
+    index("idx_option_extra_configs_active_sort_default").on(
+      table.active,
+      table.sortOrder,
+      table.isDefault,
+    ),
     uniqueIndex("uidx_option_extra_configs_option_extra").on(table.optionId, table.productExtraId),
   ],
 )
@@ -125,10 +139,14 @@ export const bookingExtras = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_extras_booking").on(table.bookingId),
-    index("idx_booking_extras_product_extra").on(table.productExtraId),
-    index("idx_booking_extras_option_extra_config").on(table.optionExtraConfigId),
-    index("idx_booking_extras_status").on(table.status),
+    index("idx_booking_extras_updated").on(table.updatedAt),
+    index("idx_booking_extras_booking_updated").on(table.bookingId, table.updatedAt),
+    index("idx_booking_extras_product_extra_updated").on(table.productExtraId, table.updatedAt),
+    index("idx_booking_extras_option_extra_config_updated").on(
+      table.optionExtraConfigId,
+      table.updatedAt,
+    ),
+    index("idx_booking_extras_status_updated").on(table.status, table.updatedAt),
   ],
 )
 

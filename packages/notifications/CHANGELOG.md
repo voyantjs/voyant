@@ -1,5 +1,19 @@
 # @voyantjs/notifications
 
+## 0.6.3
+
+### Patch Changes
+
+- 93d3734: Make worker-driven due reminder processing durable by queueing reminder runs before provider delivery and delivering each run in its own retryable background task.
+- d3c6937: Add a narrow execution lock surface and use it to serialize worker-driven notification reminder sweeps across processes.
+- Updated dependencies [d3c6937]
+  - @voyantjs/bookings@0.6.3
+  - @voyantjs/core@0.6.3
+  - @voyantjs/db@0.6.3
+  - @voyantjs/finance@0.6.3
+  - @voyantjs/hono@0.6.3
+  - @voyantjs/legal@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes

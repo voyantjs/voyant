@@ -92,7 +92,7 @@ export const orderParticipants = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_order_participants_order").on(table.orderId),
+    index("idx_order_participants_order_created").on(table.orderId, table.createdAt),
     index("idx_order_participants_person").on(table.personId),
     index("idx_order_participants_type").on(table.participantType),
   ],
@@ -134,7 +134,7 @@ export const orderItems = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_order_items_order").on(table.orderId),
+    index("idx_order_items_order_created").on(table.orderId, table.createdAt),
     index("idx_order_items_offer_item").on(table.offerItemId),
     index("idx_order_items_product").on(table.productId),
     index("idx_order_items_option").on(table.optionId),
@@ -159,7 +159,7 @@ export const orderItemParticipants = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_order_item_participants_item").on(table.orderItemId),
+    index("idx_order_item_participants_item_created").on(table.orderItemId, table.createdAt),
     index("idx_order_item_participants_participant").on(table.participantId),
     uniqueIndex("uidx_order_item_participants").on(table.orderItemId, table.participantId),
   ],
@@ -188,7 +188,7 @@ export const orderTerms = pgTable(
   },
   (table) => [
     index("idx_order_terms_offer").on(table.offerId),
-    index("idx_order_terms_order").on(table.orderId),
+    index("idx_order_terms_order_sort").on(table.orderId, table.sortOrder, table.createdAt),
     index("idx_order_terms_type").on(table.termType),
     index("idx_order_terms_acceptance").on(table.acceptanceStatus),
   ],

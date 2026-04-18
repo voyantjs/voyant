@@ -89,7 +89,7 @@ export const offerParticipants = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_offer_participants_offer").on(table.offerId),
+    index("idx_offer_participants_offer_created").on(table.offerId, table.createdAt),
     index("idx_offer_participants_person").on(table.personId),
     index("idx_offer_participants_type").on(table.participantType),
   ],
@@ -128,7 +128,7 @@ export const offerItems = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_offer_items_offer").on(table.offerId),
+    index("idx_offer_items_offer_created").on(table.offerId, table.createdAt),
     index("idx_offer_items_product").on(table.productId),
     index("idx_offer_items_option").on(table.optionId),
     index("idx_offer_items_unit").on(table.unitId),
@@ -152,7 +152,7 @@ export const offerItemParticipants = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_offer_item_participants_item").on(table.offerItemId),
+    index("idx_offer_item_participants_item_created").on(table.offerItemId, table.createdAt),
     index("idx_offer_item_participants_participant").on(table.participantId),
     uniqueIndex("uidx_offer_item_participants").on(table.offerItemId, table.participantId),
   ],

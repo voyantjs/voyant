@@ -134,7 +134,7 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as ProductFormValues["status"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

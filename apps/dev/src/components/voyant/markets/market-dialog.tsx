@@ -1,5 +1,8 @@
+"use client"
+
 import {
   type CreateMarketInput,
+  type MarketRecord,
   type UpdateMarketInput,
   useMarketMutation,
 } from "@voyantjs/markets-react"
@@ -7,6 +10,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -24,8 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui"
 import { CountryCombobox } from "@/components/ui/country-combobox"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
-import { MARKET_STATUSES, type MarketData } from "./market-shared"
+
+const MARKET_STATUSES = ["active", "inactive", "archived"] as const
 
 type MarketStatus = (typeof MARKET_STATUSES)[number]
 
@@ -44,14 +50,14 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-type Props = {
+export interface MarketDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  market?: MarketData
-  onSuccess: () => void
+  market?: MarketRecord
+  onSuccess?: (market: MarketRecord) => void
 }
 
-export function MarketDialog({ open, onOpenChange, market, onSuccess }: Props) {
+export function MarketDialog({ open, onOpenChange, market, onSuccess }: MarketDialogProps) {
   const isEditing = Boolean(market)
   const { create, update } = useMarketMutation()
 
@@ -113,12 +119,12 @@ export function MarketDialog({ open, onOpenChange, market, onSuccess }: Props) {
       taxContext: values.taxContext || null,
     }
 
-    if (isEditing) {
-      await update.mutateAsync({ id: market!.id, input: payload })
-    } else {
-      await create.mutateAsync(payload as CreateMarketInput)
-    }
-    onSuccess()
+    const saved = isEditing
+      ? await update.mutateAsync({ id: market!.id, input: payload })
+      : await create.mutateAsync(payload as CreateMarketInput)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -135,16 +141,10 @@ export function MarketDialog({ open, onOpenChange, market, onSuccess }: Props) {
               <div className="flex flex-col gap-2">
                 <Label>Code</Label>
                 <Input {...form.register("code")} placeholder="EU-DE" />
-                {form.formState.errors.code && (
-                  <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
-                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input {...form.register("name")} placeholder="Germany" />
-                {form.formState.errors.name && (
-                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-                )}
               </div>
             </div>
 
@@ -187,7 +187,15 @@ export function MarketDialog({ open, onOpenChange, market, onSuccess }: Props) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Default currency</Label>
-                <Input {...form.register("defaultCurrency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("defaultCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("defaultCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Timezone</Label>

@@ -28,6 +28,8 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -228,7 +230,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currency") || null}
+                  onChange={(next) =>
+                    form.setValue("currency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Market</Label>
@@ -316,15 +326,45 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Ordered at</Label>
-                <Input {...form.register("orderedAt")} type="date" />
+                <DatePicker
+                  value={form.watch("orderedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("orderedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select order date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Confirmed at</Label>
-                <Input {...form.register("confirmedAt")} type="date" />
+                <DatePicker
+                  value={form.watch("confirmedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("confirmedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select confirm date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Expires at</Label>
-                <Input {...form.register("expiresAt")} type="date" />
+                <DatePicker
+                  value={form.watch("expiresAt") || null}
+                  onChange={(next) =>
+                    form.setValue("expiresAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select expiry"
+                  className="w-full"
+                />
               </div>
             </div>
 

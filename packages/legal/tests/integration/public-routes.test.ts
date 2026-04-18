@@ -45,6 +45,8 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       "/",
       createContractsAdminRoutes({
         eventBus,
+        resolveDocumentDownloadUrl: (_bindings, storageKey) =>
+          `https://signed.example.com/${storageKey}`,
         documentGenerator: async ({ contract }) => {
           const name = `contract-${generatedNames.length + 1}.pdf`
           generatedNames.push(name)
@@ -248,5 +250,14 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
         }),
       }),
     ])
+
+    const latestAttachment = attachments[0]
+    expect(latestAttachment).toBeDefined()
+
+    const downloadRes = await adminApp.request(`/attachments/${latestAttachment?.id}/download`)
+    expect(downloadRes.status).toBe(302)
+    expect(downloadRes.headers.get("location")).toBe(
+      `https://signed.example.com/${latestAttachment?.storageKey}`,
+    )
   })
 })

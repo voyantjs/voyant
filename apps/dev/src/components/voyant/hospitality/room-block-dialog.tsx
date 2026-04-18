@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -20,9 +21,12 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RoomTypeCombobox } from "./room-type-combobox"
 import { RoomUnitCombobox } from "./room-unit-combobox"
+
+export type RoomBlockData = RoomBlockRecord
 
 const STATUSES = ["draft", "held", "confirmed", "released", "cancelled"] as const
 type Status = RoomBlockRecord["status"]
@@ -41,18 +45,22 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-export type RoomBlockData = RoomBlockRecord
-
-type Props = {
+export interface RoomBlockDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   propertyId: string
-  block?: RoomBlockData
-  onSuccess: () => void
+  block?: RoomBlockRecord
+  onSuccess?: (block: RoomBlockRecord) => void
 }
 
-export function RoomBlockDialog({ open, onOpenChange, propertyId, block, onSuccess }: Props) {
-  const isEditing = !!block
+export function RoomBlockDialog({
+  open,
+  onOpenChange,
+  propertyId,
+  block,
+  onSuccess,
+}: RoomBlockDialogProps) {
+  const isEditing = Boolean(block)
   const { create, update } = useRoomBlockMutation()
 
   const form = useForm<FormValues, unknown, FormOutput>({
@@ -107,12 +115,13 @@ export function RoomBlockDialog({ open, onOpenChange, propertyId, block, onSucce
       quantity: values.quantity,
       notes: values.notes || null,
     }
-    if (isEditing) {
-      await update.mutateAsync({ id: block.id, input: payload })
-    } else {
-      await create.mutateAsync(payload)
-    }
-    onSuccess()
+
+    const saved = isEditing
+      ? await update.mutateAsync({ id: block!.id, input: payload })
+      : await create.mutateAsync(payload)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -151,11 +160,31 @@ export function RoomBlockDialog({ open, onOpenChange, propertyId, block, onSucce
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Starts on</Label>
-                <Input {...form.register("startsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("startsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("startsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Ends on</Label>
-                <Input {...form.register("endsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("endsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("endsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -164,15 +193,15 @@ export function RoomBlockDialog({ open, onOpenChange, propertyId, block, onSucce
                 <Label>Status</Label>
                 <Select
                   value={form.watch("status")}
-                  onValueChange={(v) => form.setValue("status", v as Status)}
+                  onValueChange={(value) => form.setValue("status", value as Status)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s} className="capitalize">
-                        {s}
+                    {STATUSES.map((status) => (
+                      <SelectItem key={status} value={status} className="capitalize">
+                        {status}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -198,7 +227,7 @@ export function RoomBlockDialog({ open, onOpenChange, propertyId, block, onSucce
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isEditing ? "Save Changes" : "Add Block"}
             </Button>
           </DialogFooter>

@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -21,10 +22,13 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 import { CancellationPolicyCombobox } from "./cancellation-policy-combobox"
 import { MealPlanCombobox } from "./meal-plan-combobox"
 import { PriceCatalogCombobox } from "./price-catalog-combobox"
+
+export type RatePlanData = RatePlanRecord
 
 const CHARGE_FREQUENCIES = [
   "per_night",
@@ -55,18 +59,23 @@ const formSchema = z.object({
 
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
-export type RatePlanData = RatePlanRecord
 
-type Props = {
+export interface RatePlanDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   propertyId: string
-  ratePlan?: RatePlanData
-  onSuccess: () => void
+  ratePlan?: RatePlanRecord
+  onSuccess?: (ratePlan: RatePlanRecord) => void
 }
 
-export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuccess }: Props) {
-  const isEditing = !!ratePlan
+export function RatePlanDialog({
+  open,
+  onOpenChange,
+  propertyId,
+  ratePlan,
+  onSuccess,
+}: RatePlanDialogProps) {
+  const isEditing = Boolean(ratePlan)
   const { create, update } = useRatePlanMutation()
 
   const form = useForm<FormValues, unknown, FormOutput>({
@@ -122,7 +131,7 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
         sortOrder: 0,
       })
     }
-  }, [open, ratePlan, form])
+  }, [form, open, ratePlan])
 
   const onSubmit = async (values: FormOutput) => {
     const payload = {
@@ -141,12 +150,13 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
       active: values.active,
       sortOrder: values.sortOrder,
     }
-    if (isEditing) {
-      await update.mutateAsync({ id: ratePlan.id, input: payload })
-    } else {
-      await create.mutateAsync(payload)
-    }
-    onSuccess()
+
+    const saved = isEditing
+      ? await update.mutateAsync({ id: ratePlan!.id, input: payload })
+      : await create.mutateAsync(payload)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -163,16 +173,10 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
               <div className="flex flex-col gap-2">
                 <Label>Code</Label>
                 <Input {...form.register("code")} placeholder="FLEX" />
-                {form.formState.errors.code && (
-                  <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
-                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input {...form.register("name")} placeholder="Flexible Rate" />
-                {form.formState.errors.name && (
-                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-                )}
               </div>
             </div>
 
@@ -184,26 +188,31 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency</Label>
-                <Input {...form.register("currencyCode")} placeholder="EUR" maxLength={3} />
-                {form.formState.errors.currencyCode && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.currencyCode.message}
-                  </p>
-                )}
+                <CurrencyCombobox
+                  value={form.watch("currencyCode") || null}
+                  onChange={(next) =>
+                    form.setValue("currencyCode", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Charge frequency</Label>
                 <Select
                   value={form.watch("chargeFrequency")}
-                  onValueChange={(v) => form.setValue("chargeFrequency", v as ChargeFrequency)}
+                  onValueChange={(value) =>
+                    form.setValue("chargeFrequency", value as ChargeFrequency)
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CHARGE_FREQUENCIES.map((f) => (
-                      <SelectItem key={f} value={f} className="capitalize">
-                        {f.replace(/_/g, " ")}
+                    {CHARGE_FREQUENCIES.map((frequency) => (
+                      <SelectItem key={frequency} value={frequency} className="capitalize">
+                        {frequency.replace(/_/g, " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -213,15 +222,15 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
                 <Label>Guarantee</Label>
                 <Select
                   value={form.watch("guaranteeMode")}
-                  onValueChange={(v) => form.setValue("guaranteeMode", v as GuaranteeMode)}
+                  onValueChange={(value) => form.setValue("guaranteeMode", value as GuaranteeMode)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {GUARANTEE_MODES.map((g) => (
-                      <SelectItem key={g} value={g} className="capitalize">
-                        {g.replace(/_/g, " ")}
+                    {GUARANTEE_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode} className="capitalize">
+                        {mode.replace(/_/g, " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -260,35 +269,33 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Sort order</Label>
-                <Input {...form.register("sortOrder")} type="number" />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={form.watch("refundable")}
-                  onCheckedChange={(v) => form.setValue("refundable", v)}
-                />
-                <Label>Refundable</Label>
-              </div>
+            <div className="flex gap-6">
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("commissionable")}
-                  onCheckedChange={(v) => form.setValue("commissionable", v)}
+                  onCheckedChange={(checked) => form.setValue("commissionable", checked)}
                 />
                 <Label>Commissionable</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
+                  checked={form.watch("refundable")}
+                  onCheckedChange={(checked) => form.setValue("refundable", checked)}
+                />
+                <Label>Refundable</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={form.watch("active")}
-                  onCheckedChange={(v) => form.setValue("active", v)}
+                  onCheckedChange={(checked) => form.setValue("active", checked)}
                 />
                 <Label>Active</Label>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label>Sort order</Label>
+              <Input {...form.register("sortOrder")} type="number" className="w-32" />
             </div>
           </DialogBody>
           <DialogFooter>
@@ -296,7 +303,7 @@ export function RatePlanDialog({ open, onOpenChange, propertyId, ratePlan, onSuc
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isEditing ? "Save Changes" : "Add Rate Plan"}
             </Button>
           </DialogFooter>

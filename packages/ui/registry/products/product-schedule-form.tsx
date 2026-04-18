@@ -212,7 +212,7 @@ export function ProductScheduleForm({ mode, onSuccess, onCancel }: ProductSchedu
             value={state.frequency}
             onValueChange={(value) => field("frequency")(value as Frequency)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -280,7 +280,7 @@ export function ProductScheduleForm({ mode, onSuccess, onCancel }: ProductSchedu
         <div className="flex flex-col gap-1.5">
           <Label>Timezone</Label>
           <Select value={state.timezone} onValueChange={(value) => field("timezone")(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-80">

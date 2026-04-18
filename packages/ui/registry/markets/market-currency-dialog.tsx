@@ -23,6 +23,7 @@ import {
   Label,
   Switch,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const formSchema = z.object({
@@ -122,7 +123,15 @@ export function MarketCurrencyDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Currency code</Label>
-                <Input {...form.register("currencyCode")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("currencyCode") || null}
+                  onChange={(next) =>
+                    form.setValue("currencyCode", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Sort order</Label>

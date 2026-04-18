@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
+
 import {
   Button,
   Dialog,
@@ -23,9 +24,12 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RoomTypeCombobox } from "./room-type-combobox"
 import { RoomUnitCombobox } from "./room-unit-combobox"
+
+export type MaintenanceBlockData = MaintenanceBlockRecord
 
 const STATUSES = ["open", "in_progress", "resolved", "cancelled"] as const
 type Status = MaintenanceBlockRecord["status"]
@@ -43,14 +47,12 @@ const formSchema = z.object({
 type FormValues = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
-export type MaintenanceBlockData = MaintenanceBlockRecord
-
-type Props = {
+export interface MaintenanceBlockDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   propertyId: string
-  block?: MaintenanceBlockData
-  onSuccess: () => void
+  block?: MaintenanceBlockRecord
+  onSuccess?: (block: MaintenanceBlockRecord) => void
 }
 
 export function MaintenanceBlockDialog({
@@ -59,8 +61,8 @@ export function MaintenanceBlockDialog({
   propertyId,
   block,
   onSuccess,
-}: Props) {
-  const isEditing = !!block
+}: MaintenanceBlockDialogProps) {
+  const isEditing = Boolean(block)
   const { create, update } = useMaintenanceBlockMutation()
 
   const form = useForm<FormValues, unknown, FormOutput>({
@@ -98,7 +100,7 @@ export function MaintenanceBlockDialog({
         notes: "",
       })
     }
-  }, [open, block, form])
+  }, [block, form, open])
 
   const onSubmit = async (values: FormOutput) => {
     const payload = {
@@ -111,12 +113,13 @@ export function MaintenanceBlockDialog({
       reason: values.reason || null,
       notes: values.notes || null,
     }
-    if (isEditing) {
-      await update.mutateAsync({ id: block.id, input: payload })
-    } else {
-      await create.mutateAsync(payload)
-    }
-    onSuccess()
+
+    const saved = isEditing
+      ? await update.mutateAsync({ id: block!.id, input: payload })
+      : await create.mutateAsync(payload)
+
+    onOpenChange(false)
+    onSuccess?.(saved)
   }
 
   const isSubmitting = form.formState.isSubmitting || create.isPending || update.isPending
@@ -157,11 +160,31 @@ export function MaintenanceBlockDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Starts on</Label>
-                <Input {...form.register("startsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("startsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("startsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select start date"
+                  className="w-full"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Ends on</Label>
-                <Input {...form.register("endsOn")} type="date" />
+                <DatePicker
+                  value={form.watch("endsOn") || null}
+                  onChange={(next) =>
+                    form.setValue("endsOn", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select end date"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -170,15 +193,15 @@ export function MaintenanceBlockDialog({
                 <Label>Status</Label>
                 <Select
                   value={form.watch("status")}
-                  onValueChange={(v) => form.setValue("status", v as Status)}
+                  onValueChange={(value) => form.setValue("status", value as Status)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s} className="capitalize">
-                        {s.replace(/_/g, " ")}
+                    {STATUSES.map((status) => (
+                      <SelectItem key={status} value={status} className="capitalize">
+                        {status.replace(/_/g, " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -200,7 +223,7 @@ export function MaintenanceBlockDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isEditing ? "Save Changes" : "Add Block"}
             </Button>
           </DialogFooter>

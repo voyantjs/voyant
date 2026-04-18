@@ -304,7 +304,9 @@ export function DepartureDialog({
                   }
                   placeholder="Pick a date"
                   clearable
-                  disabled={startDate ? { before: new Date(`${startDate}T00:00:00`) } : undefined}
+                  dateDisabled={
+                    startDate ? { before: new Date(`${startDate}T00:00:00`) } : undefined
+                  }
                 />
                 {form.formState.errors.endDate && (
                   <p className="text-xs text-destructive">

@@ -196,7 +196,7 @@ export function OptionUnitForm({ mode, onSuccess, onCancel }: OptionUnitFormProp
             value={state.unitType}
             onValueChange={(value) => value && field("unitType")(value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

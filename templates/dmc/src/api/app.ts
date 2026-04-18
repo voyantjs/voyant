@@ -8,14 +8,15 @@ import { distributionBookingExtension, distributionHonoModule } from "@voyantjs/
 import { externalRefsHonoModule } from "@voyantjs/external-refs"
 import { extrasHonoModule } from "@voyantjs/extras"
 import { facilitiesHonoModule } from "@voyantjs/facilities"
-import { financeHonoModule } from "@voyantjs/finance"
+import { createFinanceHonoModule } from "@voyantjs/finance"
 import { groundHonoModule } from "@voyantjs/ground"
 import { createApp } from "@voyantjs/hono"
 import { hospitalityHonoModule } from "@voyantjs/hospitality"
 import { identityHonoModule } from "@voyantjs/identity"
-import { legalHonoModule } from "@voyantjs/legal"
+import { createLegalHonoModule } from "@voyantjs/legal"
 import { marketsHonoModule } from "@voyantjs/markets"
 import {
+  createDefaultBookingDocumentAttachment,
   createNotificationsHonoModule,
 } from "@voyantjs/notifications"
 import { pricingHonoModule } from "@voyantjs/pricing"
@@ -29,11 +30,28 @@ import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/
 
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { getDbFromHyperdrive } from "./lib/db"
-import { createMediaStorage, guessMimeType } from "./lib/storage"
+import { createMediaStorage, guessMimeType, resolveDocumentDownloadUrl } from "./lib/storage"
 import { resolveNotificationProviders } from "../lib/notifications"
 
 const notificationsHonoModule = createNotificationsHonoModule({
   resolveProviders: resolveNotificationProviders,
+  resolveDocumentAttachmentResolver: (bindings) => async (document) => {
+    if (document.storageKey) {
+      const path = await resolveDocumentDownloadUrl(
+        bindings as unknown as CloudflareBindings,
+        document.storageKey,
+      )
+      if (path) {
+        return {
+          filename: document.name,
+          path,
+          contentType: document.mimeType ?? undefined,
+        }
+      }
+    }
+
+    return createDefaultBookingDocumentAttachment(document)
+  },
 })
 const storefrontVerificationHonoModule = createStorefrontVerificationHonoModule({
   resolveProviders: resolveNotificationProviders,
@@ -54,6 +72,15 @@ const customerPortalHonoModule = createCustomerPortalHonoModule({
 
     return storage.signedUrl(storageKey, 300)
   },
+})
+
+const financeModule = createFinanceHonoModule({
+  resolveDocumentDownloadUrl: (bindings: unknown, storageKey: string) =>
+    resolveDocumentDownloadUrl(bindings as unknown as CloudflareBindings, storageKey),
+})
+const legalModule = createLegalHonoModule({
+  resolveDocumentDownloadUrl: (bindings: unknown, storageKey: string) =>
+    resolveDocumentDownloadUrl(bindings as unknown as CloudflareBindings, storageKey),
 })
 
 export const app = createApp<CloudflareBindings>({
@@ -83,8 +110,8 @@ export const app = createApp<CloudflareBindings>({
     suppliersHonoModule,
     productsHonoModule,
     bookingsHonoModule,
-    financeHonoModule,
-    legalHonoModule,
+    financeModule,
+    legalModule,
     storefrontHonoModule,
     customerPortalHonoModule,
     storefrontVerificationHonoModule,
@@ -107,8 +134,9 @@ export const app = createApp<CloudflareBindings>({
       hasAuthPermission(request, env, permission),
   },
   additionalRoutes: (hono) => {
-    // POST /v1/uploads — upload file via the configured StorageProvider
-    // (swap the provider in src/lib/storage.ts to use S3, GCS, etc.)
+    // POST /v1/uploads — upload public/editorial media via the configured
+    // media storage provider. Sensitive documents should use private
+    // document-aware flows instead of this route.
     hono.post("/v1/uploads", async (c) => {
       const storage = createMediaStorage(c.env)
       if (!storage) {
@@ -137,7 +165,7 @@ export const app = createApp<CloudflareBindings>({
       })
     })
 
-    // GET /v1/media/* — serve files via the configured StorageProvider
+    // GET /v1/media/* — serve public media via the configured media storage provider.
     hono.get("/v1/media/*", async (c) => {
       const storage = createMediaStorage(c.env)
       if (!storage) {

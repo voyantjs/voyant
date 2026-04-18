@@ -142,7 +142,7 @@ export function ProductMediaForm({ mode, onSuccess, onCancel }: ProductMediaForm
             value={state.mediaType}
             onValueChange={(value) => field("mediaType")(value as MediaType)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

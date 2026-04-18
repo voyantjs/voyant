@@ -97,10 +97,12 @@ For finance-aware collection sends, the routes also support:
 Those routes resolve recipients from the payment session, invoice, and linked booking participants, then render the selected notification template with finance context such as payment links, invoice balances, and booking references.
 
 Booking document sends bundle the latest customer-facing contract attachment and
-ready invoice/proforma rendition for a booking. By default they use `metadata.url`
-or `metadata.downloadUrl` on the legal/finance artifact as the attachment path.
-Apps can override that behavior with `documentAttachmentResolver` when mounting
-`createNotificationsRoutes()` or `createNotificationsHonoModule()`.
+ready invoice/proforma rendition for a booking. By default they use the stored
+artifact URL when one is durable and publicly readable. Private document flows
+should override that behavior with `documentAttachmentResolver` or
+`resolveDocumentAttachmentResolver` when mounting `createNotificationsRoutes()`
+or `createNotificationsHonoModule()`, so attachment URLs are resolved at send
+time from the current storage/runtime context.
 
 ## Exports
 

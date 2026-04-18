@@ -17,8 +17,11 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { DatePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 import { RoomTypeCombobox } from "./room-type-combobox"
+
+export type RoomInventoryData = RoomInventoryRecord
 
 const intOrEmpty = z.coerce.number().int().optional().or(z.literal("")).nullable()
 
@@ -151,7 +154,18 @@ export function RoomInventoryDialog({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Date</Label>
-                <Input {...form.register("date")} type="date" disabled={isEditing} />
+                <DatePicker
+                  value={form.watch("date") || null}
+                  onChange={(next) =>
+                    form.setValue("date", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select date"
+                  className="w-full"
+                  disabled={isEditing}
+                />
               </div>
             </div>
 

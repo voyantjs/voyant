@@ -43,11 +43,13 @@ export type ContractDocumentGenerator = Parameters<
 
 export interface ContractsRouteOptions {
   documentGenerator?: ContractDocumentGenerator
-  resolveDocumentGenerator?: (
-    bindings: Record<string, unknown>,
-  ) => ContractDocumentGenerator | undefined
+  resolveDocumentGenerator?: (bindings: unknown) => ContractDocumentGenerator | undefined
+  resolveDocumentDownloadUrl?: (
+    bindings: unknown,
+    storageKey: string,
+  ) => Promise<string | null> | string | null
   eventBus?: EventBus
-  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
+  resolveEventBus?: (bindings: unknown) => EventBus | undefined
 }
 
 function getRuntime(
@@ -59,6 +61,34 @@ function getRuntime(
     resolveFromContainer?.(CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY) ??
     buildContractsRouteRuntime(bindings, options)
   )
+}
+
+function getMetadataRecord(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null
+  }
+
+  return metadata as Record<string, unknown>
+}
+
+function maybeUrl(value: unknown) {
+  return typeof value === "string" && /^https?:\/\//i.test(value) ? value : null
+}
+
+function getFallbackDownloadUrl(metadata: unknown) {
+  const record = getMetadataRecord(metadata)
+  if (!record) {
+    return null
+  }
+
+  for (const key of ["url", "publicUrl", "downloadUrl", "download_url", "signedUrl"]) {
+    const value = maybeUrl(record[key])
+    if (value) {
+      return value
+    }
+  }
+
+  return null
 }
 
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {
@@ -322,6 +352,25 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       )
       if (!row) return c.json({ error: "Attachment not found" }, 404)
       return c.json({ data: row })
+    })
+    .get("/attachments/:attachmentId/download", async (c) => {
+      const attachment = await contractsService.getAttachmentById(c.get("db"), c.req.param("attachmentId"))
+      if (!attachment) return c.json({ error: "Attachment not found" }, 404)
+
+      let location: string | null = null
+      if (attachment.storageKey) {
+        if (!options.resolveDocumentDownloadUrl) {
+          return c.json({ error: "Document download resolver is not configured" }, 501)
+        }
+        location = await options.resolveDocumentDownloadUrl(c.env, attachment.storageKey)
+      }
+
+      location ??= getFallbackDownloadUrl(attachment.metadata)
+      if (!location) {
+        return c.json({ error: "Attachment file is not available" }, 404)
+      }
+
+      return c.redirect(location, 302)
     })
     .delete("/attachments/:attachmentId", async (c) => {
       const row = await contractsService.deleteAttachment(c.get("db"), c.req.param("attachmentId"))

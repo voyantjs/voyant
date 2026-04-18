@@ -19,6 +19,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { ChannelRow, ChannelWebhookEventRow } from "./distribution-shared"
@@ -121,7 +122,7 @@ export function ChannelWebhookEventDialog({
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select channel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,7 +151,7 @@ export function ChannelWebhookEventDialog({
                     form.setValue("status", value as ChannelWebhookEventRow["status"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -164,11 +165,31 @@ export function ChannelWebhookEventDialog({
               </div>
               <div className="grid gap-2">
                 <Label>Received At</Label>
-                <Input {...form.register("receivedAt")} type="datetime-local" />
+                <DateTimePicker
+                  value={form.watch("receivedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("receivedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select received date & time"
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Processed At</Label>
-                <Input {...form.register("processedAt")} type="datetime-local" />
+                <DateTimePicker
+                  value={form.watch("processedAt") || null}
+                  onChange={(next) =>
+                    form.setValue("processedAt", next ?? "", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="Select processed date & time"
+                  className="w-full"
+                />
               </div>
             </div>
             <div className="grid gap-2">

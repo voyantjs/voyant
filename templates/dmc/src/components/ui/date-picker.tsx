@@ -29,12 +29,16 @@ type RangePreset = {
   value: DateRangeValue | null
 }
 
-type SharedProps = Omit<CalendarProps, "mode" | "selected" | "onSelect"> & {
+type SharedProps = Omit<CalendarProps, "mode" | "selected" | "onSelect" | "disabled"> & {
   placeholder?: React.ReactNode
   displayFormat?: string
   className?: string
   contentClassName?: string
   clearable?: boolean
+  /** Disable the entire picker (prevents opening the popover). */
+  disabled?: boolean
+  /** Per-day disable matcher, forwarded to the underlying Calendar. */
+  dateDisabled?: CalendarProps["disabled"]
 }
 
 type DatePickerProps = SharedProps & {
@@ -94,14 +98,16 @@ function formatRangeLabel(
 type TriggerProps = {
   className?: string
   empty: boolean
+  disabled?: boolean
   children?: React.ReactNode
 }
 
-function DatePickerTrigger({ className, empty, children }: TriggerProps) {
+function DatePickerTrigger({ className, empty, disabled, children }: TriggerProps) {
   return (
     <Button
       variant="outline"
       data-empty={empty}
+      disabled={disabled}
       className={cn(
         "w-full justify-start text-left font-normal data-[empty=true]:text-muted-foreground",
         className,
@@ -205,6 +211,8 @@ export function DatePicker({
   className,
   contentClassName,
   clearable = true,
+  disabled,
+  dateDisabled,
   ...calendarProps
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
@@ -235,8 +243,10 @@ export function DatePicker({
   const label = selectedDate ? format(selectedDate, displayFormat) : placeholder
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={<DatePickerTrigger className={className} empty={!selectedDate} />}>
+    <Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
+      <PopoverTrigger
+        render={<DatePickerTrigger className={className} empty={!selectedDate} disabled={disabled} />}
+      >
         {label}
       </PopoverTrigger>
       <PopoverContent align="start" className={cn("w-auto p-0", contentClassName)}>
@@ -252,6 +262,7 @@ export function DatePicker({
           selected={selectedDate}
           onSelect={handleSelect}
           defaultMonth={selectedDate}
+          disabled={dateDisabled}
           {...calendarProps}
         />
         <DatePickerFooter
@@ -277,6 +288,8 @@ export function DateRangePicker({
   className,
   contentClassName,
   clearable = true,
+  disabled,
+  dateDisabled,
   numberOfMonths = 2,
   ...calendarProps
 }: DateRangePickerProps) {
@@ -323,9 +336,15 @@ export function DateRangePicker({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
       <PopoverTrigger
-        render={<DatePickerTrigger className={className} empty={!hasRangeValue(selectedValue)} />}
+        render={
+          <DatePickerTrigger
+            className={className}
+            empty={!hasRangeValue(selectedValue)}
+            disabled={disabled}
+          />
+        }
       >
         {formatRangeLabel(selectedValue, displayFormat, placeholder)}
       </PopoverTrigger>
@@ -343,6 +362,7 @@ export function DateRangePicker({
           onSelect={handleSelect}
           defaultMonth={selectedRange?.from}
           numberOfMonths={numberOfMonths}
+          disabled={dateDisabled}
           {...calendarProps}
         />
         <DatePickerFooter

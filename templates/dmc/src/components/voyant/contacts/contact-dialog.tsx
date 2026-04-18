@@ -133,7 +133,7 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
                   value={contactType}
                   onValueChange={(v) => form.setValue("type", v as "individual" | "company")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -151,7 +151,7 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
                     form.setValue("relation", v as "client" | "partner" | "supplier" | "other")
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

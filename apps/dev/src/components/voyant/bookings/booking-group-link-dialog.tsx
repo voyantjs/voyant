@@ -145,7 +145,7 @@ export function BookingGroupLinkDialog({
                 value={selectedGroupId || JOIN_PLACEHOLDER}
                 onValueChange={(v) => setSelectedGroupId(v === JOIN_PLACEHOLDER ? "" : (v ?? ""))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a group..." />
                 </SelectTrigger>
                 <SelectContent>

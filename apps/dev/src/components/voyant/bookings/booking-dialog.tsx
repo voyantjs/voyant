@@ -23,6 +23,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DateRangePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -172,7 +173,7 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
                   }
                   items={BOOKING_STATUSES}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -189,11 +190,14 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Sell Currency</Label>
-                <Input
-                  {...form.register("sellCurrency")}
-                  placeholder="EUR"
-                  maxLength={3}
-                  className="uppercase"
+                <CurrencyCombobox
+                  value={form.watch("sellCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("sellCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
                 />
               </div>
               <div className="flex flex-col gap-2">

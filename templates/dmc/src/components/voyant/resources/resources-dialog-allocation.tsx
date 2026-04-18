@@ -128,7 +128,7 @@ export function ResourceAllocationDialog({
                 value={form.watch("poolId")}
                 onValueChange={(value) => form.setValue("poolId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select pool" />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,7 +146,7 @@ export function ResourceAllocationDialog({
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
@@ -167,7 +167,7 @@ export function ResourceAllocationDialog({
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -186,7 +186,7 @@ export function ResourceAllocationDialog({
                   value={form.watch("startTimeId")}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,7 +218,7 @@ export function ResourceAllocationDialog({
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

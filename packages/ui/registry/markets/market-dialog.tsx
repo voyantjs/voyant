@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui"
 import { CountryCombobox } from "@/components/ui/country-combobox"
+import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const MARKET_STATUSES = ["active", "inactive", "archived"] as const
@@ -186,7 +187,15 @@ export function MarketDialog({ open, onOpenChange, market, onSuccess }: MarketDi
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Default currency</Label>
-                <Input {...form.register("defaultCurrency")} placeholder="EUR" maxLength={3} />
+                <CurrencyCombobox
+                  value={form.watch("defaultCurrency") || null}
+                  onChange={(next) =>
+                    form.setValue("defaultCurrency", next ?? "EUR", {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Timezone</Label>

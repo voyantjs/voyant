@@ -143,7 +143,7 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
                   value={form.watch("type")}
                   onValueChange={(v) => form.setValue("type", v as SupplierFormValues["type"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -162,7 +162,7 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as SupplierFormValues["status"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

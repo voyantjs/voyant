@@ -1,5 +1,13 @@
 # @voyantjs/resources-react
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [ec10725]
+  - @voyantjs/react@0.6.2
+  - @voyantjs/resources@0.6.2
+
 ## 0.6.1
 
 ### Patch Changes

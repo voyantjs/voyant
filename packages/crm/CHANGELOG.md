@@ -1,5 +1,29 @@
 # @voyantjs/crm
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add composite indexes for CRM communication history lists scoped by person and
+  for the segment recency list.
+- b218885: Add a composite index for custom field value admin lists filtered by entity type
+  and ordered by update time.
+- b218885: Add a CRM-owned person directory projection so person list, detail, and export
+  reads no longer hydrate email, phone, website, and primary address fields
+  directly from identity tables on every read. Also align CRM child-list indexes
+  with the actual parent-and-sort query shapes used for notes, communications,
+  pipelines, stages, activity links/participants, opportunity participants and
+  products, and quote lines.
+- b218885: Add global sort indexes for CRM pipeline and stage admin lists that order by
+  sort position and creation time without a parent filter.
+- b218885: add crm root admin list composite indexes
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/identity@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

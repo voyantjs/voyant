@@ -1,5 +1,13 @@
 # @voyantjs/identity-react
 
+## 0.6.8
+
+### Patch Changes
+
+- Updated dependencies [b218885]
+  - @voyantjs/identity@0.6.8
+  - @voyantjs/react@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

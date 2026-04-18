@@ -1,5 +1,38 @@
 # @voyantjs/distribution
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align distribution automation list indexes with the current filter-and-sort query shapes.
+- b218885: Align core distribution admin list indexes with their current filter-and-sort query shapes.
+- b218885: Align distribution finance list indexes with the current filter-and-sort query shapes.
+- b218885: Align distribution inventory list indexes with the current filter-and-sort query shapes.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/availability@0.6.8
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/identity@0.6.8
+  - @voyantjs/products@0.6.8
+  - @voyantjs/suppliers@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

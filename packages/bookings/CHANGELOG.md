@@ -1,5 +1,16 @@
 # @voyantjs/bookings
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align booking root and child-list indexes with the package’s booking-scoped sort-heavy query shapes.
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/utils@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

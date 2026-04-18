@@ -1,5 +1,21 @@
 # @voyantjs/finance
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align finance child-list indexes with the existing parent-and-sort query shapes for booking payment schedules, guarantees, tax lines, commissions, invoice lines, payments, credit notes, credit note lines, finance notes, invoice renditions, and invoice external references.
+- b218885: Align the remaining finance admin and document root-list indexes with their recency-sorted query shapes.
+- b218885: Align finance payment root-list indexes with the current recency-sorted payment admin query shapes.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/bookings@0.6.8
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/voyant-storage@0.6.8
+  - @voyantjs/utils@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

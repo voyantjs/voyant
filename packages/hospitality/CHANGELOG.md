@@ -1,5 +1,24 @@
 # @voyantjs/hospitality
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align hospitality booking and inventory indexes with active filter-and-date list queries.
+- b218885: Add global date and priority indexes for hospitality booking-operation admin
+  lists that can paginate without parent filters.
+- b218885: Add composite indexes for hospitality inventory and rate-plan admin list queries.
+- b218885: Align hospitality operations and folio indexes with active filter-and-time list queries.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/bookings@0.6.8
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/facilities@0.6.8
+  - @voyantjs/hono@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

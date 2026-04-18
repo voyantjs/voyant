@@ -1,5 +1,32 @@
 # @voyantjs/products
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align products child-list indexes with the parent-and-sort query shapes used for
+  options, units, features, FAQs, locations, itinerary days/services, versions,
+  notes, category links, and destination links.
+- b218885: Add global sort indexes for product feature, FAQ, and location admin lists that
+  order by sort position and creation time without a parent filter.
+- b218885: Add composite indexes for product feature and location admin lists that filter by
+  type and order by sort position and creation time.
+- b218885: Align remaining product list indexes with the current media, brochure, and taxonomy query shapes.
+- b218885: add products public filter support indexes
+- b218885: add products root list composite indexes
+- b218885: add products settings admin list composite indexes
+- b218885: Add global indexes for unscoped product settings admin lists.
+- b218885: Align product taxonomy and destination indexes with active filter-and-sort list queries.
+- b218885: Add global sort indexes for product type, category, and destination admin lists
+  that order by taxonomy sort fields without parent or active filters.
+- b218885: add products translation list composite indexes
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/voyant-storage@0.6.8
+  - @voyantjs/utils@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

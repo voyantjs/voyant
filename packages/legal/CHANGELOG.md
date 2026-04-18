@@ -1,5 +1,27 @@
 # @voyantjs/legal
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align legal child-list indexes with the active parent-and-sort query shapes for policy rules, contract signatures, and contract attachments.
+- b218885: add legal root and admin list composite indexes
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/crm@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/voyant-storage@0.6.8
+  - @voyantjs/suppliers@0.6.8
+  - @voyantjs/utils@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

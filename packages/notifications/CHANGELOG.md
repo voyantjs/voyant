@@ -1,5 +1,24 @@
 # @voyantjs/notifications
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add composite list indexes for notification admin queries.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/bookings@0.6.8
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/finance@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/legal@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

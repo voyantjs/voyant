@@ -137,7 +137,11 @@ export const sellabilitySnapshotItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_sellability_snapshot_items_snapshot").on(table.snapshotId),
+    index("idx_sellability_snapshot_items_snapshot_order").on(
+      table.snapshotId,
+      table.candidateIndex,
+      table.componentIndex,
+    ),
     index("idx_sellability_snapshot_items_candidate").on(table.candidateIndex),
     index("idx_sellability_snapshot_items_component").on(table.componentKind),
     index("idx_sellability_snapshot_items_product").on(table.productId),
@@ -198,7 +202,7 @@ export const sellabilityPolicyResults = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_sellability_policy_results_snapshot").on(table.snapshotId),
+    index("idx_sellability_policy_results_snapshot_created").on(table.snapshotId, table.createdAt),
     index("idx_sellability_policy_results_snapshot_item").on(table.snapshotItemId),
     index("idx_sellability_policy_results_policy").on(table.policyId),
     index("idx_sellability_policy_results_status").on(table.status),
@@ -222,7 +226,7 @@ export const offerRefreshRuns = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_offer_refresh_runs_offer").on(table.offerId),
+    index("idx_offer_refresh_runs_offer_started").on(table.offerId, table.startedAt),
     index("idx_offer_refresh_runs_snapshot").on(table.snapshotId),
     index("idx_offer_refresh_runs_status").on(table.status),
   ],
@@ -245,7 +249,7 @@ export const offerExpirationEvents = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_offer_expiration_events_offer").on(table.offerId),
+    index("idx_offer_expiration_events_offer_expires").on(table.offerId, table.expiresAt),
     index("idx_offer_expiration_events_snapshot").on(table.snapshotId),
     index("idx_offer_expiration_events_status").on(table.status),
   ],
@@ -269,7 +273,7 @@ export const sellabilityExplanations = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_sellability_explanations_snapshot").on(table.snapshotId),
+    index("idx_sellability_explanations_snapshot_created").on(table.snapshotId, table.createdAt),
     index("idx_sellability_explanations_snapshot_item").on(table.snapshotItemId),
     index("idx_sellability_explanations_type").on(table.explanationType),
   ],

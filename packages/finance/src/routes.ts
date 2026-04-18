@@ -322,7 +322,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingPaymentSchedule(
       c.get("db"),
       c.req.param("bookingId"),
-      insertBookingPaymentScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingPaymentScheduleSchema),
     )
 
     if (!row) {
@@ -336,7 +336,7 @@ export const financeRoutes = new Hono<Env>()
     const rows = await financeService.applyDefaultBookingPaymentPlan(
       c.get("db"),
       c.req.param("bookingId"),
-      applyDefaultBookingPaymentPlanSchema.parse(await c.req.json()),
+      await parseJsonBody(c, applyDefaultBookingPaymentPlanSchema),
     )
 
     if (!rows) {
@@ -350,7 +350,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingPaymentSchedule(
       c.get("db"),
       c.req.param("scheduleId"),
-      updateBookingPaymentScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingPaymentScheduleSchema),
     )
 
     if (!row) {
@@ -365,7 +365,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromBookingSchedule(
         c.get("db"),
         c.req.param("scheduleId"),
-        createPaymentSessionFromScheduleSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromScheduleSchema),
       )
 
       if (!row) {
@@ -406,7 +406,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingGuarantee(
       c.get("db"),
       c.req.param("bookingId"),
-      insertBookingGuaranteeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingGuaranteeSchema),
     )
 
     if (!row) {
@@ -421,7 +421,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromBookingGuarantee(
         c.get("db"),
         c.req.param("guaranteeId"),
-        createPaymentSessionFromGuaranteeSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromGuaranteeSchema),
       )
 
       if (!row) {
@@ -439,7 +439,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingGuarantee(
       c.get("db"),
       c.req.param("guaranteeId"),
-      updateBookingGuaranteeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingGuaranteeSchema),
     )
 
     if (!row) {

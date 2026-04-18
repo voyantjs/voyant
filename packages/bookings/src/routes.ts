@@ -677,7 +677,7 @@ export const bookingRoutes = new Hono<Env>()
       const row = await pii.upsertParticipantTravelDetails(
         c.get("db"),
         participant.id,
-        upsertParticipantTravelDetailsSchema.parse(await c.req.json()),
+        await parseJsonBody(c, upsertParticipantTravelDetailsSchema),
         c.get("userId"),
       )
 

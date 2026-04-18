@@ -1,5 +1,8 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
-import { createNotificationService, notificationsService } from "../service.js"
+
+import { createNotificationService } from "../service.js"
+import { queueDueReminders, runDueReminders } from "../service-reminders.js"
+import type { ReminderQueueResult, ReminderSweepResult } from "../service-shared.js"
 import {
   buildNotificationTaskRuntime,
   type NotificationTaskEnv,
@@ -14,7 +17,10 @@ export async function sendDueNotificationReminders(
 ) {
   const runtime = buildNotificationTaskRuntime(env, options)
   const dispatcher = createNotificationService(runtime.providers)
-  const runSweep = () => notificationsService.runDueReminders(db, dispatcher, input)
+  const runSweep: () => Promise<ReminderQueueResult | ReminderSweepResult> = () =>
+    runtime.enqueueReminderDelivery
+      ? queueDueReminders(db, input, runtime.enqueueReminderDelivery)
+      : runDueReminders(db, dispatcher, input)
 
   if (!runtime.reminderSweepLockManager) {
     return runSweep()
@@ -29,9 +35,18 @@ export async function sendDueNotificationReminders(
     return result.value
   }
 
+  if (!runtime.enqueueReminderDelivery) {
+    return {
+      processed: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    }
+  }
+
   return {
     processed: 0,
-    sent: 0,
+    queued: 0,
     skipped: 0,
     failed: 0,
   }

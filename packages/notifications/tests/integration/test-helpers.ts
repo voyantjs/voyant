@@ -113,10 +113,13 @@ export function createNotificationsTestContext(options?: { eventBus?: EventBus }
     await db.execute(sql`
       DO $$
       BEGIN
-        CREATE TYPE notification_reminder_run_status AS ENUM ('processing', 'sent', 'skipped', 'failed');
+        CREATE TYPE notification_reminder_run_status AS ENUM ('queued', 'processing', 'sent', 'skipped', 'failed');
       EXCEPTION
         WHEN duplicate_object THEN NULL;
       END $$;
+    `)
+    await db.execute(sql`
+      ALTER TYPE notification_reminder_run_status ADD VALUE IF NOT EXISTS 'queued';
     `)
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS bookings (

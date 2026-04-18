@@ -16,6 +16,7 @@ export const notificationTargetTypeSchema = z.enum([
 export const notificationReminderStatusSchema = z.enum(["draft", "active", "archived"])
 export const notificationReminderTargetTypeSchema = z.enum(["booking_payment_schedule", "invoice"])
 export const notificationReminderRunStatusSchema = z.enum([
+  "queued",
   "processing",
   "sent",
   "skipped",

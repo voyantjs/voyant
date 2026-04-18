@@ -66,6 +66,13 @@ export type ReminderSweepResult = {
   failed: number
 }
 
+export type ReminderQueueResult = {
+  processed: number
+  queued: number
+  skipped: number
+  failed: number
+}
+
 export type NotificationReminderRuleRow = typeof notificationReminderRules.$inferSelect
 export type BookingPaymentScheduleRow = typeof bookingPaymentSchedules.$inferSelect
 

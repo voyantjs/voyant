@@ -141,7 +141,7 @@ export interface CheckoutReminderRunSummary {
   bookingId: string | null
   paymentSessionId: string | null
   notificationDeliveryId: string | null
-  status: "processing" | "sent" | "skipped" | "failed"
+  status: "queued" | "processing" | "sent" | "skipped" | "failed"
   deliveryStatus: "pending" | "sent" | "failed" | "cancelled" | null
   channel: "email" | "sms" | null
   provider: string | null

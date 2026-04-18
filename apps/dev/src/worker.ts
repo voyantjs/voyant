@@ -1,7 +1,10 @@
 import { generateAvailabilitySlots } from "@voyantjs/availability"
 import { expireStaleBookingHolds } from "@voyantjs/bookings/tasks"
 import { createDbClient } from "@voyantjs/db"
-import { sendDueNotificationReminders } from "@voyantjs/notifications/tasks"
+import {
+  deliverQueuedNotificationReminder,
+  sendDueNotificationReminders,
+} from "@voyantjs/notifications/tasks"
 import { generateProductPdf } from "@voyantjs/products/tasks"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
@@ -48,6 +51,23 @@ expireBookingHolds.task({
   },
 })
 
+const deliverReminder = hatchet.task({
+  name: "notifications.deliver-reminder",
+  retries: 3,
+  backoff: {
+    factor: 2,
+    maxSeconds: 300,
+  },
+  fn: async (input: { reminderRunId: string }) => {
+    return deliverQueuedNotificationReminder(
+      getDb(),
+      process.env,
+      input,
+      getNotificationTaskRuntime(process.env),
+    )
+  },
+})
+
 const sendPaymentReminders = hatchet.workflow({
   name: "notifications.send-due-reminders",
   on: {
@@ -62,14 +82,24 @@ sendPaymentReminders.task({
       getDb(),
       process.env,
       input,
-      getNotificationTaskRuntime(process.env),
+      getNotificationTaskRuntime(process.env, {
+        enqueueReminderDelivery: async (job) => {
+          await deliverReminder.runNoWait(job)
+        },
+      }),
     )
   },
 })
 
 async function main() {
   const worker = await hatchet.worker("dev-worker", {
-    workflows: [generatePdf, generateSlots, expireBookingHolds, sendPaymentReminders],
+    workflows: [
+      generatePdf,
+      generateSlots,
+      expireBookingHolds,
+      deliverReminder,
+      sendPaymentReminders,
+    ],
   })
 
   await worker.start()

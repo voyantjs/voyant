@@ -89,8 +89,8 @@ export const productContactRequirements = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_product_contact_requirements_product").on(table.productId),
-    index("idx_product_contact_requirements_option").on(table.optionId),
+    index("idx_product_contact_requirements_product_sort").on(table.productId, table.sortOrder),
+    index("idx_product_contact_requirements_option_sort").on(table.optionId, table.sortOrder),
     uniqueIndex("uidx_product_contact_requirements_scope_field").on(
       table.productId,
       table.optionId,
@@ -120,7 +120,7 @@ export const productBookingQuestions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_product_booking_questions_product").on(table.productId),
+    index("idx_product_booking_questions_product_sort").on(table.productId, table.sortOrder),
     index("idx_product_booking_questions_active").on(table.active),
     uniqueIndex("uidx_product_booking_questions_product_code").on(table.productId, table.code),
   ],
@@ -142,7 +142,7 @@ export const optionBookingQuestions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_option_booking_questions_option").on(table.optionId),
+    index("idx_option_booking_questions_option_sort").on(table.optionId, table.sortOrder),
     index("idx_option_booking_questions_question").on(table.productBookingQuestionId),
     uniqueIndex("uidx_option_booking_questions_option_question").on(
       table.optionId,
@@ -167,7 +167,10 @@ export const bookingQuestionOptions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_question_options_question").on(table.productBookingQuestionId),
+    index("idx_booking_question_options_question_sort").on(
+      table.productBookingQuestionId,
+      table.sortOrder,
+    ),
     uniqueIndex("uidx_booking_question_options_question_value").on(
       table.productBookingQuestionId,
       table.value,
@@ -190,7 +193,10 @@ export const bookingQuestionUnitTriggers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_question_unit_triggers_question").on(table.productBookingQuestionId),
+    index("idx_booking_question_unit_triggers_question_created").on(
+      table.productBookingQuestionId,
+      table.createdAt,
+    ),
     index("idx_booking_question_unit_triggers_unit").on(table.unitId),
     uniqueIndex("uidx_booking_question_unit_triggers_question_unit").on(
       table.productBookingQuestionId,
@@ -213,7 +219,10 @@ export const bookingQuestionOptionTriggers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_question_option_triggers_question").on(table.productBookingQuestionId),
+    index("idx_booking_question_option_triggers_question_created").on(
+      table.productBookingQuestionId,
+      table.createdAt,
+    ),
     index("idx_booking_question_option_triggers_option").on(table.optionId),
     uniqueIndex("uidx_booking_question_option_triggers_question_option").on(
       table.productBookingQuestionId,
@@ -238,7 +247,10 @@ export const bookingQuestionExtraTriggers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_question_extra_triggers_question").on(table.productBookingQuestionId),
+    index("idx_booking_question_extra_triggers_question_created").on(
+      table.productBookingQuestionId,
+      table.createdAt,
+    ),
     index("idx_booking_question_extra_triggers_product_extra").on(table.productExtraId),
     index("idx_booking_question_extra_triggers_option_extra_config").on(table.optionExtraConfigId),
   ],
@@ -264,10 +276,13 @@ export const bookingAnswers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_answers_booking").on(table.bookingId),
+    index("idx_booking_answers_booking_updated").on(table.bookingId, table.updatedAt),
     index("idx_booking_answers_question").on(table.productBookingQuestionId),
-    index("idx_booking_answers_participant").on(table.bookingParticipantId),
-    index("idx_booking_answers_booking_extra").on(table.bookingExtraId),
+    index("idx_booking_answers_participant_updated").on(
+      table.bookingParticipantId,
+      table.updatedAt,
+    ),
+    index("idx_booking_answers_booking_extra_updated").on(table.bookingExtraId, table.updatedAt),
   ],
 )
 

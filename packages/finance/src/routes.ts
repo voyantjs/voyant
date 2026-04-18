@@ -743,7 +743,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createInvoiceLineItem(
       c.get("db"),
       c.req.param("id"),
-      insertInvoiceLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceLineItemSchema),
     )
 
     if (!row) {
@@ -758,7 +758,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceLineItem(
       c.get("db"),
       c.req.param("lineId"),
-      updateInvoiceLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceLineItemSchema),
     )
 
     if (!row) {
@@ -793,7 +793,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createPayment(
       c.get("db"),
       c.req.param("id"),
-      insertPaymentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPaymentSchema),
     )
 
     if (!row) {
@@ -819,7 +819,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createCreditNote(
       c.get("db"),
       c.req.param("id"),
-      insertCreditNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertCreditNoteSchema),
     )
 
     if (!row) {
@@ -834,7 +834,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateCreditNote(
       c.get("db"),
       c.req.param("creditNoteId"),
-      updateCreditNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCreditNoteSchema),
     )
 
     if (!row) {
@@ -860,7 +860,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createCreditNoteLineItem(
       c.get("db"),
       c.req.param("creditNoteId"),
-      insertCreditNoteLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertCreditNoteLineItemSchema),
     )
 
     if (!row) {
@@ -891,7 +891,7 @@ export const financeRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertFinanceNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFinanceNoteSchema),
     )
 
     if (!row) {

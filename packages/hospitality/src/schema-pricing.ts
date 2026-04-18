@@ -43,7 +43,11 @@ export const stayRules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_stay_rules_property").on(table.propertyId),
+    index("idx_stay_rules_property_priority_created").on(
+      table.propertyId,
+      table.priority,
+      table.createdAt,
+    ),
     index("idx_stay_rules_rate_plan").on(table.ratePlanId),
     index("idx_stay_rules_room_type").on(table.roomTypeId),
     index("idx_stay_rules_active").on(table.active),
@@ -73,7 +77,7 @@ export const roomInventory = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_inventory_property").on(table.propertyId),
+    index("idx_room_inventory_property_date").on(table.propertyId, table.date),
     index("idx_room_inventory_room_type").on(table.roomTypeId),
     index("idx_room_inventory_date").on(table.date),
     uniqueIndex("uidx_room_inventory_room_type_date").on(table.roomTypeId, table.date),
@@ -101,7 +105,7 @@ export const ratePlanInventoryOverrides = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_rate_plan_inventory_overrides_rate_plan").on(table.ratePlanId),
+    index("idx_rate_plan_inventory_overrides_rate_plan_date").on(table.ratePlanId, table.date),
     index("idx_rate_plan_inventory_overrides_room_type").on(table.roomTypeId),
     index("idx_rate_plan_inventory_overrides_date").on(table.date),
     uniqueIndex("uidx_rate_plan_inventory_overrides_unique").on(
@@ -134,7 +138,7 @@ export const roomTypeRates = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_type_rates_rate_plan").on(table.ratePlanId),
+    index("idx_room_type_rates_rate_plan_created").on(table.ratePlanId, table.createdAt),
     index("idx_room_type_rates_room_type").on(table.roomTypeId),
     index("idx_room_type_rates_price_schedule").on(table.priceScheduleId),
     index("idx_room_type_rates_active").on(table.active),

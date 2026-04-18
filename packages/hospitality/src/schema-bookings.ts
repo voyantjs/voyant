@@ -55,7 +55,7 @@ export const stayBookingItems = pgTable(
   },
   (table) => [
     index("idx_stay_booking_items_booking_item").on(table.bookingItemId),
-    index("idx_stay_booking_items_property").on(table.propertyId),
+    index("idx_stay_booking_items_property_check_in").on(table.propertyId, table.checkInDate),
     index("idx_stay_booking_items_room_type").on(table.roomTypeId),
     index("idx_stay_booking_items_room_unit").on(table.roomUnitId),
     index("idx_stay_booking_items_rate_plan").on(table.ratePlanId),
@@ -109,7 +109,7 @@ export const roomBlocks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_blocks_property").on(table.propertyId),
+    index("idx_room_blocks_property_starts_on").on(table.propertyId, table.startsOn),
     index("idx_room_blocks_room_type").on(table.roomTypeId),
     index("idx_room_blocks_room_unit").on(table.roomUnitId),
     index("idx_room_blocks_status").on(table.status),
@@ -133,7 +133,10 @@ export const roomUnitStatusEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_unit_status_events_room_unit").on(table.roomUnitId),
+    index("idx_room_unit_status_events_room_unit_effective_from").on(
+      table.roomUnitId,
+      table.effectiveFrom,
+    ),
     index("idx_room_unit_status_events_status").on(table.statusCode),
     index("idx_room_unit_status_events_effective_from").on(table.effectiveFrom),
   ],
@@ -158,7 +161,7 @@ export const maintenanceBlocks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_maintenance_blocks_property").on(table.propertyId),
+    index("idx_maintenance_blocks_property_starts_on").on(table.propertyId, table.startsOn),
     index("idx_maintenance_blocks_room_type").on(table.roomTypeId),
     index("idx_maintenance_blocks_room_unit").on(table.roomUnitId),
     index("idx_maintenance_blocks_status").on(table.status),
@@ -192,7 +195,11 @@ export const housekeepingTasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_housekeeping_tasks_property").on(table.propertyId),
+    index("idx_housekeeping_tasks_property_priority_due_at").on(
+      table.propertyId,
+      table.priority,
+      table.dueAt,
+    ),
     index("idx_housekeeping_tasks_room_unit").on(table.roomUnitId),
     index("idx_housekeeping_tasks_stay_booking_item").on(table.stayBookingItemId),
     index("idx_housekeeping_tasks_status").on(table.status),

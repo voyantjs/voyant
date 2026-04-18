@@ -254,7 +254,7 @@ export const bookingRoutes = new Hono<Env>()
   .post("/reserve", async (c) => {
     const result = await bookingsService.reserveBooking(
       c.get("db"),
-      reserveBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingSchema),
       c.get("userId"),
     )
 
@@ -285,7 +285,7 @@ export const bookingRoutes = new Hono<Env>()
   .post("/from-product", async (c) => {
     const row = await bookingsService.createBookingFromProduct(
       c.get("db"),
-      convertProductSchema.parse(await c.req.json()),
+      await parseJsonBody(c, convertProductSchema),
       c.get("userId"),
     )
 
@@ -301,7 +301,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.reserveBookingFromOffer(
       c.get("db"),
       c.req.param("offerId"),
-      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingFromTransactionSchema),
       c.get("userId"),
     )
 
@@ -337,7 +337,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.reserveBookingFromOrder(
       c.get("db"),
       c.req.param("orderId"),
-      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingFromTransactionSchema),
       c.get("userId"),
     )
 
@@ -396,7 +396,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateBooking(
       c.get("db"),
       c.req.param("id"),
-      updateBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingSchema),
     )
 
     if (!row) {
@@ -426,7 +426,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.updateBookingStatus(
       c.get("db"),
       c.req.param("id"),
-      updateBookingStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingStatusSchema),
       c.get("userId"),
     )
 
@@ -450,7 +450,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.confirmBooking(
       c.get("db"),
       c.req.param("id"),
-      confirmBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, confirmBookingSchema),
       c.get("userId"),
     )
 
@@ -478,7 +478,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.extendBookingHold(
       c.get("db"),
       c.req.param("id"),
-      extendBookingHoldSchema.parse(await c.req.json()),
+      await parseJsonBody(c, extendBookingHoldSchema),
       c.get("userId"),
     )
 
@@ -506,7 +506,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.expireBooking(
       c.get("db"),
       c.req.param("id"),
-      expireBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, expireBookingSchema),
       c.get("userId"),
     )
 
@@ -530,7 +530,7 @@ export const bookingRoutes = new Hono<Env>()
     return c.json(
       await bookingsService.expireStaleBookings(
         c.get("db"),
-        expireStaleBookingsSchema.parse(await c.req.json()),
+        await parseJsonBody(c, expireStaleBookingsSchema),
         c.get("userId"),
       ),
     )
@@ -541,7 +541,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.cancelBooking(
       c.get("db"),
       c.req.param("id"),
-      cancelBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, cancelBookingSchema),
       c.get("userId"),
     )
 
@@ -632,7 +632,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createParticipant(
       c.get("db"),
       c.req.param("id"),
-      insertParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertParticipantSchema),
       c.get("userId"),
     )
 
@@ -695,7 +695,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateParticipant(
       c.get("db"),
       c.req.param("participantId"),
-      updateParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateParticipantSchema),
     )
 
     if (!row) {
@@ -776,7 +776,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createPassenger(
       c.get("db"),
       c.req.param("id"),
-      insertPassengerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPassengerSchema),
       c.get("userId"),
     )
 
@@ -792,7 +792,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updatePassenger(
       c.get("db"),
       c.req.param("passengerId"),
-      updatePassengerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePassengerSchema),
     )
 
     if (!row) {
@@ -827,7 +827,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createItem(
       c.get("db"),
       c.req.param("id"),
-      insertBookingItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemSchema),
       c.get("userId"),
     )
 
@@ -843,7 +843,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateItem(
       c.get("db"),
       c.req.param("itemId"),
-      updateBookingItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemSchema),
     )
 
     if (!row) {
@@ -876,7 +876,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.addItemParticipant(
       c.get("db"),
       c.req.param("itemId"),
-      insertBookingItemParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemParticipantSchema),
     )
 
     if (!row) {
@@ -911,7 +911,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createSupplierStatus(
       c.get("db"),
       c.req.param("id"),
-      insertSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertSupplierStatusSchema),
       c.get("userId"),
     )
 
@@ -927,7 +927,7 @@ export const bookingRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("statusId"),
-      updateSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierStatusSchema),
       c.get("userId"),
     )
 
@@ -950,7 +950,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.issueFulfillment(
       c.get("db"),
       c.req.param("id"),
-      insertBookingFulfillmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingFulfillmentSchema),
       c.get("userId"),
     )
 
@@ -966,7 +966,7 @@ export const bookingRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("fulfillmentId"),
-      updateBookingFulfillmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingFulfillmentSchema),
       c.get("userId"),
     )
 
@@ -991,7 +991,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.recordRedemption(
       c.get("db"),
       c.req.param("id"),
-      recordBookingRedemptionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, recordBookingRedemptionSchema),
       c.get("userId"),
     )
 
@@ -1060,7 +1060,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createDocument(
       c.get("db"),
       c.req.param("id"),
-      insertBookingDocumentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingDocumentSchema),
     )
 
     if (!row) {

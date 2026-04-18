@@ -1041,7 +1041,7 @@ export const financeRoutes = new Hono<Env>()
   })
 
   .post("/invoices/:id/render", async (c) => {
-    const input = renderInvoiceInputSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, renderInvoiceInputSchema)
     const result = await financeService.renderInvoice(c.get("db"), c.req.param("id"), input)
     if (result.status === "not_found") return c.json({ error: "Invoice not found" }, 404)
     return c.json({ data: result.rendition }, 201)
@@ -1056,7 +1056,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.registerInvoiceExternalRef(
       c.get("db"),
       c.req.param("id"),
-      insertInvoiceExternalRefSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceExternalRefSchema),
     )
     if (!row) return c.json({ error: "Invoice not found" }, 404)
     return c.json({ data: row }, 201)

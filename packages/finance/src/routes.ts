@@ -84,7 +84,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentSession(
           c.get("db"),
-          insertPaymentSessionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentSessionSchema),
         ),
       },
       201,
@@ -101,7 +101,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -111,7 +111,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.markPaymentSessionRequiresRedirect(
       c.get("db"),
       c.req.param("id"),
-      markPaymentSessionRequiresRedirectSchema.parse(await c.req.json()),
+      await parseJsonBody(c, markPaymentSessionRequiresRedirectSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -121,7 +121,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.completePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      completePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, completePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -131,7 +131,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.failPaymentSession(
       c.get("db"),
       c.req.param("id"),
-      failPaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, failPaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -141,7 +141,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.cancelPaymentSession(
       c.get("db"),
       c.req.param("id"),
-      cancelPaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, cancelPaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -151,7 +151,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.expirePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      expirePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, expirePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -171,7 +171,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentInstrument(
           c.get("db"),
-          insertPaymentInstrumentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentInstrumentSchema),
         ),
       },
       201,
@@ -188,7 +188,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentInstrument(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentInstrumentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentInstrumentSchema),
     )
     if (!row) return c.json({ error: "Payment instrument not found" }, 404)
     return c.json({ data: row })
@@ -214,7 +214,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentAuthorization(
           c.get("db"),
-          insertPaymentAuthorizationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentAuthorizationSchema),
         ),
       },
       201,
@@ -231,7 +231,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentAuthorization(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentAuthorizationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentAuthorizationSchema),
     )
     if (!row) return c.json({ error: "Payment authorization not found" }, 404)
     return c.json({ data: row })
@@ -257,7 +257,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentCapture(
           c.get("db"),
-          insertPaymentCaptureSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentCaptureSchema),
         ),
       },
       201,
@@ -274,7 +274,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentCapture(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentCaptureSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentCaptureSchema),
     )
     if (!row) return c.json({ error: "Payment capture not found" }, 404)
     return c.json({ data: row })
@@ -322,7 +322,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingPaymentSchedule(
       c.get("db"),
       c.req.param("bookingId"),
-      insertBookingPaymentScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingPaymentScheduleSchema),
     )
 
     if (!row) {
@@ -336,7 +336,7 @@ export const financeRoutes = new Hono<Env>()
     const rows = await financeService.applyDefaultBookingPaymentPlan(
       c.get("db"),
       c.req.param("bookingId"),
-      applyDefaultBookingPaymentPlanSchema.parse(await c.req.json()),
+      await parseJsonBody(c, applyDefaultBookingPaymentPlanSchema),
     )
 
     if (!rows) {
@@ -350,7 +350,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingPaymentSchedule(
       c.get("db"),
       c.req.param("scheduleId"),
-      updateBookingPaymentScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingPaymentScheduleSchema),
     )
 
     if (!row) {
@@ -365,7 +365,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromBookingSchedule(
         c.get("db"),
         c.req.param("scheduleId"),
-        createPaymentSessionFromScheduleSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromScheduleSchema),
       )
 
       if (!row) {
@@ -406,7 +406,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingGuarantee(
       c.get("db"),
       c.req.param("bookingId"),
-      insertBookingGuaranteeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingGuaranteeSchema),
     )
 
     if (!row) {
@@ -421,7 +421,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromBookingGuarantee(
         c.get("db"),
         c.req.param("guaranteeId"),
-        createPaymentSessionFromGuaranteeSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromGuaranteeSchema),
       )
 
       if (!row) {
@@ -439,7 +439,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingGuarantee(
       c.get("db"),
       c.req.param("guaranteeId"),
-      updateBookingGuaranteeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingGuaranteeSchema),
     )
 
     if (!row) {
@@ -473,7 +473,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingItemTaxLine(
       c.get("db"),
       c.req.param("bookingItemId"),
-      insertBookingItemTaxLineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemTaxLineSchema),
     )
 
     if (!row) {
@@ -487,7 +487,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingItemTaxLine(
       c.get("db"),
       c.req.param("taxLineId"),
-      updateBookingItemTaxLineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemTaxLineSchema),
     )
 
     if (!row) {
@@ -524,7 +524,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createBookingItemCommission(
       c.get("db"),
       c.req.param("bookingItemId"),
-      insertBookingItemCommissionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemCommissionSchema),
     )
 
     if (!row) {
@@ -538,7 +538,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateBookingItemCommission(
       c.get("db"),
       c.req.param("commissionId"),
-      updateBookingItemCommissionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemCommissionSchema),
     )
 
     if (!row) {
@@ -577,7 +577,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createSupplierPayment(
           c.get("db"),
-          insertSupplierPaymentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertSupplierPaymentSchema),
         ),
       },
       201,
@@ -589,7 +589,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateSupplierPayment(
       c.get("db"),
       c.req.param("id"),
-      updateSupplierPaymentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierPaymentSchema),
     )
 
     if (!row) {
@@ -615,7 +615,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createInvoice(
           c.get("db"),
-          insertInvoiceSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertInvoiceSchema),
         ),
       },
       201,
@@ -624,7 +624,7 @@ export const financeRoutes = new Hono<Env>()
 
   // POST /invoices/from-booking — Create draft invoice from booking + booking items
   .post("/invoices/from-booking", async (c) => {
-    const input = invoiceFromBookingSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, invoiceFromBookingSchema)
     const db = c.get("db")
     const [{ bookingItems, bookings }, { eq }] = await Promise.all([
       import("@voyantjs/bookings/schema"),
@@ -683,7 +683,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoice(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceSchema),
     )
 
     if (!row) {
@@ -713,7 +713,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromInvoice(
         c.get("db"),
         c.req.param("id"),
-        createPaymentSessionFromInvoiceSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromInvoiceSchema),
       )
 
       if (!row) {
@@ -743,7 +743,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createInvoiceLineItem(
       c.get("db"),
       c.req.param("id"),
-      insertInvoiceLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceLineItemSchema),
     )
 
     if (!row) {
@@ -758,7 +758,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceLineItem(
       c.get("db"),
       c.req.param("lineId"),
-      updateInvoiceLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceLineItemSchema),
     )
 
     if (!row) {
@@ -793,7 +793,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createPayment(
       c.get("db"),
       c.req.param("id"),
-      insertPaymentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPaymentSchema),
     )
 
     if (!row) {
@@ -819,7 +819,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createCreditNote(
       c.get("db"),
       c.req.param("id"),
-      insertCreditNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertCreditNoteSchema),
     )
 
     if (!row) {
@@ -834,7 +834,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateCreditNote(
       c.get("db"),
       c.req.param("creditNoteId"),
-      updateCreditNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCreditNoteSchema),
     )
 
     if (!row) {
@@ -860,7 +860,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.createCreditNoteLineItem(
       c.get("db"),
       c.req.param("creditNoteId"),
-      insertCreditNoteLineItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertCreditNoteLineItemSchema),
     )
 
     if (!row) {
@@ -909,7 +909,7 @@ export const financeRoutes = new Hono<Env>()
   .post("/invoice-number-series", async (c) => {
     const row = await financeService.createInvoiceNumberSeries(
       c.get("db"),
-      insertInvoiceNumberSeriesSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceNumberSeriesSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -924,7 +924,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceNumberSeries(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceNumberSeriesSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceNumberSeriesSchema),
     )
     if (!row) return c.json({ error: "Invoice number series not found" }, 404)
     return c.json({ data: row })
@@ -961,7 +961,7 @@ export const financeRoutes = new Hono<Env>()
   .post("/invoice-templates", async (c) => {
     const row = await financeService.createInvoiceTemplate(
       c.get("db"),
-      insertInvoiceTemplateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceTemplateSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -976,7 +976,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoiceTemplate(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceTemplateSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceTemplateSchema),
     )
     if (!row) return c.json({ error: "Invoice template not found" }, 404)
     return c.json({ data: row })
@@ -1000,7 +1000,7 @@ export const financeRoutes = new Hono<Env>()
   .post("/tax-regimes", async (c) => {
     const row = await financeService.createTaxRegime(
       c.get("db"),
-      insertTaxRegimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertTaxRegimeSchema),
     )
     return c.json({ data: row }, 201)
   })
@@ -1015,7 +1015,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateTaxRegime(
       c.get("db"),
       c.req.param("id"),
-      updateTaxRegimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateTaxRegimeSchema),
     )
     if (!row) return c.json({ error: "Tax regime not found" }, 404)
     return c.json({ data: row })
@@ -1037,7 +1037,7 @@ export const financeRoutes = new Hono<Env>()
   })
 
   .post("/invoices/:id/render", async (c) => {
-    const input = renderInvoiceInputSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, renderInvoiceInputSchema)
     const result = await financeService.renderInvoice(c.get("db"), c.req.param("id"), input)
     if (result.status === "not_found") return c.json({ error: "Invoice not found" }, 404)
     return c.json({ data: result.rendition }, 201)
@@ -1052,7 +1052,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.registerInvoiceExternalRef(
       c.get("db"),
       c.req.param("id"),
-      insertInvoiceExternalRefSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertInvoiceExternalRefSchema),
     )
     if (!row) return c.json({ error: "Invoice not found" }, 404)
     return c.json({ data: row }, 201)

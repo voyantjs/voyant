@@ -1,4 +1,4 @@
-import { parseJsonBody, requireUserId } from "@voyantjs/hono"
+import { parseJsonBody, parseQuery, requireUserId } from "@voyantjs/hono"
 import {
   insertAddressSchema,
   insertContactPointSchema,
@@ -38,9 +38,7 @@ const personEntity = "person" as const
 export const accountRoutes = new Hono<Env>()
   // Organizations
   .get("/organizations", async (c) => {
-    const query = organizationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, organizationListQuerySchema)
     return c.json(await crmService.listOrganizations(c.get("db"), query))
   })
   .post("/organizations", async (c) => {
@@ -48,7 +46,7 @@ export const accountRoutes = new Hono<Env>()
       {
         data: await crmService.createOrganization(
           c.get("db"),
-          insertOrganizationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOrganizationSchema),
         ),
       },
       201,
@@ -63,7 +61,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.updateOrganization(
       c.get("db"),
       c.req.param("id"),
-      updateOrganizationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOrganizationSchema),
     )
     if (!row) return c.json({ error: "Organization not found" }, 404)
     return c.json({ data: row })
@@ -85,7 +83,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           organizationEntity,
           c.req.param("id"),
-          insertContactPointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertContactPointSchema),
         ),
       },
       201,
@@ -103,7 +101,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           organizationEntity,
           c.req.param("id"),
-          insertAddressSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAddressSchema),
         ),
       },
       201,
@@ -126,7 +124,7 @@ export const accountRoutes = new Hono<Env>()
     return c.json({ data: row }, 201)
   })
   .patch("/organization-notes/:id", async (c) => {
-    const body = updateOrganizationNoteSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, updateOrganizationNoteSchema)
     const row = await crmService.updateOrganizationNote(
       c.get("db"),
       c.req.param("id"),
@@ -143,7 +141,7 @@ export const accountRoutes = new Hono<Env>()
 
   // People
   .get("/people", async (c) => {
-    const query = personListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, personListQuerySchema)
     return c.json(await crmService.listPeople(c.get("db"), query))
   })
   .post("/people", async (c) => {
@@ -151,7 +149,7 @@ export const accountRoutes = new Hono<Env>()
       {
         data: await crmService.createPerson(
           c.get("db"),
-          insertPersonSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPersonSchema),
         ),
       },
       201,
@@ -166,7 +164,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.updatePerson(
       c.get("db"),
       c.req.param("id"),
-      updatePersonSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePersonSchema),
     )
     if (!row) return c.json({ error: "Person not found" }, 404)
     return c.json({ data: row })
@@ -188,7 +186,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           personEntity,
           c.req.param("id"),
-          insertContactPointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertContactPointSchema),
         ),
       },
       201,
@@ -206,7 +204,7 @@ export const accountRoutes = new Hono<Env>()
           c.get("db"),
           personEntity,
           c.req.param("id"),
-          insertAddressSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAddressSchema),
         ),
       },
       201,
@@ -229,7 +227,7 @@ export const accountRoutes = new Hono<Env>()
     return c.json({ data: row }, 201)
   })
   .patch("/person-notes/:id", async (c) => {
-    const body = updatePersonNoteSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, updatePersonNoteSchema)
     const row = await crmService.updatePersonNote(c.get("db"), c.req.param("id"), body.content)
     if (!row) return c.json({ error: "Note not found" }, 404)
     return c.json({ data: row })
@@ -240,9 +238,7 @@ export const accountRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/people/:id/communications", async (c) => {
-    const query = communicationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, communicationListQuerySchema)
     return c.json({
       data: await crmService.listCommunications(c.get("db"), c.req.param("id"), query),
     })
@@ -251,7 +247,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.createCommunication(
       c.get("db"),
       c.req.param("id"),
-      insertCommunicationLogSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertCommunicationLogSchema),
     )
     if (!row) return c.json({ error: "Person not found" }, 404)
     return c.json({ data: row }, 201)
@@ -266,7 +262,7 @@ export const accountRoutes = new Hono<Env>()
       {
         data: await crmService.createSegment(
           c.get("db"),
-          insertSegmentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertSegmentSchema),
         ),
       },
       201,
@@ -301,7 +297,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.updateContactMethod(
       c.get("db"),
       c.req.param("id"),
-      updateContactPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateContactPointSchema),
     )
     if (!row) return c.json({ error: "Contact method not found" }, 404)
     return c.json({ data: row })
@@ -315,7 +311,7 @@ export const accountRoutes = new Hono<Env>()
     const row = await crmService.updateAddress(
       c.get("db"),
       c.req.param("id"),
-      updateAddressSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAddressSchema),
     )
     if (!row) return c.json({ error: "Address not found" }, 404)
     return c.json({ data: row })

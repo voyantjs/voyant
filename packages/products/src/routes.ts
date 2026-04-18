@@ -1,4 +1,4 @@
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
@@ -1384,7 +1384,7 @@ export const productRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertVersionSchema.parse(await c.req.json().catch(() => ({}))),
+      await parseOptionalJsonBody(c, insertVersionSchema),
     )
 
     if (!row) {

@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
 
@@ -168,7 +169,7 @@ export const bookingRoutes = new Hono<Env>()
 
   // 1. GET / — List bookings
   .get("/", async (c) => {
-    const query = bookingListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, bookingListQuerySchema)
     return c.json(await bookingsService.listBookings(c.get("db"), query))
   })
 
@@ -176,9 +177,7 @@ export const bookingRoutes = new Hono<Env>()
   .get("/overview", async (c) => {
     const overview = await publicBookingsService.getOverviewByLookup(
       c.get("db"),
-      internalBookingOverviewLookupQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      ),
+      await parseQuery(c, internalBookingOverviewLookupQuerySchema),
     )
 
     if (!overview) {
@@ -203,7 +202,7 @@ export const bookingRoutes = new Hono<Env>()
   .post("/reserve", async (c) => {
     const result = await bookingsService.reserveBooking(
       c.get("db"),
-      reserveBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingSchema),
       c.get("userId"),
     )
 
@@ -234,7 +233,7 @@ export const bookingRoutes = new Hono<Env>()
   .post("/from-product", async (c) => {
     const row = await bookingsService.createBookingFromProduct(
       c.get("db"),
-      convertProductSchema.parse(await c.req.json()),
+      await parseJsonBody(c, convertProductSchema),
       c.get("userId"),
     )
 
@@ -250,7 +249,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.reserveBookingFromOffer(
       c.get("db"),
       c.req.param("offerId"),
-      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingFromTransactionSchema),
       c.get("userId"),
     )
 
@@ -286,7 +285,7 @@ export const bookingRoutes = new Hono<Env>()
     const result = await bookingsService.reserveBookingFromOrder(
       c.get("db"),
       c.req.param("orderId"),
-      reserveBookingFromTransactionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, reserveBookingFromTransactionSchema),
       c.get("userId"),
     )
 
@@ -345,7 +344,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateBooking(
       c.get("db"),
       c.req.param("id"),
-      updateBookingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingSchema),
     )
 
     if (!row) {

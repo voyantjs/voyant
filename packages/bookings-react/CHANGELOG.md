@@ -1,5 +1,29 @@
 # @voyantjs/bookings-react
 
+## 0.6.0
+
+### Minor Changes
+
+- b7d56c5: Add `useBookingPrimaryProduct(bookingId)` hook and make `BookingCancellationDialog` + `BookingGroupSection` self-resolve `productId` (and `optionUnitId`) from the booking's items.
+
+  The hook returns `{ productId, optionUnitId, isPending, isLoading }`, using the canonical "first item with a non-null productId" rule — the same heuristic every consumer was duplicating. Components auto-resolve by default when the prop is `undefined`; pass an explicit string or `null` as an override for multi-product bookings or to force the non-product-scoped policy.
+
+  This fixes a quiet correctness regression where callers who forgot to wire `productId` silently fell back to the default cancellation policy instead of the product-scoped one.
+
+- 521147e: Add canonical booking status presentation helpers to `@voyantjs/bookings-react`:
+
+  - `bookingStatusBadgeVariant: Record<BookingStatus, 'default' | 'secondary' | 'outline' | 'destructive'>` — exhaustive (not `Record<string, …>`), so adding a new booking status becomes a compile error here instead of a silent UX miss in every app.
+  - `formatBookingStatus(status)` — humanized label (`"in_progress"` → `"In Progress"`).
+  - `bookingStatuses` / `bookingStatusOptions` — status list derived from the Zod schema, ready for Select pickers.
+  - `BookingStatus` type (now exported from `./schemas`).
+
+  Registry components in `@voyantjs/voyant-ui` (`booking-list`, `booking-detail-page` copies, `status-change-dialog`) drop their duplicated local `statusVariant` / `formatStatus` / `BOOKING_STATUSES` constants and consume these instead — single source of truth.
+
+### Patch Changes
+
+- @voyantjs/bookings@0.6.0
+- @voyantjs/react@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes

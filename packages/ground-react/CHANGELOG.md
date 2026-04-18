@@ -1,5 +1,12 @@
 # @voyantjs/ground-react
 
+## 0.6.0
+
+### Patch Changes
+
+- @voyantjs/ground@0.6.0
+- @voyantjs/react@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes

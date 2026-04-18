@@ -1,6 +1,7 @@
 import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import { type Context, Hono } from "hono"
+import { z } from "zod"
 
 import { createBookingPiiService } from "./pii.js"
 import { bookingGroupRoutes } from "./routes-groups.js"
@@ -318,7 +319,7 @@ export const bookingRoutes = new Hono<Env>()
 
   // 4. POST / — Create booking (manual/backoffice only)
   .post("/", async (c) => {
-    const payload = await c.req.json()
+    const payload = await parseJsonBody(c, z.unknown())
     const parsed = createBookingSchema.safeParse(payload)
 
     if (!parsed.success) {

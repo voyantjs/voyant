@@ -89,7 +89,7 @@ export const resourcePoolMembers = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_resource_pool_members_pool").on(table.poolId),
+    index("idx_resource_pool_members_pool_created").on(table.poolId, table.createdAt),
     index("idx_resource_pool_members_resource").on(table.resourceId),
   ],
 )
@@ -111,7 +111,11 @@ export const resourceRequirements = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_resource_requirements_pool").on(table.poolId),
+    index("idx_resource_requirements_pool_priority_created").on(
+      table.poolId,
+      table.priority,
+      table.createdAt,
+    ),
     index("idx_resource_requirements_product").on(table.productId),
     index("idx_resource_requirements_rule").on(table.availabilityRuleId),
     index("idx_resource_requirements_start_time").on(table.startTimeId),
@@ -133,7 +137,7 @@ export const resourceSlotAssignments = pgTable(
     notes: text("notes"),
   },
   (table) => [
-    index("idx_resource_slot_assignments_slot").on(table.slotId),
+    index("idx_resource_slot_assignments_slot_assigned").on(table.slotId, table.assignedAt),
     index("idx_resource_slot_assignments_pool").on(table.poolId),
     index("idx_resource_slot_assignments_resource").on(table.resourceId),
     index("idx_resource_slot_assignments_booking").on(table.bookingId),
@@ -155,7 +159,7 @@ export const resourceCloseouts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_resource_closeouts_resource").on(table.resourceId),
+    index("idx_resource_closeouts_resource_created").on(table.resourceId, table.createdAt),
     index("idx_resource_closeouts_date").on(table.dateLocal),
   ],
 )

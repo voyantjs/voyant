@@ -595,7 +595,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createParticipant(
       c.get("db"),
       c.req.param("id"),
-      insertParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertParticipantSchema),
       c.get("userId"),
     )
 
@@ -673,7 +673,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateParticipant(
       c.get("db"),
       c.req.param("participantId"),
-      updateParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateParticipantSchema),
     )
 
     if (!row) {
@@ -769,7 +769,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createPassenger(
       c.get("db"),
       c.req.param("id"),
-      insertPassengerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertPassengerSchema),
       c.get("userId"),
     )
 
@@ -785,7 +785,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updatePassenger(
       c.get("db"),
       c.req.param("passengerId"),
-      updatePassengerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePassengerSchema),
     )
 
     if (!row) {
@@ -820,7 +820,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.createItem(
       c.get("db"),
       c.req.param("id"),
-      insertBookingItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemSchema),
       c.get("userId"),
     )
 
@@ -836,7 +836,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.updateItem(
       c.get("db"),
       c.req.param("itemId"),
-      updateBookingItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingItemSchema),
     )
 
     if (!row) {
@@ -869,7 +869,7 @@ export const bookingRoutes = new Hono<Env>()
     const row = await bookingsService.addItemParticipant(
       c.get("db"),
       c.req.param("itemId"),
-      insertBookingItemParticipantSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingItemParticipantSchema),
     )
 
     if (!row) {

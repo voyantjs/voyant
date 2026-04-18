@@ -1,6 +1,6 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 
 import { identityService } from "./service.js"
 import {

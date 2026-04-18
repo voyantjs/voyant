@@ -66,7 +66,7 @@ export function createCheckoutRoutes(options: CheckoutRoutesOptions = {}) {
   }
 
   return new Hono<Env>()
-    .post("/v1/checkout/bookings/:bookingId/collection-plan", async (c) => {
+    .post("/bookings/:bookingId/collection-plan", async (c) => {
       try {
         const plan = await previewCheckoutCollection(
           c.get("db"),
@@ -86,7 +86,7 @@ export function createCheckoutRoutes(options: CheckoutRoutesOptions = {}) {
         return c.json({ error: message }, 400)
       }
     })
-    .post("/v1/checkout/bookings/:bookingId/initiate-collection", async (c) => {
+    .post("/bookings/:bookingId/initiate-collection", async (c) => {
       try {
         const runtime = getRuntime(c.env, (key) => c.var.container?.resolve(key))
         const dispatcher = createNotificationService(runtime.providers)
@@ -113,7 +113,7 @@ export function createCheckoutRoutes(options: CheckoutRoutesOptions = {}) {
         return c.json({ error: message }, 409)
       }
     })
-    .post("/v1/checkout/collections/bootstrap", async (c) => {
+    .post("/collections/bootstrap", async (c) => {
       try {
         const runtime = getRuntime(c.env, (key) => c.var.container?.resolve(key))
         const dispatcher = createNotificationService(runtime.providers)
@@ -166,7 +166,7 @@ export function createCheckoutHonoModule(options: CheckoutRoutesOptions = {}): H
 
   return {
     module,
-    routes: createCheckoutRoutes(options),
+    publicRoutes: createCheckoutRoutes(options),
     adminRoutes: createCheckoutAdminRoutes(),
   }
 }

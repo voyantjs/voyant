@@ -207,7 +207,7 @@ Partially resolved:
 - `@voyantjs/checkout` now exposes a module-based checkout surface with typed
   collection-plan and initiate-collection contracts
 - `@voyantjs/checkout` now also exposes a unified
-  `/v1/checkout/collections/bootstrap` contract that can start exact-amount
+  `/v1/public/checkout/collections/bootstrap` contract that can start exact-amount
   collection from either a `bookingId` or a `sessionId`, covering booking-
   backed and session-backed storefront flows through one request shape
 - admin checkout reminder tracking is now backed by first-class notification

@@ -147,7 +147,7 @@ async function listLegalBookingDocuments(
         format: attachment.mimeType === "application/pdf" ? "pdf" : null,
         mimeType: attachment.mimeType ?? null,
         storageKey: attachment.storageKey ?? null,
-        downloadUrl: getMetadataString(metadata, ["url", "downloadUrl"]),
+        downloadUrl: getMetadataString(metadata, ["url"]),
         language: contract.language ?? null,
         metadata,
         createdAt: attachment.createdAt.toISOString(),
@@ -243,7 +243,7 @@ async function listFinanceBookingDocuments(
                 ? "application/json"
                 : "application/xml",
         storageKey: rendition.storageKey ?? null,
-        downloadUrl: getMetadataString(metadata, ["url", "downloadUrl"]),
+        downloadUrl: getMetadataString(metadata, ["url"]),
         language: rendition.language ?? invoice.language ?? null,
         metadata,
         createdAt: rendition.createdAt.toISOString(),

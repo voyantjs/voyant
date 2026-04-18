@@ -1,13 +1,16 @@
-import { type AdminExtension, defineAdminExtension } from "@voyantjs/voyant-admin"
+import {
+  type AdminExtension,
+  createAdminExtensionRegistry,
+  defineAdminExtension,
+} from "@voyantjs/voyant-admin"
 
 import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/dashboard-outstanding-invoices-widget"
 
 /**
- * Template-local admin extension registry.
+ * Operator admin contributions composed through the shared admin runtime.
  *
- * Keep this explicit and source-controlled so projects can add navigation
- * contributions, widget slots, and route metadata without relying on a more
- * dynamic plugin runtime in the admin shell.
+ * Keep this explicit and source-controlled so the template still owns shell
+ * composition while the extension seam stays typed and framework-level.
  *
  * Widget slots currently exposed by the operator template:
  * - `dashboard.header`
@@ -18,7 +21,7 @@ import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/d
  * - `invoice.details.header`
  * - `invoice.details.after-summary`
  */
-export const adminExtensions: ReadonlyArray<AdminExtension> = [
+export const adminExtensions: ReadonlyArray<AdminExtension> = createAdminExtensionRegistry(
   defineAdminExtension({
     id: "dashboard-outstanding-invoices",
     widgets: [
@@ -30,4 +33,4 @@ export const adminExtensions: ReadonlyArray<AdminExtension> = [
       },
     ],
   }),
-]
+)

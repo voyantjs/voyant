@@ -145,6 +145,19 @@ describe("createApp surface mounting", () => {
     expect(((await publicRes.json()) as { surface: string }).surface).toBe("public")
   })
 
+  it("treats public-path bypasses under /v1/public/* as customer-facing requests", async () => {
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      modules: [makeModule({ name: "checkout", public_: true })],
+      publicPaths: ["/v1/public/checkout"],
+    })
+
+    const res = await app.request("/v1/public/checkout/ping", {}, TEST_ENV, TEST_CTX)
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as { surface: string }).surface).toBe("public")
+  })
+
   it("exposes /health publicly without auth", async () => {
     const app = createApp({
       // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db

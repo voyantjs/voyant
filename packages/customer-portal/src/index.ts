@@ -5,7 +5,6 @@ import {
   buildPublicCustomerPortalRouteRuntime,
   CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
 } from "./route-runtime.js"
-import { customerPortalRoutes } from "./routes.js"
 import {
   createPublicCustomerPortalRoutes,
   type PublicCustomerPortalRouteOptions,
@@ -86,7 +85,6 @@ export function createCustomerPortalHonoModule(
 
   return {
     module,
-    routes: customerPortalRoutes,
     publicRoutes: createPublicCustomerPortalRoutes(options),
   }
 }

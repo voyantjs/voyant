@@ -9,7 +9,7 @@ Architecturally, this package is primarily:
 
 - a Netopia payment adapter
 - a finance extension
-- an optional Hono plugin bundle for distribution
+- an optional packaged Hono bundle when an app wants one installable entrypoint
 
 It starts a hosted Netopia checkout, stores provider references on the session,
 and reconciles callback payloads back into Voyant payments, captures,
@@ -58,7 +58,7 @@ const netopiaFinanceExtension = createNetopiaFinanceAdapter()
 
 Then include the returned extension in `createApp({ extensions: [...] })`.
 
-If you want the packaged Hono bundle instead, use
+If you want the packaged distribution helper instead, use
 `createNetopiaAdapterBundle()` or `netopiaHonoPlugin()`. Those are optional
 distribution helpers over the adapter/extension surfaces above; the adapter and
 finance extension remain the main runtime seams.

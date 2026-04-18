@@ -81,14 +81,7 @@ function getFallbackDownloadUrl(metadata: unknown) {
     return null
   }
 
-  for (const key of ["url", "publicUrl", "downloadUrl", "download_url", "signedUrl"]) {
-    const value = maybeUrl(record[key])
-    if (value) {
-      return value
-    }
-  }
-
-  return null
+  return maybeUrl(record.url)
 }
 
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {

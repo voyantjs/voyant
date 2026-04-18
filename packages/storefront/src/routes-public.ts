@@ -37,7 +37,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         await storefrontService.listProductDepartures(
           c.get("db" as never),
           c.req.param("productId"),
-          parseQuery(c, storefrontDepartureListQuerySchema),
+          await parseQuery(c, storefrontDepartureListQuerySchema),
         ),
       )
     })
@@ -53,11 +53,13 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         : c.json({ error: "Storefront departure not found" }, 404)
     })
     .get("/products/:productId/extensions", async (c) => {
+      const query = await parseQuery(c, storefrontProductExtensionsQuerySchema)
+
       return c.json({
         data: await storefrontService.getProductExtensions(
           c.get("db" as never),
           c.req.param("productId"),
-          parseQuery(c, storefrontProductExtensionsQuerySchema).optionId,
+          query.optionId,
         ),
       })
     })
@@ -72,7 +74,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         : c.json({ error: "Storefront itinerary not found" }, 404)
     })
     .get("/products/:productId/offers", async (c) => {
-      const query = parseQuery(c, storefrontPromotionalOfferListQuerySchema)
+      const query = await parseQuery(c, storefrontPromotionalOfferListQuerySchema)
 
       return c.json({
         data: await storefrontService.listApplicableOffers({
@@ -83,7 +85,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
       })
     })
     .get("/offers/:slug", async (c) => {
-      const query = parseQuery(c, storefrontPromotionalOfferListQuerySchema)
+      const query = await parseQuery(c, storefrontPromotionalOfferListQuerySchema)
       const offer = await storefrontService.getOfferBySlug({
         slug: c.req.param("slug"),
         locale: query.locale,

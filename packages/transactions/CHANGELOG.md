@@ -1,5 +1,18 @@
 # @voyantjs/transactions
 
+## 0.6.1
+
+### Patch Changes
+
+- c498a5b: Align transaction child-list indexes with dominant parent-scoped query shapes
+  by replacing single-column parent indexes with composite parent-and-sort
+  indexes for offer participants, offer items, order participants, order items,
+  order item participants, and order terms.
+  - @voyantjs/core@0.6.1
+  - @voyantjs/db@0.6.1
+  - @voyantjs/hono@0.6.1
+  - @voyantjs/utils@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes

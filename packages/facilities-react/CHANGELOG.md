@@ -1,5 +1,13 @@
 # @voyantjs/facilities-react
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [b68006e]
+  - @voyantjs/facilities@0.6.1
+  - @voyantjs/react@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes

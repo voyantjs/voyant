@@ -1,5 +1,23 @@
 # @voyantjs/sellability
 
+## 0.6.1
+
+### Patch Changes
+
+- 00587db: Align sellability schema indexes with the active index policy by replacing
+  decorative single-column list indexes with parent-and-sort composite indexes
+  for snapshot items, policy results, explanations, and offer lifecycle runs.
+- Updated dependencies [c498a5b]
+  - @voyantjs/availability@0.6.1
+  - @voyantjs/core@0.6.1
+  - @voyantjs/db@0.6.1
+  - @voyantjs/distribution@0.6.1
+  - @voyantjs/hono@0.6.1
+  - @voyantjs/markets@0.6.1
+  - @voyantjs/pricing@0.6.1
+  - @voyantjs/products@0.6.1
+  - @voyantjs/transactions@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes

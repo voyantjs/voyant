@@ -12,6 +12,10 @@ The goal is simple:
 
 Caching should be a performance optimization, not part of the correctness model.
 
+For active guidance on transactions, row locks, and when a first-class locking
+surface is still deferred, see
+[`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md).
+
 ## Core Rules
 
 ### 1. Cache is not coordination
@@ -157,6 +161,10 @@ Good cache candidates include:
 Rule:
 
 Cache read-heavy derived data, not primary mutable business state.
+
+For the boundary between cacheable read models and explicit derived
+projections, see
+[`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md).
 
 ### 9. Keep code tolerant of misses
 

@@ -13,6 +13,10 @@ The goal is straightforward:
 Voyant should stay Drizzle-first. The cleanup here is about consistency and
 discipline, not replacing the underlying tooling.
 
+For deeper guidance on composite indexes, partial indexes, scoped uniqueness,
+and check constraints, see
+[`index-and-constraint-policy.md`](./index-and-constraint-policy.md).
+
 ## Core Rules
 
 ### 1. Modules own their own tables
@@ -78,6 +82,15 @@ Rule:
 
 Cross-module relationships should be explicit at the framework/runtime level,
 not hidden as direct schema coupling.
+
+For the current pair-first link baseline and the threshold for richer
+relationship records, see
+[`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md).
+
+If linked reads eventually need denormalized support, keep that as an explicit
+derived read-model concern rather than baking it into schema coupling by
+default. See
+[`cross-module-indexing-and-projection-policy.md`](./cross-module-indexing-and-projection-policy.md).
 
 ### 4. Keep schema definitions and relations separate
 
@@ -208,6 +221,10 @@ Rule:
 Add indexes for real lookup and join patterns that exist in routes, services,
 workflows, or background processing.
 
+When the review needs more specific guidance on composite or partial indexes,
+use [`index-and-constraint-policy.md`](./index-and-constraint-policy.md)
+instead of inventing package-local rules ad hoc.
+
 ## Migration Ownership
 
 ### 10. Templates and apps own migrations
@@ -242,6 +259,10 @@ When adding or changing schema in a Voyant module:
 7. Add only the indexes and constraints that match real invariants and query
    patterns.
 8. Keep migration generation in the app/template layer.
+
+If the index or constraint needs more than a one-line rationale, record the
+shape against the active policy in
+[`index-and-constraint-policy.md`](./index-and-constraint-policy.md).
 
 ## Non-Goals
 

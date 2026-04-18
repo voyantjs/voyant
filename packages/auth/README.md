@@ -1,6 +1,8 @@
 # @voyantjs/auth
 
-Better Auth wiring for Voyant's reference template stack. Provides server-side auth helpers, edge runtime variants, backend utilities, and a permissions contract.
+Better Auth wiring for Voyant's reference template stack. Provides server-side
+auth helpers, edge runtime variants, backend utilities, and a permissions
+contract.
 
 ## Install
 
@@ -20,7 +22,13 @@ const auth = createAuth({
 })
 ```
 
-Auth provider wiring is template-owned — core Voyant packages only depend on the normalized `{ userId, actor }` contract, not on Better Auth specifically.
+Auth provider wiring is template-owned — core Voyant packages only depend on
+the normalized `{ userId, actor }` contract, not on Better Auth specifically.
+
+The package also exposes a narrow shared-secret bearer-token helper surface via
+`@voyantjs/utils/session-claims` for runtime-local verification. That helper is
+not a replacement for Better Auth session cookies and does not imply a
+platform-wide JWKS/JWT-first auth model.
 
 ## Exports
 

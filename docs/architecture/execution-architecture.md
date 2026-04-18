@@ -12,6 +12,13 @@ The goal is simple:
 Voyant should own the execution model. It does not need to own every runtime
 implementation.
 
+For concurrency-sensitive write paths and row-lock usage, see
+[`locking-and-concurrency-policy.md`](./locking-and-concurrency-policy.md).
+
+For the boundary between fire-and-forget events and durable background
+execution, see
+[`event-delivery-and-durable-execution-policy.md`](./event-delivery-and-durable-execution-policy.md).
+
 ## Execution Classes
 
 ### 1. Workflows

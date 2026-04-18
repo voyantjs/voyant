@@ -1,5 +1,15 @@
 # @voyantjs/identity
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align identity entity-scoped contact, address, and named-contact indexes with the active parent-and-sort query shapes used for primary-first list and entity-kind/entity-role filtering.
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

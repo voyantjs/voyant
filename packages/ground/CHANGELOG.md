@@ -1,5 +1,21 @@
 # @voyantjs/ground
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add global indexes for unscoped vehicle, driver, and shift admin lists.
+- b218885: Add composite list indexes for ground operations and dispatch queries.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/facilities@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/identity@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

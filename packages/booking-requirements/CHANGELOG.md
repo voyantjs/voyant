@@ -1,5 +1,28 @@
 # @voyantjs/booking-requirements
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add global indexes for unscoped booking requirement admin lists.
+- b218885: Add composite list indexes for booking requirement question and answer queries.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/products@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

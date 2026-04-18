@@ -1,5 +1,32 @@
 # @voyantjs/pricing
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add global created-time indexes for pricing child-list admin endpoints that can
+  paginate without a parent filter.
+- b218885: Add composite list indexes for pricing admin queries.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/availability@0.6.8
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/products@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # @voyantjs/suppliers
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Route supplier list search through the supplier-owned directory projection instead of live identity-table traversal for contact and address matching.
+- b218885: Align supplier root list indexes with the current filter-and-sort query shapes.
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/facilities@0.6.8
+  - @voyantjs/hono@0.6.8
+  - @voyantjs/identity@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

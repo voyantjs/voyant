@@ -1,5 +1,12 @@
 # @voyantjs/db
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Add a composite Better Auth membership index for workspace organization access paths.
+  - @voyantjs/core@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

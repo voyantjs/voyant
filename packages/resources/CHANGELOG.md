@@ -1,5 +1,15 @@
 # @voyantjs/resources
 
+## 0.6.8
+
+### Patch Changes
+
+- b218885: Align resources list indexes with the current filter-and-sort query shapes.
+- Updated dependencies [b218885]
+  - @voyantjs/core@0.6.8
+  - @voyantjs/db@0.6.8
+  - @voyantjs/hono@0.6.8
+
 ## 0.6.7
 
 ### Patch Changes

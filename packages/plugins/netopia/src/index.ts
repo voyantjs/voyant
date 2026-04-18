@@ -10,6 +10,7 @@ export {
   createNetopiaFinanceRoutes,
   NETOPIA_RUNTIME_CONTAINER_KEY,
   netopiaFinanceExtension,
+  netopiaHonoBundle,
   netopiaHonoPlugin,
 } from "./plugin.js"
 export {

@@ -3,7 +3,11 @@ import { financeService, type PaymentSession } from "@voyantjs/finance"
 import { notificationsService } from "@voyantjs/notifications"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { NetopiaClientApi } from "../../src/client.js"
-import { NETOPIA_RUNTIME_CONTAINER_KEY, netopiaHonoPlugin } from "../../src/plugin.js"
+import {
+  NETOPIA_RUNTIME_CONTAINER_KEY,
+  netopiaHonoBundle,
+  netopiaHonoPlugin,
+} from "../../src/plugin.js"
 import { deriveNetopiaOrderId, mapNetopiaPaymentStatus, netopiaService } from "../../src/service.js"
 import * as startService from "../../src/service-start.js"
 
@@ -77,6 +81,11 @@ afterEach(() => {
 })
 
 describe("netopiaHonoPlugin.bootstrap", () => {
+  it("exposes the bundle alias", () => {
+    const bundle = netopiaHonoBundle()
+    expect(bundle.name).toBe("netopia")
+  })
+
   it("validates and registers the resolved runtime once", async () => {
     const plugin = netopiaHonoPlugin({
       apiUrl: "https://secure.mobilpay.ro/pay",

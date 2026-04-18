@@ -1,5 +1,5 @@
 import type { Extension, ModuleContainer } from "@voyantjs/core"
-import { defineHonoPlugin, type HonoPlugin, parseJsonBody } from "@voyantjs/hono"
+import { defineHonoBundle, type HonoBundle, parseJsonBody } from "@voyantjs/hono"
 import type { HonoExtension } from "@voyantjs/hono/module"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
@@ -199,8 +199,8 @@ export function createNetopiaFinanceExtension(options: NetopiaRuntimeOptions = {
   }
 }
 
-export function netopiaHonoPlugin(options: NetopiaRuntimeOptions = {}): HonoPlugin {
-  return defineHonoPlugin({
+export function netopiaHonoBundle(options: NetopiaRuntimeOptions = {}): HonoBundle {
+  return defineHonoBundle({
     name: "netopia",
     version: "0.1.0",
     bootstrap: ({ bindings, container }) => {
@@ -212,5 +212,8 @@ export function netopiaHonoPlugin(options: NetopiaRuntimeOptions = {}): HonoPlug
     extensions: [createNetopiaFinanceExtension(options)],
   })
 }
+
+/** @deprecated Prefer {@link netopiaHonoBundle}. */
+export const netopiaHonoPlugin = netopiaHonoBundle
 
 export const netopiaFinanceExtension = createNetopiaFinanceExtension()

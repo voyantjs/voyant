@@ -1,5 +1,15 @@
 # @voyantjs/bookings
 
+## 0.6.5
+
+### Patch Changes
+
+- ae9933b: Align booking group and booking group member indexes with the actual parent-and-created-at list query shapes used by rooming and shared-booking group management.
+  - @voyantjs/core@0.6.5
+  - @voyantjs/db@0.6.5
+  - @voyantjs/hono@0.6.5
+  - @voyantjs/utils@0.6.5
+
 ## 0.6.4
 
 ### Patch Changes

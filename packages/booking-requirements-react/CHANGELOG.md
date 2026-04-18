@@ -1,5 +1,13 @@
 # @voyantjs/booking-requirements-react
 
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [5b14025]
+  - @voyantjs/booking-requirements@0.6.5
+  - @voyantjs/react@0.6.5
+
 ## 0.6.4
 
 ### Patch Changes

@@ -10,6 +10,7 @@ import {
 import { ArrowLeft, Ban, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 
+import { AdminWidgetSlotRenderer } from "@/components/admin/admin-widget-slot"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 
 import { BookingActivityTimeline } from "./booking-activity-timeline"
@@ -108,6 +109,7 @@ export function BookingDetailPage({ id }: { id: string }) {
           </Button>
         </div>
       </div>
+      <AdminWidgetSlotRenderer slot="booking.details.header" props={{ booking }} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -193,6 +195,7 @@ export function BookingDetailPage({ id }: { id: string }) {
           </CardContent>
         </Card>
       </div>
+      <AdminWidgetSlotRenderer slot="booking.details.after-summary" props={{ booking }} />
 
       <PassengerList bookingId={id} />
       <BookingItemList bookingId={id} />

@@ -48,6 +48,15 @@ describe("sanityCmsPlugin", () => {
     expect(names).toEqual(["departure.created", "departure.updated", "departure.deleted"])
   })
 
+  it("fails fast on invalid plugin options", () => {
+    expect(() =>
+      sanityCmsPlugin({
+        ...baseOptions,
+        token: "",
+      }),
+    ).toThrowError(/Invalid Sanity CMS plugin options/)
+  })
+
   it("pushes product.created to Sanity as a create mutation", async () => {
     const fetchMock = vi
       .fn<SanityFetch>()

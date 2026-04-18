@@ -1,12 +1,12 @@
-import type { Extension } from "@voyantjs/core"
-import { defineHonoPlugin, type HonoPlugin } from "@voyantjs/hono"
+import type { Extension, ModuleContainer } from "@voyantjs/core"
+import { defineHonoBundle, type HonoBundle, parseJsonBody } from "@voyantjs/hono"
 import type { HonoExtension } from "@voyantjs/hono/module"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
 import { resolveNetopiaRuntimeOptions } from "./client.js"
 import { netopiaService } from "./service.js"
-import type { NetopiaRuntimeOptions } from "./types.js"
+import type { NetopiaRuntimeOptions, ResolvedNetopiaRuntimeOptions } from "./types.js"
 import {
   netopiaCollectBookingGuaranteeSchema,
   netopiaCollectBookingScheduleSchema,
@@ -18,9 +18,28 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
+}
+
+export const NETOPIA_RUNTIME_CONTAINER_KEY = "providers.netopia.runtime"
+
+function getNetopiaRuntime(
+  bindings: Record<string, unknown>,
+  options: NetopiaRuntimeOptions,
+  resolveFromContainer?: <T>(key: string) => T,
+): ResolvedNetopiaRuntimeOptions {
+  if (resolveFromContainer) {
+    try {
+      return resolveFromContainer<ResolvedNetopiaRuntimeOptions>(NETOPIA_RUNTIME_CONTAINER_KEY)
+    } catch {
+      // Fall through to per-request resolution when bootstrap has not run.
+    }
+  }
+
+  return resolveNetopiaRuntimeOptions(bindings, options)
 }
 
 export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) {
@@ -48,18 +67,22 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
     }
     return { status: 502 as const, message }
   }
+  const resolveRuntime = (c: {
+    env: Record<string, unknown>
+    var: { container: ModuleContainer }
+  }) => getNetopiaRuntime(c.env, options, (key) => c.var.container.resolve(key))
 
   return new Hono<Env>()
     .post("/providers/netopia/payment-sessions/:sessionId/start", async (c) => {
       try {
-        const data = netopiaStartPaymentSessionSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaStartPaymentSessionSchema)
+        const runtime = resolveRuntime(c)
         const result = await netopiaService.startPaymentSession(
           c.get("db"),
           c.req.param("sessionId"),
           data,
-          options,
+          runtime,
           undefined,
-          c.env,
         )
         return c.json({ data: result }, 201)
       } catch (error) {
@@ -80,12 +103,13 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
       "/providers/netopia/bookings/:bookingId/payment-schedules/:scheduleId/collect",
       async (c) => {
         try {
-          const data = netopiaCollectBookingScheduleSchema.parse(await c.req.json())
+          const data = await parseJsonBody(c, netopiaCollectBookingScheduleSchema)
+          const runtime = resolveRuntime(c)
           const result = await netopiaService.collectBookingSchedule(
             c.get("db"),
             c.req.param("scheduleId"),
             data,
-            options,
+            runtime,
             undefined,
             undefined,
             c.env,
@@ -101,12 +125,13 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
     )
     .post("/providers/netopia/bookings/:bookingId/guarantees/:guaranteeId/collect", async (c) => {
       try {
-        const data = netopiaCollectBookingGuaranteeSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaCollectBookingGuaranteeSchema)
+        const runtime = resolveRuntime(c)
         const result = await netopiaService.collectBookingGuarantee(
           c.get("db"),
           c.req.param("guaranteeId"),
           data,
-          options,
+          runtime,
           undefined,
           undefined,
           c.env,
@@ -121,12 +146,13 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
     })
     .post("/providers/netopia/invoices/:invoiceId/collect", async (c) => {
       try {
-        const data = netopiaCollectInvoiceSchema.parse(await c.req.json())
+        const data = await parseJsonBody(c, netopiaCollectInvoiceSchema)
+        const runtime = resolveRuntime(c)
         const result = await netopiaService.collectInvoice(
           c.get("db"),
           c.req.param("invoiceId"),
           data,
-          options,
+          runtime,
           undefined,
           undefined,
           c.env,
@@ -139,13 +165,14 @@ export function createNetopiaFinanceRoutes(options: NetopiaRuntimeOptions = {}) 
       }
     })
     .post("/providers/netopia/callback", async (c) => {
-      const payload = netopiaWebhookPayloadSchema.parse(await c.req.json())
-      const result = await netopiaService.handleCallback(c.get("db"), payload, options, c.env)
+      const payload = await parseJsonBody(c, netopiaWebhookPayloadSchema)
+      const runtime = resolveRuntime(c)
+      const result = await netopiaService.handleCallback(c.get("db"), payload, runtime)
       return c.json({ data: result })
     })
     .get("/providers/netopia/config", async (c) => {
       try {
-        const runtime = resolveNetopiaRuntimeOptions(c.env, options)
+        const runtime = resolveRuntime(c)
         return c.json({
           data: {
             apiUrl: runtime.apiUrl,
@@ -176,12 +203,21 @@ export function createNetopiaFinanceExtension(options: NetopiaRuntimeOptions = {
   }
 }
 
-export function netopiaHonoPlugin(options: NetopiaRuntimeOptions = {}): HonoPlugin {
-  return defineHonoPlugin({
+export function netopiaHonoBundle(options: NetopiaRuntimeOptions = {}): HonoBundle {
+  return defineHonoBundle({
     name: "netopia",
     version: "0.1.0",
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        NETOPIA_RUNTIME_CONTAINER_KEY,
+        resolveNetopiaRuntimeOptions(bindings as Record<string, unknown> | undefined, options),
+      )
+    },
     extensions: [createNetopiaFinanceExtension(options)],
   })
 }
+
+/** @deprecated Prefer {@link netopiaHonoBundle}. */
+export const netopiaHonoPlugin = netopiaHonoBundle
 
 export const netopiaFinanceExtension = createNetopiaFinanceExtension()

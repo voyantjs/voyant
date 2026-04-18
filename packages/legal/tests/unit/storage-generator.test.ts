@@ -27,7 +27,6 @@ describe("createStorageBackedContractDocumentGenerator", () => {
     expect(result.metadata).toMatchObject({
       storageProvider: "local",
       url: "https://files.example/contracts/cont_123/contract-cont_123.html",
-      downloadUrl: "https://files.example/contracts/cont_123/contract-cont_123.html",
     })
 
     const bytes = await storage.get(result.storageKey ?? "")

@@ -63,7 +63,6 @@ export interface StorageBackedInvoiceDocumentGeneratorOptions {
   storage: StorageProvider
   keyPrefix?: string | ((context: InvoiceDocumentGeneratorContext) => Promise<string> | string)
   serializer?: StorageBackedInvoiceDocumentSerializer
-  signedUrlExpiresIn?: number
 }
 
 export interface GeneratedInvoiceDocumentRecord {
@@ -208,11 +207,6 @@ export function createStorageBackedInvoiceDocumentGenerator(
       contentType: defaultInvoiceDocumentMimeType(format),
       metadata: toUploadMetadata(upload.metadata),
     })
-    const downloadUrl =
-      uploaded.url ||
-      (options.signedUrlExpiresIn
-        ? await options.storage.signedUrl(uploaded.key, options.signedUrlExpiresIn)
-        : "")
 
     return {
       format,
@@ -223,7 +217,6 @@ export function createStorageBackedInvoiceDocumentGenerator(
         ...(upload.metadata ?? {}),
         storageProvider: options.storage.name,
         ...(uploaded.url ? { url: uploaded.url } : {}),
-        ...(downloadUrl ? { downloadUrl } : {}),
       },
     }
   }
@@ -356,15 +349,22 @@ export const financeDocumentsService = {
       return { status: "not_found" }
     }
 
-    await runtime.eventBus?.emit("invoice.document.generated", {
-      invoiceId: prepared.invoice.id,
-      invoiceStatus: prepared.invoice.status,
-      invoiceType: prepared.invoice.invoiceType,
-      renditionId: rendition.id,
-      format: rendition.format,
-      renderedBodyFormat: prepared.renderedBodyFormat,
-      regenerated: options.regenerated ?? false,
-    } satisfies InvoiceDocumentGeneratedEvent)
+    await runtime.eventBus?.emit(
+      "invoice.document.generated",
+      {
+        invoiceId: prepared.invoice.id,
+        invoiceStatus: prepared.invoice.status,
+        invoiceType: prepared.invoice.invoiceType,
+        renditionId: rendition.id,
+        format: rendition.format,
+        renderedBodyFormat: prepared.renderedBodyFormat,
+        regenerated: options.regenerated ?? false,
+      } satisfies InvoiceDocumentGeneratedEvent,
+      {
+        category: "internal",
+        source: "service",
+      },
+    )
 
     return {
       status: "generated",

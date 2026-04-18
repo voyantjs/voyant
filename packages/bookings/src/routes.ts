@@ -1,10 +1,21 @@
-import { createKmsProviderFromEnv } from "@voyantjs/utils"
+import {
+  ForbiddenApiError,
+  handleApiError,
+  parseJsonBody,
+  requireUserId,
+  UnauthorizedApiError,
+} from "@voyantjs/hono"
 import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
+import {
+  BOOKING_ROUTE_RUNTIME_CONTAINER_KEY,
+  type BookingRouteRuntime,
+  buildBookingRouteRuntime,
+} from "./route-runtime.js"
 import { bookingGroupRoutes } from "./routes-groups.js"
 import type { publicBookingRoutes } from "./routes-public.js"
-import { type Env, getRuntimeEnv } from "./routes-shared.js"
+import type { Env } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
 import { bookingsService } from "./service.js"
 import { bookingGroupsService } from "./service-groups.js"
@@ -98,7 +109,10 @@ async function authorizeBookingPiiAccess(
       outcome: "denied",
       reason: "missing_user",
     })
-    return { allowed: false as const, response: c.json({ error: "Unauthorized" }, 401) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new UnauthorizedApiError(), c),
+    }
   }
 
   const customAuthorizer = c.get("authorizeBookingPii")
@@ -119,7 +133,10 @@ async function authorizeBookingPiiAccess(
         outcome: "denied",
         reason: "custom_policy_denied",
       })
-      return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+      return {
+        allowed: false as const,
+        response: handleApiError(new ForbiddenApiError(), c),
+      }
     }
 
     return { allowed: true as const }
@@ -136,7 +153,10 @@ async function authorizeBookingPiiAccess(
       reason: "insufficient_scope",
       metadata: { actor: actor ?? null },
     })
-    return { allowed: false as const, response: c.json({ error: "Forbidden" }, 403) }
+    return {
+      allowed: false as const,
+      response: handleApiError(new ForbiddenApiError(), c),
+    }
   }
 
   return { allowed: true as const }
@@ -154,6 +174,38 @@ function handleKmsConfigError(c: Context<Env>, error: unknown) {
   }
 
   return c.json({ error: "Booking PII encryption is not configured" }, 500)
+}
+
+function getRouteRuntime(c: Context<Env>): BookingRouteRuntime {
+  try {
+    return (
+      c.var.container?.resolve<BookingRouteRuntime>(BOOKING_ROUTE_RUNTIME_CONTAINER_KEY) ??
+      buildBookingRouteRuntime(c.env)
+    )
+  } catch {
+    return buildBookingRouteRuntime(c.env)
+  }
+}
+
+function createAuditedBookingPiiService(c: Context<Env>, bookingId: string) {
+  const runtime = getRouteRuntime(c)
+
+  return createBookingPiiService({
+    kms: runtime.getKmsProvider(),
+    onAudit: async (event) => {
+      await logBookingPiiAccess(c, {
+        bookingId,
+        participantId: event.participantId,
+        action:
+          event.action === "encrypt"
+            ? "update"
+            : event.action === "decrypt"
+              ? "read"
+              : event.action,
+        outcome: "allowed",
+      })
+    },
+  })
 }
 
 // ==========================================================================
@@ -552,22 +604,7 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const details = await pii.getParticipantTravelDetails(
         c.get("db"),
         participant.id,
@@ -636,26 +673,11 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const row = await pii.upsertParticipantTravelDetails(
         c.get("db"),
         participant.id,
-        upsertParticipantTravelDetailsSchema.parse(await c.req.json()),
+        await parseJsonBody(c, upsertParticipantTravelDetailsSchema),
         c.get("userId"),
       )
 
@@ -713,22 +735,7 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     try {
-      const pii = createBookingPiiService({
-        kms: createKmsProviderFromEnv(getRuntimeEnv(c)),
-        onAudit: async (event) => {
-          await logBookingPiiAccess(c, {
-            bookingId: participant.bookingId,
-            participantId: event.participantId,
-            action:
-              event.action === "encrypt"
-                ? "update"
-                : event.action === "decrypt"
-                  ? "read"
-                  : event.action,
-            outcome: "allowed",
-          })
-        },
-      })
+      const pii = createAuditedBookingPiiService(c, participant.bookingId)
       const row = await pii.deleteParticipantTravelDetails(
         c.get("db"),
         participant.id,
@@ -1025,16 +1032,12 @@ export const bookingRoutes = new Hono<Env>()
 
   // 28. POST /:id/notes — Add note
   .post("/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
     const row = await bookingsService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertBookingNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertBookingNoteSchema),
     )
 
     if (!row) {

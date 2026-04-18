@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import {
   insertContactPointForEntitySchema,
   insertNamedContactForEntitySchema,
@@ -172,7 +173,7 @@ async function handleBatchDelete({
 
 export const distributionRoutes = new Hono<Env>()
   .get("/channels", async (c) => {
-    const query = channelListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, channelListQuerySchema)
     return c.json(await distributionService.listChannels(c.get("db"), query))
   })
   .post("/channels", async (c) => {
@@ -180,14 +181,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createChannel(
           c.get("db"),
-          insertChannelSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelSchema),
         ),
       },
       201,
     )
   })
   .post("/channels/batch-update", async (c) => {
-    const body = batchUpdateChannelSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -198,7 +199,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/channels/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -216,7 +217,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateChannel(
       c.get("db"),
       c.req.param("id"),
-      updateChannelSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelSchema),
     )
     if (!row) return c.json({ error: "Channel not found" }, 404)
     return c.json({ data: row })
@@ -235,7 +236,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.createChannelContactPoint(
       c.get("db"),
       c.req.param("id"),
-      insertContactPointForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertContactPointForEntitySchema),
     )
     if (!row) return c.json({ error: "Channel not found" }, 404)
     return c.json({ data: row }, 201)
@@ -244,7 +245,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateChannelContactPoint(
       c.get("db"),
       c.req.param("contactPointId"),
-      updateIdentityContactPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityContactPointSchema),
     )
     if (!row) return c.json({ error: "Channel contact point not found" }, 404)
     return c.json({ data: row })
@@ -266,7 +267,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.createChannelContact(
       c.get("db"),
       c.req.param("id"),
-      insertNamedContactForEntitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertNamedContactForEntitySchema),
     )
     if (!row) return c.json({ error: "Channel not found" }, 404)
     return c.json({ data: row }, 201)
@@ -275,7 +276,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateChannelContact(
       c.get("db"),
       c.req.param("contactId"),
-      updateIdentityNamedContactSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateIdentityNamedContactSchema),
     )
     if (!row) return c.json({ error: "Channel contact not found" }, 404)
     return c.json({ data: row })
@@ -289,9 +290,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/contracts", async (c) => {
-    const query = channelContractListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelContractListQuerySchema)
     return c.json(await distributionService.listContracts(c.get("db"), query))
   })
   .post("/contracts", async (c) => {
@@ -299,14 +298,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createContract(
           c.get("db"),
-          insertChannelContractSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelContractSchema),
         ),
       },
       201,
     )
   })
   .post("/contracts/batch-update", async (c) => {
-    const body = batchUpdateChannelContractSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelContractSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -317,7 +316,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/contracts/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -335,7 +334,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateContract(
       c.get("db"),
       c.req.param("id"),
-      updateChannelContractSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelContractSchema),
     )
     if (!row) return c.json({ error: "Channel contract not found" }, 404)
     return c.json({ data: row })
@@ -346,9 +345,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/commission-rules", async (c) => {
-    const query = channelCommissionRuleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelCommissionRuleListQuerySchema)
     return c.json(await distributionService.listCommissionRules(c.get("db"), query))
   })
   .post("/commission-rules", async (c) => {
@@ -356,14 +353,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createCommissionRule(
           c.get("db"),
-          insertChannelCommissionRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelCommissionRuleSchema),
         ),
       },
       201,
     )
   })
   .post("/commission-rules/batch-update", async (c) => {
-    const body = batchUpdateChannelCommissionRuleSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelCommissionRuleSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -374,7 +371,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/commission-rules/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -392,7 +389,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateCommissionRule(
       c.get("db"),
       c.req.param("id"),
-      updateChannelCommissionRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelCommissionRuleSchema),
     )
     if (!row) return c.json({ error: "Channel commission rule not found" }, 404)
     return c.json({ data: row })
@@ -403,9 +400,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/product-mappings", async (c) => {
-    const query = channelProductMappingListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelProductMappingListQuerySchema)
     return c.json(await distributionService.listProductMappings(c.get("db"), query))
   })
   .post("/product-mappings", async (c) => {
@@ -413,14 +408,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createProductMapping(
           c.get("db"),
-          insertChannelProductMappingSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelProductMappingSchema),
         ),
       },
       201,
     )
   })
   .post("/product-mappings/batch-update", async (c) => {
-    const body = batchUpdateChannelProductMappingSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelProductMappingSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -431,7 +426,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/product-mappings/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -449,7 +444,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateProductMapping(
       c.get("db"),
       c.req.param("id"),
-      updateChannelProductMappingSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelProductMappingSchema),
     )
     if (!row) return c.json({ error: "Channel product mapping not found" }, 404)
     return c.json({ data: row })
@@ -460,9 +455,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/booking-links", async (c) => {
-    const query = channelBookingLinkListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelBookingLinkListQuerySchema)
     return c.json(await distributionService.listBookingLinks(c.get("db"), query))
   })
   .post("/booking-links", async (c) => {
@@ -470,14 +463,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createBookingLink(
           c.get("db"),
-          insertChannelBookingLinkSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelBookingLinkSchema),
         ),
       },
       201,
     )
   })
   .post("/booking-links/batch-update", async (c) => {
-    const body = batchUpdateChannelBookingLinkSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelBookingLinkSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -488,7 +481,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/booking-links/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -506,7 +499,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateBookingLink(
       c.get("db"),
       c.req.param("id"),
-      updateChannelBookingLinkSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelBookingLinkSchema),
     )
     if (!row) return c.json({ error: "Channel booking link not found" }, 404)
     return c.json({ data: row })
@@ -517,9 +510,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/webhook-events", async (c) => {
-    const query = channelWebhookEventListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelWebhookEventListQuerySchema)
     return c.json(await distributionService.listWebhookEvents(c.get("db"), query))
   })
   .post("/webhook-events", async (c) => {
@@ -527,14 +518,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createWebhookEvent(
           c.get("db"),
-          insertChannelWebhookEventSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelWebhookEventSchema),
         ),
       },
       201,
     )
   })
   .post("/webhook-events/batch-update", async (c) => {
-    const body = batchUpdateChannelWebhookEventSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelWebhookEventSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -545,7 +536,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/webhook-events/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -563,7 +554,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateWebhookEvent(
       c.get("db"),
       c.req.param("id"),
-      updateChannelWebhookEventSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelWebhookEventSchema),
     )
     if (!row) return c.json({ error: "Channel webhook event not found" }, 404)
     return c.json({ data: row })
@@ -574,9 +565,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/inventory-allotments", async (c) => {
-    const query = channelInventoryAllotmentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelInventoryAllotmentListQuerySchema)
     return c.json(await distributionService.listInventoryAllotments(c.get("db"), query))
   })
   .post("/inventory-allotments", async (c) => {
@@ -584,14 +573,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createInventoryAllotment(
           c.get("db"),
-          insertChannelInventoryAllotmentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelInventoryAllotmentSchema),
         ),
       },
       201,
     )
   })
   .post("/inventory-allotments/batch-update", async (c) => {
-    const body = batchUpdateChannelInventoryAllotmentSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelInventoryAllotmentSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -602,7 +591,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/inventory-allotments/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -620,7 +609,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateInventoryAllotment(
       c.get("db"),
       c.req.param("id"),
-      updateChannelInventoryAllotmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelInventoryAllotmentSchema),
     )
     if (!row) return c.json({ error: "Channel inventory allotment not found" }, 404)
     return c.json({ data: row })
@@ -631,9 +620,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/inventory-allotment-targets", async (c) => {
-    const query = channelInventoryAllotmentTargetListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelInventoryAllotmentTargetListQuerySchema)
     return c.json(await distributionService.listInventoryAllotmentTargets(c.get("db"), query))
   })
   .post("/inventory-allotment-targets", async (c) => {
@@ -641,14 +628,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createInventoryAllotmentTarget(
           c.get("db"),
-          insertChannelInventoryAllotmentTargetSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelInventoryAllotmentTargetSchema),
         ),
       },
       201,
     )
   })
   .post("/inventory-allotment-targets/batch-update", async (c) => {
-    const body = batchUpdateChannelInventoryAllotmentTargetSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelInventoryAllotmentTargetSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -659,7 +646,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/inventory-allotment-targets/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -680,7 +667,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateInventoryAllotmentTarget(
       c.get("db"),
       c.req.param("id"),
-      updateChannelInventoryAllotmentTargetSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelInventoryAllotmentTargetSchema),
     )
     if (!row) return c.json({ error: "Channel inventory allotment target not found" }, 404)
     return c.json({ data: row })
@@ -694,9 +681,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/inventory-release-rules", async (c) => {
-    const query = channelInventoryReleaseRuleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelInventoryReleaseRuleListQuerySchema)
     return c.json(await distributionService.listInventoryReleaseRules(c.get("db"), query))
   })
   .post("/inventory-release-rules", async (c) => {
@@ -704,14 +689,14 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createInventoryReleaseRule(
           c.get("db"),
-          insertChannelInventoryReleaseRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelInventoryReleaseRuleSchema),
         ),
       },
       201,
     )
   })
   .post("/inventory-release-rules/batch-update", async (c) => {
-    const body = batchUpdateChannelInventoryReleaseRuleSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateChannelInventoryReleaseRuleSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -722,7 +707,7 @@ export const distributionRoutes = new Hono<Env>()
     )
   })
   .post("/inventory-release-rules/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -743,7 +728,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateInventoryReleaseRule(
       c.get("db"),
       c.req.param("id"),
-      updateChannelInventoryReleaseRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelInventoryReleaseRuleSchema),
     )
     if (!row) return c.json({ error: "Channel inventory release rule not found" }, 404)
     return c.json({ data: row })
@@ -754,9 +739,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/settlement-runs", async (c) => {
-    const query = channelSettlementRunListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelSettlementRunListQuerySchema)
     return c.json(await distributionService.listSettlementRuns(c.get("db"), query))
   })
   .post("/settlement-runs", async (c) => {
@@ -764,7 +747,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createSettlementRun(
           c.get("db"),
-          insertChannelSettlementRunSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelSettlementRunSchema),
         ),
       },
       201,
@@ -779,7 +762,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateSettlementRun(
       c.get("db"),
       c.req.param("id"),
-      updateChannelSettlementRunSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelSettlementRunSchema),
     )
     if (!row) return c.json({ error: "Channel settlement run not found" }, 404)
     return c.json({ data: row })
@@ -790,9 +773,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/settlement-items", async (c) => {
-    const query = channelSettlementItemListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelSettlementItemListQuerySchema)
     return c.json(await distributionService.listSettlementItems(c.get("db"), query))
   })
   .post("/settlement-items", async (c) => {
@@ -800,7 +781,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createSettlementItem(
           c.get("db"),
-          insertChannelSettlementItemSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelSettlementItemSchema),
         ),
       },
       201,
@@ -815,7 +796,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateSettlementItem(
       c.get("db"),
       c.req.param("id"),
-      updateChannelSettlementItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelSettlementItemSchema),
     )
     if (!row) return c.json({ error: "Channel settlement item not found" }, 404)
     return c.json({ data: row })
@@ -826,9 +807,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/reconciliation-runs", async (c) => {
-    const query = channelReconciliationRunListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelReconciliationRunListQuerySchema)
     return c.json(await distributionService.listReconciliationRuns(c.get("db"), query))
   })
   .post("/reconciliation-runs", async (c) => {
@@ -836,7 +815,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createReconciliationRun(
           c.get("db"),
-          insertChannelReconciliationRunSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelReconciliationRunSchema),
         ),
       },
       201,
@@ -851,7 +830,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateReconciliationRun(
       c.get("db"),
       c.req.param("id"),
-      updateChannelReconciliationRunSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelReconciliationRunSchema),
     )
     if (!row) return c.json({ error: "Channel reconciliation run not found" }, 404)
     return c.json({ data: row })
@@ -862,9 +841,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/reconciliation-items", async (c) => {
-    const query = channelReconciliationItemListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelReconciliationItemListQuerySchema)
     return c.json(await distributionService.listReconciliationItems(c.get("db"), query))
   })
   .post("/reconciliation-items", async (c) => {
@@ -872,7 +849,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createReconciliationItem(
           c.get("db"),
-          insertChannelReconciliationItemSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelReconciliationItemSchema),
         ),
       },
       201,
@@ -887,7 +864,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateReconciliationItem(
       c.get("db"),
       c.req.param("id"),
-      updateChannelReconciliationItemSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelReconciliationItemSchema),
     )
     if (!row) return c.json({ error: "Channel reconciliation item not found" }, 404)
     return c.json({ data: row })
@@ -898,9 +875,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/inventory-release-executions", async (c) => {
-    const query = channelInventoryReleaseExecutionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelInventoryReleaseExecutionListQuerySchema)
     return c.json(await distributionService.listReleaseExecutions(c.get("db"), query))
   })
   .post("/inventory-release-executions", async (c) => {
@@ -908,7 +883,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createReleaseExecution(
           c.get("db"),
-          insertChannelInventoryReleaseExecutionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelInventoryReleaseExecutionSchema),
         ),
       },
       201,
@@ -923,7 +898,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateReleaseExecution(
       c.get("db"),
       c.req.param("id"),
-      updateChannelInventoryReleaseExecutionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelInventoryReleaseExecutionSchema),
     )
     if (!row) return c.json({ error: "Channel inventory release execution not found" }, 404)
     return c.json({ data: row })
@@ -934,9 +909,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/settlement-policies", async (c) => {
-    const query = channelSettlementPolicyListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelSettlementPolicyListQuerySchema)
     return c.json(await distributionService.listSettlementPolicies(c.get("db"), query))
   })
   .post("/settlement-policies", async (c) =>
@@ -944,7 +917,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createSettlementPolicy(
           c.get("db"),
-          insertChannelSettlementPolicySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelSettlementPolicySchema),
         ),
       },
       201,
@@ -959,7 +932,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateSettlementPolicy(
       c.get("db"),
       c.req.param("id"),
-      updateChannelSettlementPolicySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelSettlementPolicySchema),
     )
     if (!row) return c.json({ error: "Channel settlement policy not found" }, 404)
     return c.json({ data: row })
@@ -970,9 +943,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/reconciliation-policies", async (c) => {
-    const query = channelReconciliationPolicyListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelReconciliationPolicyListQuerySchema)
     return c.json(await distributionService.listReconciliationPolicies(c.get("db"), query))
   })
   .post("/reconciliation-policies", async (c) =>
@@ -980,7 +951,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createReconciliationPolicy(
           c.get("db"),
-          insertChannelReconciliationPolicySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelReconciliationPolicySchema),
         ),
       },
       201,
@@ -998,7 +969,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateReconciliationPolicy(
       c.get("db"),
       c.req.param("id"),
-      updateChannelReconciliationPolicySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelReconciliationPolicySchema),
     )
     if (!row) return c.json({ error: "Channel reconciliation policy not found" }, 404)
     return c.json({ data: row })
@@ -1009,9 +980,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/release-schedules", async (c) => {
-    const query = channelReleaseScheduleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelReleaseScheduleListQuerySchema)
     return c.json(await distributionService.listReleaseSchedules(c.get("db"), query))
   })
   .post("/release-schedules", async (c) =>
@@ -1019,7 +988,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createReleaseSchedule(
           c.get("db"),
-          insertChannelReleaseScheduleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelReleaseScheduleSchema),
         ),
       },
       201,
@@ -1034,7 +1003,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateReleaseSchedule(
       c.get("db"),
       c.req.param("id"),
-      updateChannelReleaseScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelReleaseScheduleSchema),
     )
     if (!row) return c.json({ error: "Channel release schedule not found" }, 404)
     return c.json({ data: row })
@@ -1045,9 +1014,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/remittance-exceptions", async (c) => {
-    const query = channelRemittanceExceptionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelRemittanceExceptionListQuerySchema)
     return c.json(await distributionService.listRemittanceExceptions(c.get("db"), query))
   })
   .post("/remittance-exceptions", async (c) =>
@@ -1055,7 +1022,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createRemittanceException(
           c.get("db"),
-          insertChannelRemittanceExceptionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelRemittanceExceptionSchema),
         ),
       },
       201,
@@ -1070,7 +1037,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateRemittanceException(
       c.get("db"),
       c.req.param("id"),
-      updateChannelRemittanceExceptionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelRemittanceExceptionSchema),
     )
     if (!row) return c.json({ error: "Channel remittance exception not found" }, 404)
     return c.json({ data: row })
@@ -1081,9 +1048,7 @@ export const distributionRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/settlement-approvals", async (c) => {
-    const query = channelSettlementApprovalListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, channelSettlementApprovalListQuerySchema)
     return c.json(await distributionService.listSettlementApprovals(c.get("db"), query))
   })
   .post("/settlement-approvals", async (c) =>
@@ -1091,7 +1056,7 @@ export const distributionRoutes = new Hono<Env>()
       {
         data: await distributionService.createSettlementApproval(
           c.get("db"),
-          insertChannelSettlementApprovalSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertChannelSettlementApprovalSchema),
         ),
       },
       201,
@@ -1106,7 +1071,7 @@ export const distributionRoutes = new Hono<Env>()
     const row = await distributionService.updateSettlementApproval(
       c.get("db"),
       c.req.param("id"),
-      updateChannelSettlementApprovalSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateChannelSettlementApprovalSchema),
     )
     if (!row) return c.json({ error: "Channel settlement approval not found" }, 404)
     return c.json({ data: row })

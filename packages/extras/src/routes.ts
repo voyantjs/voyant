@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -23,9 +24,7 @@ type Env = {
 
 export const extrasRoutes = new Hono<Env>()
   .get("/product-extras", async (c) => {
-    const query = productExtraListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productExtraListQuerySchema)
     return c.json(await extrasService.listProductExtras(c.get("db"), query))
   })
   .post("/product-extras", async (c) => {
@@ -33,7 +32,7 @@ export const extrasRoutes = new Hono<Env>()
       {
         data: await extrasService.createProductExtra(
           c.get("db"),
-          insertProductExtraSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductExtraSchema),
         ),
       },
       201,
@@ -48,7 +47,7 @@ export const extrasRoutes = new Hono<Env>()
     const row = await extrasService.updateProductExtra(
       c.get("db"),
       c.req.param("id"),
-      updateProductExtraSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductExtraSchema),
     )
     if (!row) return c.json({ error: "Product extra not found" }, 404)
     return c.json({ data: row })
@@ -59,9 +58,7 @@ export const extrasRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/option-extra-configs", async (c) => {
-    const query = optionExtraConfigListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, optionExtraConfigListQuerySchema)
     return c.json(await extrasService.listOptionExtraConfigs(c.get("db"), query))
   })
   .post("/option-extra-configs", async (c) => {
@@ -69,7 +66,7 @@ export const extrasRoutes = new Hono<Env>()
       {
         data: await extrasService.createOptionExtraConfig(
           c.get("db"),
-          insertOptionExtraConfigSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertOptionExtraConfigSchema),
         ),
       },
       201,
@@ -84,7 +81,7 @@ export const extrasRoutes = new Hono<Env>()
     const row = await extrasService.updateOptionExtraConfig(
       c.get("db"),
       c.req.param("id"),
-      updateOptionExtraConfigSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateOptionExtraConfigSchema),
     )
     if (!row) return c.json({ error: "Option extra config not found" }, 404)
     return c.json({ data: row })
@@ -95,9 +92,7 @@ export const extrasRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/booking-extras", async (c) => {
-    const query = bookingExtraListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, bookingExtraListQuerySchema)
     return c.json(await extrasService.listBookingExtras(c.get("db"), query))
   })
   .post("/booking-extras", async (c) => {
@@ -105,7 +100,7 @@ export const extrasRoutes = new Hono<Env>()
       {
         data: await extrasService.createBookingExtra(
           c.get("db"),
-          insertBookingExtraSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertBookingExtraSchema),
         ),
       },
       201,
@@ -120,7 +115,7 @@ export const extrasRoutes = new Hono<Env>()
     const row = await extrasService.updateBookingExtra(
       c.get("db"),
       c.req.param("id"),
-      updateBookingExtraSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateBookingExtraSchema),
     )
     if (!row) return c.json({ error: "Booking extra not found" }, 404)
     return c.json({ data: row })

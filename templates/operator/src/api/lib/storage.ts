@@ -29,6 +29,22 @@ export function guessMimeType(key: string): string {
   return MIME_BY_EXT[ext] ?? "application/octet-stream"
 }
 
+function createR2BucketStorage(
+  bucket: R2Bucket | undefined,
+  options: {
+    publicBaseUrl?: string
+  } = {},
+): StorageProvider | null {
+  if (!bucket) return null
+
+  return createR2Provider({
+    bucket,
+    ...(options.publicBaseUrl ? { publicBaseUrl: options.publicBaseUrl } : {}),
+  })
+}
+
+const DEFAULT_DOCUMENT_URL_EXPIRES_IN = 60 * 5
+
 /**
  * Resolve the media storage provider from the environment.
  *
@@ -73,14 +89,31 @@ export function guessMimeType(key: string): string {
  * will respond with 503.
  */
 export function createMediaStorage(env: CloudflareBindings): StorageProvider | null {
-  // Default: R2 via Workers binding. Replace with createS3Provider / createLocalStorageProvider
-  // / your own StorageProvider to switch backends.
-  const bucket = env.MEDIA_BUCKET
-  if (!bucket) return null
-
   const appUrl = env.APP_URL?.replace(/\/api$/, "") ?? ""
-  return createR2Provider({
-    bucket,
+  return createR2BucketStorage(env.MEDIA_BUCKET, {
     publicBaseUrl: `${appUrl}/api/v1/media/`,
   })
+}
+
+/**
+ * Resolve the private document storage provider from the environment.
+ *
+ * Documents default to a private R2 bucket binding (`DOCUMENTS_BUCKET`) with
+ * no public base URL. Consumers should access files through fresh signed URLs
+ * or authenticated application routes, not stable public URLs.
+ *
+ * Returns `null` when no private document storage is configured.
+ */
+export function createDocumentStorage(env: CloudflareBindings): StorageProvider | null {
+  return createR2BucketStorage(env.DOCUMENTS_BUCKET)
+}
+
+export async function resolveDocumentDownloadUrl(
+  env: CloudflareBindings,
+  storageKey: string,
+  expiresIn = DEFAULT_DOCUMENT_URL_EXPIRES_IN,
+): Promise<string | null> {
+  const storage = createDocumentStorage(env)
+  if (!storage) return null
+  return storage.signedUrl(storageKey, expiresIn)
 }

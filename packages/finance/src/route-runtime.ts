@@ -1,0 +1,29 @@
+import type { EventBus } from "@voyantjs/core"
+
+import type { FinanceDocumentRouteOptions, InvoiceDocumentGenerator } from "./routes-documents.js"
+import type { FinanceSettlementRouteOptions, InvoiceSettlementPoller } from "./routes-settlement.js"
+
+export type FinanceRouteRuntime = {
+  invoiceDocumentGenerator?: InvoiceDocumentGenerator
+  invoiceSettlementPollers: Record<string, InvoiceSettlementPoller>
+  eventBus?: EventBus
+}
+
+export const FINANCE_ROUTE_RUNTIME_CONTAINER_KEY = "providers.finance.runtime"
+
+export interface FinanceRuntimeOptions
+  extends FinanceDocumentRouteOptions,
+    FinanceSettlementRouteOptions {}
+
+export function buildFinanceRouteRuntime(
+  bindings: Record<string, unknown>,
+  options: FinanceRuntimeOptions = {},
+): FinanceRouteRuntime {
+  return {
+    invoiceDocumentGenerator:
+      options.resolveInvoiceDocumentGenerator?.(bindings) ?? options.invoiceDocumentGenerator,
+    invoiceSettlementPollers:
+      options.resolveInvoiceSettlementPollers?.(bindings) ?? options.invoiceSettlementPollers ?? {},
+    eventBus: options.resolveEventBus?.(bindings) ?? options.eventBus,
+  }
+}

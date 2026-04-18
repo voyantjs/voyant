@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 /**
  * Booking-portal types — these intentionally mirror a **subset** of Voyant's
  * `products` module shapes so the example stays self-contained. In a real
@@ -10,45 +12,50 @@
  * We keep the fields small here to make the example readable.
  */
 
-export interface PublicProduct {
-  id: string
-  name: string
-  summary: string
-  description: string
-  destination: string
-  durationDays: number
-  basePriceCents: number
-  currency: string
-  heroImage: string
-  highlights: readonly string[]
-}
+export const publicProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  destination: z.string(),
+  durationDays: z.number(),
+  basePriceCents: z.number(),
+  currency: z.string(),
+  heroImage: z.string(),
+  highlights: z.array(z.string()),
+})
 
-export interface PublicProductList {
-  items: readonly PublicProduct[]
-  total: number
-}
+export const publicProductListSchema = z.object({
+  items: z.array(publicProductSchema),
+  total: z.number(),
+})
 
 /**
  * Customer inquiry submitted from the `/inquire/[id]` form. A real customer
  * actor posts this to `/v1/public/bookings` (or a dedicated inquiries
  * module) with `Content-Type: application/json`.
  */
-export interface InquiryInput {
-  productId: string
-  travelDate: string
-  partySize: number
-  contact: {
-    firstName: string
-    lastName: string
-    email: string
-    phone?: string
-  }
-  message?: string
-}
+export const inquiryInputSchema = z.object({
+  productId: z.string(),
+  travelDate: z.string(),
+  partySize: z.number(),
+  contact: z.object({
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string(),
+    phone: z.string().optional(),
+  }),
+  message: z.string().optional(),
+})
 
-export interface InquiryResponse {
-  id: string
-  status: "received" | "error"
-  productId: string
-  createdAt: string
-}
+export const inquiryResponseSchema = z.object({
+  id: z.string(),
+  status: z.enum(["received", "error"]),
+  productId: z.string(),
+  createdAt: z.string(),
+})
+
+export type PublicProduct = z.infer<typeof publicProductSchema>
+export type PublicProductList = z.infer<typeof publicProductListSchema>
+export type InquiryInput = z.infer<typeof inquiryInputSchema>
+export type InquiryResponse = z.infer<typeof inquiryResponseSchema>

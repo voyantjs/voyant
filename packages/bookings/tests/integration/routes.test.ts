@@ -1195,6 +1195,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       )
 
       expect(res.status).toBe(403)
+      expect(await res.json()).toMatchObject({
+        error: "Forbidden",
+        code: "forbidden",
+      })
 
       const rows = await db
         .select()

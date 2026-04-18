@@ -1,9 +1,8 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import type { QueryClient } from "@tanstack/react-query"
+import { AdminProvider } from "@voyantjs/voyant-admin"
 import type * as React from "react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
-
-import { ThemeProvider } from "./providers/theme-provider"
 
 export function Providers({
   children,
@@ -13,10 +12,8 @@ export function Providers({
   queryClient: QueryClient
 }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>{children}</TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <AdminProvider queryClient={queryClient}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </AdminProvider>
   )
 }

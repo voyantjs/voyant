@@ -1,6 +1,10 @@
 import type {
   VoyantVariables as CoreVoyantVariables,
+  EventBus,
+  LinkService,
   ModuleContainer,
+  QueryGraphContext,
+  QueryRunner,
   VoyantAuthContext,
   VoyantPermission,
 } from "@voyantjs/core"
@@ -10,7 +14,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Hono } from "hono"
 
 import type { HonoExtension, HonoModule } from "./module.js"
-import type { HonoPlugin } from "./plugin.js"
+import type { HonoBundle } from "./plugin.js"
 
 export interface VoyantExecutionContext {
   waitUntil?: (promise: Promise<unknown>) => void
@@ -31,9 +35,17 @@ export interface VoyantBindings {
 }
 
 export type VoyantDb = PostgresJsDatabase | NeonHttpDatabase
+export type VoyantQueryRuntime = QueryRunner
+
 export type VoyantVariables = CoreVoyantVariables & {
   db: VoyantDb
+  /** Shared app/runtime container for explicit service resolution. */
   container: ModuleContainer
+  eventBus: EventBus
+  /** Shared cross-module link runtime, when the app wires one in. */
+  link?: LinkService
+  /** Shared cross-module query runtime, when the app wires one in. */
+  query?: VoyantQueryRuntime
 }
 
 export type DbFactory<TBindings extends VoyantBindings = VoyantBindings> = (
@@ -86,7 +98,10 @@ export interface VoyantAppConfig<TBindings extends VoyantBindings = VoyantBindin
   db: DbFactory<TBindings>
   modules?: HonoModule[]
   extensions?: HonoExtension[]
-  plugins?: HonoPlugin[]
+  plugins?: HonoBundle[]
+  eventBus?: EventBus
+  link?: LinkService
+  query?: QueryGraphContext | VoyantQueryRuntime
   auth?: VoyantAuthIntegration<TBindings>
   publicPaths?: string[]
   logger?: LoggerProvider

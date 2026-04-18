@@ -146,6 +146,9 @@ export function createLinkService(
 
   async function dismissImpl(spec: ResolvedLinkSpec): Promise<void> {
     const { definition: def, leftId, rightId } = spec
+    if (def.readOnly) {
+      throw new Error(`createLinkService: read-only link "${def.tableName}" cannot be dismissed`)
+    }
     const table = sql.identifier(def.tableName)
     const leftCol = sql.identifier(def.leftColumn)
     const rightCol = sql.identifier(def.rightColumn)
@@ -157,6 +160,9 @@ export function createLinkService(
 
   async function deleteImpl(spec: ResolvedLinkSpec): Promise<void> {
     const { definition: def, leftId, rightId } = spec
+    if (def.readOnly) {
+      throw new Error(`createLinkService: read-only link "${def.tableName}" cannot be deleted`)
+    }
     const table = sql.identifier(def.tableName)
     const leftCol = sql.identifier(def.leftColumn)
     const rightCol = sql.identifier(def.rightColumn)
@@ -170,6 +176,10 @@ export function createLinkService(
     filter: { leftId?: string; rightId?: string } = {},
   ): Promise<LinkRow[]> {
     const def = lookupByKey(linkKey)
+    if (def.readOnly) {
+      return def.readOnly.list(filter)
+    }
+
     const table = sql.identifier(def.tableName)
     const leftCol = sql.identifier(def.leftColumn)
     const rightCol = sql.identifier(def.rightColumn)
@@ -193,7 +203,13 @@ export function createLinkService(
 
   return {
     async create(keyOrSpec: string | LinkSpec, leftId?: string, rightId?: string) {
-      return createImpl(resolveArgs(keyOrSpec, leftId, rightId))
+      const spec = resolveArgs(keyOrSpec, leftId, rightId)
+      if (spec.definition.readOnly) {
+        throw new Error(
+          `createLinkService: read-only link "${spec.definition.tableName}" cannot be created`,
+        )
+      }
+      return createImpl(spec)
     },
     async dismiss(keyOrSpec: string | LinkSpec, leftId?: string, rightId?: string) {
       return dismissImpl(resolveArgs(keyOrSpec, leftId, rightId))
@@ -213,6 +229,7 @@ export function createLinkService(
  */
 export async function syncLinks(db: DrizzleClient, definitions: LinkDefinition[]): Promise<void> {
   for (const def of definitions) {
+    if (def.readOnly) continue
     const { createTable, indexes } = generateLinkTableSql(def)
     // biome-ignore lint/suspicious/noExplicitAny: drizzle adapter execute typing varies
     await (db as any).execute(sql.raw(createTable))

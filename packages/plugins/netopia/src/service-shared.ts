@@ -1,12 +1,8 @@
 import { financeService, type PaymentSession } from "@voyantjs/finance"
-import {
-  createDefaultNotificationProviders,
-  createNotificationService,
-  type NotificationDelivery,
-  type NotificationService,
-} from "@voyantjs/notifications"
+import type { NotificationDelivery, NotificationService } from "@voyantjs/notifications"
 import type { z } from "zod"
 
+import { buildNetopiaNotificationRuntime } from "./notification-runtime.js"
 import type {
   NetopiaProductLine,
   NetopiaRuntimeOptions,
@@ -96,14 +92,7 @@ export function resolveNotificationDispatcher(
   runtimeOptions: NetopiaRuntimeOptions,
   dispatcherOverride?: NotificationService,
 ) {
-  if (dispatcherOverride) {
-    return dispatcherOverride
-  }
-
-  return createNotificationService(
-    runtimeOptions.resolveNotificationProviders?.(bindings ?? {}) ??
-      createDefaultNotificationProviders(bindings ?? {}),
-  )
+  return buildNetopiaNotificationRuntime(bindings, runtimeOptions, dispatcherOverride).dispatcher
 }
 
 export { financeService }

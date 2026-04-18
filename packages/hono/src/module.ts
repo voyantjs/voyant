@@ -18,6 +18,13 @@ export interface HonoModule {
   /** Customer/partner/supplier-facing routes — mounted at `/v1/public/{module.name}`. */
   // biome-ignore lint/suspicious/noExplicitAny: Hono sub-apps have varied env generics
   publicRoutes?: Hono<any>
+  /**
+   * Optional override for the public mount path relative to `/v1/public`.
+   *
+   * Defaults to `{module.name}`. Use `"/"` to mount a module directly at the
+   * public root and omit the extra module segment.
+   */
+  publicPath?: string
 }
 
 export interface HonoExtension {
@@ -31,4 +38,11 @@ export interface HonoExtension {
   /** Customer/partner/supplier-facing routes — mounted at `/v1/public/{extension.module}`. */
   // biome-ignore lint/suspicious/noExplicitAny: Hono sub-apps have varied env generics
   publicRoutes?: Hono<any>
+  /**
+   * Optional override for the public mount path relative to `/v1/public`.
+   *
+   * Defaults to `{extension.module}`. Use `"/"` to mount an extension directly
+   * at the public root and omit the extra module segment.
+   */
+  publicPath?: string
 }

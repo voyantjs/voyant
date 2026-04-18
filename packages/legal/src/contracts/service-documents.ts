@@ -57,7 +57,6 @@ export interface StorageBackedContractDocumentGeneratorOptions {
   storage: StorageProvider
   keyPrefix?: string | ((context: ContractDocumentGeneratorContext) => Promise<string> | string)
   serializer?: StorageBackedContractDocumentSerializer
-  signedUrlExpiresIn?: number
 }
 
 export interface GeneratedContractDocumentRecord {
@@ -215,11 +214,6 @@ export function createStorageBackedContractDocumentGenerator(
       contentType: upload.mimeType ?? defaultContractDocumentMimeType(context.renderedBodyFormat),
       metadata: toUploadMetadata(upload.metadata),
     })
-    const downloadUrl =
-      uploaded.url ||
-      (options.signedUrlExpiresIn
-        ? await options.storage.signedUrl(uploaded.key, options.signedUrlExpiresIn)
-        : "")
 
     return {
       kind: upload.kind ?? "document",
@@ -231,7 +225,6 @@ export function createStorageBackedContractDocumentGenerator(
         ...(upload.metadata ?? {}),
         storageProvider: options.storage.name,
         ...(uploaded.url ? { url: uploaded.url } : {}),
-        ...(downloadUrl ? { downloadUrl } : {}),
       },
     }
   }
@@ -388,15 +381,22 @@ export const contractDocumentsService = {
       return { status: "not_found" }
     }
 
-    await runtime.eventBus?.emit("contract.document.generated", {
-      contractId: prepared.contract.id,
-      contractStatus: prepared.contract.status,
-      attachmentId: attachment.id,
-      attachmentKind: attachment.kind,
-      attachmentName: attachment.name,
-      renderedBodyFormat: prepared.renderedBodyFormat,
-      regenerated: options.regenerated ?? false,
-    } satisfies ContractDocumentGeneratedEvent)
+    await runtime.eventBus?.emit(
+      "contract.document.generated",
+      {
+        contractId: prepared.contract.id,
+        contractStatus: prepared.contract.status,
+        attachmentId: attachment.id,
+        attachmentKind: attachment.kind,
+        attachmentName: attachment.name,
+        renderedBodyFormat: prepared.renderedBodyFormat,
+        regenerated: options.regenerated ?? false,
+      } satisfies ContractDocumentGeneratedEvent,
+      {
+        category: "internal",
+        source: "service",
+      },
+    )
 
     return {
       status: "generated",

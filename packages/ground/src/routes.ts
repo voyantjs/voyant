@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -50,9 +51,7 @@ type Env = {
 
 export const groundRoutes = new Hono<Env>()
   .get("/operators", async (c) => {
-    const query = groundOperatorListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundOperatorListQuerySchema)
     return c.json(await groundService.listOperators(c.get("db"), query))
   })
   .post("/operators", async (c) => {
@@ -60,7 +59,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createOperator(
           c.get("db"),
-          insertGroundOperatorSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundOperatorSchema),
         ),
       },
       201,
@@ -75,7 +74,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateOperator(
       c.get("db"),
       c.req.param("id"),
-      updateGroundOperatorSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundOperatorSchema),
     )
     if (!row) return c.json({ error: "Ground operator not found" }, 404)
     return c.json({ data: row })
@@ -86,9 +85,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/vehicles", async (c) => {
-    const query = groundVehicleListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundVehicleListQuerySchema)
     return c.json(await groundService.listVehicles(c.get("db"), query))
   })
   .post("/vehicles", async (c) => {
@@ -96,7 +93,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createVehicle(
           c.get("db"),
-          insertGroundVehicleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundVehicleSchema),
         ),
       },
       201,
@@ -111,7 +108,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateVehicle(
       c.get("db"),
       c.req.param("id"),
-      updateGroundVehicleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundVehicleSchema),
     )
     if (!row) return c.json({ error: "Ground vehicle not found" }, 404)
     return c.json({ data: row })
@@ -122,9 +119,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/drivers", async (c) => {
-    const query = groundDriverListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDriverListQuerySchema)
     return c.json(await groundService.listDrivers(c.get("db"), query))
   })
   .post("/drivers", async (c) => {
@@ -132,7 +127,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDriver(
           c.get("db"),
-          insertGroundDriverSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDriverSchema),
         ),
       },
       201,
@@ -147,7 +142,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDriver(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDriverSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDriverSchema),
     )
     if (!row) return c.json({ error: "Ground driver not found" }, 404)
     return c.json({ data: row })
@@ -158,9 +153,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/transfer-preferences", async (c) => {
-    const query = groundTransferPreferenceListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundTransferPreferenceListQuerySchema)
     return c.json(await groundService.listTransferPreferences(c.get("db"), query))
   })
   .post("/transfer-preferences", async (c) => {
@@ -168,7 +161,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createTransferPreference(
           c.get("db"),
-          insertGroundTransferPreferenceSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundTransferPreferenceSchema),
         ),
       },
       201,
@@ -183,7 +176,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateTransferPreference(
       c.get("db"),
       c.req.param("id"),
-      updateGroundTransferPreferenceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundTransferPreferenceSchema),
     )
     if (!row) return c.json({ error: "Ground transfer preference not found" }, 404)
     return c.json({ data: row })
@@ -194,9 +187,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/dispatches", async (c) => {
-    const query = groundDispatchListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDispatchListQuerySchema)
     return c.json(await groundService.listDispatches(c.get("db"), query))
   })
   .post("/dispatches", async (c) => {
@@ -204,7 +195,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDispatch(
           c.get("db"),
-          insertGroundDispatchSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDispatchSchema),
         ),
       },
       201,
@@ -219,7 +210,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDispatch(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDispatchSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDispatchSchema),
     )
     if (!row) return c.json({ error: "Ground dispatch not found" }, 404)
     return c.json({ data: row })
@@ -230,9 +221,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/execution-events", async (c) => {
-    const query = groundExecutionEventListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundExecutionEventListQuerySchema)
     return c.json(await groundService.listExecutionEvents(c.get("db"), query))
   })
   .post("/execution-events", async (c) => {
@@ -240,7 +229,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createExecutionEvent(
           c.get("db"),
-          insertGroundExecutionEventSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundExecutionEventSchema),
         ),
       },
       201,
@@ -255,7 +244,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateExecutionEvent(
       c.get("db"),
       c.req.param("id"),
-      updateGroundExecutionEventSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundExecutionEventSchema),
     )
     if (!row) return c.json({ error: "Ground execution event not found" }, 404)
     return c.json({ data: row })
@@ -266,9 +255,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/dispatch-assignments", async (c) => {
-    const query = groundDispatchAssignmentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDispatchAssignmentListQuerySchema)
     return c.json(await groundService.listDispatchAssignments(c.get("db"), query))
   })
   .post("/dispatch-assignments", async (c) =>
@@ -276,7 +263,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDispatchAssignment(
           c.get("db"),
-          insertGroundDispatchAssignmentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDispatchAssignmentSchema),
         ),
       },
       201,
@@ -291,7 +278,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDispatchAssignment(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDispatchAssignmentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDispatchAssignmentSchema),
     )
     if (!row) return c.json({ error: "Ground dispatch assignment not found" }, 404)
     return c.json({ data: row })
@@ -302,9 +289,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/dispatch-legs", async (c) => {
-    const query = groundDispatchLegListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDispatchLegListQuerySchema)
     return c.json(await groundService.listDispatchLegs(c.get("db"), query))
   })
   .post("/dispatch-legs", async (c) =>
@@ -312,7 +297,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDispatchLeg(
           c.get("db"),
-          insertGroundDispatchLegSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDispatchLegSchema),
         ),
       },
       201,
@@ -327,7 +312,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDispatchLeg(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDispatchLegSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDispatchLegSchema),
     )
     if (!row) return c.json({ error: "Ground dispatch leg not found" }, 404)
     return c.json({ data: row })
@@ -338,9 +323,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/dispatch-passengers", async (c) => {
-    const query = groundDispatchPassengerListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDispatchPassengerListQuerySchema)
     return c.json(await groundService.listDispatchPassengers(c.get("db"), query))
   })
   .post("/dispatch-passengers", async (c) =>
@@ -348,7 +331,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDispatchPassenger(
           c.get("db"),
-          insertGroundDispatchPassengerSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDispatchPassengerSchema),
         ),
       },
       201,
@@ -363,7 +346,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDispatchPassenger(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDispatchPassengerSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDispatchPassengerSchema),
     )
     if (!row) return c.json({ error: "Ground dispatch passenger not found" }, 404)
     return c.json({ data: row })
@@ -374,9 +357,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/driver-shifts", async (c) => {
-    const query = groundDriverShiftListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDriverShiftListQuerySchema)
     return c.json(await groundService.listDriverShifts(c.get("db"), query))
   })
   .post("/driver-shifts", async (c) =>
@@ -384,7 +365,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDriverShift(
           c.get("db"),
-          insertGroundDriverShiftSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDriverShiftSchema),
         ),
       },
       201,
@@ -399,7 +380,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDriverShift(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDriverShiftSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDriverShiftSchema),
     )
     if (!row) return c.json({ error: "Ground driver shift not found" }, 404)
     return c.json({ data: row })
@@ -410,9 +391,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/service-incidents", async (c) => {
-    const query = groundServiceIncidentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundServiceIncidentListQuerySchema)
     return c.json(await groundService.listServiceIncidents(c.get("db"), query))
   })
   .post("/service-incidents", async (c) =>
@@ -420,7 +399,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createServiceIncident(
           c.get("db"),
-          insertGroundServiceIncidentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundServiceIncidentSchema),
         ),
       },
       201,
@@ -435,7 +414,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateServiceIncident(
       c.get("db"),
       c.req.param("id"),
-      updateGroundServiceIncidentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundServiceIncidentSchema),
     )
     if (!row) return c.json({ error: "Ground service incident not found" }, 404)
     return c.json({ data: row })
@@ -446,9 +425,7 @@ export const groundRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/dispatch-checkpoints", async (c) => {
-    const query = groundDispatchCheckpointListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, groundDispatchCheckpointListQuerySchema)
     return c.json(await groundService.listDispatchCheckpoints(c.get("db"), query))
   })
   .post("/dispatch-checkpoints", async (c) =>
@@ -456,7 +433,7 @@ export const groundRoutes = new Hono<Env>()
       {
         data: await groundService.createDispatchCheckpoint(
           c.get("db"),
-          insertGroundDispatchCheckpointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertGroundDispatchCheckpointSchema),
         ),
       },
       201,
@@ -471,7 +448,7 @@ export const groundRoutes = new Hono<Env>()
     const row = await groundService.updateDispatchCheckpoint(
       c.get("db"),
       c.req.param("id"),
-      updateGroundDispatchCheckpointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateGroundDispatchCheckpointSchema),
     )
     if (!row) return c.json({ error: "Ground dispatch checkpoint not found" }, 404)
     return c.json({ data: row })

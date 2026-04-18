@@ -5,6 +5,7 @@ export {
   extractBearerToken,
   generateNumericCode,
   randomBytesHex,
+  requireUserId,
   sha256Base64Url,
   sha256Hex,
   unsignCookie,
@@ -15,6 +16,7 @@ export {
   cors,
   db,
   errorBoundary,
+  handleApiError,
   LIVE_LIMITS,
   logger,
   rateLimit,
@@ -24,8 +26,18 @@ export {
   requirePermission,
 } from "./middleware/index.js"
 export type { HonoExtension, HonoModule } from "./module.js"
-export type { ExpandedHonoPlugins, HonoPlugin } from "./plugin.js"
-export { defineHonoPlugin, expandHonoPlugins } from "./plugin.js"
+export type {
+  ExpandedHonoBundles,
+  ExpandedHonoPlugins,
+  HonoBundle,
+  HonoPlugin,
+} from "./plugin.js"
+export {
+  defineHonoBundle,
+  defineHonoPlugin,
+  expandHonoBundles,
+  expandHonoPlugins,
+} from "./plugin.js"
 export type {
   DbFactory,
   LogEntry,
@@ -37,6 +49,17 @@ export type {
   VoyantBindings,
   VoyantDb,
   VoyantExecutionContext,
+  VoyantQueryRuntime,
   VoyantRequestAuthContext,
   VoyantVariables,
 } from "./types.js"
+export {
+  ApiHttpError,
+  ForbiddenApiError,
+  normalizeValidationError,
+  parseJsonBody,
+  parseOptionalJsonBody,
+  parseQuery,
+  RequestValidationError,
+  UnauthorizedApiError,
+} from "./validation.js"

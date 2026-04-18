@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import type { Env } from "./routes-shared.js"
 import { notFound } from "./routes-shared.js"
@@ -25,9 +26,7 @@ import {
 
 export const hospitalityInventoryRoutes = new Hono<Env>()
   .get("/room-inventory", async (c) => {
-    const query = roomInventoryListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, roomInventoryListQuerySchema)
     return c.json(await hospitalityService.listRoomInventory(c.get("db"), query))
   })
   .post("/room-inventory", async (c) => {
@@ -35,7 +34,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomInventory(
           c.get("db"),
-          insertRoomInventorySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomInventorySchema),
         ),
       },
       201,
@@ -50,7 +49,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomInventory(
       c.get("db"),
       c.req.param("id"),
-      updateRoomInventorySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomInventorySchema),
     )
     if (!row) return c.json(notFound("Room inventory"), 404)
     return c.json({ data: row })
@@ -61,9 +60,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/rate-plan-inventory-overrides", async (c) => {
-    const query = ratePlanInventoryOverrideListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, ratePlanInventoryOverrideListQuerySchema)
     return c.json(await hospitalityService.listRatePlanInventoryOverrides(c.get("db"), query))
   })
   .post("/rate-plan-inventory-overrides", async (c) => {
@@ -71,7 +68,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRatePlanInventoryOverride(
           c.get("db"),
-          insertRatePlanInventoryOverrideSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRatePlanInventoryOverrideSchema),
         ),
       },
       201,
@@ -89,7 +86,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRatePlanInventoryOverride(
       c.get("db"),
       c.req.param("id"),
-      updateRatePlanInventoryOverrideSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRatePlanInventoryOverrideSchema),
     )
     if (!row) return c.json(notFound("Rate plan inventory override"), 404)
     return c.json({ data: row })
@@ -103,9 +100,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/room-blocks", async (c) => {
-    const query = roomBlockListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, roomBlockListQuerySchema)
     return c.json(await hospitalityService.listRoomBlocks(c.get("db"), query))
   })
   .post("/room-blocks", async (c) =>
@@ -113,7 +108,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomBlock(
           c.get("db"),
-          insertRoomBlockSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomBlockSchema),
         ),
       },
       201,
@@ -128,7 +123,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomBlock(
       c.get("db"),
       c.req.param("id"),
-      updateRoomBlockSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomBlockSchema),
     )
     if (!row) return c.json(notFound("Room block"), 404)
     return c.json({ data: row })
@@ -139,9 +134,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/room-unit-status-events", async (c) => {
-    const query = roomUnitStatusEventListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, roomUnitStatusEventListQuerySchema)
     return c.json(await hospitalityService.listRoomUnitStatusEvents(c.get("db"), query))
   })
   .post("/room-unit-status-events", async (c) =>
@@ -149,7 +142,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createRoomUnitStatusEvent(
           c.get("db"),
-          insertRoomUnitStatusEventSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertRoomUnitStatusEventSchema),
         ),
       },
       201,
@@ -164,7 +157,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateRoomUnitStatusEvent(
       c.get("db"),
       c.req.param("id"),
-      updateRoomUnitStatusEventSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateRoomUnitStatusEventSchema),
     )
     if (!row) return c.json(notFound("Room unit status event"), 404)
     return c.json({ data: row })
@@ -175,9 +168,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/maintenance-blocks", async (c) => {
-    const query = maintenanceBlockListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, maintenanceBlockListQuerySchema)
     return c.json(await hospitalityService.listMaintenanceBlocks(c.get("db"), query))
   })
   .post("/maintenance-blocks", async (c) =>
@@ -185,7 +176,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createMaintenanceBlock(
           c.get("db"),
-          insertMaintenanceBlockSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertMaintenanceBlockSchema),
         ),
       },
       201,
@@ -200,7 +191,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateMaintenanceBlock(
       c.get("db"),
       c.req.param("id"),
-      updateMaintenanceBlockSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateMaintenanceBlockSchema),
     )
     if (!row) return c.json(notFound("Maintenance block"), 404)
     return c.json({ data: row })
@@ -211,9 +202,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/housekeeping-tasks", async (c) => {
-    const query = housekeepingTaskListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, housekeepingTaskListQuerySchema)
     return c.json(await hospitalityService.listHousekeepingTasks(c.get("db"), query))
   })
   .post("/housekeeping-tasks", async (c) =>
@@ -221,7 +210,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
       {
         data: await hospitalityService.createHousekeepingTask(
           c.get("db"),
-          insertHousekeepingTaskSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertHousekeepingTaskSchema),
         ),
       },
       201,
@@ -236,7 +225,7 @@ export const hospitalityInventoryRoutes = new Hono<Env>()
     const row = await hospitalityService.updateHousekeepingTask(
       c.get("db"),
       c.req.param("id"),
-      updateHousekeepingTaskSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateHousekeepingTaskSchema),
     )
     if (!row) return c.json(notFound("Housekeeping task"), 404)
     return c.json({ data: row })

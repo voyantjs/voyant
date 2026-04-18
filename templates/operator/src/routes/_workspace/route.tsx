@@ -1,10 +1,13 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { VoyantReactProvider } from "@voyantjs/react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
+import { useEffect } from "react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
 import { WorkspaceProvider } from "@/components/providers/workspace-provider"
 import { SidebarProvider } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { getCurrentUser } from "@/lib/current-user"
 import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
@@ -47,13 +50,29 @@ function WorkspaceLayout() {
 
 function WorkspaceContent() {
   const { user, isLoading } = useUser()
+  const { setLocale, setTimeZone } = useLocale()
+  const messages = useAdminMessages()
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") {
+      return
+    }
+
+    if (!window.localStorage.getItem("admin-locale") && user.locale) {
+      setLocale(user.locale)
+    }
+
+    if (!window.localStorage.getItem("admin-timezone") && user.timezone) {
+      setTimeZone(user.timezone)
+    }
+  }, [setLocale, setTimeZone, user])
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{messages.loading}</p>
         </div>
       </div>
     )

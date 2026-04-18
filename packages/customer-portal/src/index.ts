@@ -1,13 +1,20 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
+import {
+  buildPublicCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./route-runtime.js"
 import { customerPortalRoutes } from "./routes.js"
-import { publicCustomerPortalRoutes } from "./routes-public.js"
+import {
+  createPublicCustomerPortalRoutes,
+  type PublicCustomerPortalRouteOptions,
+} from "./routes-public.js"
 
 export type { CustomerPortalRoutes } from "./routes.js"
 export { customerPortalRoutes } from "./routes.js"
 export type { PublicCustomerPortalRoutes } from "./routes-public.js"
-export { publicCustomerPortalRoutes } from "./routes-public.js"
+export { createPublicCustomerPortalRoutes, publicCustomerPortalRoutes } from "./routes-public.js"
 export { publicCustomerPortalService } from "./service-public.js"
 export type {
   BootstrapCustomerPortalInput,
@@ -64,8 +71,35 @@ export const customerPortalModule: Module = {
   name: "customer-portal",
 }
 
-export const customerPortalHonoModule: HonoModule = {
-  module: customerPortalModule,
-  routes: customerPortalRoutes,
-  publicRoutes: publicCustomerPortalRoutes,
+export function createCustomerPortalHonoModule(
+  options: PublicCustomerPortalRouteOptions = {},
+): HonoModule {
+  const module: Module = {
+    ...customerPortalModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildPublicCustomerPortalRouteRuntime(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
+  return {
+    module,
+    routes: customerPortalRoutes,
+    publicRoutes: createPublicCustomerPortalRoutes(options),
+  }
 }
+
+export const customerPortalHonoModule: HonoModule = createCustomerPortalHonoModule()
+
+export type {
+  CustomerPortalRouteRuntime,
+  PublicCustomerPortalRouteRuntime,
+  PublicCustomerPortalRuntimeOptions,
+} from "./route-runtime.js"
+export {
+  buildCustomerPortalRouteRuntime,
+  buildPublicCustomerPortalRouteRuntime,
+  CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./route-runtime.js"

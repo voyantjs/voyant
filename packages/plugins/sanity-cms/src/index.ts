@@ -7,4 +7,6 @@ export type {
   SanitySyncEventNames,
 } from "./plugin.js"
 export { sanityCmsPlugin } from "./plugin.js"
+export type { ResolvedSanitySyncEventNames, SanitySyncRuntime } from "./runtime.js"
+export { createSanitySyncRuntime } from "./runtime.js"
 export type { SanityDocBody, SanityFetch, VoyantEntityEvent } from "./types.js"

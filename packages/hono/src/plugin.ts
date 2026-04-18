@@ -1,23 +1,26 @@
-import type { LinkDefinition, Subscriber } from "@voyantjs/core"
+import type { BootstrapHandler, LinkDefinition, Subscriber } from "@voyantjs/core"
 
 import type { HonoExtension, HonoModule } from "./module.js"
 
 /**
- * Hono-flavoured plugin bundle.
+ * Hono-flavoured bundle contribution surface.
  *
- * Unlike the transport-agnostic `Plugin` in `@voyantjs/core`, a
- * `HonoPlugin` contributes {@link HonoModule} / {@link HonoExtension}
- * wrappers that can carry HTTP routes.
+ * `@voyantjs/hono` is the default HTTP transport adapter for Voyant. The
+ * preferred `HonoBundle` term describes reusable packages that contribute
+ * {@link HonoModule} / {@link HonoExtension} wrappers that can carry HTTP
+ * routes. `HonoPlugin` remains as a compatibility alias for the same shape.
  *
  * Registered via `createApp({ plugins: [...] })` — the app factory expands
- * each plugin into the underlying modules, extensions, subscribers, and link
+ * each bundle into the underlying modules, extensions, subscribers, and link
  * definitions before mounting them.
  */
-export interface HonoPlugin {
-  /** Unique plugin identifier (e.g. "payload-cms", "bokun"). */
+export interface HonoBundle {
+  /** Unique bundle identifier (e.g. "payload-cms", "bokun"). */
   name: string
   /** Optional version tag for diagnostics. */
   version?: string
+  /** Optional lazy runtime bootstrap executed once per app/isolate. */
+  bootstrap?: BootstrapHandler
   /** Hono modules (module + routes) contributed by the plugin. */
   modules?: HonoModule[]
   /** Hono extensions (extension + routes) contributed by the plugin. */
@@ -28,43 +31,55 @@ export interface HonoPlugin {
   links?: LinkDefinition[]
 }
 
+/** @deprecated Prefer {@link HonoBundle}. */
+export type HonoPlugin = HonoBundle
+
 /**
- * Identity helper — returns the plugin unchanged, purely for IDE inference.
+ * Identity helper — returns the bundle unchanged, purely for IDE inference.
  */
-export function defineHonoPlugin<P extends HonoPlugin>(plugin: P): P {
-  return plugin
+export function defineHonoBundle<P extends HonoBundle>(bundle: P): P {
+  return bundle
 }
 
-export interface ExpandedHonoPlugins {
+/** @deprecated Prefer {@link defineHonoBundle}. */
+export const defineHonoPlugin = defineHonoBundle
+
+export interface ExpandedHonoBundles {
   modules: HonoModule[]
   extensions: HonoExtension[]
   subscribers: Subscriber[]
   links: LinkDefinition[]
 }
 
+/** @deprecated Prefer {@link ExpandedHonoBundles}. */
+export type ExpandedHonoPlugins = ExpandedHonoBundles
+
 /**
- * Flatten a list of {@link HonoPlugin} values into their constituent pieces.
+ * Flatten a list of {@link HonoBundle} values into their constituent pieces.
  *
- * Throws if two plugins declare the same `name`.
+ * Throws if two bundles declare the same `name`.
  */
-export function expandHonoPlugins(plugins: ReadonlyArray<HonoPlugin>): ExpandedHonoPlugins {
+export function expandHonoBundles(bundles: ReadonlyArray<HonoBundle>): ExpandedHonoBundles {
   const seen = new Set<string>()
   const modules: HonoModule[] = []
   const extensions: HonoExtension[] = []
   const subscribers: Subscriber[] = []
   const links: LinkDefinition[] = []
 
-  for (const plugin of plugins) {
-    if (seen.has(plugin.name)) {
-      throw new Error(`Duplicate plugin name: "${plugin.name}"`)
+  for (const bundle of bundles) {
+    if (seen.has(bundle.name)) {
+      throw new Error(`Duplicate bundle name: "${bundle.name}"`)
     }
-    seen.add(plugin.name)
+    seen.add(bundle.name)
 
-    if (plugin.modules) modules.push(...plugin.modules)
-    if (plugin.extensions) extensions.push(...plugin.extensions)
-    if (plugin.subscribers) subscribers.push(...plugin.subscribers)
-    if (plugin.links) links.push(...plugin.links)
+    if (bundle.modules) modules.push(...bundle.modules)
+    if (bundle.extensions) extensions.push(...bundle.extensions)
+    if (bundle.subscribers) subscribers.push(...bundle.subscribers)
+    if (bundle.links) links.push(...bundle.links)
   }
 
   return { modules, extensions, subscribers, links }
 }
+
+/** @deprecated Prefer {@link expandHonoBundles}. */
+export const expandHonoPlugins = expandHonoBundles

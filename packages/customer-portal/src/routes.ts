@@ -1,3 +1,4 @@
+import { parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -15,9 +16,7 @@ type Env = {
 
 export const customerPortalRoutes = new Hono<Env>()
   .get("/contact-exists", async (c) => {
-    const query = customerPortalContactExistsQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, customerPortalContactExistsQuerySchema)
 
     return c.json({
       data: await publicCustomerPortalService.contactExists(c.get("db"), query.email),
@@ -25,9 +24,7 @@ export const customerPortalRoutes = new Hono<Env>()
   })
 
   .get("/contact-exists/phone", async (c) => {
-    const query = customerPortalPhoneContactExistsQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, customerPortalPhoneContactExistsQuerySchema)
 
     return c.json({
       data: await publicCustomerPortalService.phoneContactExists(c.get("db"), query.phone),

@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -19,7 +20,7 @@ type Env = {
 
 export const activityRoutes = new Hono<Env>()
   .get("/activities", async (c) => {
-    const query = activityListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, activityListQuerySchema)
     return c.json(await crmService.listActivities(c.get("db"), query))
   })
   .post("/activities", async (c) => {
@@ -27,7 +28,7 @@ export const activityRoutes = new Hono<Env>()
       {
         data: await crmService.createActivity(
           c.get("db"),
-          insertActivitySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertActivitySchema),
         ),
       },
       201,
@@ -42,7 +43,7 @@ export const activityRoutes = new Hono<Env>()
     const row = await crmService.updateActivity(
       c.get("db"),
       c.req.param("id"),
-      updateActivitySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateActivitySchema),
     )
     if (!row) return c.json({ error: "Activity not found" }, 404)
     return c.json({ data: row })
@@ -61,7 +62,7 @@ export const activityRoutes = new Hono<Env>()
         data: await crmService.createActivityLink(
           c.get("db"),
           c.req.param("id"),
-          insertActivityLinkSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertActivityLinkSchema),
         ),
       },
       201,
@@ -83,7 +84,7 @@ export const activityRoutes = new Hono<Env>()
         data: await crmService.createActivityParticipant(
           c.get("db"),
           c.req.param("id"),
-          insertActivityParticipantSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertActivityParticipantSchema),
         ),
       },
       201,

@@ -44,6 +44,8 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
       "/",
       createFinanceAdminDocumentRoutes({
         eventBus,
+        resolveDocumentDownloadUrl: (_bindings, storageKey) =>
+          `https://signed.example.com/${storageKey}`,
         invoiceDocumentGenerator: async ({ invoice }) => {
           const storageKey = `invoices/${invoice.id}/rendition-${generatedKeys.length + 1}.pdf`
           generatedKeys.push(storageKey)
@@ -150,17 +152,40 @@ describe.skipIf(!DB_AVAILABLE)("Finance document routes", () => {
     expect(renditions.filter((entry) => entry.status === "stale")).toHaveLength(1)
     expect(documentEvents).toEqual([
       expect.objectContaining({
-        invoiceId: invoice.id,
-        invoiceType: "invoice",
-        format: "pdf",
-        regenerated: false,
+        name: "invoice.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          invoiceId: invoice.id,
+          invoiceType: "invoice",
+          format: "pdf",
+          regenerated: false,
+        }),
       }),
       expect.objectContaining({
-        invoiceId: invoice.id,
-        invoiceType: "invoice",
-        format: "pdf",
-        regenerated: true,
+        name: "invoice.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          invoiceId: invoice.id,
+          invoiceType: "invoice",
+          format: "pdf",
+          regenerated: true,
+        }),
       }),
     ])
+
+    const readyRendition = renditions.find((entry) => entry.status === "ready")
+    expect(readyRendition).toBeDefined()
+
+    const downloadRes = await app.request(`/invoice-renditions/${readyRendition?.id}/download`)
+    expect(downloadRes.status).toBe(302)
+    expect(downloadRes.headers.get("location")).toBe(
+      `https://signed.example.com/${readyRendition?.storageKey}`,
+    )
   })
 })

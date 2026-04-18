@@ -1,3 +1,4 @@
+import { parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -14,9 +15,7 @@ type Env = {
 export const publicBookingRequirementsRoutes = new Hono<Env>().get(
   "/products/:productId/transport-requirements",
   async (c) => {
-    const query = publicTransportRequirementsQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, publicTransportRequirementsQuerySchema)
 
     const result = await bookingRequirementsService.getPublicTransportRequirements(
       c.get("db"),

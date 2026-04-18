@@ -1,4 +1,7 @@
+export type { CheckoutRouteRuntime, CheckoutRoutesOptions } from "./routes.js"
 export {
+  buildCheckoutRouteRuntime,
+  CHECKOUT_ROUTE_RUNTIME_CONTAINER_KEY,
   checkoutModule,
   createCheckoutAdminRoutes,
   createCheckoutHonoModule,

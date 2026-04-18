@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -19,16 +20,13 @@ type Env = {
 
 export const quoteRoutes = new Hono<Env>()
   .get("/quotes", async (c) => {
-    const query = quoteListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, quoteListQuerySchema)
     return c.json(await crmService.listQuotes(c.get("db"), query))
   })
   .post("/quotes", async (c) => {
     return c.json(
       {
-        data: await crmService.createQuote(
-          c.get("db"),
-          insertQuoteSchema.parse(await c.req.json()),
-        ),
+        data: await crmService.createQuote(c.get("db"), await parseJsonBody(c, insertQuoteSchema)),
       },
       201,
     )
@@ -42,7 +40,7 @@ export const quoteRoutes = new Hono<Env>()
     const row = await crmService.updateQuote(
       c.get("db"),
       c.req.param("id"),
-      updateQuoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateQuoteSchema),
     )
     if (!row) return c.json({ error: "Quote not found" }, 404)
     return c.json({ data: row })
@@ -61,7 +59,7 @@ export const quoteRoutes = new Hono<Env>()
         data: await crmService.createQuoteLine(
           c.get("db"),
           c.req.param("id"),
-          insertQuoteLineSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertQuoteLineSchema),
         ),
       },
       201,
@@ -71,7 +69,7 @@ export const quoteRoutes = new Hono<Env>()
     const row = await crmService.updateQuoteLine(
       c.get("db"),
       c.req.param("id"),
-      updateQuoteLineSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateQuoteLineSchema),
     )
     if (!row) return c.json({ error: "Quote line not found" }, 404)
     return c.json({ data: row })

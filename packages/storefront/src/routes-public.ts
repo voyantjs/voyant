@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import { createStorefrontService, type StorefrontServiceOptions } from "./service.js"
@@ -36,9 +37,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         await storefrontService.listProductDepartures(
           c.get("db" as never),
           c.req.param("productId"),
-          storefrontDepartureListQuerySchema.parse(
-            Object.fromEntries(new URL(c.req.url).searchParams),
-          ),
+          await parseQuery(c, storefrontDepartureListQuerySchema),
         ),
       )
     })
@@ -46,7 +45,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
       const preview = await storefrontService.previewDeparturePrice(
         c.get("db" as never),
         c.req.param("departureId"),
-        storefrontDeparturePricePreviewInputSchema.parse(await c.req.json().catch(() => ({}))),
+        await parseJsonBody(c, storefrontDeparturePricePreviewInputSchema),
       )
 
       return preview
@@ -54,13 +53,13 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         : c.json({ error: "Storefront departure not found" }, 404)
     })
     .get("/products/:productId/extensions", async (c) => {
+      const query = await parseQuery(c, storefrontProductExtensionsQuerySchema)
+
       return c.json({
         data: await storefrontService.getProductExtensions(
           c.get("db" as never),
           c.req.param("productId"),
-          storefrontProductExtensionsQuerySchema.parse(
-            Object.fromEntries(new URL(c.req.url).searchParams),
-          ).optionId,
+          query.optionId,
         ),
       })
     })
@@ -75,9 +74,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
         : c.json({ error: "Storefront itinerary not found" }, 404)
     })
     .get("/products/:productId/offers", async (c) => {
-      const query = storefrontPromotionalOfferListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = await parseQuery(c, storefrontPromotionalOfferListQuerySchema)
 
       return c.json({
         data: await storefrontService.listApplicableOffers({
@@ -88,9 +85,7 @@ export function createStorefrontPublicRoutes(options?: StorefrontServiceOptions)
       })
     })
     .get("/offers/:slug", async (c) => {
-      const query = storefrontPromotionalOfferListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = await parseQuery(c, storefrontPromotionalOfferListQuerySchema)
       const offer = await storefrontService.getOfferBySlug({
         slug: c.req.param("slug"),
         locale: query.locale,

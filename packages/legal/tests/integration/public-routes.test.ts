@@ -45,6 +45,8 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       "/",
       createContractsAdminRoutes({
         eventBus,
+        resolveDocumentDownloadUrl: (_bindings, storageKey) =>
+          `https://signed.example.com/${storageKey}`,
         documentGenerator: async ({ contract }) => {
           const name = `contract-${generatedNames.length + 1}.pdf`
           generatedNames.push(name)
@@ -222,17 +224,40 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
     expect(attachments[0]?.storageKey).toContain("contract-2.pdf")
     expect(documentEvents).toEqual([
       expect.objectContaining({
-        contractId: contract.id,
-        attachmentKind: "document",
-        attachmentName: "contract-1.pdf",
-        regenerated: false,
+        name: "contract.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          contractId: contract.id,
+          attachmentKind: "document",
+          attachmentName: "contract-1.pdf",
+          regenerated: false,
+        }),
       }),
       expect.objectContaining({
-        contractId: contract.id,
-        attachmentKind: "document",
-        attachmentName: "contract-2.pdf",
-        regenerated: true,
+        name: "contract.document.generated",
+        metadata: {
+          category: "internal",
+          source: "service",
+        },
+        data: expect.objectContaining({
+          contractId: contract.id,
+          attachmentKind: "document",
+          attachmentName: "contract-2.pdf",
+          regenerated: true,
+        }),
       }),
     ])
+
+    const latestAttachment = attachments[0]
+    expect(latestAttachment).toBeDefined()
+
+    const downloadRes = await adminApp.request(`/attachments/${latestAttachment?.id}/download`)
+    expect(downloadRes.status).toBe(302)
+    expect(downloadRes.headers.get("location")).toBe(
+      `https://signed.example.com/${latestAttachment?.storageKey}`,
+    )
   })
 })

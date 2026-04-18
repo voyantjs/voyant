@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import {
   batchIdsSchema,
@@ -48,9 +49,7 @@ const batchUpdateCustomPickupAreaSchema = createBatchUpdateSchema(updateCustomPi
 
 export const availabilityPickupRoutes = new Hono<Env>()
   .get("/pickup-points", async (c) => {
-    const query = availabilityPickupPointListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilityPickupPointListQuerySchema)
     return c.json(await availabilityService.listPickupPoints(c.get("db"), query))
   })
   .post("/pickup-points", async (c) =>
@@ -58,14 +57,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createPickupPoint(
           c.get("db"),
-          insertAvailabilityPickupPointSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilityPickupPointSchema),
         ),
       },
       201,
     ),
   )
   .post("/pickup-points/batch-update", async (c) => {
-    const body = batchUpdateAvailabilityPickupPointSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilityPickupPointSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -76,7 +75,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/pickup-points/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -93,7 +92,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updatePickupPoint(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilityPickupPointSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilityPickupPointSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability pickup point not found")
   })
@@ -102,9 +101,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Availability pickup point not found")
   })
   .get("/slot-pickups", async (c) => {
-    const query = availabilitySlotPickupListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, availabilitySlotPickupListQuerySchema)
     return c.json(await availabilityService.listSlotPickups(c.get("db"), query))
   })
   .post("/slot-pickups", async (c) =>
@@ -112,14 +109,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createSlotPickup(
           c.get("db"),
-          insertAvailabilitySlotPickupSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertAvailabilitySlotPickupSchema),
         ),
       },
       201,
     ),
   )
   .post("/slot-pickups/batch-update", async (c) => {
-    const body = batchUpdateAvailabilitySlotPickupSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateAvailabilitySlotPickupSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -130,7 +127,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/slot-pickups/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -147,7 +144,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updateSlotPickup(
       c.get("db"),
       c.req.param("id"),
-      updateAvailabilitySlotPickupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateAvailabilitySlotPickupSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Availability slot pickup not found")
   })
@@ -156,9 +153,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Availability slot pickup not found")
   })
   .get("/meeting-configs", async (c) => {
-    const query = productMeetingConfigListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, productMeetingConfigListQuerySchema)
     return c.json(await availabilityService.listMeetingConfigs(c.get("db"), query))
   })
   .post("/meeting-configs", async (c) =>
@@ -166,14 +161,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createMeetingConfig(
           c.get("db"),
-          insertProductMeetingConfigSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertProductMeetingConfigSchema),
         ),
       },
       201,
     ),
   )
   .post("/meeting-configs/batch-update", async (c) => {
-    const body = batchUpdateProductMeetingConfigSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateProductMeetingConfigSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -184,7 +179,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/meeting-configs/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -201,7 +196,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updateMeetingConfig(
       c.get("db"),
       c.req.param("id"),
-      updateProductMeetingConfigSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateProductMeetingConfigSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Product meeting config not found")
   })
@@ -210,9 +205,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Product meeting config not found")
   })
   .get("/pickup-groups", async (c) => {
-    const query = pickupGroupListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, pickupGroupListQuerySchema)
     return c.json(await availabilityService.listPickupGroups(c.get("db"), query))
   })
   .post("/pickup-groups", async (c) =>
@@ -220,14 +213,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createPickupGroup(
           c.get("db"),
-          insertPickupGroupSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPickupGroupSchema),
         ),
       },
       201,
     ),
   )
   .post("/pickup-groups/batch-update", async (c) => {
-    const body = batchUpdatePickupGroupSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdatePickupGroupSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -238,7 +231,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/pickup-groups/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -255,7 +248,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updatePickupGroup(
       c.get("db"),
       c.req.param("id"),
-      updatePickupGroupSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePickupGroupSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Pickup group not found")
   })
@@ -264,9 +257,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Pickup group not found")
   })
   .get("/pickup-locations", async (c) => {
-    const query = pickupLocationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, pickupLocationListQuerySchema)
     return c.json(await availabilityService.listPickupLocations(c.get("db"), query))
   })
   .post("/pickup-locations", async (c) =>
@@ -274,14 +265,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createPickupLocation(
           c.get("db"),
-          insertPickupLocationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPickupLocationSchema),
         ),
       },
       201,
     ),
   )
   .post("/pickup-locations/batch-update", async (c) => {
-    const body = batchUpdatePickupLocationSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdatePickupLocationSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -292,7 +283,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/pickup-locations/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -309,7 +300,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updatePickupLocation(
       c.get("db"),
       c.req.param("id"),
-      updatePickupLocationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePickupLocationSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Pickup location not found")
   })
@@ -318,9 +309,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Pickup location not found")
   })
   .get("/location-pickup-times", async (c) => {
-    const query = locationPickupTimeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, locationPickupTimeListQuerySchema)
     return c.json(await availabilityService.listLocationPickupTimes(c.get("db"), query))
   })
   .post("/location-pickup-times", async (c) =>
@@ -328,14 +317,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createLocationPickupTime(
           c.get("db"),
-          insertLocationPickupTimeSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertLocationPickupTimeSchema),
         ),
       },
       201,
     ),
   )
   .post("/location-pickup-times/batch-update", async (c) => {
-    const body = batchUpdateLocationPickupTimeSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateLocationPickupTimeSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -346,7 +335,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/location-pickup-times/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -363,7 +352,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updateLocationPickupTime(
       c.get("db"),
       c.req.param("id"),
-      updateLocationPickupTimeSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateLocationPickupTimeSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Location pickup time not found")
   })
@@ -372,9 +361,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Location pickup time not found")
   })
   .get("/custom-pickup-areas", async (c) => {
-    const query = customPickupAreaListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, customPickupAreaListQuerySchema)
     return c.json(await availabilityService.listCustomPickupAreas(c.get("db"), query))
   })
   .post("/custom-pickup-areas", async (c) =>
@@ -382,14 +369,14 @@ export const availabilityPickupRoutes = new Hono<Env>()
       {
         data: await availabilityService.createCustomPickupArea(
           c.get("db"),
-          insertCustomPickupAreaSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertCustomPickupAreaSchema),
         ),
       },
       201,
     ),
   )
   .post("/custom-pickup-areas/batch-update", async (c) => {
-    const body = batchUpdateCustomPickupAreaSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchUpdateCustomPickupAreaSchema)
     return c.json(
       await handleBatchUpdate({
         db: c.get("db"),
@@ -400,7 +387,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     )
   })
   .post("/custom-pickup-areas/batch-delete", async (c) => {
-    const body = batchIdsSchema.parse(await c.req.json())
+    const body = await parseJsonBody(c, batchIdsSchema)
     return c.json(
       await handleBatchDelete({
         db: c.get("db"),
@@ -417,7 +404,7 @@ export const availabilityPickupRoutes = new Hono<Env>()
     const row = await availabilityService.updateCustomPickupArea(
       c.get("db"),
       c.req.param("id"),
-      updateCustomPickupAreaSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCustomPickupAreaSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Custom pickup area not found")
   })

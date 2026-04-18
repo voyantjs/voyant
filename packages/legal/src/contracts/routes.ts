@@ -1,7 +1,13 @@
-import type { EventBus } from "@voyantjs/core"
+import type { EventBus, ModuleContainer } from "@voyantjs/core"
+import { parseJsonBody, parseOptionalJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
+import {
+  buildContractsRouteRuntime,
+  CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
+  type ContractsRouteRuntime,
+} from "./route-runtime.js"
 import { contractsService } from "./service.js"
 import {
   contractListQuerySchema,
@@ -25,6 +31,7 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
+    container: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
   }
@@ -36,39 +43,62 @@ export type ContractDocumentGenerator = Parameters<
 
 export interface ContractsRouteOptions {
   documentGenerator?: ContractDocumentGenerator
-  resolveDocumentGenerator?: (
-    bindings: Record<string, unknown>,
-  ) => ContractDocumentGenerator | undefined
+  resolveDocumentGenerator?: (bindings: unknown) => ContractDocumentGenerator | undefined
+  resolveDocumentDownloadUrl?: (
+    bindings: unknown,
+    storageKey: string,
+  ) => Promise<string | null> | string | null
   eventBus?: EventBus
-  resolveEventBus?: (bindings: Record<string, unknown>) => EventBus | undefined
+  resolveEventBus?: (bindings: unknown) => EventBus | undefined
 }
 
-function resolveDocumentGenerator(
+function getRuntime(
   options: ContractsRouteOptions | undefined,
   bindings: Record<string, unknown>,
+  resolveFromContainer?: (key: string) => ContractsRouteRuntime | undefined,
 ) {
-  return options?.resolveDocumentGenerator?.(bindings) ?? options?.documentGenerator
+  return (
+    resolveFromContainer?.(CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY) ??
+    buildContractsRouteRuntime(bindings, options)
+  )
 }
 
-function resolveEventBus(
-  options: ContractsRouteOptions | undefined,
-  bindings: Record<string, unknown>,
-) {
-  return options?.resolveEventBus?.(bindings) ?? options?.eventBus
+function getMetadataRecord(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null
+  }
+
+  return metadata as Record<string, unknown>
+}
+
+function maybeUrl(value: unknown) {
+  return typeof value === "string" && /^https?:\/\//i.test(value) ? value : null
+}
+
+function getFallbackDownloadUrl(metadata: unknown) {
+  const record = getMetadataRecord(metadata)
+  if (!record) {
+    return null
+  }
+
+  for (const key of ["url", "publicUrl", "downloadUrl", "download_url", "signedUrl"]) {
+    const value = maybeUrl(record[key])
+    if (value) {
+      return value
+    }
+  }
+
+  return null
 }
 
 export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) {
   return new Hono<Env>()
     .get("/templates", async (c) => {
-      const query = contractTemplateListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateListQuerySchema)
       return c.json(await contractsService.listTemplates(c.get("db"), query))
     })
     .get("/templates/default", async (c) => {
-      const query = contractTemplateDefaultQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateDefaultQuerySchema)
       const row = await contractsService.getDefaultTemplate(c.get("db"), query)
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
@@ -76,7 +106,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
     .post("/templates", async (c) => {
       const row = await contractsService.createTemplate(
         c.get("db"),
-        insertContractTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractTemplateSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -89,7 +119,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateTemplate(
         c.get("db"),
         c.req.param("id"),
-        updateContractTemplateSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractTemplateSchema),
       )
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
@@ -100,7 +130,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ success: true })
     })
     .post("/templates/:id/preview", async (c) => {
-      const input = renderTemplateInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, renderTemplateInputSchema)
       const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
       if (!template) return c.json({ error: "Template not found" }, 404)
       const body = input.body ?? template.body
@@ -116,7 +146,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const version = await contractsService.createTemplateVersion(
         c.get("db"),
         c.req.param("id"),
-        insertContractTemplateVersionSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractTemplateVersionSchema),
       )
       if (!version) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: version }, 201)
@@ -133,7 +163,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
     .post("/number-series", async (c) => {
       const row = await contractsService.createSeries(
         c.get("db"),
-        insertContractNumberSeriesSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractNumberSeriesSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -146,7 +176,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateSeries(
         c.get("db"),
         c.req.param("id"),
-        updateContractNumberSeriesSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractNumberSeriesSchema),
       )
       if (!row) return c.json({ error: "Series not found" }, 404)
       return c.json({ data: row })
@@ -157,15 +187,13 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ success: true })
     })
     .get("/", async (c) => {
-      const query = contractListQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractListQuerySchema)
       return c.json(await contractsService.listContracts(c.get("db"), query))
     })
     .post("/", async (c) => {
       const row = await contractsService.createContract(
         c.get("db"),
-        insertContractSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractSchema),
       )
       return c.json({ data: row }, 201)
     })
@@ -178,7 +206,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateContract(
         c.get("db"),
         c.req.param("id"),
-        updateContractSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractSchema),
       )
       if (!row) return c.json({ error: "Contract not found" }, 404)
       return c.json({ data: row })
@@ -208,7 +236,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result.contract })
     })
     .post("/:id/sign", async (c) => {
-      const input = insertContractSignatureSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, insertContractSignatureSchema)
       const result = await contractsService.signContract(c.get("db"), c.req.param("id"), input)
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
       if (result.status === "not_signable") {
@@ -233,14 +261,15 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result.contract })
     })
     .post("/:id/render", async (c) => {
-      const input = renderTemplateInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, renderTemplateInputSchema)
       const contract = await contractsService.getContractById(c.get("db"), c.req.param("id"))
       if (!contract) return c.json({ error: "Contract not found" }, 404)
       const rendered = contractsService.renderPreview(input)
       return c.json({ data: { rendered } })
     })
     .post("/:id/generate-document", async (c) => {
-      const generator = resolveDocumentGenerator(options, c.env)
+      const runtime = getRuntime(options, c.env, (key) => c.var.container?.resolve(key))
+      const generator = runtime.documentGenerator
       if (!generator) {
         return c.json({ error: "Contract document generator is not configured" }, 501)
       }
@@ -248,8 +277,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const result = await contractsService.generateContractDocument(
         c.get("db"),
         c.req.param("id"),
-        generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
+        await parseOptionalJsonBody(c, generateContractDocumentInputSchema),
+        { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
@@ -269,7 +298,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       return c.json({ data: result }, 201)
     })
     .post("/:id/regenerate-document", async (c) => {
-      const generator = resolveDocumentGenerator(options, c.env)
+      const runtime = getRuntime(options, c.env, (key) => c.var.container?.resolve(key))
+      const generator = runtime.documentGenerator
       if (!generator) {
         return c.json({ error: "Contract document generator is not configured" }, 501)
       }
@@ -277,8 +307,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const result = await contractsService.regenerateContractDocument(
         c.get("db"),
         c.req.param("id"),
-        generateContractDocumentInputSchema.parse(await c.req.json().catch(() => ({}))),
-        { generator, bindings: c.env, eventBus: resolveEventBus(options, c.env) },
+        await parseOptionalJsonBody(c, generateContractDocumentInputSchema),
+        { generator, bindings: c.env, eventBus: runtime.eventBus },
       )
 
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
@@ -309,7 +339,7 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.createAttachment(
         c.get("db"),
         c.req.param("id"),
-        insertContractAttachmentSchema.parse(await c.req.json()),
+        await parseJsonBody(c, insertContractAttachmentSchema),
       )
       if (!row) return c.json({ error: "Contract not found" }, 404)
       return c.json({ data: row }, 201)
@@ -318,10 +348,32 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const row = await contractsService.updateAttachment(
         c.get("db"),
         c.req.param("attachmentId"),
-        updateContractAttachmentSchema.parse(await c.req.json()),
+        await parseJsonBody(c, updateContractAttachmentSchema),
       )
       if (!row) return c.json({ error: "Attachment not found" }, 404)
       return c.json({ data: row })
+    })
+    .get("/attachments/:attachmentId/download", async (c) => {
+      const attachment = await contractsService.getAttachmentById(
+        c.get("db"),
+        c.req.param("attachmentId"),
+      )
+      if (!attachment) return c.json({ error: "Attachment not found" }, 404)
+
+      let location: string | null = null
+      if (attachment.storageKey) {
+        if (!options.resolveDocumentDownloadUrl) {
+          return c.json({ error: "Document download resolver is not configured" }, 501)
+        }
+        location = await options.resolveDocumentDownloadUrl(c.env, attachment.storageKey)
+      }
+
+      location ??= getFallbackDownloadUrl(attachment.metadata)
+      if (!location) {
+        return c.json({ error: "Attachment file is not available" }, 404)
+      }
+
+      return c.redirect(location, 302)
     })
     .delete("/attachments/:attachmentId", async (c) => {
       const row = await contractsService.deleteAttachment(c.get("db"), c.req.param("attachmentId"))
@@ -335,15 +387,13 @@ export const contractsAdminRoutes = createContractsAdminRoutes()
 export function createContractsPublicRoutes() {
   return new Hono<Env>()
     .get("/templates/default", async (c) => {
-      const query = contractTemplateDefaultQuerySchema.parse(
-        Object.fromEntries(new URL(c.req.url).searchParams),
-      )
+      const query = parseQuery(c, contractTemplateDefaultQuerySchema)
       const row = await contractsService.getDefaultTemplate(c.get("db"), query)
       if (!row) return c.json({ error: "Template not found" }, 404)
       return c.json({ data: row })
     })
     .post("/templates/:id/preview", async (c) => {
-      const input = publicRenderTemplatePreviewInputSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, publicRenderTemplatePreviewInputSchema)
       const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
       if (!template?.active) return c.json({ error: "Template not found" }, 404)
       const rendered = contractsService.renderPreview({
@@ -360,7 +410,7 @@ export function createContractsPublicRoutes() {
       return c.json({ data: publicContract })
     })
     .post("/:id/sign", async (c) => {
-      const input = insertContractSignatureSchema.parse(await c.req.json())
+      const input = await parseJsonBody(c, insertContractSignatureSchema)
       const result = await contractsService.signContract(c.get("db"), c.req.param("id"), input)
       if (result.status === "not_found") return c.json({ error: "Contract not found" }, 404)
       if (result.status === "not_signable") {

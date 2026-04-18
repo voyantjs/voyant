@@ -1,4 +1,5 @@
 import type { Extension } from "@voyantjs/core"
+import { parseJsonBody } from "@voyantjs/hono"
 import type { HonoExtension } from "@voyantjs/hono/module"
 import { eq } from "drizzle-orm"
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core"
@@ -95,7 +96,7 @@ const bookingTransactionExtensionRoutes = new Hono<Env>()
   })
 
   .put("/:bookingId/transaction-details", async (c) => {
-    const data = bookingTransactionDetailSchema.parse(await c.req.json())
+    const data = await parseJsonBody(c, bookingTransactionDetailSchema)
     const row = await bookingTransactionExtensionService.upsert(
       c.get("db"),
       c.req.param("bookingId"),

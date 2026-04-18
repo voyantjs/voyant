@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 
@@ -19,9 +20,7 @@ type Env = {
 
 export const customFieldRoutes = new Hono<Env>()
   .get("/custom-fields", async (c) => {
-    const query = customFieldDefinitionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, customFieldDefinitionListQuerySchema)
     return c.json(await crmService.listCustomFieldDefinitions(c.get("db"), query))
   })
   .post("/custom-fields", async (c) => {
@@ -29,7 +28,7 @@ export const customFieldRoutes = new Hono<Env>()
       {
         data: await crmService.createCustomFieldDefinition(
           c.get("db"),
-          insertCustomFieldDefinitionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertCustomFieldDefinitionSchema),
         ),
       },
       201,
@@ -44,7 +43,7 @@ export const customFieldRoutes = new Hono<Env>()
     const row = await crmService.updateCustomFieldDefinition(
       c.get("db"),
       c.req.param("id"),
-      updateCustomFieldDefinitionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCustomFieldDefinitionSchema),
     )
     if (!row) return c.json({ error: "Custom field not found" }, 404)
     return c.json({ data: row })
@@ -55,9 +54,7 @@ export const customFieldRoutes = new Hono<Env>()
     return c.json({ success: true })
   })
   .get("/custom-field-values", async (c) => {
-    const query = customFieldValueListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, customFieldValueListQuerySchema)
     return c.json(await crmService.listCustomFieldValues(c.get("db"), query))
   })
   .put("/custom-fields/:id/value", async (c) => {
@@ -66,7 +63,7 @@ export const customFieldRoutes = new Hono<Env>()
         data: await crmService.upsertCustomFieldValue(
           c.get("db"),
           c.req.param("id"),
-          upsertCustomFieldValueSchema.parse(await c.req.json()),
+          await parseJsonBody(c, upsertCustomFieldValueSchema),
         ),
       },
       200,

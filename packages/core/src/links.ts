@@ -54,6 +54,16 @@ export interface LinkDefinitionOptions {
     /** Override the auto-generated right-side ID column name. */
     rightColumn?: string
   }
+  /**
+   * Mark the link as externally-owned and non-materialized.
+   *
+   * Read-only links participate in cross-module query traversal, but they do
+   * not create a neutral-territory pivot table and cannot be mutated through
+   * the runtime link service.
+   */
+  readOnly?: {
+    list(filter?: { leftId?: string; rightId?: string }): Promise<LinkRow[]>
+  }
 }
 
 export type LinkCardinality = "one-to-one" | "one-to-many" | "many-to-one" | "many-to-many"
@@ -74,6 +84,13 @@ export interface LinkDefinition {
   /** Inferred cardinality from the `isList` flags on each side. */
   cardinality: LinkCardinality
   deleteCascade: boolean
+  /**
+   * Read-only links are resolved from an externally-owned relation instead of
+   * a generated pivot table.
+   */
+  readOnly?: {
+    list(filter?: { leftId?: string; rightId?: string }): Promise<LinkRow[]>
+  }
 }
 
 /**
@@ -124,6 +141,7 @@ export function defineLink(
     rightColumn,
     cardinality: cardinalityFor(leftSide, rightSide),
     deleteCascade: options?.deleteCascade ?? false,
+    readOnly: options?.readOnly,
   }
 }
 
@@ -167,6 +185,12 @@ export interface LinkTableSql {
  * link's cardinality so the database enforces the relationship shape.
  */
 export function generateLinkTableSql(def: LinkDefinition): LinkTableSql {
+  if (def.readOnly) {
+    throw new Error(
+      `generateLinkTableSql: read-only link "${def.tableName}" is externally owned and does not materialize a pivot table`,
+    )
+  }
+
   const { tableName, leftColumn, rightColumn } = def
 
   const createTable = [

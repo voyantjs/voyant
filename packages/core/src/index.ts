@@ -18,7 +18,15 @@ export type {
   VoyantPermission,
   VoyantVariables,
 } from "./env.js"
-export type { EventBus, EventHandler, Subscription } from "./events.js"
+export type {
+  EventBus,
+  EventCategory,
+  EventEnvelope,
+  EventHandler,
+  EventMetadata,
+  EventSource,
+  Subscription,
+} from "./events.js"
 export { createEventBus } from "./events.js"
 export { hooks } from "./hooks.js"
 export type {
@@ -36,7 +44,7 @@ export type {
   ResolvedLinkSpec,
 } from "./links.js"
 export { defineLink, generateLinkTableSql, resolveLinkFromSpec } from "./links.js"
-export type { Extension, Module } from "./module.js"
+export type { BootstrapContext, BootstrapHandler, Extension, Module } from "./module.js"
 export type { JobOptions, JobRunner } from "./orchestration.js"
 export type {
   Plugin,
@@ -49,13 +57,15 @@ export type {
   EntityFetcher,
   EntityFetcherArgs,
   EntityRecord,
+  QueryContextValue,
   QueryFilters,
   QueryGraphConfig,
   QueryGraphContext,
   QueryGraphResult,
   QueryPagination,
+  QueryRunner,
 } from "./query.js"
-export { createQueryContext, queryGraph } from "./query.js"
+export { createQueryContext, createQueryRunner, queryGraph } from "./query.js"
 export type { RegistryOptions } from "./registry.js"
 export { createRegistry } from "./registry.js"
 export type {

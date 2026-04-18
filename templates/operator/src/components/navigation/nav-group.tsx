@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router"
-import type { LucideIcon } from "lucide-react"
+import { BETA, COMING_SOON, type NavItem } from "@voyantjs/voyant-admin"
 import * as React from "react"
 import {
   Badge,
@@ -15,8 +15,6 @@ import {
   useSidebar,
 } from "@/components/ui"
 
-import { BETA, COMING_SOON } from "./app-sidebar"
-
 export function NavGroup({
   items,
   label,
@@ -24,21 +22,7 @@ export function NavGroup({
 }: {
   label?: string
   className?: string
-  items: readonly {
-    title: string
-    url: string
-    icon: LucideIcon | React.ComponentType<{ className?: string }>
-    isActive?: boolean
-    status?: typeof COMING_SOON | typeof BETA
-    target?: string
-    items?: readonly {
-      title: string
-      url: string
-      icon?: LucideIcon | React.ComponentType<{ className?: string }>
-      status?: typeof COMING_SOON | typeof BETA
-      target?: string
-    }[]
-  }[]
+  items: ReadonlyArray<NavItem>
 }) {
   const currentPath = useRouterState({ select: (s) => s.location.pathname })
   const { isMobile, setOpenMobile } = useSidebar()
@@ -101,12 +85,14 @@ export function NavGroup({
             const expanded = parentActive || anyChildActive
 
             return (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.id ?? item.url ?? item.title}>
                 <SidebarMenuButton asChild tooltip={item.title} isActive={parentActive}>
                   <Link to={item.url} onClick={handleLinkClick}>
-                    {React.createElement(item.icon, {
-                      className: "h-4 w-4",
-                    })}
+                    {item.icon
+                      ? React.createElement(item.icon, {
+                          className: "h-4 w-4",
+                        })
+                      : null}
                     <span>{item.title}</span>
                     {renderBadge(item.status)}
                   </Link>
@@ -114,7 +100,7 @@ export function NavGroup({
                 {expanded && (
                   <SidebarMenuSub>
                     {item.items?.map((subItem) => (
-                      <SidebarMenuSubItem key={subItem.title}>
+                      <SidebarMenuSubItem key={subItem.id ?? subItem.url ?? subItem.title}>
                         {subItem.status === COMING_SOON ? (
                           <SidebarMenuSubButton
                             className={cn(subItem.status === COMING_SOON && "opacity-50")}
@@ -150,10 +136,10 @@ export function NavGroup({
             )
           } else {
             return (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.id ?? item.url ?? item.title}>
                 {item.status === COMING_SOON ? (
                   <SidebarMenuButton tooltip={item.title} disabled>
-                    {React.createElement(item.icon, { className: "h-4 w-4" })}
+                    {item.icon ? React.createElement(item.icon, { className: "h-4 w-4" }) : null}
                     <span>{item.title}</span>
                     {renderBadge(item.status)}
                   </SidebarMenuButton>
@@ -165,7 +151,7 @@ export function NavGroup({
                       rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                       onClick={handleLinkClick}
                     >
-                      {React.createElement(item.icon, { className: "h-4 w-4" })}
+                      {item.icon ? React.createElement(item.icon, { className: "h-4 w-4" }) : null}
                       <span>{item.title}</span>
                       {renderBadge(item.status)}
                     </a>
@@ -173,7 +159,7 @@ export function NavGroup({
                 ) : (
                   <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
                     <Link to={item.url} onClick={handleLinkClick}>
-                      {React.createElement(item.icon, { className: "h-4 w-4" })}
+                      {item.icon ? React.createElement(item.icon, { className: "h-4 w-4" }) : null}
                       <span>{item.title}</span>
                       {renderBadge(item.status)}
                     </Link>

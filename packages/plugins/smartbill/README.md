@@ -1,6 +1,15 @@
 # @voyantjs/plugin-smartbill
 
-SmartBill e-invoicing plugin for Voyant. Subscribes to invoice events and creates/cancels/syncs invoices via the SmartBill REST API for Romanian tax compliance.
+SmartBill e-invoicing sync adapter bundle for Voyant.
+
+Architecturally, this package is primarily:
+
+- a SmartBill e-invoicing adapter
+- a subscriber bundle for finance invoice events
+- an optional plugin bundle for distribution
+
+It subscribes to invoice events and creates, cancels, or syncs invoices via the
+SmartBill REST API for Romanian tax compliance.
 
 ## Install
 
@@ -14,20 +23,25 @@ pnpm add @voyantjs/plugin-smartbill
 import { smartbillPlugin } from "@voyantjs/plugin-smartbill"
 import { createApp } from "@voyantjs/hono"
 
+const smartbillSync = smartbillPlugin({
+  username: env.SMARTBILL_USERNAME,
+  apiToken: env.SMARTBILL_API_TOKEN,
+  companyVatCode: "RO12345678",
+  seriesName: "A",
+  // optional: language, art311SpecialRegime, events, mapEvent, logger
+})
+
 const app = createApp({
-  plugins: [
-    smartbillPlugin({
-      username: env.SMARTBILL_USERNAME,
-      apiToken: env.SMARTBILL_API_TOKEN,
-      companyVatCode: "RO12345678",
-      seriesName: "A",
-      // optional: language, art311SpecialRegime, events, mapEvent, logger
-    }),
-  ],
+  plugins: [smartbillSync],
 })
 ```
 
-By default the plugin wires up 3 subscribers (`invoice.issued`, `invoice.voided`, `invoice.external.sync.requested`) that create, cancel, and check payment status on SmartBill. All error handling is fire-and-forget per the EventBus contract.
+The exported value is an optional distribution bundle. At runtime, the package
+behaves primarily as a subscriber-driven SmartBill sync adapter. By default it
+wires up 3 subscribers (`invoice.issued`, `invoice.voided`,
+`invoice.external.sync.requested`) that create, cancel, and check payment
+status on SmartBill. All error handling is fire-and-forget per the EventBus
+contract.
 
 ## Exports
 

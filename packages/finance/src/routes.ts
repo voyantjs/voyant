@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery, requireUserId } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import type { publicFinanceRoutes } from "./routes-public.js"
@@ -74,9 +75,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-sessions", async (c) => {
-    const query = paymentSessionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, paymentSessionListQuerySchema)
     return c.json(await financeService.listPaymentSessions(c.get("db"), query))
   })
 
@@ -163,9 +162,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-instruments", async (c) => {
-    const query = paymentInstrumentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, paymentInstrumentListQuerySchema)
     return c.json(await financeService.listPaymentInstruments(c.get("db"), query))
   })
 
@@ -208,9 +205,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-authorizations", async (c) => {
-    const query = paymentAuthorizationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, paymentAuthorizationListQuerySchema)
     return c.json(await financeService.listPaymentAuthorizations(c.get("db"), query))
   })
 
@@ -253,9 +248,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-captures", async (c) => {
-    const query = paymentCaptureListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, paymentCaptureListQuerySchema)
     return c.json(await financeService.listPaymentCaptures(c.get("db"), query))
   })
 
@@ -299,23 +292,19 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /reports/revenue — Revenue by month
   .get("/reports/revenue", async (c) => {
-    const query = revenueReportQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, revenueReportQuerySchema)
     return c.json({ data: await financeService.getRevenueReport(c.get("db"), query) })
   })
 
   // GET /reports/aging — Outstanding invoices by age buckets
   .get("/reports/aging", async (c) => {
-    const query = agingReportQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, agingReportQuerySchema)
     return c.json({ data: await financeService.getAgingReport(c.get("db"), query) })
   })
 
   // GET /reports/profitability — Per-booking margin summary
   .get("/reports/profitability", async (c) => {
-    const query = profitabilityQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, profitabilityQuerySchema)
     return c.json({ data: await financeService.getProfitabilityReport(c.get("db"), query) })
   })
 
@@ -578,9 +567,7 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /supplier-payments — List supplier payments
   .get("/supplier-payments", async (c) => {
-    const query = supplierPaymentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, supplierPaymentListQuerySchema)
     return c.json(await financeService.listSupplierPayments(c.get("db"), query))
   })
 
@@ -618,7 +605,7 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /invoices — List invoices
   .get("/invoices", async (c) => {
-    const query = invoiceListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = parseQuery(c, invoiceListQuerySchema)
     return c.json(await financeService.listInvoices(c.get("db"), query))
   })
 
@@ -894,17 +881,13 @@ export const financeRoutes = new Hono<Env>()
 
   // POST /invoices/:id/notes — Add note
   .post("/invoices/:id/notes", async (c) => {
-    const userId = c.get("userId")
-
-    if (!userId) {
-      return c.json({ error: "User ID required to create notes" }, 400)
-    }
+    const userId = requireUserId(c)
 
     const row = await financeService.createNote(
       c.get("db"),
       c.req.param("id"),
       userId,
-      insertFinanceNoteSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertFinanceNoteSchema),
     )
 
     if (!row) {
@@ -919,9 +902,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/invoice-number-series", async (c) => {
-    const query = invoiceNumberSeriesListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, invoiceNumberSeriesListQuerySchema)
     return c.json(await financeService.listInvoiceNumberSeries(c.get("db"), query))
   })
 
@@ -973,9 +954,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/invoice-templates", async (c) => {
-    const query = invoiceTemplateListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, invoiceTemplateListQuerySchema)
     return c.json(await financeService.listInvoiceTemplates(c.get("db"), query))
   })
 
@@ -1014,9 +993,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/tax-regimes", async (c) => {
-    const query = taxRegimeListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = parseQuery(c, taxRegimeListQuerySchema)
     return c.json(await financeService.listTaxRegimes(c.get("db"), query))
   })
 

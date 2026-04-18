@@ -1,6 +1,12 @@
+import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
 
-import { createNotificationsRoutes } from "./routes.js"
+import {
+  buildNotificationsRouteRuntime,
+  createNotificationsRoutes,
+  NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+  type NotificationsRoutesOptions,
+} from "./routes.js"
 import { notificationsModule } from "./schema.js"
 
 export type { DefaultNotificationProviderOptions } from "./provider-resolution.js"
@@ -19,7 +25,12 @@ export type {
 export { createResendProvider } from "./providers/resend.js"
 export type { TwilioFetch, TwilioProviderOptions, TwilioRenderedSms } from "./providers/twilio.js"
 export { createTwilioProvider } from "./providers/twilio.js"
-export { createNotificationsRoutes } from "./routes.js"
+export type { NotificationsRouteRuntime, NotificationsRoutesOptions } from "./routes.js"
+export {
+  buildNotificationsRouteRuntime,
+  createNotificationsRoutes,
+  NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./routes.js"
 export type {
   NewNotificationDelivery,
   NewNotificationReminderRule,
@@ -31,7 +42,6 @@ export type {
   NotificationsHonoModule,
   NotificationTemplate,
 } from "./schema.js"
-
 export {
   notificationChannelEnum,
   notificationDeliveries,
@@ -60,6 +70,12 @@ export type {
   SendBookingDocumentsRuntimeOptions,
 } from "./service-booking-documents.js"
 export { bookingDocumentNotificationsService } from "./service-booking-documents.js"
+export type {
+  NotificationTaskEnv,
+  NotificationTaskRuntime,
+  NotificationTaskRuntimeOptions,
+} from "./task-runtime.js"
+export { buildNotificationTaskRuntime } from "./task-runtime.js"
 export { sendDueNotificationReminders } from "./tasks/index.js"
 export type {
   NotificationAttachment,
@@ -102,11 +118,19 @@ export {
   updateNotificationTemplateSchema,
 } from "./validation.js"
 
-export function createNotificationsHonoModule(
-  options?: Parameters<typeof createNotificationsRoutes>[0],
-): HonoModule {
+export function createNotificationsHonoModule(options?: NotificationsRoutesOptions): HonoModule {
+  const module: Module = {
+    ...notificationsModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildNotificationsRouteRuntime(bindings as Record<string, unknown>, options),
+      )
+    },
+  }
+
   return {
-    module: notificationsModule,
+    module,
     routes: createNotificationsRoutes(options),
   }
 }

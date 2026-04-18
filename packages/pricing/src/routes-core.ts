@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import { type Env, notFound } from "./routes-shared.js"
 import { pricingService } from "./service.js"
@@ -27,7 +28,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listPricingCategories(
         c.get("db"),
-        pricingCategoryListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, pricingCategoryListQuerySchema),
       ),
     ),
   )
@@ -36,7 +37,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createPricingCategory(
           c.get("db"),
-          insertPricingCategorySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPricingCategorySchema),
         ),
       },
       201,
@@ -50,7 +51,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updatePricingCategory(
       c.get("db"),
       c.req.param("id"),
-      updatePricingCategorySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePricingCategorySchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Pricing category not found")
   })
@@ -62,9 +63,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listPricingCategoryDependencies(
         c.get("db"),
-        pricingCategoryDependencyListQuerySchema.parse(
-          Object.fromEntries(new URL(c.req.url).searchParams),
-        ),
+        await parseQuery(c, pricingCategoryDependencyListQuerySchema),
       ),
     ),
   )
@@ -73,7 +72,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createPricingCategoryDependency(
           c.get("db"),
-          insertPricingCategoryDependencySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPricingCategoryDependencySchema),
         ),
       },
       201,
@@ -90,7 +89,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updatePricingCategoryDependency(
       c.get("db"),
       c.req.param("id"),
-      updatePricingCategoryDependencySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePricingCategoryDependencySchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Pricing category dependency not found")
   })
@@ -102,9 +101,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listCancellationPolicies(
         c.get("db"),
-        cancellationPolicyListQuerySchema.parse(
-          Object.fromEntries(new URL(c.req.url).searchParams),
-        ),
+        await parseQuery(c, cancellationPolicyListQuerySchema),
       ),
     ),
   )
@@ -113,7 +110,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createCancellationPolicy(
           c.get("db"),
-          insertCancellationPolicySchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertCancellationPolicySchema),
         ),
       },
       201,
@@ -127,7 +124,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updateCancellationPolicy(
       c.get("db"),
       c.req.param("id"),
-      updateCancellationPolicySchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCancellationPolicySchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Cancellation policy not found")
   })
@@ -139,9 +136,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listCancellationPolicyRules(
         c.get("db"),
-        cancellationPolicyRuleListQuerySchema.parse(
-          Object.fromEntries(new URL(c.req.url).searchParams),
-        ),
+        await parseQuery(c, cancellationPolicyRuleListQuerySchema),
       ),
     ),
   )
@@ -150,7 +145,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createCancellationPolicyRule(
           c.get("db"),
-          insertCancellationPolicyRuleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertCancellationPolicyRuleSchema),
         ),
       },
       201,
@@ -164,7 +159,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updateCancellationPolicyRule(
       c.get("db"),
       c.req.param("id"),
-      updateCancellationPolicyRuleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateCancellationPolicyRuleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Cancellation policy rule not found")
   })
@@ -176,7 +171,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listPriceCatalogs(
         c.get("db"),
-        priceCatalogListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, priceCatalogListQuerySchema),
       ),
     ),
   )
@@ -185,7 +180,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createPriceCatalog(
           c.get("db"),
-          insertPriceCatalogSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPriceCatalogSchema),
         ),
       },
       201,
@@ -199,7 +194,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updatePriceCatalog(
       c.get("db"),
       c.req.param("id"),
-      updatePriceCatalogSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePriceCatalogSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Price catalog not found")
   })
@@ -211,7 +206,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     c.json(
       await pricingService.listPriceSchedules(
         c.get("db"),
-        priceScheduleListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams)),
+        await parseQuery(c, priceScheduleListQuerySchema),
       ),
     ),
   )
@@ -220,7 +215,7 @@ export const pricingCoreRoutes = new Hono<Env>()
       {
         data: await pricingService.createPriceSchedule(
           c.get("db"),
-          insertPriceScheduleSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPriceScheduleSchema),
         ),
       },
       201,
@@ -234,7 +229,7 @@ export const pricingCoreRoutes = new Hono<Env>()
     const row = await pricingService.updatePriceSchedule(
       c.get("db"),
       c.req.param("id"),
-      updatePriceScheduleSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePriceScheduleSchema),
     )
     return row ? c.json({ data: row }) : notFound(c, "Price schedule not found")
   })

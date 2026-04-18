@@ -15,6 +15,8 @@ import type { LinkDefinition, LinkService } from "./links.js"
 
 /** Filters applied to the underlying entity fetcher. */
 export type QueryFilters = Record<string, unknown>
+/** Per-request hints threaded through cross-module reads. */
+export type QueryContextValue = Record<string, unknown>
 
 export interface QueryPagination {
   skip?: number
@@ -26,6 +28,7 @@ export interface EntityFetcherArgs {
   filters?: QueryFilters
   ids?: string[]
   pagination?: QueryPagination
+  context?: QueryContextValue
 }
 
 /**
@@ -61,11 +64,25 @@ export interface QueryGraphConfig {
   fields: string[]
   filters?: QueryFilters
   pagination?: QueryPagination
+  /**
+   * Per-request runtime hints such as locale, market, actor, or pricing
+   * context. The query planner passes this through unchanged to every
+   * participating entity fetcher.
+   */
+  context?: QueryContextValue
 }
 
 export interface QueryGraphResult {
   data: EntityRecord[]
 }
+
+/**
+ * Callable query runtime exposed to routes and workflows.
+ *
+ * It wraps a fixed {@link QueryGraphContext} so callers only supply the
+ * per-request graph config.
+ */
+export type QueryRunner = (config: QueryGraphConfig) => Promise<QueryGraphResult>
 
 export interface QueryGraphContext {
   /** Entity name → fetcher. */
@@ -85,6 +102,13 @@ export function createQueryContext(
   linkService: LinkService,
 ): QueryGraphContext {
   return { fetchers: new Map(Object.entries(fetchers)), links, linkService }
+}
+
+/**
+ * Wrap a fixed {@link QueryGraphContext} in a callable runtime.
+ */
+export function createQueryRunner(ctx: QueryGraphContext): QueryRunner {
+  return (config) => queryGraph(ctx, config)
 }
 
 interface RelationPlan {
@@ -148,7 +172,7 @@ export async function queryGraph(
   config: QueryGraphConfig,
 ): Promise<QueryGraphResult> {
   const { fetchers, links, linkService } = ctx
-  const { entity, fields, filters, pagination } = config
+  const { entity, fields, filters, pagination, context } = config
 
   const baseFetcher = fetchers.get(entity)
   if (!baseFetcher) {
@@ -156,7 +180,7 @@ export async function queryGraph(
   }
 
   const plans = parseRelations(fields)
-  const baseRecords = await baseFetcher.list({ filters, pagination })
+  const baseRecords = await baseFetcher.list({ filters, pagination, context })
   if (baseRecords.length === 0) return { data: [] }
 
   for (const { relation } of plans) {
@@ -198,7 +222,7 @@ export async function queryGraph(
     // Hydrate all target records in one call.
     const allTargetIds = unique(Array.from(idMap.values()).flat())
     const targetRecords =
-      allTargetIds.length > 0 ? await targetFetcher.list({ ids: allTargetIds }) : []
+      allTargetIds.length > 0 ? await targetFetcher.list({ ids: allTargetIds, context }) : []
     const byTargetId = new Map(targetRecords.map((r) => [r.id, r]))
 
     // Attach to each base record.

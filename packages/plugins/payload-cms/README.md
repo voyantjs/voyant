@@ -1,6 +1,15 @@
 # @voyantjs/plugin-payload-cms
 
-Payload CMS sync plugin for Voyant. Subscribes to module events and mirrors documents into a Payload collection keyed by a `voyantId` field.
+Payload CMS sync adapter bundle for Voyant.
+
+Architecturally, this package is primarily:
+
+- a Payload sync adapter
+- a subscriber bundle that mirrors Voyant module records into Payload
+- an optional plugin bundle for distribution
+
+It subscribes to module events and mirrors documents into a Payload collection
+keyed by a `voyantId` field.
 
 ## Install
 
@@ -14,19 +23,23 @@ pnpm add @voyantjs/plugin-payload-cms
 import { payloadCmsPlugin } from "@voyantjs/plugin-payload-cms"
 import { createApp } from "@voyantjs/hono"
 
+const payloadCmsSync = payloadCmsPlugin({
+  apiUrl: "https://cms.example.com/api",
+  apiKey: env.PAYLOAD_API_KEY,
+  collection: "products",
+  // optional: events, mapEvent, logger, apiKeyAuthScheme
+})
+
 const app = createApp({
-  plugins: [
-    payloadCmsPlugin({
-      apiUrl: "https://cms.example.com/api",
-      apiKey: env.PAYLOAD_API_KEY,
-      collection: "products",
-      // optional: events, mapEvent, logger, apiKeyAuthScheme
-    }),
-  ],
+  plugins: [payloadCmsSync],
 })
 ```
 
-By default the plugin wires up 3 subscribers (`product.created`, `product.updated`, `product.deleted`) that upsert/delete documents keyed by `voyantId`. All error handling is fire-and-forget per the EventBus contract.
+The exported value is an optional distribution bundle. At runtime, the package
+behaves primarily as a subscriber-driven Payload sync adapter. By default it
+wires up 3 subscribers (`product.created`, `product.updated`, `product.deleted`)
+that upsert/delete documents keyed by `voyantId`. All error handling is
+fire-and-forget per the EventBus contract.
 
 ## Exports
 

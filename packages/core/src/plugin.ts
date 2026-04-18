@@ -1,10 +1,12 @@
 /**
- * Plugins — distributable bundles that group modules, extensions, event
- * subscribers, and link definitions into a single unit.
+ * Plugins — optional distributable bundles that group modules, extensions,
+ * event subscribers, and link definitions into a single unit.
  *
  * A plugin is the unit of "distribution" in Voyant: a customer, vendor, or
  * integrator ships a plugin package and it can be registered alongside core
- * modules without touching the framework itself.
+ * modules without touching the framework itself. It is not the default runtime
+ * customization unit — modules, providers, extensions, and workflows should be
+ * preferred when a smaller seam fits.
  *
  * Core plugins are transport-agnostic — they contain {@link Module} and
  * {@link Extension} values (no HTTP routes). Transport adapters (such as
@@ -12,9 +14,9 @@
  * contract to carry route bundles.
  */
 
-import type { EventBus, EventHandler } from "./events.js"
+import type { EventBus, EventHandler, EventMetadata } from "./events.js"
 import type { LinkDefinition } from "./links.js"
-import type { Extension, Module } from "./module.js"
+import type { BootstrapHandler, Extension, Module } from "./module.js"
 
 /**
  * A single event subscription contributed by a plugin.
@@ -22,11 +24,14 @@ import type { Extension, Module } from "./module.js"
  * When the plugin is registered, `handler` is attached to the provided
  * {@link EventBus} for the given `event` name.
  */
-export interface Subscriber<TData = unknown> {
+export interface Subscriber<
+  TData = unknown,
+  TMetadata extends EventMetadata | undefined = EventMetadata | undefined,
+> {
   /** Event name, following `<resource>.<pastTenseAction>` convention. */
   event: string
   /** Callback invoked when the event is emitted. */
-  handler: EventHandler<TData>
+  handler: EventHandler<TData, TMetadata>
 }
 
 /**
@@ -46,6 +51,11 @@ export interface Plugin {
   name: string
   /** Optional version tag for diagnostics. */
   version?: string
+  /**
+   * Optional lazy runtime bootstrap executed once per app/isolate, on the
+   * first request where bindings are available.
+   */
+  bootstrap?: BootstrapHandler
   /** Modules contributed by the plugin. */
   modules?: Module[]
   /** Extensions contributed by the plugin. */

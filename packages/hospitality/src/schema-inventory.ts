@@ -49,7 +49,7 @@ export const roomTypes = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_types_property").on(table.propertyId),
+    index("idx_room_types_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
     index("idx_room_types_active").on(table.active),
     index("idx_room_types_inventory_mode").on(table.inventoryMode),
     uniqueIndex("uidx_room_types_property_code").on(table.propertyId, table.code),
@@ -71,7 +71,11 @@ export const roomTypeBedConfigs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_type_bed_configs_room_type").on(table.roomTypeId),
+    index("idx_room_type_bed_configs_room_type_primary_created").on(
+      table.roomTypeId,
+      table.isPrimary,
+      table.createdAt,
+    ),
     index("idx_room_type_bed_configs_primary").on(table.isPrimary),
   ],
 )
@@ -100,7 +104,11 @@ export const roomUnits = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_room_units_property").on(table.propertyId),
+    index("idx_room_units_property_room_number_code").on(
+      table.propertyId,
+      table.roomNumber,
+      table.code,
+    ),
     index("idx_room_units_room_type").on(table.roomTypeId),
     index("idx_room_units_status").on(table.status),
     uniqueIndex("uidx_room_units_property_code").on(table.propertyId, table.code),
@@ -128,7 +136,7 @@ export const mealPlans = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_meal_plans_property").on(table.propertyId),
+    index("idx_meal_plans_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
     index("idx_meal_plans_active").on(table.active),
     uniqueIndex("uidx_meal_plans_property_code").on(table.propertyId, table.code),
   ],
@@ -160,7 +168,7 @@ export const ratePlans = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_rate_plans_property").on(table.propertyId),
+    index("idx_rate_plans_property_sort_name").on(table.propertyId, table.sortOrder, table.name),
     index("idx_rate_plans_meal_plan").on(table.mealPlanId),
     index("idx_rate_plans_catalog").on(table.priceCatalogId),
     index("idx_rate_plans_policy").on(table.cancellationPolicyId),
@@ -189,7 +197,11 @@ export const ratePlanRoomTypes = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_rate_plan_room_types_rate_plan").on(table.ratePlanId),
+    index("idx_rate_plan_room_types_rate_plan_sort_created").on(
+      table.ratePlanId,
+      table.sortOrder,
+      table.createdAt,
+    ),
     index("idx_rate_plan_room_types_room_type").on(table.roomTypeId),
     index("idx_rate_plan_room_types_product").on(table.productId),
     index("idx_rate_plan_room_types_option").on(table.optionId),

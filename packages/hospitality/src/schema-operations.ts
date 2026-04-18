@@ -45,7 +45,7 @@ export const stayOperations = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_stay_operations_stay_booking_item").on(table.stayBookingItemId),
-    index("idx_stay_operations_property").on(table.propertyId),
+    index("idx_stay_operations_property_created").on(table.propertyId, table.createdAt),
     index("idx_stay_operations_room_unit").on(table.roomUnitId),
     index("idx_stay_operations_status").on(table.operationStatus),
   ],
@@ -66,7 +66,7 @@ export const stayCheckpoints = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_stay_checkpoints_operation").on(table.stayOperationId),
+    index("idx_stay_checkpoints_operation_occurred_at").on(table.stayOperationId, table.occurredAt),
     index("idx_stay_checkpoints_type").on(table.checkpointType),
     index("idx_stay_checkpoints_occurred_at").on(table.occurredAt),
   ],
@@ -95,7 +95,10 @@ export const stayServicePosts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_stay_service_posts_operation").on(table.stayOperationId),
+    index("idx_stay_service_posts_operation_service_date").on(
+      table.stayOperationId,
+      table.serviceDate,
+    ),
     index("idx_stay_service_posts_booking_item").on(table.bookingItemId),
     index("idx_stay_service_posts_service_date").on(table.serviceDate),
     index("idx_stay_service_posts_kind").on(table.kind),
@@ -119,7 +122,7 @@ export const stayFolios = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_stay_folios_operation").on(table.stayOperationId),
+    index("idx_stay_folios_operation_opened_at").on(table.stayOperationId, table.openedAt),
     index("idx_stay_folios_status").on(table.status),
   ],
 )
@@ -147,7 +150,7 @@ export const stayFolioLines = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_stay_folio_lines_folio").on(table.stayFolioId),
+    index("idx_stay_folio_lines_folio_posted_at").on(table.stayFolioId, table.postedAt),
     index("idx_stay_folio_lines_service_post").on(table.servicePostId),
     index("idx_stay_folio_lines_posted_at").on(table.postedAt),
   ],

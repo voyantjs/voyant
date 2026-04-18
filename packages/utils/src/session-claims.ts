@@ -10,26 +10,13 @@
  * - 5-minute expiration ensures quick revocation
  * - HttpOnly, Secure, SameSite cookies
  *
- * Compatible with both Node.js (middleware) and Cloudflare Workers (API)
+ * Compatible with environments that expose the standard Web Crypto API,
+ * including Node.js, browsers, and Cloudflare Workers.
  */
-
-// Use Node crypto when available (Next.js middleware, Node.js environments)
-// Falls back to Web Crypto API for Cloudflare Workers
-let nodeCrypto: typeof import("node:crypto") | null = null
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  nodeCrypto = require("node:crypto")
-} catch {
-  // Not in Node.js environment
-}
 
 function getWebCrypto(): Crypto {
   if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.subtle) {
     return globalThis.crypto
-  }
-
-  if (nodeCrypto?.webcrypto) {
-    return nodeCrypto.webcrypto as Crypto
   }
 
   throw new Error("No crypto implementation available")
@@ -49,13 +36,6 @@ const CLAIMS_EXPIRY_SECONDS = 5 * 60 // 5 minutes
  * Uses first 16 chars of base64url-encoded SHA-256 hash
  */
 async function hashSessionId(sessionId: string): Promise<string> {
-  // Node.js crypto (preferred - synchronous)
-  if (nodeCrypto) {
-    const hash = nodeCrypto.createHash("sha256").update(sessionId).digest("base64url")
-    return hash.slice(0, 16)
-  }
-
-  // Web Crypto API (Cloudflare Workers)
   const webCrypto = getWebCrypto()
   const encoder = new TextEncoder()
   const data = encoder.encode(sessionId)
@@ -109,29 +89,22 @@ export async function signSessionClaims(
   // Create signature
   const message = `${headerB64}.${payloadB64}`
 
-  let signature: string
-  // Node.js crypto (preferred - synchronous)
-  if (nodeCrypto) {
-    signature = nodeCrypto.createHmac("sha256", secret).update(message).digest("base64url")
-  } else {
-    // Web Crypto API (Cloudflare Workers)
-    const webCrypto = getWebCrypto()
-    const encoder = new TextEncoder()
-    const keyData = encoder.encode(secret)
-    const key = await webCrypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    )
-    const sigBuffer = await webCrypto.subtle.sign("HMAC", key, encoder.encode(message))
-    const sigArray = Array.from(new Uint8Array(sigBuffer))
-    signature = btoa(String.fromCharCode(...sigArray))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=/g, "")
-  }
+  const webCrypto = getWebCrypto()
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(secret)
+  const key = await webCrypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  )
+  const sigBuffer = await webCrypto.subtle.sign("HMAC", key, encoder.encode(message))
+  const sigArray = Array.from(new Uint8Array(sigBuffer))
+  const signature = btoa(String.fromCharCode(...sigArray))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "")
 
   return `${headerB64}.${payloadB64}.${signature}`
 }
@@ -163,29 +136,22 @@ export async function verifySessionClaims(
     // Verify signature
     const message = `${headerB64}.${payloadB64}`
 
-    let expectedSig: string
-    // Node.js crypto (preferred - synchronous)
-    if (nodeCrypto) {
-      expectedSig = nodeCrypto.createHmac("sha256", secret).update(message).digest("base64url")
-    } else {
-      // Web Crypto API (Cloudflare Workers)
-      const webCrypto = getWebCrypto()
-      const encoder = new TextEncoder()
-      const keyData = encoder.encode(secret)
-      const key = await webCrypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      )
-      const sigBuffer = await webCrypto.subtle.sign("HMAC", key, encoder.encode(message))
-      const sigArray = Array.from(new Uint8Array(sigBuffer))
-      expectedSig = btoa(String.fromCharCode(...sigArray))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=/g, "")
-    }
+    const webCrypto = getWebCrypto()
+    const encoder = new TextEncoder()
+    const keyData = encoder.encode(secret)
+    const key = await webCrypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    )
+    const sigBuffer = await webCrypto.subtle.sign("HMAC", key, encoder.encode(message))
+    const sigArray = Array.from(new Uint8Array(sigBuffer))
+    const expectedSig = btoa(String.fromCharCode(...sigArray))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "")
 
     // Constant-time comparison
     if (!constantTimeEqual(signature, expectedSig)) {

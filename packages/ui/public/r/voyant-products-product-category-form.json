@@ -3,18 +3,8 @@
   "name": "voyant-products-product-category-form",
   "title": "Product Category Form",
   "description": "Create/edit form for product categories with parent selection and active state.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/products/product-category-form.tsx",

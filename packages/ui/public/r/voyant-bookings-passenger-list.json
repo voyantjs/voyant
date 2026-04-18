@@ -3,15 +3,8 @@
   "name": "voyant-bookings-passenger-list",
   "title": "Passenger List",
   "description": "Passenger section for a booking detail page, including create, edit, and delete actions.",
-  "dependencies": [
-    "@voyantjs/bookings-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "card",
-    "voyant-bookings-passenger-dialog"
-  ],
+  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+  "registryDependencies": ["button", "card", "voyant-bookings-passenger-dialog"],
   "files": [
     {
       "path": "registry/bookings/passenger-list.tsx",

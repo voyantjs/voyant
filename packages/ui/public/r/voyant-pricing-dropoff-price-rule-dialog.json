@@ -3,20 +3,8 @@
   "name": "voyant-pricing-dropoff-price-rule-dialog",
   "title": "Dropoff Price Rule Dialog",
   "description": "Create/edit dialog for dropoff-point pricing attached to option price rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/pricing/dropoff-price-rule-dialog.tsx",

@@ -3,16 +3,8 @@
   "name": "voyant-ground-vehicles-tab",
   "title": "Ground Vehicles Tab",
   "description": "Server-paginated CRUD table for ground vehicles.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/ground-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "data-table",
-    "voyant-ground-vehicle-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+  "registryDependencies": ["badge", "button", "data-table", "voyant-ground-vehicle-dialog"],
   "files": [
     {
       "path": "registry/ground/vehicles-tab.tsx",

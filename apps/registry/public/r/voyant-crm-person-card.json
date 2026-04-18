@@ -3,15 +3,8 @@
   "name": "voyant-crm-person-card",
   "title": "Person Card",
   "description": "Display card for a CRM person — shows name, job title, contact details, and relation badge.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/crm-react"
-  ],
-  "registryDependencies": [
-    "avatar",
-    "badge",
-    "card"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+  "registryDependencies": ["avatar", "badge", "card"],
   "files": [
     {
       "path": "registry/crm/person-card.tsx",

@@ -3,13 +3,8 @@
   "name": "voyant-products-option-unit-dialog",
   "title": "Option Unit Dialog",
   "description": "Modal wrapper around Option Unit Form with create/edit modes.",
-  "dependencies": [
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "voyant-products-option-unit-form"
-  ],
+  "dependencies": ["@voyantjs/products-react"],
+  "registryDependencies": ["dialog", "voyant-products-option-unit-form"],
   "files": [
     {
       "path": "registry/products/option-unit-dialog.tsx",

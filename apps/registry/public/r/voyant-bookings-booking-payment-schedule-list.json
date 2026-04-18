@@ -3,10 +3,7 @@
   "name": "voyant-bookings-booking-payment-schedule-list",
   "title": "Booking Payment Schedule List",
   "description": "Payment schedule section for booking detail page with inline CRUD.",
-  "dependencies": [
-    "@voyantjs/finance-react",
-    "lucide-react"
-  ],
+  "dependencies": ["@voyantjs/finance-react", "lucide-react"],
   "registryDependencies": [
     "badge",
     "button",

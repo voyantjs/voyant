@@ -3,16 +3,8 @@
   "name": "voyant-identity-addresses-tab",
   "title": "Identity Addresses Tab",
   "description": "Server-paginated CRUD table for entity addresses.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/identity-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "data-table",
-    "voyant-identity-address-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
+  "registryDependencies": ["badge", "button", "data-table", "voyant-identity-address-dialog"],
   "files": [
     {
       "path": "registry/identity/addresses-tab.tsx",

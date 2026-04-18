@@ -3,10 +3,7 @@
   "name": "voyant-identity-address-dialog",
   "title": "Identity Address Dialog",
   "description": "Modal form for creating and editing identity addresses.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/identity-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/identity-react"],
   "registryDependencies": [
     "button",
     "country-combobox",

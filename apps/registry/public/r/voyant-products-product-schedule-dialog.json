@@ -3,13 +3,8 @@
   "name": "voyant-products-product-schedule-dialog",
   "title": "Product Schedule Dialog",
   "description": "Modal wrapper around Product Schedule Form with create/edit modes.",
-  "dependencies": [
-    "@voyantjs/availability-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "voyant-products-product-schedule-form"
-  ],
+  "dependencies": ["@voyantjs/availability-react"],
+  "registryDependencies": ["dialog", "voyant-products-product-schedule-form"],
   "files": [
     {
       "path": "registry/products/product-schedule-dialog.tsx",

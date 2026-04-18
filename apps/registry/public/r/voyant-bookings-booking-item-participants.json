@@ -3,15 +3,8 @@
   "name": "voyant-bookings-booking-item-participants",
   "title": "Booking Item Participants",
   "description": "Inline participant assignment panel for booking items. Assign passengers to items with roles.",
-  "dependencies": [
-    "@voyantjs/bookings-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "select"
-  ],
+  "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
+  "registryDependencies": ["badge", "button", "select"],
   "files": [
     {
       "path": "registry/bookings/booking-item-participants.tsx",

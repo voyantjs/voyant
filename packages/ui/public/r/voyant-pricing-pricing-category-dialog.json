@@ -3,13 +3,8 @@
   "name": "voyant-pricing-pricing-category-dialog",
   "title": "Pricing Category Dialog",
   "description": "Modal wrapper around Pricing Category Form with create/edit modes.",
-  "dependencies": [
-    "@voyantjs/pricing-react"
-  ],
-  "registryDependencies": [
-    "dialog",
-    "voyant-pricing-pricing-category-form"
-  ],
+  "dependencies": ["@voyantjs/pricing-react"],
+  "registryDependencies": ["dialog", "voyant-pricing-pricing-category-form"],
   "files": [
     {
       "path": "registry/pricing/pricing-category-dialog.tsx",

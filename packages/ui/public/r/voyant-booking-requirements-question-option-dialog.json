@@ -3,16 +3,8 @@
   "name": "voyant-booking-requirements-question-option-dialog",
   "title": "Question Option Dialog",
   "description": "Create/edit dialog for choice options on select-style booking questions.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/booking-requirements-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/booking-requirements-react"],
+  "registryDependencies": ["button", "dialog", "input", "label"],
   "files": [
     {
       "path": "registry/booking-requirements/question-option-dialog.tsx",

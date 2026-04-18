@@ -3,14 +3,8 @@
   "name": "voyant-bookings-booking-payments-summary",
   "title": "Booking Payments Summary",
   "description": "Read-only payments summary card showing all payments linked to a booking.",
-  "dependencies": [
-    "@voyantjs/finance-react",
-    "lucide-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "card"
-  ],
+  "dependencies": ["@voyantjs/finance-react", "lucide-react"],
+  "registryDependencies": ["badge", "card"],
   "files": [
     {
       "path": "registry/bookings/booking-payments-summary.tsx",

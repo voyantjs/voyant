@@ -40,7 +40,9 @@ export function DashboardOutstandingInvoicesWidget({
           <Badge variant={outstandingInvoiceCount > 0 ? "secondary" : "outline"}>
             {outstandingInvoiceCount}
           </Badge>
-          <span>{outstandingInvoiceCount === 1 ? "invoice needs attention" : "invoices need attention"}</span>
+          <span>
+            {outstandingInvoiceCount === 1 ? "invoice needs attention" : "invoices need attention"}
+          </span>
         </div>
       </CardContent>
     </Card>

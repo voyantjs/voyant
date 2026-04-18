@@ -1,4 +1,4 @@
-import { defineAdminExtension, type AdminExtension } from "@voyantjs/voyant-admin"
+import { type AdminExtension, defineAdminExtension } from "@voyantjs/voyant-admin"
 
 import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/dashboard-outstanding-invoices-widget"
 

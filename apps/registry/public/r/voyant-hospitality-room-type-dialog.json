@@ -3,19 +3,8 @@
   "name": "voyant-hospitality-room-type-dialog",
   "title": "Room Type Dialog",
   "description": "Modal form for creating and editing hospitality room types.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/hospitality-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "select",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "select", "switch", "textarea"],
   "files": [
     {
       "path": "registry/hospitality/room-type-dialog.tsx",

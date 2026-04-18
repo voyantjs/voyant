@@ -3,17 +3,8 @@
   "name": "voyant-pricing-option-unit-tier-dialog",
   "title": "Option Unit Tier Dialog",
   "description": "Create/edit dialog for quantity tier breaks attached to an option unit price rule.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "switch"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "switch"],
   "files": [
     {
       "path": "registry/pricing/option-unit-tier-dialog.tsx",

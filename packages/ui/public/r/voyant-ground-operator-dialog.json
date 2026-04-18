@@ -3,18 +3,8 @@
   "name": "voyant-ground-operator-dialog",
   "title": "Ground Operator Dialog",
   "description": "Modal form for creating and editing ground operators.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/ground-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "input",
-    "label",
-    "switch",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+  "registryDependencies": ["button", "dialog", "input", "label", "switch", "textarea"],
   "files": [
     {
       "path": "registry/ground/operator-dialog.tsx",

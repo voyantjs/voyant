@@ -3,10 +3,7 @@
   "name": "voyant-pricing-cancellation-policies-page",
   "title": "Cancellation Fee Policies Page",
   "description": "Server-paginated cancellation fee policy manager with nested rule CRUD.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
   "registryDependencies": [
     "badge",
     "button",

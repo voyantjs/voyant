@@ -3,16 +3,8 @@
   "name": "voyant-products-product-version-dialog",
   "title": "Product Version Dialog",
   "description": "Create a product version snapshot with optional release notes.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "dialog",
-    "label",
-    "textarea"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
+  "registryDependencies": ["button", "dialog", "label", "textarea"],
   "files": [
     {
       "path": "registry/products/product-version-dialog.tsx",

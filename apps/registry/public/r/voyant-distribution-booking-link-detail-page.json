@@ -9,11 +9,7 @@
     "@tanstack/react-router",
     "@voyantjs/distribution-react"
   ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "card"
-  ],
+  "registryDependencies": ["badge", "button", "card"],
   "files": [
     {
       "path": "registry/distribution/booking-link-detail-page.tsx",

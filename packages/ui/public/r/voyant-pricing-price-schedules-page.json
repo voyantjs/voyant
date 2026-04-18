@@ -3,10 +3,7 @@
   "name": "voyant-pricing-price-schedules-page",
   "title": "Price Schedules Page",
   "description": "Server-paginated CRUD table for price schedules with catalog hydration and search.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react"],
   "registryDependencies": [
     "badge",
     "button",

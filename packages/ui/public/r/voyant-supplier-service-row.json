@@ -3,14 +3,8 @@
   "name": "voyant-supplier-service-row",
   "title": "Supplier Service Row",
   "description": "Expandable supplier service row with nested rates table and row actions.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/suppliers-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/suppliers-react"],
+  "registryDependencies": ["badge", "button"],
   "files": [
     {
       "path": "registry/suppliers/supplier-service-row.tsx",

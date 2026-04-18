@@ -1,10 +1,7 @@
 import { createContainer, createEventBus } from "@voyantjs/core"
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
-  createLegalHonoModule,
-} from "../../src/index.js"
+import { CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY, createLegalHonoModule } from "../../src/index.js"
 
 describe("createLegalHonoModule", () => {
   it("registers contracts route runtime during bootstrap", () => {

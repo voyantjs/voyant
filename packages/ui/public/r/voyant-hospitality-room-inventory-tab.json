@@ -3,10 +3,7 @@
   "name": "voyant-hospitality-room-inventory-tab",
   "title": "Room Inventory Tab",
   "description": "Filterable inventory table for daily hospitality room availability.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/hospitality-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/hospitality-react"],
   "registryDependencies": [
     "badge",
     "button",

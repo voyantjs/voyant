@@ -3,16 +3,8 @@
   "name": "voyant-ground-operators-tab",
   "title": "Ground Operators Tab",
   "description": "Server-paginated CRUD table for ground transport operators.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/ground-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "data-table",
-    "voyant-ground-operator-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/ground-react"],
+  "registryDependencies": ["badge", "button", "data-table", "voyant-ground-operator-dialog"],
   "files": [
     {
       "path": "registry/ground/operators-tab.tsx",

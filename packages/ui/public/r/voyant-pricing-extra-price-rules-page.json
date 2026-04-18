@@ -3,17 +3,8 @@
   "name": "voyant-pricing-extra-price-rules-page",
   "title": "Extra Price Rules Page",
   "description": "Server-paginated CRUD table for extra pricing rules attached to option price rules.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/pricing-react",
-    "@voyantjs/products-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "button",
-    "table",
-    "voyant-pricing-extra-price-rule-dialog"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/pricing-react", "@voyantjs/products-react"],
+  "registryDependencies": ["badge", "button", "table", "voyant-pricing-extra-price-rule-dialog"],
   "files": [
     {
       "path": "registry/pricing/extra-price-rules-page.tsx",

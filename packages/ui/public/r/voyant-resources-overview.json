@@ -3,16 +3,8 @@
   "name": "voyant-resources-overview",
   "title": "Resources Overview",
   "description": "Overview metrics and filters for resource operations, assignment gaps, and ownership gaps.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/resources-react"
-  ],
-  "registryDependencies": [
-    "button",
-    "card",
-    "input",
-    "select"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/resources-react"],
+  "registryDependencies": ["button", "card", "input", "select"],
   "files": [
     {
       "path": "registry/resources/resources-overview.tsx",

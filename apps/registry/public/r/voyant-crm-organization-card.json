@@ -3,14 +3,8 @@
   "name": "voyant-crm-organization-card",
   "title": "Organization Card",
   "description": "Display card for a CRM organization — shows name, industry, website, and relation badge.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/crm-react"
-  ],
-  "registryDependencies": [
-    "badge",
-    "card"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/crm-react"],
+  "registryDependencies": ["badge", "card"],
   "files": [
     {
       "path": "registry/crm/organization-card.tsx",

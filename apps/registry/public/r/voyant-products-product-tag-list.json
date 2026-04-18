@@ -3,10 +3,7 @@
   "name": "voyant-products-product-tag-list",
   "title": "Product Tag List",
   "description": "Searchable CRUD table for reusable product tags.",
-  "dependencies": [
-    "lucide-react",
-    "@voyantjs/products-react"
-  ],
+  "dependencies": ["lucide-react", "@voyantjs/products-react"],
   "registryDependencies": [
     "button",
     "dropdown-menu",

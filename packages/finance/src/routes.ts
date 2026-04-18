@@ -1,3 +1,4 @@
+import { parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import type { publicFinanceRoutes } from "./routes-public.js"
@@ -74,9 +75,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-sessions", async (c) => {
-    const query = paymentSessionListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, paymentSessionListQuerySchema)
     return c.json(await financeService.listPaymentSessions(c.get("db"), query))
   })
 
@@ -85,7 +84,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentSession(
           c.get("db"),
-          insertPaymentSessionSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentSessionSchema),
         ),
       },
       201,
@@ -102,7 +101,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -112,7 +111,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.markPaymentSessionRequiresRedirect(
       c.get("db"),
       c.req.param("id"),
-      markPaymentSessionRequiresRedirectSchema.parse(await c.req.json()),
+      await parseJsonBody(c, markPaymentSessionRequiresRedirectSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -122,7 +121,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.completePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      completePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, completePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -132,7 +131,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.failPaymentSession(
       c.get("db"),
       c.req.param("id"),
-      failPaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, failPaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -142,7 +141,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.cancelPaymentSession(
       c.get("db"),
       c.req.param("id"),
-      cancelPaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, cancelPaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -152,7 +151,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.expirePaymentSession(
       c.get("db"),
       c.req.param("id"),
-      expirePaymentSessionSchema.parse(await c.req.json()),
+      await parseJsonBody(c, expirePaymentSessionSchema),
     )
     if (!row) return c.json({ error: "Payment session not found" }, 404)
     return c.json({ data: row })
@@ -163,9 +162,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-instruments", async (c) => {
-    const query = paymentInstrumentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, paymentInstrumentListQuerySchema)
     return c.json(await financeService.listPaymentInstruments(c.get("db"), query))
   })
 
@@ -174,7 +171,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentInstrument(
           c.get("db"),
-          insertPaymentInstrumentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentInstrumentSchema),
         ),
       },
       201,
@@ -191,7 +188,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentInstrument(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentInstrumentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentInstrumentSchema),
     )
     if (!row) return c.json({ error: "Payment instrument not found" }, 404)
     return c.json({ data: row })
@@ -208,9 +205,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-authorizations", async (c) => {
-    const query = paymentAuthorizationListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, paymentAuthorizationListQuerySchema)
     return c.json(await financeService.listPaymentAuthorizations(c.get("db"), query))
   })
 
@@ -219,7 +214,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentAuthorization(
           c.get("db"),
-          insertPaymentAuthorizationSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentAuthorizationSchema),
         ),
       },
       201,
@@ -236,7 +231,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentAuthorization(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentAuthorizationSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentAuthorizationSchema),
     )
     if (!row) return c.json({ error: "Payment authorization not found" }, 404)
     return c.json({ data: row })
@@ -253,9 +248,7 @@ export const financeRoutes = new Hono<Env>()
   // ========================================================================
 
   .get("/payment-captures", async (c) => {
-    const query = paymentCaptureListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, paymentCaptureListQuerySchema)
     return c.json(await financeService.listPaymentCaptures(c.get("db"), query))
   })
 
@@ -264,7 +257,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createPaymentCapture(
           c.get("db"),
-          insertPaymentCaptureSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertPaymentCaptureSchema),
         ),
       },
       201,
@@ -281,7 +274,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updatePaymentCapture(
       c.get("db"),
       c.req.param("id"),
-      updatePaymentCaptureSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updatePaymentCaptureSchema),
     )
     if (!row) return c.json({ error: "Payment capture not found" }, 404)
     return c.json({ data: row })
@@ -299,23 +292,19 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /reports/revenue — Revenue by month
   .get("/reports/revenue", async (c) => {
-    const query = revenueReportQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, revenueReportQuerySchema)
     return c.json({ data: await financeService.getRevenueReport(c.get("db"), query) })
   })
 
   // GET /reports/aging — Outstanding invoices by age buckets
   .get("/reports/aging", async (c) => {
-    const query = agingReportQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, agingReportQuerySchema)
     return c.json({ data: await financeService.getAgingReport(c.get("db"), query) })
   })
 
   // GET /reports/profitability — Per-booking margin summary
   .get("/reports/profitability", async (c) => {
-    const query = profitabilityQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, profitabilityQuerySchema)
     return c.json({ data: await financeService.getProfitabilityReport(c.get("db"), query) })
   })
 

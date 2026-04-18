@@ -1,6 +1,7 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 
-import { createSanityClient, type SanityClientOptions } from "./client.js"
+import type { SanityClientOptions } from "./client.js"
+import { createSanitySyncRuntime } from "./runtime.js"
 import type { SanityDocBody, VoyantEntityEvent } from "./types.js"
 
 /**
@@ -50,11 +51,6 @@ export interface SanityCmsPluginOptions extends SanityClientOptions {
   logger?: SanityLogger
 }
 
-function defaultMapEvent(event: VoyantEntityEvent): SanityDocBody {
-  const { id: _id, ...rest } = event
-  return rest
-}
-
 function coerceEvent(data: unknown): VoyantEntityEvent | null {
   if (data == null || typeof data !== "object") return null
   const maybe = data as Record<string, unknown>
@@ -76,14 +72,7 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
  * EventBus contract, so a Sanity outage never blocks the emitter.
  */
 export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
-  const client = createSanityClient(options)
-  const mapEvent = options.mapEvent ?? defaultMapEvent
-  const logger = options.logger ?? console
-  const eventNames = {
-    created: options.events?.created ?? "product.created",
-    updated: options.events?.updated ?? "product.updated",
-    deleted: options.events?.deleted ?? "product.deleted",
-  }
+  const { client, mapEvent, logger, eventNames } = createSanitySyncRuntime(options)
 
   const subscribers: Subscriber[] = [
     {

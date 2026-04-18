@@ -30,6 +30,14 @@ Rule:
 If an idea is plausible but not yet necessary, track it here instead of turning
 it into an active architecture requirement.
 
+## Promoted Since Drafting
+
+The following item has moved into active architecture guidance:
+
+- advanced constraint and index policy
+  see [`data-model-schema-authoring.md`](./data-model-schema-authoring.md) and
+  [`index-and-constraint-policy.md`](./index-and-constraint-policy.md)
+
 ## Deferred Areas
 
 ### 1. Custom link metadata and richer relationship records
@@ -104,23 +112,7 @@ Why deferred:
 - in-process event delivery is still enough for the current baseline
 - priority only becomes meaningful once durable queued execution exists
 
-### 5. Advanced constraint and index policy
-
-Voyant should already use deliberate indexes and stable local constraints.
-
-Later work may go deeper on:
-
-- composite index guidance
-- partial indexes
-- more formal check-constraint policy
-- package-level query-shape to index-shape mapping guidance
-
-Why deferred:
-
-- the baseline schema-authoring guide is enough for now
-- the more advanced policy should follow real query and scaling patterns
-
-### 6. Asymmetric signing / JWKS-style auth distribution
+### 5. Asymmetric signing / JWKS-style auth distribution
 
 Voyant’s current shared-secret session model is sufficient for the present auth
 surface.

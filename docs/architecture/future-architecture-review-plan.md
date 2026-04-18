@@ -19,6 +19,12 @@ instead of turning all deferred ideas into simultaneous scope.
 
 ### 1. Advanced constraint and index policy
 
+Status:
+
+- promoted into active guidance
+- see [`data-model-schema-authoring.md`](./data-model-schema-authoring.md) and
+  [`index-and-constraint-policy.md`](./index-and-constraint-policy.md)
+
 Why first:
 
 - it is the lowest-risk deferred area

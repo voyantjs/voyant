@@ -19,7 +19,7 @@ type Env = {
 
 export const externalRefsRoutes = new Hono<Env>()
   .get("/refs", async (c) => {
-    const query = parseQuery(c, externalRefListQuerySchema)
+    const query = await parseQuery(c, externalRefListQuerySchema)
     return c.json(await externalRefsService.listExternalRefs(c.get("db"), query))
   })
   .post("/refs", async (c) => {
@@ -55,7 +55,7 @@ export const externalRefsRoutes = new Hono<Env>()
   .get("/entities/:entityType/:entityId/refs", async (c) => {
     const params = c.req.param()
     const query = externalRefListQuerySchema.parse({
-      ...parseQuery(c, externalRefListQuerySchema.partial()),
+      ...(await parseQuery(c, externalRefListQuerySchema.partial())),
       entityType: params.entityType,
       entityId: params.entityId,
     })

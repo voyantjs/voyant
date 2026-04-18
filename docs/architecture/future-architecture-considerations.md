@@ -11,6 +11,10 @@ The goal is simple:
 
 These are not rejected ideas. They are deferred ideas.
 
+For the disciplined review order and the "first real slice" to take when one of
+these items becomes justified, see
+[`future-architecture-review-plan.md`](./future-architecture-review-plan.md).
+
 ## Deferral Rules
 
 An item belongs here when:

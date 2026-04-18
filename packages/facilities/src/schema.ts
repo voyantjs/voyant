@@ -142,7 +142,11 @@ export const facilityFeatures = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_facility_features_facility").on(table.facilityId),
+    index("idx_facility_features_facility_sort_name").on(
+      table.facilityId,
+      table.sortOrder,
+      table.name,
+    ),
     index("idx_facility_features_category").on(table.category),
   ],
 )
@@ -165,7 +169,11 @@ export const facilityOperationSchedules = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_facility_operation_schedules_facility").on(table.facilityId),
+    index("idx_facility_operation_schedules_facility_day_valid").on(
+      table.facilityId,
+      table.dayOfWeek,
+      table.validFrom,
+    ),
     index("idx_facility_operation_schedules_day").on(table.dayOfWeek),
   ],
 )
@@ -216,7 +224,7 @@ export const propertyGroups = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_property_groups_parent").on(table.parentGroupId),
+    index("idx_property_groups_parent_updated").on(table.parentGroupId, table.updatedAt),
     index("idx_property_groups_type").on(table.groupType),
     index("idx_property_groups_status").on(table.status),
     uniqueIndex("uidx_property_groups_code").on(table.code),
@@ -242,7 +250,7 @@ export const propertyGroupMembers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_property_group_members_group").on(table.groupId),
+    index("idx_property_group_members_group_updated").on(table.groupId, table.updatedAt),
     index("idx_property_group_members_property").on(table.propertyId),
     index("idx_property_group_members_role").on(table.membershipRole),
     uniqueIndex("uidx_property_group_members_pair").on(table.groupId, table.propertyId),

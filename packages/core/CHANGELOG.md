@@ -1,5 +1,11 @@
 # @voyantjs/core
 
+## 0.6.3
+
+### Patch Changes
+
+- d3c6937: Add a narrow execution lock surface and use it to serialize worker-driven notification reminder sweeps across processes.
+
 ## 0.6.2
 
 ## 0.6.1

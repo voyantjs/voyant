@@ -1,5 +1,12 @@
 # @voyantjs/cli
 
+## 0.6.3
+
+### Patch Changes
+
+- Updated dependencies [d3c6937]
+  - @voyantjs/core@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes

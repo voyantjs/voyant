@@ -567,9 +567,7 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /supplier-payments — List supplier payments
   .get("/supplier-payments", async (c) => {
-    const query = supplierPaymentListQuerySchema.parse(
-      Object.fromEntries(new URL(c.req.url).searchParams),
-    )
+    const query = await parseQuery(c, supplierPaymentListQuerySchema)
     return c.json(await financeService.listSupplierPayments(c.get("db"), query))
   })
 
@@ -579,7 +577,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createSupplierPayment(
           c.get("db"),
-          insertSupplierPaymentSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertSupplierPaymentSchema),
         ),
       },
       201,
@@ -591,7 +589,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateSupplierPayment(
       c.get("db"),
       c.req.param("id"),
-      updateSupplierPaymentSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierPaymentSchema),
     )
 
     if (!row) {
@@ -607,7 +605,7 @@ export const financeRoutes = new Hono<Env>()
 
   // GET /invoices — List invoices
   .get("/invoices", async (c) => {
-    const query = invoiceListQuerySchema.parse(Object.fromEntries(new URL(c.req.url).searchParams))
+    const query = await parseQuery(c, invoiceListQuerySchema)
     return c.json(await financeService.listInvoices(c.get("db"), query))
   })
 
@@ -617,7 +615,7 @@ export const financeRoutes = new Hono<Env>()
       {
         data: await financeService.createInvoice(
           c.get("db"),
-          insertInvoiceSchema.parse(await c.req.json()),
+          await parseJsonBody(c, insertInvoiceSchema),
         ),
       },
       201,
@@ -626,7 +624,7 @@ export const financeRoutes = new Hono<Env>()
 
   // POST /invoices/from-booking — Create draft invoice from booking + booking items
   .post("/invoices/from-booking", async (c) => {
-    const input = invoiceFromBookingSchema.parse(await c.req.json())
+    const input = await parseJsonBody(c, invoiceFromBookingSchema)
     const db = c.get("db")
     const [{ bookingItems, bookings }, { eq }] = await Promise.all([
       import("@voyantjs/bookings/schema"),
@@ -685,7 +683,7 @@ export const financeRoutes = new Hono<Env>()
     const row = await financeService.updateInvoice(
       c.get("db"),
       c.req.param("id"),
-      updateInvoiceSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateInvoiceSchema),
     )
 
     if (!row) {
@@ -715,7 +713,7 @@ export const financeRoutes = new Hono<Env>()
       const row = await financeService.createPaymentSessionFromInvoice(
         c.get("db"),
         c.req.param("id"),
-        createPaymentSessionFromInvoiceSchema.parse(await c.req.json()),
+        await parseJsonBody(c, createPaymentSessionFromInvoiceSchema),
       )
 
       if (!row) {

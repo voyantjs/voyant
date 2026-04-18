@@ -386,11 +386,7 @@ export const supplierRoutes = new Hono<Env>()
       z.union([z.array(insertAvailabilitySchema), insertAvailabilitySchema]),
     )
     const entries = Array.isArray(body) ? body : [body]
-    const row = await suppliersService.createAvailability(
-      c.get("db"),
-      c.req.param("id"),
-      entries,
-    )
+    const row = await suppliersService.createAvailability(c.get("db"), c.req.param("id"), entries)
 
     if (!row) {
       return c.json({ error: "Supplier not found" }, 404)

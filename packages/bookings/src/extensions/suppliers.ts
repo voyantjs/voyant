@@ -1,4 +1,5 @@
 import type { Extension } from "@voyantjs/core"
+import { parseJsonBody } from "@voyantjs/hono"
 import type { HonoExtension } from "@voyantjs/hono/module"
 import { asc, eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -125,7 +126,7 @@ const supplierStatusRoutes = new Hono<Env>()
     const row = await supplierStatusService.createSupplierStatus(
       c.get("db"),
       c.req.param("id"),
-      insertSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, insertSupplierStatusSchema),
       c.get("userId"),
     )
 
@@ -141,7 +142,7 @@ const supplierStatusRoutes = new Hono<Env>()
       c.get("db"),
       c.req.param("id"),
       c.req.param("statusId"),
-      updateSupplierStatusSchema.parse(await c.req.json()),
+      await parseJsonBody(c, updateSupplierStatusSchema),
       c.get("userId"),
     )
 

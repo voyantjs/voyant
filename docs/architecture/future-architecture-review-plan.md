@@ -152,6 +152,12 @@ Do not do first:
 
 ### 5. Custom link metadata and richer relationship records
 
+Status:
+
+- promoted into active guidance
+- see
+  [`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md)
+
 Why fifth:
 
 - the current link model already covers the baseline use cases

@@ -45,29 +45,13 @@ The following items have moved into active architecture guidance:
 - token signing and key distribution policy
   see
   [`token-signing-and-key-distribution-policy.md`](./token-signing-and-key-distribution-policy.md)
+- link metadata and relationship policy
+  see
+  [`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md)
 
 ## Deferred Areas
 
-### 1. Custom link metadata and richer relationship records
-
-Voyant links are already useful for cross-module associations.
-
-A future enhancement may allow the relationship itself to carry additional
-metadata, such as:
-
-- role/label information
-- edge-specific timestamps
-- relationship-scoped configuration
-
-This is useful, but not necessary to validate the current cross-module link and
-query model.
-
-Why deferred:
-
-- the current link model already covers the core cross-module use cases
-- richer link records increase API and query complexity
-
-### 2. Cross-module indexing and projection infrastructure
+### 1. Cross-module indexing and projection infrastructure
 
 Application-layer link/query traversal is the right current default.
 

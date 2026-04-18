@@ -83,6 +83,10 @@ Rule:
 Cross-module relationships should be explicit at the framework/runtime level,
 not hidden as direct schema coupling.
 
+For the current pair-first link baseline and the threshold for richer
+relationship records, see
+[`link-metadata-and-relationship-policy.md`](./link-metadata-and-relationship-policy.md).
+
 ### 4. Keep schema definitions and relations separate
 
 Prefer splitting schema authoring into:

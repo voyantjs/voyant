@@ -1,5 +1,18 @@
 # @voyantjs/distribution
 
+## 0.6.7
+
+### Patch Changes
+
+- 7f10cfa: Align distribution channel root indexes with the main list query and add a distribution-owned contact projection so channel reads no longer hydrate directly from identity contact tables.
+  - @voyantjs/availability@0.6.7
+  - @voyantjs/core@0.6.7
+  - @voyantjs/db@0.6.7
+  - @voyantjs/hono@0.6.7
+  - @voyantjs/identity@0.6.7
+  - @voyantjs/products@0.6.7
+  - @voyantjs/suppliers@0.6.7
+
 ## 0.6.6
 
 ### Patch Changes

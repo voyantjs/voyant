@@ -21,4 +21,17 @@ describe("buildNotificationTaskRuntime", () => {
     expect(runtime.providers).toHaveLength(1)
     expect(runtime.providers[0]?.name).toBe("email-provider")
   })
+
+  it("preserves the reminder sweep lock manager", () => {
+    const reminderSweepLockManager = {
+      runExclusive: vi.fn(),
+    }
+
+    const runtime = buildNotificationTaskRuntime(
+      { RESEND_API_KEY: "resend_test", EMAIL_FROM: "hello@example.com" },
+      { providers: [], reminderSweepLockManager },
+    )
+
+    expect(runtime.reminderSweepLockManager).toBe(reminderSweepLockManager)
+  })
 })

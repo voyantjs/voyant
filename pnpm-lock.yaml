@@ -136,6 +136,9 @@ importers:
       '@voyantjs/checkout':
         specifier: workspace:*
         version: link:../../packages/checkout
+      '@voyantjs/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@voyantjs/crm':
         specifier: workspace:*
         version: link:../../packages/crm

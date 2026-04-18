@@ -1,3 +1,5 @@
+import type { ExecutionLockManager } from "@voyantjs/core"
+
 import { createDefaultNotificationProviders } from "./provider-resolution.js"
 import type { NotificationProvider } from "./types.js"
 
@@ -8,10 +10,12 @@ export type NotificationTaskEnv = {
 
 export type NotificationTaskRuntime = {
   providers: ReadonlyArray<NotificationProvider>
+  reminderSweepLockManager?: ExecutionLockManager
 }
 
 export type NotificationTaskRuntimeOptions = {
   providers?: ReadonlyArray<NotificationProvider>
+  reminderSweepLockManager?: ExecutionLockManager
   resolveProviders?: (env: NotificationTaskEnv) => ReadonlyArray<NotificationProvider>
 }
 
@@ -24,5 +28,6 @@ export function buildNotificationTaskRuntime(
       options.resolveProviders?.(env) ??
       options.providers ??
       createDefaultNotificationProviders(env),
+    reminderSweepLockManager: options.reminderSweepLockManager,
   }
 }

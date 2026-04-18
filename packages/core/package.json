@@ -8,6 +8,7 @@
     "./env": "./src/env.ts",
     "./module": "./src/module.ts",
     "./hooks": "./src/hooks.ts",
+    "./locking": "./src/locking.ts",
     "./registry": "./src/registry.ts",
     "./container": "./src/container.ts",
     "./events": "./src/events.ts",
@@ -52,6 +53,10 @@
       "./hooks": {
         "types": "./dist/hooks.d.ts",
         "import": "./dist/hooks.js"
+      },
+      "./locking": {
+        "types": "./dist/locking.d.ts",
+        "import": "./dist/locking.js"
       },
       "./registry": {
         "types": "./dist/registry.d.ts",

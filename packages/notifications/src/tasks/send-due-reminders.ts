@@ -14,5 +14,25 @@ export async function sendDueNotificationReminders(
 ) {
   const runtime = buildNotificationTaskRuntime(env, options)
   const dispatcher = createNotificationService(runtime.providers)
-  return notificationsService.runDueReminders(db, dispatcher, input)
+  const runSweep = () => notificationsService.runDueReminders(db, dispatcher, input)
+
+  if (!runtime.reminderSweepLockManager) {
+    return runSweep()
+  }
+
+  const result = await runtime.reminderSweepLockManager.runExclusive(
+    "notifications:due-reminders",
+    runSweep,
+  )
+
+  if (result.executed) {
+    return result.value
+  }
+
+  return {
+    processed: 0,
+    sent: 0,
+    skipped: 0,
+    failed: 0,
+  }
 }

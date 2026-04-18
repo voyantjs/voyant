@@ -1,5 +1,5 @@
+import type { ModuleContainer } from "@voyantjs/core"
 import { ForbiddenApiError, handleApiError, parseJsonBody, requireUserId } from "@voyantjs/hono"
-import { createKmsProviderFromEnv } from "@voyantjs/utils"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { type Context, Hono } from "hono"
 
@@ -20,27 +20,9 @@ import {
 type Env = {
   Bindings: Record<string, unknown>
   Variables: {
-    container: import("@voyantjs/core").ModuleContainer
+    container?: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
-  }
-}
-
-function getRuntimeEnv(c: Context<Env>) {
-  const processEnv =
-    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
-
-  return {
-    ...processEnv,
-    ...(c.env ?? {}),
-  } as Record<string, string | undefined>
-}
-
-function resolveOptionalKms(c: Context<Env>) {
-  try {
-    return createKmsProviderFromEnv(getRuntimeEnv(c))
-  } catch {
-    return null
   }
 }
 
@@ -74,6 +56,8 @@ export function createPublicCustomerPortalRoutes(options: PublicCustomerPortalRo
     c.var.container?.resolve<PublicCustomerPortalRouteRuntime>(
       CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
     ) ?? buildPublicCustomerPortalRouteRuntime(c.env, options)
+
+  const resolveOptionalKms = (c: Context<Env>) => getRuntime(c).getOptionalKmsProvider()
 
   const resolveDocumentDownloadUrl = (c: Context<Env>, storageKey: string) =>
     getRuntime(c).resolveDocumentDownloadUrl?.(storageKey) ?? null

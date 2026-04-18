@@ -183,11 +183,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order participant not found")
   })
   .get("/order-items", async (c) => {
-<<<<<<< HEAD
     const query = await parseQuery(c, orderItemListQuerySchema)
-=======
-    const query = parseQuery(c, orderItemListQuerySchema)
->>>>>>> cleanup/pricing-core-route-helpers
     return c.json(await transactionsService.listOrderItems(c.get("db"), query))
   })
   .post("/order-items", async (c) =>
@@ -218,11 +214,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order item not found")
   })
   .get("/order-item-participants", async (c) => {
-<<<<<<< HEAD
     const query = await parseQuery(c, orderItemParticipantListQuerySchema)
-=======
-    const query = parseQuery(c, orderItemParticipantListQuerySchema)
->>>>>>> cleanup/pricing-core-route-helpers
     return c.json(await transactionsService.listOrderItemParticipants(c.get("db"), query))
   })
   .post("/order-item-participants", async (c) =>
@@ -256,11 +248,7 @@ export const transactionOrderRoutes = new Hono<Env>()
     return row ? c.json({ success: true }) : notFound(c, "Order item participant not found")
   })
   .get("/order-terms", async (c) => {
-<<<<<<< HEAD
     const query = await parseQuery(c, orderTermListQuerySchema)
-=======
-    const query = parseQuery(c, orderTermListQuerySchema)
->>>>>>> cleanup/pricing-core-route-helpers
     return c.json(await transactionsService.listOrderTerms(c.get("db"), query))
   })
   .post("/order-terms", async (c) =>

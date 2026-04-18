@@ -1,58 +1,29 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 import { ZodError } from "zod"
 
-import { createPayloadClient, type PayloadClientOptions } from "./client.js"
+import type { PayloadClientOptions } from "./client.js"
+import { createPayloadSyncRuntime } from "./runtime.js"
 import type { PayloadDocBody, VoyantEntityEvent } from "./types.js"
 import { payloadCmsPluginOptionsSchema } from "./validation.js"
 
-/**
- * Event names the plugin subscribes to. Defaults match the `<resource>.<pastTenseAction>`
- * naming convention documented by the EventBus contract.
- */
 export interface PayloadSyncEventNames {
   created?: string
   updated?: string
   deleted?: string
 }
 
-/**
- * Mapper from a Voyant event payload (assumed to carry at least `id: string`)
- * to a Payload document body. The `voyantId` field is injected automatically
- * by the client — do not set it here.
- */
 export type PayloadMapFn = (event: VoyantEntityEvent) => PayloadDocBody
 
-/**
- * Logger shape used to surface plugin errors without coupling to any specific
- * runtime. Defaults to `console`.
- */
 export interface PayloadLogger {
   error: (message: string, meta?: unknown) => void
   info?: (message: string, meta?: unknown) => void
 }
 
 export interface PayloadCmsPluginOptions extends PayloadClientOptions {
-  /**
-   * Payload collection slug to sync Voyant records into (e.g. "products").
-   */
   collection: string
-  /**
-   * Event names this plugin subscribes to. Defaults to
-   * `product.created` / `product.updated` / `product.deleted`.
-   */
   events?: PayloadSyncEventNames
-  /**
-   * Map a Voyant event payload into a Payload document body. Defaults to
-   * passing through every property except `id` (which becomes `voyantId`).
-   */
   mapEvent?: PayloadMapFn
-  /** Override logger. Defaults to `console`. */
   logger?: PayloadLogger
-}
-
-function defaultMapEvent(event: VoyantEntityEvent): PayloadDocBody {
-  const { id: _id, ...rest } = event
-  return rest
 }
 
 function coerceEvent(data: unknown): VoyantEntityEvent | null {
@@ -62,29 +33,9 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
   return maybe as VoyantEntityEvent
 }
 
-/**
- * Build a Voyant {@link Plugin} that pushes event payloads to a Payload
- * collection as documents, keyed by `voyantId` for idempotent upserts.
- *
- * The plugin subscribes to three events (configurable via
- * {@link PayloadCmsPluginOptions.events}):
- * - `product.created` → upsert document
- * - `product.updated` → upsert document
- * - `product.deleted` → delete document by `voyantId`
- *
- * Errors are caught and logged — subscribers are fire-and-forget per the
- * EventBus contract, so a Payload outage never blocks the emitter.
- */
 export function payloadCmsPlugin(options: PayloadCmsPluginOptions): Plugin {
   const validatedOptions = parsePayloadCmsPluginOptions(options)
-  const client = createPayloadClient(validatedOptions)
-  const mapEvent = validatedOptions.mapEvent ?? defaultMapEvent
-  const logger = validatedOptions.logger ?? console
-  const eventNames = {
-    created: validatedOptions.events?.created ?? "product.created",
-    updated: validatedOptions.events?.updated ?? "product.updated",
-    deleted: validatedOptions.events?.deleted ?? "product.deleted",
-  }
+  const { client, mapEvent, logger, eventNames } = createPayloadSyncRuntime(validatedOptions)
 
   const subscribers: Subscriber[] = [
     {

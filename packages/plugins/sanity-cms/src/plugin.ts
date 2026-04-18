@@ -1,60 +1,29 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 import { ZodError } from "zod"
 
-import { createSanityClient, type SanityClientOptions } from "./client.js"
+import type { SanityClientOptions } from "./client.js"
+import { createSanitySyncRuntime } from "./runtime.js"
 import type { SanityDocBody, VoyantEntityEvent } from "./types.js"
 import { sanityCmsPluginOptionsSchema } from "./validation.js"
 
-/**
- * Event names the plugin subscribes to. Defaults match the
- * `<resource>.<pastTenseAction>` naming convention documented by the
- * EventBus contract.
- */
 export interface SanitySyncEventNames {
   created?: string
   updated?: string
   deleted?: string
 }
 
-/**
- * Mapper from a Voyant event payload (assumed to carry at least `id: string`)
- * to a Sanity document body. The `voyantId` field + `_type` are injected
- * automatically by the client — do not set either here.
- */
 export type SanityMapFn = (event: VoyantEntityEvent) => SanityDocBody
 
-/**
- * Logger shape used to surface plugin errors without coupling to any specific
- * runtime. Defaults to `console`.
- */
 export interface SanityLogger {
   error: (message: string, meta?: unknown) => void
   info?: (message: string, meta?: unknown) => void
 }
 
 export interface SanityCmsPluginOptions extends SanityClientOptions {
-  /**
-   * Sanity document type to sync Voyant records into (e.g. `"product"`).
-   * Equivalent to a Payload collection / content model.
-   */
   documentType: string
-  /**
-   * Event names this plugin subscribes to. Defaults to
-   * `product.created` / `product.updated` / `product.deleted`.
-   */
   events?: SanitySyncEventNames
-  /**
-   * Map a Voyant event payload into a Sanity document body. Defaults to
-   * passing through every property except `id` (which becomes `voyantId`).
-   */
   mapEvent?: SanityMapFn
-  /** Override logger. Defaults to `console`. */
   logger?: SanityLogger
-}
-
-function defaultMapEvent(event: VoyantEntityEvent): SanityDocBody {
-  const { id: _id, ...rest } = event
-  return rest
 }
 
 function coerceEvent(data: unknown): VoyantEntityEvent | null {
@@ -64,29 +33,9 @@ function coerceEvent(data: unknown): VoyantEntityEvent | null {
   return maybe as VoyantEntityEvent
 }
 
-/**
- * Build a Voyant {@link Plugin} that pushes event payloads to a Sanity
- * document type, keyed by `voyantId` for idempotent upserts.
- *
- * The plugin subscribes to three events (configurable via
- * {@link SanityCmsPluginOptions.events}):
- * - `product.created` → upsert document
- * - `product.updated` → upsert document
- * - `product.deleted` → delete document by `voyantId`
- *
- * Errors are caught and logged — subscribers are fire-and-forget per the
- * EventBus contract, so a Sanity outage never blocks the emitter.
- */
 export function sanityCmsPlugin(options: SanityCmsPluginOptions): Plugin {
   const validatedOptions = parseSanityCmsPluginOptions(options)
-  const client = createSanityClient(validatedOptions)
-  const mapEvent = validatedOptions.mapEvent ?? defaultMapEvent
-  const logger = validatedOptions.logger ?? console
-  const eventNames = {
-    created: validatedOptions.events?.created ?? "product.created",
-    updated: validatedOptions.events?.updated ?? "product.updated",
-    deleted: validatedOptions.events?.deleted ?? "product.deleted",
-  }
+  const { client, mapEvent, logger, eventNames } = createSanitySyncRuntime(validatedOptions)
 
   const subscribers: Subscriber[] = [
     {

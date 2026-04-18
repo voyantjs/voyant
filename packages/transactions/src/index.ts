@@ -8,6 +8,10 @@ export {
   type UpsertTransactionParticipantIdentityInput,
 } from "./pii.js"
 
+import {
+  buildTransactionsRouteRuntime,
+  TRANSACTIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./route-runtime.js"
 import { transactionsRoutes } from "./routes.js"
 import { transactionsService } from "./service.js"
 
@@ -37,12 +41,31 @@ export const transactionsModule: Module = {
   linkable: transactionsLinkable,
 }
 
-export const transactionsHonoModule: HonoModule = {
-  module: transactionsModule,
-  routes: transactionsRoutes,
+export function createTransactionsHonoModule(): HonoModule {
+  const module: Module = {
+    ...transactionsModule,
+    bootstrap: ({ bindings, container }) => {
+      container.register(
+        TRANSACTIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+        buildTransactionsRouteRuntime(bindings as Record<string, unknown>),
+      )
+    },
+  }
+
+  return {
+    module,
+    routes: transactionsRoutes,
+  }
 }
 
+export const transactionsHonoModule: HonoModule = createTransactionsHonoModule()
+
 export { transactionsBookingExtension } from "./booking-extension.js"
+export type { TransactionsRouteRuntime } from "./route-runtime.js"
+export {
+  buildTransactionsRouteRuntime,
+  TRANSACTIONS_ROUTE_RUNTIME_CONTAINER_KEY,
+} from "./route-runtime.js"
 export type {
   DecryptedTransactionParticipantIdentity,
   TransactionParticipantIdentity,

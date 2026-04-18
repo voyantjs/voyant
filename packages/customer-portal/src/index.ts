@@ -79,7 +79,7 @@ export function createCustomerPortalHonoModule(
     bootstrap: ({ bindings, container }) => {
       container.register(
         CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
-        buildPublicCustomerPortalRouteRuntime(bindings, options),
+        buildPublicCustomerPortalRouteRuntime(bindings as Record<string, unknown>, options),
       )
     },
   }
@@ -93,9 +93,13 @@ export function createCustomerPortalHonoModule(
 
 export const customerPortalHonoModule: HonoModule = createCustomerPortalHonoModule()
 
+export type {
+  CustomerPortalRouteRuntime,
+  PublicCustomerPortalRouteRuntime,
+  PublicCustomerPortalRuntimeOptions,
+} from "./route-runtime.js"
 export {
+  buildCustomerPortalRouteRuntime,
   buildPublicCustomerPortalRouteRuntime,
   CUSTOMER_PORTAL_ROUTE_RUNTIME_CONTAINER_KEY,
-  type PublicCustomerPortalRouteRuntime,
-  type PublicCustomerPortalRuntimeOptions,
 } from "./route-runtime.js"

@@ -1,5 +1,5 @@
-import { Hono } from "hono"
 import { parseJsonBody, parseQuery } from "@voyantjs/hono"
+import { Hono } from "hono"
 
 import { type Env, notFound } from "./routes-shared.js"
 import { publicBookingsService } from "./service-public.js"

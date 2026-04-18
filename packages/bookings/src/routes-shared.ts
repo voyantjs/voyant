@@ -1,3 +1,4 @@
+import type { ModuleContainer } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Context } from "hono"
 
@@ -24,6 +25,7 @@ export type KmsBindings = Partial<{
 export type Env = {
   Bindings: KmsBindings
   Variables: {
+    container?: ModuleContainer
     db: PostgresJsDatabase
     userId?: string
     actor?: "staff" | "customer" | "partner" | "supplier"

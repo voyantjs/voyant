@@ -5,6 +5,11 @@ export {
   type NetopiaClientOptions,
   resolveNetopiaRuntimeOptions,
 } from "./client.js"
+export type {
+  NetopiaNotificationRuntime,
+  NetopiaNotificationRuntimeOptions,
+} from "./notification-runtime.js"
+export { buildNetopiaNotificationRuntime } from "./notification-runtime.js"
 export {
   createNetopiaFinanceExtension,
   createNetopiaFinanceExtension as createNetopiaFinanceAdapter,
@@ -14,11 +19,6 @@ export {
   netopiaHonoPlugin as createNetopiaAdapterBundle,
   netopiaHonoPlugin,
 } from "./plugin.js"
-export type {
-  NetopiaNotificationRuntime,
-  NetopiaNotificationRuntimeOptions,
-} from "./notification-runtime.js"
-export { buildNetopiaNotificationRuntime } from "./notification-runtime.js"
 export {
   deriveNetopiaOrderId,
   mapNetopiaPaymentStatus,

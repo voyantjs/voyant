@@ -1,5 +1,5 @@
 import { financeService, type PaymentSession } from "@voyantjs/finance"
-import { type NotificationDelivery, type NotificationService } from "@voyantjs/notifications"
+import type { NotificationDelivery, NotificationService } from "@voyantjs/notifications"
 import type { z } from "zod"
 
 import { buildNetopiaNotificationRuntime } from "./notification-runtime.js"

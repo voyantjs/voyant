@@ -1,50 +1,30 @@
 import type { Plugin, Subscriber } from "@voyantjs/core"
 import { ZodError } from "zod"
 
-import { createSmartbillClient, type SmartbillClientOptions } from "./client.js"
-import { mapVoyantInvoiceToSmartbill, type SmartbillMappingOptions } from "./mapping.js"
+import type { SmartbillClientOptions } from "./client.js"
+import type { mapVoyantInvoiceToSmartbill, SmartbillMappingOptions } from "./mapping.js"
+import { createSmartbillSyncRuntime } from "./runtime.js"
 import type { VoyantInvoiceEvent } from "./types.js"
 import { smartbillPluginOptionsSchema } from "./validation.js"
 
-/**
- * Event names the plugin subscribes to. Defaults match the
- * `invoice.<action>` naming convention from the EventBus.
- */
 export interface SmartbillSyncEventNames {
   issued?: string
   voided?: string
   syncRequested?: string
 }
 
-/**
- * Logger shape used to surface plugin errors without coupling to any specific
- * runtime. Defaults to `console`.
- */
 export interface SmartbillLogger {
   error: (message: string, meta?: unknown) => void
   info?: (message: string, meta?: unknown) => void
 }
 
-/**
- * Custom mapper from a Voyant invoice event to a SmartBill invoice body.
- * When provided, replaces the default {@link mapVoyantInvoiceToSmartbill}.
- */
 export type SmartbillMapFn = (
   event: VoyantInvoiceEvent,
 ) => ReturnType<typeof mapVoyantInvoiceToSmartbill>
 
 export interface SmartbillPluginOptions extends SmartbillClientOptions, SmartbillMappingOptions {
-  /**
-   * Event names this plugin subscribes to.
-   * Defaults to `invoice.issued` / `invoice.voided` / `invoice.external.sync.requested`.
-   */
   events?: SmartbillSyncEventNames
-  /**
-   * Map a Voyant invoice event into a SmartBill invoice body.
-   * Defaults to the built-in {@link mapVoyantInvoiceToSmartbill}.
-   */
   mapEvent?: SmartbillMapFn
-  /** Override logger. Defaults to `console`. */
   logger?: SmartbillLogger
 }
 
@@ -55,38 +35,9 @@ function coerceEvent(data: unknown): VoyantInvoiceEvent | null {
   return maybe as VoyantInvoiceEvent
 }
 
-/**
- * Build a Voyant {@link Plugin} that pushes invoice events to SmartBill
- * for Romanian e-invoicing.
- *
- * The plugin subscribes to three events (configurable via
- * {@link SmartbillPluginOptions.events}):
- * - `invoice.issued` → create invoice in SmartBill
- * - `invoice.voided` → cancel invoice in SmartBill
- * - `invoice.external.sync.requested` → re-fetch payment status
- *
- * Errors are caught and logged — subscribers are fire-and-forget per the
- * EventBus contract, so a SmartBill outage never blocks the emitter.
- */
 export function smartbillPlugin(options: SmartbillPluginOptions): Plugin {
   const validatedOptions = parseSmartbillPluginOptions(options)
-  const client = createSmartbillClient(validatedOptions)
-  const logger = validatedOptions.logger ?? console
-  const mappingOptions: SmartbillMappingOptions = {
-    companyVatCode: validatedOptions.companyVatCode,
-    seriesName: validatedOptions.seriesName,
-    language: validatedOptions.language,
-    isTaxIncluded: validatedOptions.isTaxIncluded,
-    art311SpecialRegime: validatedOptions.art311SpecialRegime,
-  }
-  const mapEvent =
-    validatedOptions.mapEvent ??
-    ((ev: VoyantInvoiceEvent) => mapVoyantInvoiceToSmartbill(ev, mappingOptions))
-  const eventNames = {
-    issued: validatedOptions.events?.issued ?? "invoice.issued",
-    voided: validatedOptions.events?.voided ?? "invoice.voided",
-    syncRequested: validatedOptions.events?.syncRequested ?? "invoice.external.sync.requested",
-  }
+  const { client, logger, mapEvent, eventNames } = createSmartbillSyncRuntime(validatedOptions)
 
   const subscribers: Subscriber[] = [
     {

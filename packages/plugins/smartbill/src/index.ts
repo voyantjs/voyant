@@ -9,6 +9,8 @@ export type {
   SmartbillSyncEventNames,
 } from "./plugin.js"
 export { smartbillPlugin } from "./plugin.js"
+export type { ResolvedSmartbillSyncEventNames, SmartbillSyncRuntime } from "./runtime.js"
+export { createSmartbillSyncRuntime } from "./runtime.js"
 export type {
   SmartbillInvoiceSettlementPoller,
   SmartbillInvoiceSettlementPollerOptions,

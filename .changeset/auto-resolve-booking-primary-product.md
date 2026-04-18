@@ -1,6 +1,5 @@
 ---
 "@voyantjs/bookings-react": minor
-"@voyantjs/voyant-ui": minor
 ---
 
 Add `useBookingPrimaryProduct(bookingId)` hook and make `BookingCancellationDialog` + `BookingGroupSection` self-resolve `productId` (and `optionUnitId`) from the booking's items.

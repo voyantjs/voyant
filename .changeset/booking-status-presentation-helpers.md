@@ -1,6 +1,5 @@
 ---
 "@voyantjs/bookings-react": minor
-"@voyantjs/voyant-ui": minor
 ---
 
 Add canonical booking status presentation helpers to `@voyantjs/bookings-react`:

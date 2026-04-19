@@ -1,6 +1,6 @@
 # DMC Template
 
-The reference Voyant template for a Destination Management Company. A single Cloudflare Worker that serves the `/v1/*` API and SSR dashboard, with a Hatchet background worker for durable tasks.
+The reference Voyant template for a Destination Management Company. A single Cloudflare Worker that serves the `/v1/*` API and SSR dashboard, with Voyant Workflows as the default durable task runtime.
 
 ## Stack
 
@@ -9,16 +9,17 @@ The reference Voyant template for a Destination Management Company. A single Clo
 - **UI**: Local shadcn copy + Tailwind CSS v4
 - **DB**: PostgreSQL via Hyperdrive (Neon recommended)
 - **Auth**: Better Auth
-- **Jobs**: Hatchet
+- **Jobs**: Voyant Workflows
 
 ## Quick start
 
 ```bash
 pnpm -F dmc dev          # Cloudflare Worker + SSR
-pnpm -F dmc dev:worker   # Hatchet background worker
+pnpm -F dmc dev:worker   # Voyant Workflows dev loop
 ```
 
 Dev server runs on port `3100`.
+The local workflows runtime listens on port `3110`.
 
 ## Database
 

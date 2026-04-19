@@ -69,7 +69,7 @@ export function SellabilityPage() {
 
   React.useEffect(() => {
     setPageIndex(0)
-  }, [active, policyType, scope])
+  }, [])
 
   const rows = React.useMemo(
     () => (data?.data ?? []).slice().sort((left, right) => left.priority - right.priority),

@@ -14,6 +14,8 @@
     "./commands/db-sync-links": "./src/commands/db-sync-links.ts",
     "./commands/exec": "./src/commands/exec.ts",
     "./commands/new": "./src/commands/new.ts",
+    "./commands/dev": "./src/commands/dev.ts",
+    "./commands/workflows": "./src/commands/workflows-command.ts",
     "./lib/strings": "./src/lib/strings.ts",
     "./lib/args": "./src/lib/args.ts",
     "./lib/config-loader": "./src/lib/config-loader.ts"
@@ -32,6 +34,10 @@
   },
   "dependencies": {
     "@voyantjs/core": "workspace:*",
+    "@voyantjs/workflows": "workspace:*",
+    "@voyantjs/workflows-orchestrator": "workspace:*",
+    "@voyantjs/workflows-orchestrator-node": "workspace:*",
+    "esbuild": "^0.24.0",
     "tar": "^7.4.3"
   },
   "devDependencies": {
@@ -70,6 +76,14 @@
       "./commands/new": {
         "types": "./dist/commands/new.d.ts",
         "import": "./dist/commands/new.js"
+      },
+      "./commands/dev": {
+        "types": "./dist/commands/dev.d.ts",
+        "import": "./dist/commands/dev.js"
+      },
+      "./commands/workflows": {
+        "types": "./dist/commands/workflows-command.d.ts",
+        "import": "./dist/commands/workflows-command.js"
       },
       "./lib/strings": {
         "types": "./dist/lib/strings.d.ts",

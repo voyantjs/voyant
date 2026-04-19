@@ -1,0 +1,108 @@
+import { describe, expect, it } from "vitest"
+import worker, { type Env, WorkflowRunDO } from "./worker.js"
+
+describe("worker entry", () => {
+  it("exports a default with a fetch handler", () => {
+    expect(worker).toBeDefined()
+    expect(typeof worker.fetch).toBe("function")
+  })
+
+  it("exports the WorkflowRunDO class with fetch + alarm", () => {
+    expect(WorkflowRunDO).toBeDefined()
+    expect(typeof WorkflowRunDO).toBe("function")
+    expect(typeof WorkflowRunDO.prototype.fetch).toBe("function")
+    expect(typeof WorkflowRunDO.prototype.alarm).toBe("function")
+  })
+
+  it("WorkflowRunDO.fetch forwards to the DO request handler and returns a Response", async () => {
+    // The real DO runtime provides a fully-typed `state`. For this
+    // smoke check we hand in a minimal storage stub — the DO's own
+    // handler routes to a 404 for unknown paths, which is enough to
+    // prove wiring is intact.
+    const storage = {
+      _map: new Map<string, unknown>(),
+      async get(k: string) {
+        return this._map.get(k)
+      },
+      async put(k: string, v: unknown) {
+        this._map.set(k, v)
+      },
+      async delete(k: string) {
+        return this._map.delete(k)
+      },
+      async list() {
+        return new Map(this._map)
+      },
+    }
+    const state = { storage } as unknown as DurableObjectState
+    // DISPATCHER is never called for a 404 path; a stub is fine.
+    const env = {
+      WORKFLOW_RUN_DO: null as unknown as DurableObjectNamespace,
+      DISPATCHER: {
+        get: () => ({ fetch: async () => new Response() }),
+      } as unknown as DispatchNamespace,
+      NODE_STEP_POOL: null as unknown as DurableObjectNamespace,
+      BUNDLE_R2: null as unknown as R2Bucket,
+      BUNDLE_HASHES: null as unknown as KVNamespace,
+    } satisfies Env
+
+    const instance = new WorkflowRunDO(state, env)
+    const res = await instance.fetch(new Request("https://do-internal/unknown"))
+    expect(res.status).toBe(404)
+  })
+
+  it("default.fetch routes POST /api/runs through the DO namespace", async () => {
+    // Simulate a DO namespace + a DO instance in Node: one fetch
+    // handler that just mirrors the request to prove the routing.
+    let received: { url: string; method: string } | undefined
+    const fakeStub = {
+      async fetch(req: Request) {
+        received = { url: req.url, method: req.method }
+        return new Response(JSON.stringify({ routed: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      },
+    }
+    const fakeNS = {
+      idFromName: (name: string) => name,
+      get: () => fakeStub,
+    } as unknown as DurableObjectNamespace
+
+    const env = {
+      WORKFLOW_RUN_DO: fakeNS,
+      DISPATCHER: {
+        get: () => ({ fetch: async () => new Response() }),
+      } as unknown as DispatchNamespace,
+      NODE_STEP_POOL: null as unknown as DurableObjectNamespace,
+      BUNDLE_R2: null as unknown as R2Bucket,
+      BUNDLE_HASHES: null as unknown as KVNamespace,
+    } satisfies Env
+
+    const res = await worker.fetch(
+      new Request("https://orch/api/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workflowId: "wf",
+          workflowVersion: "v1",
+          input: null,
+          tenantMeta: {
+            tenantId: "tnt",
+            projectId: "prj",
+            organizationId: "org",
+            tenantScript: "tenant-a",
+          },
+          runId: "run_worker_test",
+        }),
+      }),
+      env,
+    )
+    expect(res.status).toBe(200)
+    expect(received?.method).toBe("POST")
+    // Request forwarded to the DO's /trigger route.
+    expect(received?.url).toMatch(/\/trigger$/)
+    const body = await res.json()
+    expect(body).toEqual({ routed: true })
+  })
+})

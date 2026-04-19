@@ -1,10 +1,12 @@
 import { configCommand } from "./commands/config.js"
 import { dbCommand } from "./commands/db.js"
+import { devCommand } from "./commands/dev-command.js"
 import { execCommand } from "./commands/exec.js"
 import { generateLinkCommand } from "./commands/generate-link.js"
 import { generateModuleCommand } from "./commands/generate-module.js"
 import { helpCommand } from "./commands/help.js"
 import { newCommand } from "./commands/new.js"
+import { workflowsCommand } from "./commands/workflows-command.js"
 import type { CommandContext, CommandResult } from "./types.js"
 
 export type { CommandContext, CommandResult } from "./types.js"
@@ -56,8 +58,26 @@ export async function main(
     case "exec": {
       return execCommand({ ...ctx, argv: rest })
     }
+    case "dev": {
+      return devCommand({ ...ctx, argv: rest })
+    }
+    case "workflows": {
+      return workflowsCommand({ ...ctx, argv: rest })
+    }
     case "db": {
       return dbCommand({ ...ctx, argv: rest })
+    }
+    case "build": {
+      ctx.stderr(
+        "voyant: use `voyant workflows build`. The top-level `voyant build` entry will wrap multiple build targets once the app/runtime layer is merged.\n",
+      )
+      return 1
+    }
+    case "deploy": {
+      ctx.stderr(
+        "voyant: use `voyant workflows deploy --target docker|cloudflare` for self-host targets. The top-level `voyant deploy` entry still belongs to the cloud control plane.\n",
+      )
+      return 1
     }
     case "db:generate":
     case "db:migrate":

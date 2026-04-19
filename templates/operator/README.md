@@ -1,6 +1,6 @@
 # Operator Template
 
-The Voyant template for tour operators. A single Cloudflare Worker that serves the `/v1/*` API and SSR dashboard, with a Hatchet background worker for durable tasks.
+The Voyant template for tour operators. A single Cloudflare Worker that serves the `/v1/*` API and SSR dashboard, with Voyant Workflows as the default durable task runtime.
 
 ## Stack
 
@@ -9,16 +9,17 @@ The Voyant template for tour operators. A single Cloudflare Worker that serves t
 - **UI**: Local shadcn copy + Tailwind CSS v4
 - **DB**: PostgreSQL via Hyperdrive (Neon recommended)
 - **Auth**: Better Auth
-- **Jobs**: Hatchet
+- **Jobs**: Voyant Workflows
 
 ## Quick start
 
 ```bash
 pnpm -F operator dev          # Cloudflare Worker + SSR
-pnpm -F operator dev:worker   # Hatchet background worker
+pnpm -F operator dev:worker   # Voyant Workflows dev loop
 ```
 
 Dev server runs on port `3300`.
+The local workflows runtime listens on port `3310`.
 
 ## Database
 

@@ -1,0 +1,29 @@
+{
+  "name": "@voyantjs/workflows-orchestrator-worker",
+  "version": "0.0.0",
+  "description": "Reference Cloudflare Worker that hosts the Voyant Workflows orchestrator. Composes @voyantjs/workflows-orchestrator-cloudflare into a deployable Worker + Durable Object.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/worker.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.2",
+    "@voyantjs/workflows-orchestrator": "workspace:*",
+    "@voyantjs/workflows-orchestrator-cloudflare": "workspace:*",
+    "@voyantjs/workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.83.0"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@voyantjs/workflows-tenant-worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reference tenant Worker for Voyant Workflows. Wraps a user's workflow bundle with createStepHandler + nodeStepRunner + createCfContainerStepRunner so it runs behind the orchestrator's dispatch namespace.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/worker.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@voyantjs/workflows-orchestrator-cloudflare": "workspace:*",
+    "@voyantjs/workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.83.0"
+  }
+}

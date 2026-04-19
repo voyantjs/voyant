@@ -1,0 +1,57 @@
+{
+  // Single-tenant self-host deployment on plain Cloudflare Workers.
+  // Unlike `apps/workflows-orchestrator-worker`, this Worker imports the user's
+  // workflow bundle directly and does not use Workers for Platforms or
+  // dispatch namespaces.
+  "$schema": "node_modules/wrangler/workflows-config-schema.json",
+  "name": "voyant-workflows-selfhost",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WORKFLOW_RUN_DO",
+        "class_name": "WorkflowRunDO"
+      },
+      {
+        "name": "NODE_STEP_POOL",
+        "class_name": "NodeStepContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WorkflowRunDO", "NodeStepContainer"]
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "NodeStepContainer",
+      "image": "../workflows-node-step-container/Dockerfile",
+      "image_build_context": "../../",
+      "instance_type": "standard-2",
+      "max_instances": 50
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUNDLE_R2",
+      "bucket_name": "voyant-bundles"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "BUNDLE_HASHES",
+      "id": "replace-me-after-wrangler-kv-namespace-create"
+    }
+  ],
+  "vars": {
+    "R2_ACCOUNT_ID": "replace-with-your-cf-account-id",
+    "R2_BUCKET": "voyant-bundles"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

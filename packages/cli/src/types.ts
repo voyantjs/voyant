@@ -9,5 +9,5 @@ export interface CommandContext {
   stderr: (chunk: string) => void
 }
 
-/** Exit code. 0 = success, non-zero = failure. */
-export type CommandResult = number
+/** Exit code. `undefined` means the command is long-lived and keeps the process alive. */
+export type CommandResult = number | undefined

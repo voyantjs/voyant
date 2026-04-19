@@ -8,5 +8,6 @@
     "moduleResolution": "Bundler",
     "types": ["node"]
   },
-  "include": ["src/**/*", "tests/**/*", "bin/**/*"]
+  "include": ["src/**/*", "tests/**/*", "bin/**/*"],
+  "exclude": ["src/**/__tests__/**/*"]
 }

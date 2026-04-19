@@ -1,0 +1,98 @@
+{
+  // Reference orchestrator Worker for Voyant Workflows.
+  // Rename `name` for your own deployment and replace the dispatch
+  // namespace with one provisioned on your account.
+  "$schema": "node_modules/wrangler/workflows-config-schema.json",
+  "name": "voyant-orchestrator",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Durable Object bindings.
+  //
+  // WORKFLOW_RUN_DO  — one DO per run; stores the RunRecord in its
+  //                    transactional storage and drives the run to
+  //                    the next pause or terminal state.
+  // NODE_STEP_POOL   — DO namespace backing the Cloudflare Container
+  //                    class `NodeStepContainer`. Each addressable id
+  //                    corresponds to one container instance; the
+  //                    tenant Worker dispatches `runtime: "node"`
+  //                    steps here via `createCfContainerStepRunner`.
+  //
+  // Both default to SQLite-backed storage, which `new_sqlite_classes`
+  // spells out explicitly for the migration log.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WORKFLOW_RUN_DO",
+        "class_name": "WorkflowRunDO"
+      },
+      {
+        "name": "NODE_STEP_POOL",
+        "class_name": "NodeStepContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WorkflowRunDO", "NodeStepContainer"]
+    }
+  ],
+
+  // Cloudflare Container class that materializes `NODE_STEP_POOL`.
+  // Builds the image from `apps/workflows-node-step-container/Dockerfile` and
+  // ships it as part of `wrangler deploy`. Instance size can be set
+  // per-step via `options.machine` in workflow code; `instance_type`
+  // here is the default / warm-pool size.
+  "containers": [
+    {
+      "class_name": "NodeStepContainer",
+      "image": "../workflows-node-step-container/Dockerfile",
+      // The Dockerfile's `COPY packages ./packages` etc. are relative
+      // to the monorepo root, so we set the build context there.
+      "image_build_context": "../../",
+      "instance_type": "standard-2",
+      "max_instances": 50
+    }
+  ],
+
+  // R2 bucket that stores per-tenant `container.mjs` bundles, keyed
+  // `<projectId>/<workflowVersion>/container.mjs`. The tenant Worker's
+  // `createCfContainerStepRunner({ resolveBundle })` signs short-TTL
+  // URLs against this bucket and passes them to the container.
+  "r2_buckets": [
+    {
+      "binding": "BUNDLE_R2",
+      "bucket_name": "voyant-bundles"
+    }
+  ],
+
+  // KV namespace holding the deploy-time SHA-256 of each bundle,
+  // keyed `<projectId>:<workflowVersion>`. The container verifies
+  // fetched bundle bytes against the value here before importing.
+  "kv_namespaces": [
+    {
+      "binding": "BUNDLE_HASHES",
+      "id": "replace-me-after-wrangler-kv-namespace-create"
+    }
+  ],
+
+  // Workers-for-Platforms dispatch namespace that hosts the tenant
+  // bundles produced by `voyant workflows build`. Step requests are
+  // routed through this binding to the tenant Worker named by each
+  // run's `tenantScript` field.
+  //
+  // `namespace` is the WfP namespace id/name; provision it in your
+  // Cloudflare account under Workers for Platforms before deploying.
+  "dispatch_namespaces": [
+    {
+      "binding": "DISPATCHER",
+      "namespace": "voyant-tenants"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}

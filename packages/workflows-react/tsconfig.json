@@ -1,0 +1,10 @@
+{
+  "extends": "@voyantjs/voyant-typescript-config/react.json",
+  "compilerOptions": {
+    "types": ["react"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

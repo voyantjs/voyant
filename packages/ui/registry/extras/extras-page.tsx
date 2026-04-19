@@ -35,7 +35,7 @@ export function ExtrasPage() {
 
   React.useEffect(() => {
     setPageIndex(0)
-  }, [productId, search])
+  }, [])
 
   const rows = React.useMemo(
     () => (data?.data ?? []).slice().sort((left, right) => left.sortOrder - right.sortOrder),

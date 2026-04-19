@@ -1,0 +1,21 @@
+{
+  "name": "@voyantjs/workflows-node-step-container",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reference Node container image for executing `runtime: \"node\"` steps. Deployed alongside the orchestrator as a Cloudflare Container.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@voyantjs/workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "@voyantjs/voyant-typescript-config": "workspace:*",
+    "typescript": "^5.9.2"
+  }
+}

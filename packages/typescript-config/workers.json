@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Workers",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "types": ["@cloudflare/workers-types"]
+  }
+}

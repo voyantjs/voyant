@@ -11,6 +11,8 @@
  */
 export interface ParsedArgs {
   positionals: string[]
+  /** Compatibility alias used by the imported workflows CLI modules. */
+  positional: string[]
   flags: Record<string, string | boolean>
 }
 
@@ -24,6 +26,11 @@ export function parseArgs(argv: ReadonlyArray<string>): ParsedArgs {
 
     if (token.startsWith("--")) {
       const body = token.slice(2)
+      if (body.startsWith("no-")) {
+        flags[body] = true
+        flags[body.slice(3)] = false
+        continue
+      }
       const eq = body.indexOf("=")
       if (eq >= 0) {
         flags[body.slice(0, eq)] = body.slice(eq + 1)
@@ -47,5 +54,34 @@ export function parseArgs(argv: ReadonlyArray<string>): ParsedArgs {
     positionals.push(token)
   }
 
-  return { positionals, flags }
+  const parsed = { positionals, flags } as ParsedArgs
+  Object.defineProperty(parsed, "positional", {
+    enumerable: false,
+    get: () => positionals,
+  })
+  return parsed
+}
+
+export function getStringFlag(args: ParsedArgs, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = args.flags[name]
+    if (typeof value === "string") return value
+  }
+  return undefined
+}
+
+export function getBooleanFlag(args: ParsedArgs, ...names: string[]): boolean {
+  for (const name of names) {
+    const value = args.flags[name]
+    if (typeof value === "boolean") return value
+  }
+  return false
+}
+
+export function getNumberFlag(args: ParsedArgs, ...names: string[]): number | undefined {
+  for (const name of names) {
+    const value = args.flags[name]
+    if (typeof value === "string") return Number(value)
+  }
+  return undefined
 }

@@ -27,6 +27,31 @@ async function fetchLatestVersion(packageName) {
   return payload?.["dist-tags"]?.latest ?? null
 }
 
+async function getPublishedVersions(packageNames) {
+  const publishedVersions = new Map()
+
+  await Promise.all(
+    packageNames.map(async (packageName) => {
+      publishedVersions.set(packageName, await fetchLatestVersion(packageName))
+    }),
+  )
+
+  return publishedVersions
+}
+
+function getPendingPackages(publishablePackages, sharedTrainVersion, publishedVersions) {
+  return publishablePackages
+    .map((pkg) => ({
+      name: pkg.packageJson.name,
+      latestPublishedVersion: publishedVersions.get(pkg.packageJson.name) ?? null,
+    }))
+    .filter(
+      ({ latestPublishedVersion }) =>
+        latestPublishedVersion === null || semver.lt(latestPublishedVersion, sharedTrainVersion),
+    )
+    .sort((left, right) => left.name.localeCompare(right.name))
+}
+
 function appendGithubOutput(key, value) {
   const outputPath = process.env.GITHUB_OUTPUT
   if (!outputPath) {
@@ -47,24 +72,25 @@ async function main() {
   const publishablePackages = getPublishablePackages(packages, noFixedConfig)
   const sharedTrainVersion = getSharedTrainVersion(publishablePackages)
 
-  const canonicalPackage =
-    publishablePackages.find((pkg) => pkg.packageJson.name === "@voyantjs/cli") ??
-    publishablePackages[0]
-
-  if (!canonicalPackage) {
+  if (publishablePackages.length === 0) {
     throw new Error("No publishable packages found for pending publication detection.")
   }
 
-  const latestPublishedVersion = await fetchLatestVersion(canonicalPackage.packageJson.name)
-  const pendingPublication =
-    latestPublishedVersion === null || semver.lt(latestPublishedVersion, sharedTrainVersion)
+  const publishedVersions = await getPublishedVersions(
+    publishablePackages.map((pkg) => pkg.packageJson.name),
+  )
+  const pendingPackages = getPendingPackages(
+    publishablePackages,
+    sharedTrainVersion,
+    publishedVersions,
+  )
+  const pendingPublication = pendingPackages.length > 0
 
   console.log(
     JSON.stringify(
       {
-        canonicalPackage: canonicalPackage.packageJson.name,
         hasReleasableChangesets,
-        latestPublishedVersion,
+        pendingPackages,
         pendingPublication,
         sharedTrainVersion,
       },
@@ -73,9 +99,7 @@ async function main() {
     ),
   )
 
-  appendGithubOutput("canonical_package", canonicalPackage.packageJson.name)
   appendGithubOutput("has_releasable_changesets", hasReleasableChangesets ? "true" : "false")
-  appendGithubOutput("latest_published_version", latestPublishedVersion ?? "")
   appendGithubOutput("pending", pendingPublication ? "true" : "false")
   appendGithubOutput("shared_train_version", sharedTrainVersion)
 }

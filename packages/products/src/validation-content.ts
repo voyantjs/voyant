@@ -164,6 +164,20 @@ export type UpdateProductOptionTranslation = z.infer<typeof updateProductOptionT
 export type InsertOptionUnitTranslation = z.infer<typeof insertOptionUnitTranslationSchema>
 export type UpdateOptionUnitTranslation = z.infer<typeof updateOptionUnitTranslationSchema>
 
+const itineraryCoreSchema = z.object({
+  name: z.string().min(1).max(255),
+  isDefault: z.boolean().default(false),
+  sortOrder: z.number().int().default(0),
+})
+export const insertItinerarySchema = itineraryCoreSchema
+export const updateItinerarySchema = itineraryCoreSchema.partial()
+export const duplicateItinerarySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+})
+export type InsertItinerary = z.infer<typeof insertItinerarySchema>
+export type UpdateItinerary = z.infer<typeof updateItinerarySchema>
+export type DuplicateItinerary = z.infer<typeof duplicateItinerarySchema>
+
 const dayCoreSchema = z.object({
   dayNumber: z.number().int().positive(),
   title: z.string().max(255).optional().nullable(),

@@ -152,6 +152,10 @@ export function NamedContactDialog({
               <div className="flex flex-col gap-2">
                 <Label>Role</Label>
                 <Select
+                  items={NAMED_CONTACT_ROLES.map((x) => ({
+                    label: x.replace(/_/g, " "),
+                    value: x,
+                  }))}
                   value={form.watch("role")}
                   onValueChange={(value) => form.setValue("role", value as NamedContactRole)}
                 >

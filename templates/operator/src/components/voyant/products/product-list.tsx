@@ -1,12 +1,14 @@
 "use client"
 
 import { type ProductRecord, useProducts } from "@voyantjs/products-react"
-import { Loader2, Plus, Search } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { Plus, Search } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SkeletonTableRows } from "@/components/ui/skeletons"
 import {
   Table,
   TableBody,
@@ -15,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
+import { getProductStatusLabel } from "./product-detail-shared"
 import { ProductDialog } from "./product-dialog"
 
 export interface ProductListProps {
@@ -29,12 +32,14 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
   archived: "secondary",
 }
 
-function formatAmount(cents: number | null, currency: string): string {
-  if (cents == null) return "—"
+function formatAmount(cents: number | null, currency: string, fallback: string): string {
+  if (cents == null) return fallback
   return `${(cents / 100).toFixed(2)} ${currency}`
 }
 
 export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps = {}) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -74,7 +79,7 @@ export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps
             aria-hidden="true"
           />
           <Input
-            placeholder="Search products…"
+            placeholder={productMessages.searchPlaceholder}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
@@ -85,7 +90,7 @@ export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps
         </div>
         <Button onClick={handleCreate} data-slot="product-list-create">
           <Plus className="mr-2 size-4" aria-hidden="true" />
-          New product
+          {productMessages.newProduct}
         </Button>
       </div>
 
@@ -93,37 +98,38 @@ export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Sell Amount</TableHead>
-              <TableHead>Pax</TableHead>
-              <TableHead>Start Date</TableHead>
+              <TableHead>{productMessages.tableName}</TableHead>
+              <TableHead>{productMessages.tableStatus}</TableHead>
+              <TableHead>{productMessages.tableSellAmount}</TableHead>
+              <TableHead>{productMessages.tablePax}</TableHead>
+              <TableHead>{productMessages.tableStartDate}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <Loader2
-                    className="mx-auto size-4 animate-spin text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
+          {isPending ? (
+            <SkeletonTableRows
+              rows={6}
+              columns={5}
+              columnWidths={["w-48", "w-16", "w-24", "w-8", "w-24"]}
+            />
+          ) : isError ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-destructive">
-                  Failed to load products.
+                  {productMessages.loadFailed}
                 </TableCell>
               </TableRow>
-            ) : products.length === 0 ? (
+            </TableBody>
+          ) : products.length === 0 ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                  No products found.
+                  {productMessages.empty}
                 </TableCell>
               </TableRow>
-            ) : (
-              products.map((product) => (
+            </TableBody>
+          ) : (
+            <TableBody>
+              {products.map((product) => (
                 <TableRow
                   key={product.id}
                   onClick={() => handleEdit(product)}
@@ -131,28 +137,29 @@ export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps
                 >
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={statusVariant[product.status] ?? "secondary"}
-                      className="capitalize"
-                    >
-                      {product.status}
+                    <Badge variant={statusVariant[product.status] ?? "secondary"}>
+                      {getProductStatusLabel(product.status, messages)}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatAmount(product.sellAmountCents, product.sellCurrency)}
+                    {formatAmount(
+                      product.sellAmountCents,
+                      product.sellCurrency,
+                      productMessages.noValue,
+                    )}
                   </TableCell>
-                  <TableCell>{product.pax ?? "—"}</TableCell>
-                  <TableCell>{product.startDate ?? "—"}</TableCell>
+                  <TableCell>{product.pax ?? productMessages.noValue}</TableCell>
+                  <TableCell>{product.startDate ?? productMessages.noValue}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ))}
+            </TableBody>
+          )}
         </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {products.length} of {total}
+          {formatMessage(productMessages.paginationShowing, { count: products.length, total })}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -161,18 +168,16 @@ export function ProductList({ pageSize = 25, onSelectProduct }: ProductListProps
             disabled={offset === 0}
             onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
           >
-            Previous
+            {productMessages.paginationPrevious}
           </Button>
-          <span>
-            Page {page} / {pageCount}
-          </span>
+          <span>{formatMessage(productMessages.paginationPage, { page, pageCount })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={offset + pageSize >= total}
             onClick={() => setOffset((prev) => prev + pageSize)}
           >
-            Next
+            {productMessages.paginationNext}
           </Button>
         </div>
       </div>

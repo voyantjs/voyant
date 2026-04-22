@@ -1,7 +1,8 @@
 "use client"
 
-import { useBookingActivity, useBookingDocuments } from "@voyantjs/bookings-react"
+import { useBookingActivity, useBookingTravelerDocuments } from "@voyantjs/bookings-react"
 import { usePublicBookingPayments } from "@voyantjs/finance-react"
+import { formatMessage, useLocale } from "@voyantjs/voyant-admin"
 import {
   Activity,
   Clock,
@@ -17,6 +18,7 @@ import {
 import * as React from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 export interface BookingActivityTimelineProps {
   bookingId: string
@@ -53,12 +55,6 @@ const activityIcons: Record<string, LucideIcon> = {
   note_added: Pencil,
 }
 
-const sourceLabel: Record<TimelineSource, string> = {
-  activity: "Activity",
-  document: "Document",
-  payment: "Payment",
-}
-
 const sourceVariant: Record<TimelineSource, "default" | "secondary" | "outline"> = {
   activity: "outline",
   document: "secondary",
@@ -67,10 +63,87 @@ const sourceVariant: Record<TimelineSource, "default" | "secondary" | "outline">
 
 type Filter = TimelineSource | "all"
 
+function getPaymentMethodLabel(
+  method: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["payments"],
+) {
+  switch (method) {
+    case "bank_transfer":
+      return messages.methodBankTransfer
+    case "credit_card":
+      return messages.methodCreditCard
+    case "cash":
+      return messages.methodCash
+    case "cheque":
+      return messages.methodCheque
+    case "other":
+      return messages.methodOther
+    default:
+      return method.replace(/_/g, " ")
+  }
+}
+
+function getPaymentStatusLabel(
+  status: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["payments"],
+) {
+  switch (status) {
+    case "pending":
+      return messages.statusPending
+    case "completed":
+      return messages.statusCompleted
+    case "failed":
+      return messages.statusFailed
+    case "refunded":
+      return messages.statusRefunded
+    default:
+      return status.replace(/_/g, " ")
+  }
+}
+
+function getDocumentTypeLabel(
+  type: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["documents"],
+) {
+  switch (type) {
+    case "visa":
+      return messages.typeVisa
+    case "insurance":
+      return messages.typeInsurance
+    case "health":
+      return messages.typeHealth
+    case "passport_copy":
+      return messages.typePassportCopy
+    case "other":
+      return messages.typeOther
+    default:
+      return type.replace(/_/g, " ")
+  }
+}
+
+function getSourceLabel(
+  source: TimelineSource,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["activity"],
+) {
+  switch (source) {
+    case "activity":
+      return messages.sourceActivity
+    case "document":
+      return messages.sourceDocument
+    case "payment":
+      return messages.sourcePayment
+  }
+}
+
 export function BookingActivityTimeline({ bookingId }: BookingActivityTimelineProps) {
+  const messages = useAdminMessages()
+  const activityMessages = messages.bookings.detail.activity
+  const paymentMessages = messages.bookings.detail.payments
+  const documentMessages = messages.bookings.detail.documents
+  const { resolvedLocale } = useLocale()
   const [filter, setFilter] = React.useState<Filter>("all")
   const { data: activityData } = useBookingActivity(bookingId)
-  const { data: documentsData } = useBookingDocuments(bookingId)
+  const { data: documentsData } = useBookingTravelerDocuments(bookingId)
   const { data: paymentsData } = usePublicBookingPayments(bookingId)
 
   const events = React.useMemo<TimelineEvent[]>(() => {
@@ -91,20 +164,28 @@ export function BookingActivityTimeline({ bookingId }: BookingActivityTimelinePr
       merged.push({
         id: `document:${doc.id}`,
         source: "document",
-        title: `${doc.type.replace(/_/g, " ")} uploaded`,
+        title: `${getDocumentTypeLabel(doc.type, documentMessages)} ${activityMessages.uploadedSuffix}`,
         description: doc.fileName,
         timestamp: doc.createdAt,
         icon: FileText,
-        link: { href: doc.fileUrl, label: "View file" },
+        link: { href: doc.fileUrl, label: activityMessages.viewFile },
       })
     }
 
     for (const payment of paymentsData?.data?.payments ?? []) {
+      const paymentStatus = getPaymentStatusLabel(payment.status, paymentMessages)
       merged.push({
         id: `payment:${payment.id}`,
         source: "payment",
-        title: `Payment ${payment.status} — ${(payment.amountCents / 100).toFixed(2)} ${payment.currency}`,
-        description: `Invoice ${payment.invoiceNumber} · ${payment.paymentMethod.replace(/_/g, " ")}`,
+        title: formatMessage(activityMessages.paymentTitle, {
+          status: paymentStatus,
+          amount: (payment.amountCents / 100).toFixed(2),
+          currency: payment.currency,
+        }),
+        description: formatMessage(activityMessages.paymentDescription, {
+          invoice: payment.invoiceNumber,
+          method: getPaymentMethodLabel(payment.paymentMethod, paymentMessages),
+        }),
         timestamp: payment.paymentDate,
         icon: CreditCard,
       })
@@ -112,7 +193,14 @@ export function BookingActivityTimeline({ bookingId }: BookingActivityTimelinePr
 
     merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     return merged
-  }, [activityData, documentsData, paymentsData])
+  }, [
+    activityData,
+    activityMessages,
+    documentMessages,
+    documentsData,
+    paymentMessages,
+    paymentsData,
+  ])
 
   const visible = filter === "all" ? events : events.filter((e) => e.source === filter)
 
@@ -123,7 +211,7 @@ export function BookingActivityTimeline({ bookingId }: BookingActivityTimelinePr
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-4 w-4" />
-          Activity Timeline
+          {activityMessages.title}
         </CardTitle>
         <div className="flex items-center gap-1">
           {filterChips.map((chip) => (
@@ -131,21 +219,32 @@ export function BookingActivityTimeline({ bookingId }: BookingActivityTimelinePr
               key={chip}
               variant={filter === chip ? "default" : "ghost"}
               size="sm"
-              className="h-7 capitalize"
+              className="h-7"
               onClick={() => setFilter(chip)}
             >
-              {chip === "all" ? "All" : sourceLabel[chip]}
+              {chip === "all"
+                ? activityMessages.filterAll
+                : chip === "activity"
+                  ? activityMessages.filterActivity
+                  : chip === "document"
+                    ? activityMessages.filterDocument
+                    : activityMessages.filterPayment}
             </Button>
           ))}
         </div>
       </CardHeader>
       <CardContent>
         {visible.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No events yet.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{activityMessages.empty}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {visible.map((event) => (
-              <TimelineEventItem key={event.id} event={event} />
+              <TimelineEventItem
+                key={event.id}
+                event={event}
+                resolvedLocale={resolvedLocale}
+                activityMessages={activityMessages}
+              />
             ))}
           </div>
         )}
@@ -154,24 +253,34 @@ export function BookingActivityTimeline({ bookingId }: BookingActivityTimelinePr
   )
 }
 
-function TimelineEventItem({ event }: { event: TimelineEvent }) {
+function TimelineEventItem({
+  event,
+  resolvedLocale,
+  activityMessages,
+}: {
+  event: TimelineEvent
+  resolvedLocale: string
+  activityMessages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["activity"]
+}) {
   const Icon = event.icon
   return (
     <div className="flex items-start gap-3 rounded-md border p-3">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium capitalize">{event.title}</p>
+          <p className="text-sm font-medium">{event.title}</p>
           <Badge variant={sourceVariant[event.source]} className="text-xs">
-            {sourceLabel[event.source]}
+            {getSourceLabel(event.source, activityMessages)}
           </Badge>
         </div>
         {event.description && (
           <p className="mt-0.5 text-xs text-muted-foreground">{event.description}</p>
         )}
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {event.actorId && event.actorId !== "system" ? `By ${event.actorId} · ` : ""}
-          {new Date(event.timestamp).toLocaleString()}
+          {event.actorId && event.actorId !== "system"
+            ? formatMessage(activityMessages.byActorPrefix, { actor: event.actorId })
+            : ""}
+          {new Date(event.timestamp).toLocaleString(resolvedLocale)}
         </p>
         {event.link && (
           <a

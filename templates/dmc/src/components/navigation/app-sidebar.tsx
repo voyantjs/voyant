@@ -1,34 +1,20 @@
-import { useNavigate } from "@tanstack/react-router"
 import {
   Building2,
   CalendarCheck,
   CalendarDays,
-  Check,
-  ChevronsUpDown,
   DollarSign,
   Globe2,
   LayoutDashboard,
+  Mail,
   Package,
-  Plus,
   Users,
   Wrench,
 } from "lucide-react"
 import type * as React from "react"
 import { NavGroup } from "@/components/navigation/nav-group"
 import { NavUser } from "@/components/navigation/nav-user"
-import { useWorkspace } from "@/components/providers/workspace-provider"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 export const COMING_SOON = "COMING_SOON" as const
 export const BETA = "BETA" as const
@@ -98,55 +84,19 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   }
 }
 
-function OrgSwitcher() {
-  const navigate = useNavigate()
-  const { activeOrganization, organizations, isSwitchingOrganization, setActiveOrganization } =
-    useWorkspace()
-
+function AppBrand() {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent"
-        >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
-            {activeOrganization?.name?.charAt(0)?.toUpperCase() ?? "V"}
-          </div>
-          <span className="flex-1 truncate text-sm font-semibold">
-            {activeOrganization?.name ?? "Voyant"}
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        {organizations.map((org) => (
-          <DropdownMenuItem
-            key={org.id}
-            disabled={isSwitchingOrganization}
-            onClick={() => {
-              void setActiveOrganization(org.id)
-            }}
-          >
-            <span className="flex-1 truncate">{org.name}</span>
-            {activeOrganization?.id === org.id && <Check className="ml-2 h-4 w-4" />}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            void navigate({ to: "/onboarding" })
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create organization
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-2 px-2 py-1.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+        V
+      </div>
+      <span className="flex-1 truncate text-sm font-semibold">Voyant</span>
+    </div>
   )
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const messages = useAdminMessages()
   const resolvedUser = {
     name: user?.name ?? baseData.user.name,
     firstName: user?.firstName,
@@ -158,10 +108,72 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <OrgSwitcher />
+        <AppBrand />
       </SidebarHeader>
       <SidebarContent>
-        <NavGroup items={baseData.navMain} />
+        <NavGroup
+          items={[
+            {
+              ...baseData.navMain[0],
+              title: messages.nav.dashboard,
+            },
+            {
+              ...baseData.navMain[1],
+              title: messages.nav.contacts,
+            },
+            {
+              ...baseData.navMain[2],
+              title: messages.nav.suppliers,
+            },
+            {
+              ...baseData.navMain[3],
+              title: messages.nav.products,
+            },
+            {
+              ...baseData.navMain[4],
+              title: messages.nav.availability,
+            },
+            {
+              ...baseData.navMain[5],
+              title: messages.nav.resources,
+            },
+            {
+              ...baseData.navMain[6],
+              title: messages.nav.bookings,
+            },
+            {
+              title: messages.nav.notifications,
+              url: "/notifications/templates",
+              icon: Mail,
+              items: [
+                {
+                  title: messages.nav.notificationTemplates,
+                  url: "/notifications/templates",
+                },
+                {
+                  title: messages.nav.notificationReminderRules,
+                  url: "/notifications/reminder-rules",
+                },
+                {
+                  title: messages.nav.notificationDeliveries,
+                  url: "/notifications/deliveries",
+                },
+                {
+                  title: messages.nav.notificationReminderRuns,
+                  url: "/notifications/reminder-runs",
+                },
+              ],
+            },
+            {
+              ...baseData.navMain[7],
+              title: messages.nav.distribution,
+            },
+            {
+              ...baseData.navMain[8],
+              title: messages.nav.finance,
+            },
+          ]}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={resolvedUser} />

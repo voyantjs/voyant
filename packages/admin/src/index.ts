@@ -27,6 +27,16 @@ export {
   resolveAdminNavigation,
   resolveAdminWidgets,
 } from "./extensions.js"
+export {
+  composeLocaleMessageDefinitions,
+  type DeepPartial,
+  formatMessage,
+  type LocaleMessageDefinitions,
+  type LocaleMessageOverrides,
+  MessagesProvider,
+  resolveLocaleMessages,
+  useMessages,
+} from "./lib/i18n.js"
 export { getDisplayName, getInitials } from "./lib/initials.js"
 export { AdminProvider, type AdminProviderProps } from "./providers/admin-provider.js"
 export {

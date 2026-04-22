@@ -1,6 +1,6 @@
 import { type InvoiceRecord, useInvoiceMutation } from "@voyantjs/finance-react"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
@@ -23,25 +23,30 @@ import {
 } from "@/components/ui"
 import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DatePicker } from "@/components/ui/date-picker"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const invoiceFormSchema = z.object({
-  invoiceNumber: z.string().min(1, "Invoice number is required"),
-  bookingId: z.string().min(1, "Booking ID is required"),
-  personId: z.string().optional().nullable(),
-  organizationId: z.string().optional().nullable(),
-  status: z.enum(["draft", "sent", "partially_paid", "paid", "overdue", "void"]),
-  currency: z.string().min(3).max(3, "Use 3-letter ISO code"),
-  subtotalCents: z.coerce.number().int().min(0).default(0),
-  taxCents: z.coerce.number().int().min(0).default(0),
-  totalCents: z.coerce.number().int().min(0).default(0),
-  issueDate: z.string().min(1, "Issue date is required"),
-  dueDate: z.string().min(1, "Due date is required"),
-  notes: z.string().optional().nullable(),
-})
+function getInvoiceFormSchema(messages: AdminMessages) {
+  return z.object({
+    invoiceNumber: z
+      .string()
+      .min(1, messages.finance.invoiceDialog.validationInvoiceNumberRequired),
+    bookingId: z.string().min(1, messages.finance.invoiceDialog.validationBookingIdRequired),
+    personId: z.string().optional().nullable(),
+    organizationId: z.string().optional().nullable(),
+    status: z.enum(["draft", "sent", "partially_paid", "paid", "overdue", "void"]),
+    currency: z.string().min(3).max(3, messages.finance.invoiceDialog.validationCurrencyCode),
+    subtotalCents: z.coerce.number().int().min(0).default(0),
+    taxCents: z.coerce.number().int().min(0).default(0),
+    totalCents: z.coerce.number().int().min(0).default(0),
+    issueDate: z.string().min(1, messages.finance.invoiceDialog.validationIssueDateRequired),
+    dueDate: z.string().min(1, messages.finance.invoiceDialog.validationDueDateRequired),
+    notes: z.string().optional().nullable(),
+  })
+}
 
-type InvoiceFormValues = z.input<typeof invoiceFormSchema>
-type InvoiceFormOutput = z.output<typeof invoiceFormSchema>
+type InvoiceFormValues = z.input<ReturnType<typeof getInvoiceFormSchema>>
+type InvoiceFormOutput = z.output<ReturnType<typeof getInvoiceFormSchema>>
 
 export interface InvoiceDialogProps {
   open: boolean
@@ -49,15 +54,6 @@ export interface InvoiceDialogProps {
   invoice?: InvoiceRecord
   onSuccess?: (invoice: InvoiceRecord) => void
 }
-
-const INVOICE_STATUSES = [
-  { value: "draft", label: "Draft" },
-  { value: "sent", label: "Sent" },
-  { value: "partially_paid", label: "Partially Paid" },
-  { value: "paid", label: "Paid" },
-  { value: "overdue", label: "Overdue" },
-  { value: "void", label: "Void" },
-] as const
 
 function generateInvoiceNumber(): string {
   const now = new Date()
@@ -67,8 +63,22 @@ function generateInvoiceNumber(): string {
 }
 
 export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: InvoiceDialogProps) {
+  const messages = useAdminMessages()
   const isEditing = Boolean(invoice)
   const { create, update } = useInvoiceMutation()
+  const invoiceFormSchema = useMemo(() => getInvoiceFormSchema(messages), [messages])
+  const invoiceStatuses = useMemo(
+    () =>
+      [
+        { value: "draft", label: messages.finance.invoiceStatusDraft },
+        { value: "sent", label: messages.finance.invoiceStatusSent },
+        { value: "partially_paid", label: messages.finance.invoiceStatusPartiallyPaid },
+        { value: "paid", label: messages.finance.invoiceStatusPaid },
+        { value: "overdue", label: messages.finance.invoiceStatusOverdue },
+        { value: "void", label: messages.finance.invoiceStatusVoid },
+      ] as const,
+    [messages],
+  )
 
   const form = useForm<InvoiceFormValues, unknown, InvoiceFormOutput>({
     resolver: zodResolver(invoiceFormSchema),
@@ -158,14 +168,21 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Invoice" : "New Invoice"}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? messages.finance.invoiceDialog.editTitle
+              : messages.finance.invoiceDialog.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Invoice Number</Label>
-                <Input {...form.register("invoiceNumber")} placeholder="INV-2025-1234" />
+                <Label>{messages.finance.invoiceDialog.invoiceNumberLabel}</Label>
+                <Input
+                  {...form.register("invoiceNumber")}
+                  placeholder={messages.finance.invoiceDialog.invoiceNumberPlaceholder}
+                />
                 {form.formState.errors.invoiceNumber ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.invoiceNumber.message}
@@ -174,8 +191,9 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{messages.finance.invoiceDialog.statusLabel}</Label>
                 <Select
+                  items={invoiceStatuses}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as InvoiceFormValues["status"])
@@ -185,7 +203,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {INVOICE_STATUSES.map((status) => (
+                    {invoiceStatuses.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
                       </SelectItem>
@@ -197,8 +215,11 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Booking ID</Label>
-                <Input {...form.register("bookingId")} placeholder="book_..." />
+                <Label>{messages.finance.invoiceDialog.bookingIdLabel}</Label>
+                <Input
+                  {...form.register("bookingId")}
+                  placeholder={messages.finance.invoiceDialog.bookingIdPlaceholder}
+                />
                 {form.formState.errors.bookingId ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.bookingId.message}
@@ -206,7 +227,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{messages.finance.invoiceDialog.currencyLabel}</Label>
                 <CurrencyCombobox
                   value={form.watch("currency") || null}
                   onChange={(next) =>
@@ -221,22 +242,22 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Subtotal (cents)</Label>
+                <Label>{messages.finance.invoiceDialog.subtotalLabel}</Label>
                 <Input {...form.register("subtotalCents")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Tax (cents)</Label>
+                <Label>{messages.finance.invoiceDialog.taxLabel}</Label>
                 <Input {...form.register("taxCents")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Total (cents)</Label>
+                <Label>{messages.finance.invoiceDialog.totalLabel}</Label>
                 <Input {...form.register("totalCents")} type="number" min="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Issue Date</Label>
+                <Label>{messages.finance.invoiceDialog.issueDateLabel}</Label>
                 <DatePicker
                   value={form.watch("issueDate") || null}
                   onChange={(nextValue) =>
@@ -245,7 +266,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                       shouldValidate: true,
                     })
                   }
-                  placeholder="Pick issue date"
+                  placeholder={messages.finance.invoiceDialog.issueDatePlaceholder}
                   className="w-full"
                 />
                 {form.formState.errors.issueDate ? (
@@ -255,7 +276,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Due Date</Label>
+                <Label>{messages.finance.invoiceDialog.dueDateLabel}</Label>
                 <DatePicker
                   value={form.watch("dueDate") || null}
                   onChange={(nextValue) =>
@@ -264,7 +285,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
                       shouldValidate: true,
                     })
                   }
-                  placeholder="Pick due date"
+                  placeholder={messages.finance.invoiceDialog.dueDatePlaceholder}
                   className="w-full"
                 />
                 {form.formState.errors.dueDate ? (
@@ -276,17 +297,22 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Invoice notes..." />
+              <Label>{messages.finance.invoiceDialog.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={messages.finance.invoiceDialog.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.finance.invoiceDialog.cancel}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isEditing ? "Save Changes" : "Create Invoice"}
+              {isEditing
+                ? messages.finance.invoiceDialog.saveChanges
+                : messages.finance.invoiceDialog.createInvoice}
             </Button>
           </DialogFooter>
         </form>

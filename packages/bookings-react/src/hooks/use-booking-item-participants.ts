@@ -1,37 +1,21 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { fetchWithValidation } from "../client.js"
 import { useVoyantBookingsContext } from "../provider.js"
 import { bookingsQueryKeys } from "../query-keys.js"
-import { getBookingItemParticipantsQueryOptions } from "../query-options.js"
-import {
-  bookingItemParticipantsResponse,
-  bookingSingleResponse,
-  successEnvelope,
-} from "../schemas.js"
+import { bookingItemTravelersResponse, bookingSingleResponse, successEnvelope } from "../schemas.js"
 
-export interface UseBookingItemParticipantsOptions {
-  enabled?: boolean
-}
-
-export function useBookingItemParticipants(
-  bookingId: string | null | undefined,
-  itemId: string | null | undefined,
-  options: UseBookingItemParticipantsOptions = {},
-) {
-  const { baseUrl, fetcher } = useVoyantBookingsContext()
-  const { enabled = true } = options
-
-  return useQuery({
-    ...getBookingItemParticipantsQueryOptions({ baseUrl, fetcher }, bookingId, itemId),
-    enabled: enabled && Boolean(bookingId) && Boolean(itemId),
-  })
-}
+export {
+  type UseBookingItemTravelersOptions as UseBookingItemParticipantsOptions,
+  useBookingItemTravelers as useBookingItemParticipants,
+} from "./use-booking-item-travelers.js"
 
 export interface AddItemParticipantInput {
-  participantId: string
+  travelerId?: string
+  participantId?: string
+  passengerId?: string
   role?: string
   isPrimary?: boolean
 }
@@ -42,19 +26,29 @@ export function useBookingItemParticipantMutation(bookingId: string, itemId: str
 
   const add = useMutation({
     mutationFn: async (input: AddItemParticipantInput) => {
+      const travelerId = input.travelerId ?? input.participantId ?? input.passengerId
+      if (!travelerId) throw new Error("travelerId is required")
+
       const { data } = await fetchWithValidation(
-        `/v1/bookings/${bookingId}/items/${itemId}/participants`,
+        `/v1/bookings/${bookingId}/items/${itemId}/travelers`,
         bookingSingleResponse.extend({
-          data: bookingItemParticipantsResponse.shape.data.element,
+          data: bookingItemTravelersResponse.shape.data.element,
         }),
         { baseUrl, fetcher },
-        { method: "POST", body: JSON.stringify(input) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            travelerId,
+            role: input.role,
+            isPrimary: input.isPrimary,
+          }),
+        },
       )
       return data
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: bookingsQueryKeys.itemParticipants(bookingId, itemId),
+        queryKey: bookingsQueryKeys.itemTravelers(bookingId, itemId),
       })
     },
   })
@@ -62,14 +56,14 @@ export function useBookingItemParticipantMutation(bookingId: string, itemId: str
   const remove = useMutation({
     mutationFn: async (linkId: string) =>
       fetchWithValidation(
-        `/v1/bookings/${bookingId}/items/${itemId}/participants/${linkId}`,
+        `/v1/bookings/${bookingId}/items/${itemId}/travelers/${linkId}`,
         successEnvelope,
         { baseUrl, fetcher },
         { method: "DELETE" },
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: bookingsQueryKeys.itemParticipants(bookingId, itemId),
+        queryKey: bookingsQueryKeys.itemTravelers(bookingId, itemId),
       })
     },
   })

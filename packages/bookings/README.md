@@ -1,6 +1,6 @@
 # @voyantjs/bookings
 
-Bookings module for Voyant. Manages booking lifecycle with passengers, supplier statuses, activity log, and notes. Uses `personId` + `organizationId` from CRM as client snapshot.
+Bookings module for Voyant. Manages booking lifecycle with travelers, supplier statuses, activity log, and notes. Uses `personId` + `organizationId` from CRM as client snapshot.
 
 ## Install
 
@@ -37,7 +37,7 @@ room/unit selection back onto the booking session totals.
 ## Entities
 
 - **Bookings** (`book`)
-- **Booking passengers** (`bkps`)
+- **Booking travelers** (`bkps`)
 - **Booking supplier statuses** (`bkss`)
 - **Booking activity log** (`bkal`)
 - **Booking notes** (`bnot`)

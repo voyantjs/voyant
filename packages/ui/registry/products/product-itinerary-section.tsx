@@ -3,17 +3,47 @@
 import {
   type ProductDayRecord,
   type ProductDayServiceRecord,
+  type ProductItineraryRecord,
   useProductDayMutation,
   useProductDayServiceMutation,
   useProductDayServices,
-  useProductDays,
+  useProductItineraries,
+  useProductItineraryDays,
+  useProductItineraryMutation,
 } from "@voyantjs/products-react"
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+} from "lucide-react"
 import * as React from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -26,6 +56,7 @@ import {
 import { ProductDayDialog } from "./product-day-dialog"
 import { ProductDayServiceDialog } from "./product-day-service-dialog"
 import type { ProductDayServiceSupplierPickerRenderer } from "./product-day-service-form"
+import { ProductItineraryDialog } from "./product-itinerary-dialog"
 import { ProductMediaSection, type ProductMediaUploadHandler } from "./product-media-section"
 
 const serviceTypeLabels: Record<ProductDayServiceRecord["serviceType"], string> = {
@@ -40,7 +71,9 @@ const serviceTypeLabels: Record<ProductDayServiceRecord["serviceType"], string> 
 export interface ProductItinerarySectionProps {
   productId: string
   title?: string
+  titleMultiple?: string
   description?: string
+  descriptionMultiple?: string
   uploadMedia?: ProductMediaUploadHandler
   renderSupplierServicePicker?: ProductDayServiceSupplierPickerRenderer
   renderDayMediaSection?: (args: {
@@ -53,83 +86,289 @@ export interface ProductItinerarySectionProps {
 export function ProductItinerarySection({
   productId,
   title = "Itinerary",
+  titleMultiple = "Itineraries",
   description = "Manage day-by-day structure and attached services for this product.",
+  descriptionMultiple = "Manage the itinerary variants for this product.",
   uploadMedia,
   renderSupplierServicePicker,
   renderDayMediaSection,
 }: ProductItinerarySectionProps) {
   const [expandedDayId, setExpandedDayId] = React.useState<string | null>(null)
+  const [selectedItineraryId, setSelectedItineraryId] = React.useState<string | null>(null)
   const [dayDialogOpen, setDayDialogOpen] = React.useState(false)
   const [editingDay, setEditingDay] = React.useState<ProductDayRecord | undefined>()
   const [serviceDialogOpen, setServiceDialogOpen] = React.useState(false)
   const [serviceDayId, setServiceDayId] = React.useState("")
   const [editingService, setEditingService] = React.useState<ProductDayServiceRecord | undefined>()
+  const [itineraryDialogOpen, setItineraryDialogOpen] = React.useState(false)
+  const [editingItinerary, setEditingItinerary] = React.useState<
+    ProductItineraryRecord | undefined
+  >()
+  const [deleteItineraryTarget, setDeleteItineraryTarget] =
+    React.useState<ProductItineraryRecord | null>(null)
 
-  const { data, isPending, isError } = useProductDays(productId)
-  const { remove } = useProductDayMutation()
+  const itineraryQuery = useProductItineraries(productId)
+  const itineraryMutation = useProductItineraryMutation()
+  const itineraries = React.useMemo(
+    () => itineraryQuery.data?.data ?? [],
+    [itineraryQuery.data?.data],
+  )
+  const hasMultiple = itineraries.length > 1
+
+  React.useEffect(() => {
+    if (itineraries.length === 0) {
+      setSelectedItineraryId(null)
+      return
+    }
+
+    setSelectedItineraryId((current) => {
+      if (current && itineraries.some((itinerary) => itinerary.id === current)) {
+        return current
+      }
+
+      return itineraries.find((itinerary) => itinerary.isDefault)?.id ?? itineraries[0]?.id ?? null
+    })
+  }, [itineraries])
+
+  const selectedItinerary = React.useMemo(
+    () => itineraries.find((itinerary) => itinerary.id === selectedItineraryId),
+    [itineraries, selectedItineraryId],
+  )
+
+  const daysQuery = useProductItineraryDays(productId, selectedItineraryId, {
+    enabled: Boolean(selectedItineraryId),
+  })
+  const { remove: removeDay } = useProductDayMutation()
   const days = React.useMemo(
-    () => (data?.data ?? []).slice().sort((left, right) => left.dayNumber - right.dayNumber),
-    [data?.data],
+    () =>
+      (daysQuery.data?.data ?? []).slice().sort((left, right) => left.dayNumber - right.dayNumber),
+    [daysQuery.data?.data],
   )
   const nextDayNumber = days.length > 0 ? Math.max(...days.map((day) => day.dayNumber)) + 1 : 1
+
+  const openCreateItinerary = () => {
+    setEditingItinerary(undefined)
+    setItineraryDialogOpen(true)
+  }
+
+  const openRenameItinerary = (itinerary: ProductItineraryRecord) => {
+    setEditingItinerary(itinerary)
+    setItineraryDialogOpen(true)
+  }
+
+  const handleSetDefault = async (itinerary: ProductItineraryRecord) => {
+    if (itinerary.isDefault) return
+    await itineraryMutation.update.mutateAsync({
+      productId,
+      itineraryId: itinerary.id,
+      input: { isDefault: true },
+    })
+  }
+
+  const handleDuplicate = async (itinerary: ProductItineraryRecord) => {
+    const result = await itineraryMutation.duplicate.mutateAsync({
+      productId,
+      itineraryId: itinerary.id,
+    })
+    setExpandedDayId(null)
+    setSelectedItineraryId(result.itinerary.id)
+  }
+
+  const handleConfirmDeleteItinerary = async () => {
+    if (!deleteItineraryTarget) return
+    await itineraryMutation.remove.mutateAsync({
+      productId,
+      itineraryId: deleteItineraryTarget.id,
+    })
+    setDeleteItineraryTarget(null)
+  }
 
   return (
     <Card data-slot="product-itinerary-section">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardTitle>{hasMultiple ? titleMultiple : title}</CardTitle>
+          <CardDescription>{hasMultiple ? descriptionMultiple : description}</CardDescription>
         </div>
-        <Button
-          onClick={() => {
-            setEditingDay(undefined)
-            setDayDialogOpen(true)
-          }}
-        >
-          <Plus className="mr-2 size-4" aria-hidden="true" />
-          Add day
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={!selectedItinerary}
+            onClick={() => {
+              setEditingDay(undefined)
+              setDayDialogOpen(true)
+            }}
+          >
+            <Plus className="mr-2 size-4" aria-hidden="true" />
+            Add day
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Itinerary options">
+                <MoreHorizontal className="size-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={openCreateItinerary}>
+                <Plus className="size-4" aria-hidden="true" />
+                New itinerary
+              </DropdownMenuItem>
+              {selectedItinerary && !hasMultiple ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => openRenameItinerary(selectedItinerary)}>
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Rename itinerary
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void handleDuplicate(selectedItinerary)}>
+                    <Copy className="size-4" aria-hidden="true" />
+                    Duplicate itinerary
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {isPending ? (
+        {itineraryQuery.isPending ? (
           <div className="flex min-h-24 items-center justify-center">
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
-        ) : isError ? (
-          <p className="text-sm text-destructive">Failed to load itinerary days.</p>
-        ) : days.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No itinerary days configured yet.</p>
+        ) : itineraryQuery.isError ? (
+          <p className="text-sm text-destructive">Failed to load itineraries.</p>
+        ) : itineraries.length === 0 ? (
+          <div className="flex flex-col items-start gap-3 rounded-md border border-dashed p-6">
+            <p className="text-sm text-muted-foreground">
+              No itinerary yet. Create one to start adding days.
+            </p>
+            <Button variant="outline" size="sm" onClick={openCreateItinerary}>
+              <Plus className="mr-2 size-4" aria-hidden="true" />
+              New itinerary
+            </Button>
+          </div>
         ) : (
-          days.map((day) => (
-            <DayRow
-              key={day.id}
-              productId={productId}
-              day={day}
-              expanded={expandedDayId === day.id}
-              onToggle={() => setExpandedDayId((current) => (current === day.id ? null : day.id))}
-              onEdit={() => {
-                setEditingDay(day)
-                setDayDialogOpen(true)
-              }}
-              onDelete={() => {
-                if (confirm("Delete this day and all its services?")) {
-                  remove.mutate({ productId, dayId: day.id })
-                }
-              }}
-              onAddService={() => {
-                setServiceDayId(day.id)
-                setEditingService(undefined)
-                setServiceDialogOpen(true)
-              }}
-              onEditService={(service) => {
-                setServiceDayId(day.id)
-                setEditingService(service)
-                setServiceDialogOpen(true)
-              }}
-              uploadMedia={uploadMedia}
-              renderDayMediaSection={renderDayMediaSection}
-            />
-          ))
+          <>
+            {hasMultiple ? (
+              <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/30 p-1">
+                {itineraries.map((itinerary) => {
+                  const isSelected = itinerary.id === selectedItineraryId
+                  return (
+                    <div
+                      key={itinerary.id}
+                      className={`flex items-center gap-1 rounded-sm pl-2 pr-1 transition-colors ${
+                        isSelected ? "bg-background shadow-sm" : "hover:bg-background/60"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedDayId(null)
+                          setSelectedItineraryId(itinerary.id)
+                        }}
+                        className="flex items-center gap-2 py-1.5 text-sm"
+                      >
+                        <span className={isSelected ? "font-medium" : "text-muted-foreground"}>
+                          {itinerary.name}
+                        </span>
+                        {itinerary.isDefault ? (
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                            Default
+                          </Badge>
+                        ) : null}
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`${itinerary.name} options`}
+                            className="size-6 text-muted-foreground"
+                          >
+                            <MoreHorizontal className="size-3.5" aria-hidden="true" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openRenameItinerary(itinerary)}>
+                            <Pencil className="size-4" aria-hidden="true" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => void handleDuplicate(itinerary)}>
+                            <Copy className="size-4" aria-hidden="true" />
+                            Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={itinerary.isDefault}
+                            onClick={() => handleSetDefault(itinerary)}
+                          >
+                            <Star className="size-4" aria-hidden="true" />
+                            Set as default
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={itinerary.isDefault && itineraries.length > 1}
+                            onClick={() => setDeleteItineraryTarget(itinerary)}
+                          >
+                            <Trash2 className="size-4" aria-hidden="true" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            {daysQuery.isPending ? (
+              <div className="flex min-h-24 items-center justify-center">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : daysQuery.isError ? (
+              <p className="text-sm text-destructive">Failed to load itinerary days.</p>
+            ) : days.length === 0 ? (
+              <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+                No days configured yet. Click "Add day" to start.
+              </p>
+            ) : (
+              days.map((day) => (
+                <DayRow
+                  key={day.id}
+                  productId={productId}
+                  day={day}
+                  expanded={expandedDayId === day.id}
+                  onToggle={() =>
+                    setExpandedDayId((current) => (current === day.id ? null : day.id))
+                  }
+                  onEdit={() => {
+                    setEditingDay(day)
+                    setDayDialogOpen(true)
+                  }}
+                  onDelete={() => {
+                    if (confirm("Delete this day and all its services?")) {
+                      removeDay.mutate({
+                        productId,
+                        itineraryId: selectedItineraryId ?? undefined,
+                        dayId: day.id,
+                      })
+                    }
+                  }}
+                  onAddService={() => {
+                    setServiceDayId(day.id)
+                    setEditingService(undefined)
+                    setServiceDialogOpen(true)
+                  }}
+                  onEditService={(service) => {
+                    setServiceDayId(day.id)
+                    setEditingService(service)
+                    setServiceDialogOpen(true)
+                  }}
+                  uploadMedia={uploadMedia}
+                  renderDayMediaSection={renderDayMediaSection}
+                />
+              ))
+            )}
+          </>
         )}
 
         <ProductDayDialog
@@ -149,6 +388,42 @@ export function ProductItinerarySection({
           renderSupplierServicePicker={renderSupplierServicePicker}
           onSuccess={() => setEditingService(undefined)}
         />
+        <ProductItineraryDialog
+          open={itineraryDialogOpen}
+          onOpenChange={(open) => {
+            setItineraryDialogOpen(open)
+            if (!open) setEditingItinerary(undefined)
+          }}
+          productId={productId}
+          itinerary={editingItinerary}
+          itineraryCount={itineraries.length}
+          onSuccess={(itineraryId) => {
+            if (!editingItinerary) setSelectedItineraryId(itineraryId)
+          }}
+        />
+        <AlertDialog
+          open={!!deleteItineraryTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteItineraryTarget(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete itinerary?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteItineraryTarget
+                  ? `"${deleteItineraryTarget.name}" and all its days and services will be permanently removed.`
+                  : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleConfirmDeleteItinerary()}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )

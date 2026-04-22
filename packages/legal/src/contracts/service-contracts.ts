@@ -101,8 +101,8 @@ export const contractRecordsService = {
           .limit(1)
         if (version) {
           const vars = (contract.variables as Record<string, unknown>) ?? {}
-          renderedBody = renderTemplate(version.body, version.bodyFormat, vars)
-          renderedBodyFormat = version.bodyFormat
+          renderedBody = renderTemplate(version.body, "html", vars)
+          renderedBodyFormat = "html"
         }
       }
       let contractNumber = contract.contractNumber

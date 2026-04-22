@@ -61,7 +61,6 @@ export {
   policyAcceptanceMethodSchema,
   policyAssignmentListQuerySchema,
   policyAssignmentScopeSchema,
-  policyBodyFormatSchema,
   policyKindSchema,
   policyListQuerySchema,
   policyRefundTypeSchema,

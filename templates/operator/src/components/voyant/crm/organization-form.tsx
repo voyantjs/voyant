@@ -7,10 +7,10 @@ import {
 } from "@voyantjs/crm-react"
 import { Loader2 } from "lucide-react"
 import * as React from "react"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Mode = { kind: "create" } | { kind: "edit"; organization: OrganizationRecord }
 
@@ -56,6 +56,7 @@ function toPayload(state: FormState): CreateOrganizationInput {
 }
 
 export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationFormProps) {
+  const messages = useAdminMessages().crm.organizationForm
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useOrganizationMutation()
@@ -73,7 +74,7 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
     setError(null)
 
     if (!state.name.trim()) {
-      setError("Organization name is required.")
+      setError(messages.validationNameRequired)
       return
     }
 
@@ -86,7 +87,7 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
           : await update.mutateAsync({ id: mode.organization.id, input: payload })
       onSuccess?.(organization)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save organization.")
+      setError(err instanceof Error ? err.message : messages.saveFailed)
     }
   }
 
@@ -94,11 +95,11 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
     <form data-slot="organization-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="organization-name">Name</Label>
+          <Label htmlFor="organization-name">{messages.nameLabel}</Label>
           <Input id="organization-name" required value={state.name} onChange={field("name")} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="organization-legal-name">Legal name</Label>
+          <Label htmlFor="organization-legal-name">{messages.legalNameLabel}</Label>
           <Input
             id="organization-legal-name"
             value={state.legalName}
@@ -106,7 +107,7 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="organization-website">Website</Label>
+          <Label htmlFor="organization-website">{messages.websiteLabel}</Label>
           <Input
             id="organization-website"
             type="url"
@@ -115,7 +116,7 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="organization-industry">Industry</Label>
+          <Label htmlFor="organization-industry">{messages.industryLabel}</Label>
           <Input id="organization-industry" value={state.industry} onChange={field("industry")} />
         </div>
       </div>
@@ -129,19 +130,19 @@ export function OrganizationForm({ mode, onSuccess, onCancel }: OrganizationForm
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {messages.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-              Saving…
+              {messages.saving}
             </>
           ) : mode.kind === "create" ? (
-            "Create organization"
+            messages.create
           ) : (
-            "Save changes"
+            messages.saveChanges
           )}
         </Button>
       </div>

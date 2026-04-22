@@ -197,7 +197,14 @@ export function pickOptionStartTimes(
   return source.map((startTime) => startTime.startTimeLocal)
 }
 
-export function pickBookingContact(
+export function pickBookingContact(params: {
+  booking: {
+    contactFirstName: string | null
+    contactLastName: string | null
+    contactEmail: string | null
+    contactPhone: string | null
+    contactPreferredLanguage: string | null
+  }
   participants: Array<{
     participantType: string | null
     isPrimary: boolean | null
@@ -207,18 +214,44 @@ export function pickBookingContact(
     email: string | null
     phone: string | null
     preferredLanguage: string | null
-  }>,
-) {
+  }>
+}) {
+  const { booking, participants } = params
+  const hasBookingContact = Boolean(
+    booking.contactFirstName ??
+      booking.contactLastName ??
+      booking.contactEmail ??
+      booking.contactPhone ??
+      booking.contactPreferredLanguage,
+  )
+
+  if (hasBookingContact) {
+    return {
+      travelerId: null,
+      firstName: booking.contactFirstName,
+      lastName: booking.contactLastName,
+      email: booking.contactEmail,
+      phone: booking.contactPhone,
+      language: booking.contactPreferredLanguage,
+    }
+  }
+
+  const nonStaffParticipants = participants.filter(
+    (participant) => participant.participantType !== "staff",
+  )
   const preferred =
-    participants.find((participant) => participant.participantType === "booker") ??
-    participants.find((participant) => participant.participantType === "contact") ??
+    nonStaffParticipants.find((participant) => participant.isPrimary) ??
+    nonStaffParticipants.find((participant) =>
+      ["traveler", "occupant"].includes(participant.participantType ?? ""),
+    ) ??
+    nonStaffParticipants[0] ??
     participants.find((participant) => participant.isPrimary) ??
     participants[0]
 
   if (!preferred) return null
 
   return {
-    participantId: preferred.id,
+    travelerId: preferred.id,
     firstName: preferred.firstName,
     lastName: preferred.lastName,
     email: preferred.email,
@@ -266,7 +299,7 @@ export function mapBookingArtifact(fulfillment: typeof bookingFulfillments.$infe
   return {
     fulfillmentId: fulfillment.id,
     bookingItemId: fulfillment.bookingItemId,
-    participantId: fulfillment.participantId,
+    travelerId: fulfillment.travelerId,
     type: fulfillment.fulfillmentType,
     deliveryChannel: fulfillment.deliveryChannel,
     status: fulfillment.status,

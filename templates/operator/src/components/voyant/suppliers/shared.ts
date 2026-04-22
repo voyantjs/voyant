@@ -14,11 +14,32 @@ import {
   statusVariant,
   suppliersQueryKeys,
 } from "@voyantjs/suppliers-react"
+import type { AdminMessages } from "@/lib/admin-i18n"
+import { getApiUrl } from "@/lib/env"
 
-const client = { baseUrl: "", fetcher: defaultFetcher }
+const client = { baseUrl: getApiUrl(), fetcher: defaultFetcher }
 
 export type { Supplier, SupplierNote, SupplierRate, SupplierService }
 export { formatAmount, formatUnit, statusVariant, suppliersQueryKeys }
+
+export function getSupplierTypeLabel(type: Supplier["type"], messages: AdminMessages) {
+  return messages.suppliers.typeLabels[type]
+}
+
+export function getSupplierStatusLabel(status: Supplier["status"], messages: AdminMessages) {
+  return messages.suppliers.statusLabels[status]
+}
+
+export function getServiceTypeLabel(
+  serviceType: SupplierService["serviceType"],
+  messages: AdminMessages,
+) {
+  return messages.suppliers.serviceTypeLabels[serviceType]
+}
+
+export function getRateUnitLabel(unit: SupplierRate["unit"], messages: AdminMessages) {
+  return messages.suppliers.rateUnitLabels[unit]
+}
 
 export function getSuppliersQueryOptions(
   options: { search?: string; limit?: number; offset?: number } = {},

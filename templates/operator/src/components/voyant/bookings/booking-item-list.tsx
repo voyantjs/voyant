@@ -9,9 +9,10 @@ import { ChevronDown, ChevronRight, Package, Pencil, Plus, Trash2 } from "lucide
 import * as React from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { BookingItemDialog } from "./booking-item-dialog"
-import { BookingItemParticipants } from "./booking-item-participants"
+import { BookingItemTravelers } from "./booking-item-travelers"
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "outline",
@@ -22,9 +23,61 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
   fulfilled: "default",
 }
 
-function formatAmount(cents: number | null, currency: string): string {
-  if (cents == null) return "-"
+function formatAmount(cents: number | null, currency: string, noValue: string): string {
+  if (cents == null) return noValue
   return `${(cents / 100).toFixed(2)} ${currency}`
+}
+
+function getItemTypeLabel(
+  itemType: BookingItemRecord["itemType"],
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["items"],
+) {
+  switch (itemType) {
+    case "unit":
+      return messages.typeUnit
+    case "extra":
+      return messages.typeExtra
+    case "service":
+      return messages.typeService
+    case "fee":
+      return messages.typeFee
+    case "tax":
+      return messages.typeTax
+    case "discount":
+      return messages.typeDiscount
+    case "adjustment":
+      return messages.typeAdjustment
+    case "accommodation":
+      return messages.typeAccommodation
+    case "transport":
+      return messages.typeTransport
+    case "other":
+      return messages.typeOther
+    default:
+      return itemType
+  }
+}
+
+function getItemStatusLabel(
+  status: BookingItemRecord["status"],
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["items"],
+) {
+  switch (status) {
+    case "draft":
+      return messages.statusDraft
+    case "on_hold":
+      return messages.statusOnHold
+    case "confirmed":
+      return messages.statusConfirmed
+    case "cancelled":
+      return messages.statusCancelled
+    case "expired":
+      return messages.statusExpired
+    case "fulfilled":
+      return messages.statusFulfilled
+    default:
+      return status
+  }
 }
 
 export interface BookingItemListProps {
@@ -32,6 +85,8 @@ export interface BookingItemListProps {
 }
 
 export function BookingItemList({ bookingId }: BookingItemListProps) {
+  const itemMessages = useAdminMessages().bookings.detail.items
+  const noValue = useAdminMessages().bookings.detail.noValue
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<BookingItemRecord | undefined>(undefined)
   const [expandedItemId, setExpandedItemId] = React.useState<string | null>(null)
@@ -45,7 +100,7 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Package className="h-4 w-4" />
-          Items
+          {itemMessages.title}
         </CardTitle>
         <Button
           size="sm"
@@ -55,24 +110,24 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Item
+          {itemMessages.addAction}
         </Button>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No items yet.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{itemMessages.empty}</p>
         ) : (
           <div className="rounded border bg-background">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
                   <th className="w-8 p-2" />
-                  <th className="p-2 text-left font-medium">Title</th>
-                  <th className="p-2 text-left font-medium">Type</th>
-                  <th className="p-2 text-left font-medium">Status</th>
-                  <th className="p-2 text-right font-medium">Qty</th>
-                  <th className="p-2 text-right font-medium">Total</th>
-                  <th className="p-2 text-left font-medium">Service Date</th>
+                  <th className="p-2 text-left font-medium">{itemMessages.tableTitle}</th>
+                  <th className="p-2 text-left font-medium">{itemMessages.tableType}</th>
+                  <th className="p-2 text-left font-medium">{itemMessages.tableStatus}</th>
+                  <th className="p-2 text-right font-medium">{itemMessages.tableQuantity}</th>
+                  <th className="p-2 text-right font-medium">{itemMessages.tableTotal}</th>
+                  <th className="p-2 text-left font-medium">{itemMessages.tableServiceDate}</th>
                   <th className="w-20 p-2" />
                 </tr>
               </thead>
@@ -96,20 +151,17 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
                           </button>
                         </td>
                         <td className="p-2 font-medium">{item.title}</td>
-                        <td className="p-2 capitalize">{item.itemType.replace("_", " ")}</td>
+                        <td className="p-2">{getItemTypeLabel(item.itemType, itemMessages)}</td>
                         <td className="p-2">
-                          <Badge
-                            variant={statusVariant[item.status] ?? "secondary"}
-                            className="capitalize"
-                          >
-                            {item.status.replace("_", " ")}
+                          <Badge variant={statusVariant[item.status] ?? "secondary"}>
+                            {getItemStatusLabel(item.status, itemMessages)}
                           </Badge>
                         </td>
                         <td className="p-2 text-right font-mono">{item.quantity}</td>
                         <td className="p-2 text-right font-mono">
-                          {formatAmount(item.totalSellAmountCents, item.sellCurrency)}
+                          {formatAmount(item.totalSellAmountCents, item.sellCurrency, noValue)}
                         </td>
-                        <td className="p-2">{item.serviceDate ?? "-"}</td>
+                        <td className="p-2">{item.serviceDate ?? noValue}</td>
                         <td className="p-2">
                           <div className="flex items-center gap-1">
                             <button
@@ -118,6 +170,7 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
                                 setEditing(item)
                                 setDialogOpen(true)
                               }}
+                              aria-label={itemMessages.editAction}
                               className="text-muted-foreground hover:text-foreground"
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -125,10 +178,11 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
                             <button
                               type="button"
                               onClick={() => {
-                                if (confirm("Delete this item?")) {
+                                if (confirm(itemMessages.deleteConfirm)) {
                                   remove.mutate(item.id)
                                 }
                               }}
+                              aria-label={itemMessages.deleteAction}
                               className="text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -139,7 +193,7 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
                       {isExpanded && (
                         <tr className="border-b last:border-b-0">
                           <td colSpan={8} className="p-2">
-                            <BookingItemParticipants bookingId={bookingId} itemId={item.id} />
+                            <BookingItemTravelers bookingId={bookingId} itemId={item.id} />
                           </td>
                         </tr>
                       )}

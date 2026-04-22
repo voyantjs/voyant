@@ -191,6 +191,7 @@ export function RoomTypeDialog({
               <div className="flex flex-col gap-2">
                 <Label>Inventory mode</Label>
                 <Select
+                  items={INVENTORY_MODES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("inventoryMode")}
                   onValueChange={(value) => form.setValue("inventoryMode", value as InventoryMode)}
                 >

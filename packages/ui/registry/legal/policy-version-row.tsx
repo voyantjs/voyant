@@ -80,6 +80,22 @@ export function PolicyVersionRow({
 
       {expanded && (
         <div className="border-t bg-muted/30 p-3">
+          {version.body ? (
+            <div className="mb-4 rounded border bg-background p-3">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Body
+              </p>
+              {version.body.trim().startsWith("<") ? (
+                <div
+                  className="prose prose-invert max-w-none text-sm [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_p]:my-2"
+                  // biome-ignore lint/security/noDangerouslySetInnerHtml: Policy version body is trusted admin-authored HTML rendered for preview.
+                  dangerouslySetInnerHTML={{ __html: version.body }}
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm">{version.body}</pre>
+              )}
+            </div>
+          ) : null}
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Rules

@@ -5,11 +5,13 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { UserProvider, useUser } from "@/components/providers/user-provider"
-import { WorkspaceProvider } from "@/components/providers/workspace-provider"
 import { SidebarProvider } from "@/components/ui"
-import { useAdminMessages } from "@/lib/admin-i18n"
+import {
+  AdminI18nProvider,
+  getAdminMessageOverridesFromUiPrefs,
+  useAdminMessages,
+} from "@/lib/admin-i18n"
 import { getCurrentUser } from "@/lib/current-user"
-import { getCurrentWorkspace } from "@/lib/current-workspace"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace")({
@@ -23,26 +25,31 @@ export const Route = createFileRoute("/_workspace")({
       })
     }
 
-    const workspace = await getCurrentWorkspace()
-
-    if (!workspace?.activeOrganization) {
-      throw new Error("Failed to resolve active workspace organization")
-    }
-
-    return { user, workspace }
+    return { user }
   },
+  // Minimal SSR fallback. Rendered for the first paint because `defaultSsr: false`
+  // (src/start.ts) turns off server-side loader/component execution for the whole
+  // auth-gated app. Once the client hydrates, each child route's own pendingComponent
+  // takes over while its loader runs.
+  pendingComponent: WorkspacePendingFallback,
   component: WorkspaceLayout,
 })
 
+function WorkspacePendingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="size-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
+
 function WorkspaceLayout() {
-  const { user, workspace } = Route.useLoaderData()
+  const { user } = Route.useLoaderData()
 
   return (
     <VoyantReactProvider baseUrl={getApiUrl()}>
       <UserProvider initialUser={user}>
-        <WorkspaceProvider initialWorkspace={workspace}>
-          <WorkspaceContent />
-        </WorkspaceProvider>
+        <WorkspaceContent />
       </UserProvider>
     </VoyantReactProvider>
   )
@@ -82,6 +89,14 @@ function WorkspaceContent() {
     return null
   }
 
+  return (
+    <AdminI18nProvider overrides={getAdminMessageOverridesFromUiPrefs(user.uiPrefs)}>
+      <WorkspaceInner user={user} />
+    </AdminI18nProvider>
+  )
+}
+
+function WorkspaceInner({ user }: { user: NonNullable<ReturnType<typeof useUser>["user"]> }) {
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ")
 
   return (

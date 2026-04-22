@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router"
 import { describeRRule } from "@voyantjs/availability/rrule"
-import { MoreHorizontal, Pencil, Plus, Star, Trash2, Upload } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
-import { useRef } from "react"
 import {
   Badge,
   Button,
@@ -13,22 +13,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui"
 import { Separator } from "@/components/ui/separator"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import type { DepartureSlot } from "./product-departure-dialog"
-
 import {
   type AvailabilityRule,
   type ChannelInfo,
   type ChannelProductMapping,
   formatAmount,
-  formatCapacity,
+  formatCapacityLabel,
   formatDuration,
   formatMargin,
   formatSlotDate,
   formatSlotTime,
+  getDepartureStatusLabel,
+  getProductBookingModeLabel,
   type ProductMediaItem,
   type ProductRecord,
   slotStatusVariant,
 } from "./product-detail-shared"
+import { ProductMediaGallery } from "./product-media-gallery"
 
 export function Section({
   title,
@@ -86,14 +89,16 @@ export function ProductDetailsSection({
   product: ProductRecord
   onEdit: () => void
 }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   return (
     <Section
-      title="Product Details"
+      title={productMessages.detailsTitle}
       actions={
         <ActionMenu>
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="h-4 w-4" />
-            Edit
+            {productMessages.edit}
           </DropdownMenuItem>
         </ActionMenu>
       }
@@ -105,7 +110,7 @@ export function ProductDetailsSection({
       ) : null}
       {product.sellAmountCents != null ? (
         <DetailRow
-          label="Sell"
+          label={productMessages.sellLabel}
           value={
             <span className="font-mono">
               {formatAmount(product.sellAmountCents, product.sellCurrency)}
@@ -115,7 +120,7 @@ export function ProductDetailsSection({
       ) : null}
       {product.costAmountCents != null ? (
         <DetailRow
-          label="Cost"
+          label={productMessages.costLabel}
           value={
             <span className="font-mono">
               {formatAmount(product.costAmountCents, product.sellCurrency)}
@@ -125,53 +130,64 @@ export function ProductDetailsSection({
       ) : null}
       {product.marginPercent != null ? (
         <DetailRow
-          label="Margin"
+          label={productMessages.marginLabel}
           value={<span className="font-mono">{formatMargin(product.marginPercent)}</span>}
         />
       ) : null}
-      <DetailRow
-        label="Currency"
-        value={<span className="font-mono">{product.sellCurrency}</span>}
-      />
     </Section>
   )
 }
 
 export function ProductDeparturesSection({
   slots,
+  itineraryNameById,
   onCreate,
   onEdit,
   onDelete,
 }: {
   slots: DepartureSlot[]
+  itineraryNameById: Map<string, string>
   onCreate: () => void
   onEdit: (slot: DepartureSlot) => void
   onDelete: (slotId: string) => void
 }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   return (
     <Section
-      title="Departures"
+      title={productMessages.departuresTitle}
       actions={
         <ActionMenu>
           <DropdownMenuItem onClick={onCreate}>
             <Plus className="h-4 w-4" />
-            New Departure
+            {productMessages.newDeparture}
           </DropdownMenuItem>
         </ActionMenu>
       }
       contentClassName=""
     >
       {slots.length === 0 ? (
-        <EmptyState message="No departures yet. Add a departure or create a recurring schedule." />
+        <EmptyState message={productMessages.departuresEmpty} />
       ) : (
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-muted-foreground">
-              <th className="py-2.5 pl-6 pr-3 text-left font-medium">Start</th>
-              <th className="px-3 py-2.5 text-left font-medium">End</th>
-              <th className="px-3 py-2.5 text-left font-medium">Duration</th>
-              <th className="px-3 py-2.5 text-left font-medium">Status</th>
-              <th className="px-3 py-2.5 text-left font-medium">Capacity</th>
+              <th className="py-2.5 pl-6 pr-3 text-left font-medium">
+                {productMessages.departureStartColumn}
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium">
+                {productMessages.departureEndColumn}
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium">Itinerary</th>
+              <th className="px-3 py-2.5 text-left font-medium">
+                {productMessages.departureDurationColumn}
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium">
+                {productMessages.departureStatusColumn}
+              </th>
+              <th className="px-3 py-2.5 text-left font-medium">
+                {productMessages.departureCapacityColumn}
+              </th>
               <th className="w-10 px-3 py-2.5" />
             </tr>
           </thead>
@@ -193,26 +209,33 @@ export function ProductDeparturesSection({
                       </div>
                     </>
                   ) : (
-                    <span className="text-muted-foreground">-</span>
+                    <span className="text-muted-foreground">{productMessages.noValue}</span>
                   )}
+                </td>
+                <td className="px-3 py-2.5 text-xs">
+                  {slot.itineraryId
+                    ? (itineraryNameById.get(slot.itineraryId) ?? "Custom override")
+                    : "Default"}
                 </td>
                 <td className="px-3 py-2.5 text-xs">{formatDuration(slot)}</td>
                 <td className="px-3 py-2.5">
-                  <Badge variant={slotStatusVariant[slot.status]} className="text-xs capitalize">
-                    {slot.status.replace("_", " ")}
+                  <Badge variant={slotStatusVariant[slot.status]} className="text-xs">
+                    {getDepartureStatusLabel(slot.status, messages)}
                   </Badge>
                 </td>
-                <td className="px-3 py-2.5 font-mono text-xs">{formatCapacity(slot)}</td>
+                <td className="px-3 py-2.5 font-mono text-xs">
+                  {formatCapacityLabel(slot, messages)}
+                </td>
                 <td className="px-3 py-2.5">
                   <ActionMenu>
                     <DropdownMenuItem onClick={() => onEdit(slot)}>
                       <Pencil className="h-4 w-4" />
-                      Edit
+                      {productMessages.edit}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onClick={() => onDelete(slot.id)}>
                       <Trash2 className="h-4 w-4" />
-                      Delete
+                      {productMessages.delete}
                     </DropdownMenuItem>
                   </ActionMenu>
                 </td>
@@ -236,20 +259,22 @@ export function ProductSchedulesSection({
   onEdit: (rule: AvailabilityRule) => void
   onDelete: (ruleId: string) => void
 }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   return (
     <Section
-      title="Recurring Schedules"
+      title={productMessages.schedulesTitle}
       actions={
         <ActionMenu>
           <DropdownMenuItem onClick={onCreate}>
             <Plus className="h-4 w-4" />
-            New Schedule
+            {productMessages.newSchedule}
           </DropdownMenuItem>
         </ActionMenu>
       }
     >
       {rules.length === 0 ? (
-        <EmptyState message="No recurring schedules. Define a rule to auto-generate departures." />
+        <EmptyState message={productMessages.schedulesEmpty} />
       ) : (
         <div className="flex flex-col divide-y">
           {rules.map((rule) => (
@@ -262,24 +287,32 @@ export function ProductSchedulesSection({
                   <span className="text-sm font-medium">{describeRRule(rule.recurrenceRule)}</span>
                   {!rule.active ? (
                     <Badge variant="outline" className="text-xs">
-                      inactive
+                      {productMessages.inactiveBadge}
                     </Badge>
                   ) : null}
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Max {rule.maxCapacity} pax · {rule.timezone}
-                  {rule.cutoffMinutes != null ? ` · cutoff ${rule.cutoffMinutes}m` : ""}
+                  {formatMessage(productMessages.scheduleSummary, {
+                    maxCapacity: rule.maxCapacity,
+                    timezone: rule.timezone,
+                    cutoff:
+                      rule.cutoffMinutes != null
+                        ? formatMessage(productMessages.scheduleCutoffSuffix, {
+                            minutes: rule.cutoffMinutes,
+                          })
+                        : "",
+                  })}
                 </p>
               </div>
               <ActionMenu>
                 <DropdownMenuItem onClick={() => onEdit(rule)}>
                   <Pencil className="h-4 w-4" />
-                  Edit
+                  {productMessages.edit}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => onDelete(rule.id)}>
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  {productMessages.delete}
                 </DropdownMenuItem>
               </ActionMenu>
             </div>
@@ -301,6 +334,8 @@ export function ProductChannelsSection({
   onAddChannel: (channelId: string) => void
   onRemoveChannel: (mappingId: string) => void
 }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const assignedChannelIds = new Set(mappings.map((mapping) => mapping.channelId))
   const assignedChannels = allChannels.filter((channel) => assignedChannelIds.has(channel.id))
   const unassignedChannels = allChannels.filter(
@@ -308,10 +343,10 @@ export function ProductChannelsSection({
   )
 
   return (
-    <Section title="Channels">
+    <Section title={productMessages.channelsTitle}>
       <div className="flex flex-col gap-3">
         {assignedChannels.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Not assigned to any channels yet.</p>
+          <p className="text-sm text-muted-foreground">{productMessages.channelsEmpty}</p>
         ) : (
           <div className="flex flex-col divide-y">
             {assignedChannels.map((channel) => {
@@ -347,7 +382,7 @@ export function ProductChannelsSection({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="w-full">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Channel
+                {productMessages.addChannel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -364,9 +399,9 @@ export function ProductChannelsSection({
         ) : null}
         {allChannels.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No channels defined yet.{" "}
+            {productMessages.noChannelsDefined}{" "}
             <Link to="/settings/channels" className="underline">
-              Create channels in Settings
+              {productMessages.createChannelsInSettings}
             </Link>
           </p>
         ) : null}
@@ -382,20 +417,22 @@ export function ProductOrganizeSection({
   product: ProductRecord
   onEdit: () => void
 }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   return (
     <Section
-      title="Organize"
+      title={productMessages.organizeTitle}
       actions={
         <ActionMenu>
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="h-4 w-4" />
-            Edit
+            {productMessages.edit}
           </DropdownMenuItem>
         </ActionMenu>
       }
     >
       <DetailRow
-        label="Tags"
+        label={productMessages.tagsLabel}
         value={
           product.tags.length > 0 ? (
             <div className="flex flex-wrap justify-end gap-1">
@@ -406,116 +443,46 @@ export function ProductOrganizeSection({
               ))}
             </div>
           ) : (
-            <span className="text-muted-foreground">-</span>
+            <span className="text-muted-foreground">{productMessages.noValue}</span>
           )
         }
       />
       <DetailRow
-        label="Type"
-        value={<span className="capitalize">{product.bookingMode.replace("_", " ")}</span>}
+        label={productMessages.typeLabel}
+        value={<span>{getProductBookingModeLabel(product.bookingMode, messages)}</span>}
       />
     </Section>
   )
 }
 
 export function ProductMediaSection({
+  productId,
   media,
   isUploading,
   onUpload,
   onSetCover,
   onDelete,
 }: {
+  productId: string
   media: ProductMediaItem[]
   isUploading: boolean
   onUpload: (file: File) => void
   onSetCover: (mediaId: string) => void
   onDelete: (mediaId: string) => void
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
+  const messages = useAdminMessages()
   return (
-    <Section
-      title="Media"
-      actions={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs"
-          disabled={isUploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="mr-1.5 h-3.5 w-3.5" />
-          Upload
-        </Button>
-      }
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) {
-            onUpload(file)
-            event.target.value = ""
-          }
-        }}
-      />
-      {media.length === 0 ? (
-        <EmptyState message="No media yet. Upload images or videos." />
-      ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {media.map((item) => (
-            <div
-              key={item.id}
-              className="group relative aspect-square overflow-hidden rounded-md border"
-            >
-              {item.mediaType === "image" ? (
-                <img
-                  src={item.url}
-                  alt={item.altText ?? item.name}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted text-xs text-muted-foreground">
-                  {item.mediaType}
-                </div>
-              )}
-              {item.isCover ? (
-                <div className="absolute left-1 top-1">
-                  <Badge variant="secondary" className="px-1 py-0 text-[10px]">
-                    <Star className="mr-0.5 h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                    Cover
-                  </Badge>
-                </div>
-              ) : null}
-              <div className="absolute inset-0 flex items-end justify-center gap-1 bg-black/0 pb-1.5 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
-                {!item.isCover ? (
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => onSetCover(item.id)}
-                    title="Set as cover"
-                  >
-                    <Star className="h-3 w-3" />
-                  </Button>
-                ) : null}
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => onDelete(item.id)}
-                  title="Delete"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <Section title={messages.products.core.mediaTitle}>
+      <div className="flex flex-col gap-4">
+        <ProductMediaGallery
+          productId={productId}
+          media={media}
+          isUploading={isUploading}
+          onUpload={onUpload}
+          onSetCover={onSetCover}
+          onDelete={onDelete}
+        />
+      </div>
     </Section>
   )
 }

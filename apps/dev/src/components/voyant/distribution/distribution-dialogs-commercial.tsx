@@ -121,6 +121,7 @@ export function ChannelDialog({
               <div className="grid gap-2">
                 <Label>Kind</Label>
                 <Select
+                  items={channelKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ChannelRow["kind"])}
                 >
@@ -139,6 +140,7 @@ export function ChannelDialog({
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={channelStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as ChannelRow["status"])}
                 >
@@ -290,6 +292,7 @@ export function ChannelContractDialog({
               <div className="grid gap-2">
                 <Label>Channel</Label>
                 <Select
+                  items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                   value={form.watch("channelId")}
                   onValueChange={(value) => form.setValue("channelId", value ?? "")}
                 >
@@ -308,6 +311,10 @@ export function ChannelContractDialog({
               <div className="grid gap-2">
                 <Label>Supplier</Label>
                 <Select
+                  items={[
+                    { label: "No supplier", value: NONE_VALUE },
+                    ...suppliers.map((supplier) => ({ label: supplier.name, value: supplier.id })),
+                  ]}
                   value={form.watch("supplierId")}
                   onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
                 >
@@ -327,6 +334,7 @@ export function ChannelContractDialog({
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={contractStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ChannelContractRow["status"])
@@ -375,6 +383,7 @@ export function ChannelContractDialog({
               <div className="grid gap-2">
                 <Label>Payment Owner</Label>
                 <Select
+                  items={paymentOwnerOptions}
                   value={form.watch("paymentOwner")}
                   onValueChange={(value) =>
                     form.setValue("paymentOwner", value as ChannelContractRow["paymentOwner"])
@@ -395,6 +404,7 @@ export function ChannelContractDialog({
               <div className="grid gap-2">
                 <Label>Cancellation Owner</Label>
                 <Select
+                  items={cancellationOwnerOptions}
                   value={form.watch("cancellationOwner")}
                   onValueChange={(value) =>
                     form.setValue(

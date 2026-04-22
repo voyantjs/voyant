@@ -19,6 +19,11 @@ CORS_ALLOWLIST="http://localhost:3100"
 # Email (Resend)
 RESEND_API_KEY="re_..."
 
+# Unsplash API — used by `pnpm seed` to attach realistic product images.
+# Get a key at https://unsplash.com/developers. Optional — if unset, seed
+# skips media attachment.
+UNSPLASH_ACCESS_KEY=""
+
 # KMS provider — "local" for dev, "env" for self-managed symmetric keys,
 # "gcp" for Cloud KMS, "aws" for AWS KMS.
 # wrangler.jsonc defaults this to "local" for the dev env; override here if

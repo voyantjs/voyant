@@ -13,6 +13,7 @@ import {
   Label,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -31,6 +32,8 @@ type VersionDialogProps = {
 }
 
 export function VersionDialog({ open, onOpenChange, productId, onSuccess }: VersionDialogProps) {
+  const messages = useAdminMessages()
+  const versionMessages = messages.products.operations.versions
   const form = useForm<VersionFormValues, unknown, VersionFormOutput>({
     resolver: zodResolver(versionFormSchema),
     defaultValues: {
@@ -55,25 +58,26 @@ export function VersionDialog({ open, onOpenChange, productId, onSuccess }: Vers
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Version Snapshot</DialogTitle>
+          <DialogTitle>{versionMessages.dialogTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
-            <p className="text-sm text-muted-foreground">
-              This will save a snapshot of the current product with all its days and services.
-            </p>
+            <p className="text-sm text-muted-foreground">{versionMessages.description}</p>
             <div className="flex flex-col gap-2">
-              <Label>Notes (optional)</Label>
-              <Textarea {...form.register("notes")} placeholder="What changed in this version..." />
+              <Label>{versionMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={versionMessages.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {versionMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Version
+              {versionMessages.create}
             </Button>
           </DialogFooter>
         </form>

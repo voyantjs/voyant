@@ -144,6 +144,7 @@ export function PaymentDialog({
               <div className="flex flex-col gap-2">
                 <Label>Payment Method</Label>
                 <Select
+                  items={PAYMENT_METHODS}
                   value={form.watch("paymentMethod")}
                   onValueChange={(value) =>
                     form.setValue("paymentMethod", value as PaymentFormValues["paymentMethod"])
@@ -164,6 +165,7 @@ export function PaymentDialog({
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={PAYMENT_STATUSES}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as PaymentFormValues["status"])

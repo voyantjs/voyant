@@ -6,7 +6,8 @@ import {
   useProductDayMutation,
   useProductDayServiceMutation,
   useProductDayServices,
-  useProductDays,
+  useProductItineraries,
+  useProductItineraryDays,
 } from "@voyantjs/products-react"
 import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
@@ -39,7 +40,13 @@ export function ProductItinerarySection({ productId }: { productId: string }) {
   const [serviceDayId, setServiceDayId] = React.useState("")
   const [editingService, setEditingService] = React.useState<ProductDayServiceRecord | undefined>()
 
-  const { data, isPending, isError } = useProductDays(productId)
+  const { data: itineraryData } = useProductItineraries(productId)
+  const itineraries = itineraryData?.data ?? []
+  const selectedItineraryId =
+    itineraries.find((itinerary) => itinerary.isDefault)?.id ?? itineraries[0]?.id ?? ""
+  const { data, isPending, isError } = useProductItineraryDays(productId, selectedItineraryId, {
+    enabled: Boolean(selectedItineraryId),
+  })
   const { remove } = useProductDayMutation()
   const days = React.useMemo(
     () => (data?.data ?? []).slice().sort((left, right) => left.dayNumber - right.dayNumber),
@@ -114,6 +121,7 @@ export function ProductItinerarySection({ productId }: { productId: string }) {
           open={dayDialogOpen}
           onOpenChange={setDayDialogOpen}
           productId={productId}
+          itineraryId={selectedItineraryId ?? ""}
           day={editingDay}
           nextDayNumber={nextDayNumber}
           onSuccess={() => {

@@ -195,6 +195,7 @@ export function UnitDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={UNIT_TYPES}
                   value={form.watch("unitType")}
                   onValueChange={(v) => form.setValue("unitType", v as UnitFormValues["unitType"])}
                 >

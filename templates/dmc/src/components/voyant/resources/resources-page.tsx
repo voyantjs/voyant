@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import type { RowSelectionState } from "@tanstack/react-table"
-import { Loader2 } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { ResourcesOverview } from "./resources-overview"
 import { ResourcesDialogs } from "./resources-page-dialogs"
@@ -17,7 +18,7 @@ import type {
   ResourceSlotAssignmentRow,
 } from "./resources-shared"
 import {
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   getResourceAllocationsQueryOptions,
   getResourceAssignmentsQueryOptions,
   getResourceBookingsQueryOptions,
@@ -37,6 +38,7 @@ import { AssignmentsTab, CloseoutsTab } from "./resources-tabs-secondary"
 
 export function ResourcesPage() {
   const navigate = useNavigate()
+  const messages = useAdminMessages()
   const [search, setSearch] = useState("")
   const [kindFilter, setKindFilter] = useState("all")
   const [bulkActionTarget, setBulkActionTarget] = useState<string | null>(null)
@@ -189,7 +191,8 @@ export function ResourcesPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nounSingular,
+    nounPlural,
     payload,
     successVerb,
     clearSelection,
@@ -197,7 +200,8 @@ export function ResourcesPage() {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nounSingular: string
+    nounPlural: string
     payload: Record<string, unknown>
     successVerb: string
     clearSelection: () => void
@@ -216,12 +220,21 @@ export function ResourcesPage() {
     setBulkActionTarget(null)
 
     if (result.failed.length === 0) {
-      toast.success(`${successVerb} ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.resources.toasts.bulkUpdated, {
+          verb: successVerb,
+          selection: formatLocalizedSelectionLabel(result.succeeded, nounSingular, nounPlural),
+        }),
+      )
       return
     }
 
     toast.error(
-      `${successVerb} ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`,
+      formatMessage(messages.resources.toasts.bulkUpdatedPartial, {
+        verb: successVerb,
+        succeeded: result.succeeded,
+        selection: formatLocalizedSelectionLabel(result.total, nounSingular, nounPlural),
+      }),
     )
   }
 
@@ -229,13 +242,15 @@ export function ResourcesPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nounSingular,
+    nounPlural,
     clearSelection,
   }: {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nounSingular: string
+    nounPlural: string
     clearSelection: () => void
   }) => {
     if (ids.length === 0) return
@@ -249,25 +264,32 @@ export function ResourcesPage() {
     setBulkActionTarget(null)
 
     if (result.failed.length === 0) {
-      toast.success(`Deleted ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.resources.toasts.bulkDeleted, {
+          selection: formatLocalizedSelectionLabel(result.succeeded, nounSingular, nounPlural),
+        }),
+      )
       return
     }
 
-    toast.error(`Deleted ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`)
+    toast.error(
+      formatMessage(messages.resources.toasts.bulkDeletedPartial, {
+        succeeded: result.succeeded,
+        selection: formatLocalizedSelectionLabel(result.total, nounSingular, nounPlural),
+      }),
+    )
   }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Resources</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage assignable guides, vehicles, rooms, pools, and operational closeouts.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{messages.resources.title}</h1>
+        <p className="text-sm text-muted-foreground">{messages.resources.description}</p>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+          {messages.loading}
         </div>
       ) : (
         <>
@@ -302,11 +324,11 @@ export function ResourcesPage() {
 
           <Tabs defaultValue="resources">
             <TabsList variant="line">
-              <TabsTrigger value="resources">Resources</TabsTrigger>
-              <TabsTrigger value="pools">Pools</TabsTrigger>
-              <TabsTrigger value="allocations">Allocations</TabsTrigger>
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
-              <TabsTrigger value="closeouts">Closeouts</TabsTrigger>
+              <TabsTrigger value="resources">{messages.resources.tabResources}</TabsTrigger>
+              <TabsTrigger value="pools">{messages.resources.tabPools}</TabsTrigger>
+              <TabsTrigger value="allocations">{messages.resources.tabAllocations}</TabsTrigger>
+              <TabsTrigger value="assignments">{messages.resources.tabAssignments}</TabsTrigger>
+              <TabsTrigger value="closeouts">{messages.resources.tabCloseouts}</TabsTrigger>
             </TabsList>
             <ResourcesTab
               suppliers={suppliers}

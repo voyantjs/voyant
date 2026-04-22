@@ -145,6 +145,7 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={PRODUCT_STATUSES}
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as ProductFormValues["status"])}
                 >

@@ -1,12 +1,13 @@
 "use client"
 
 import { type PersonRecord, usePeople } from "@voyantjs/crm-react"
-import { Loader2, Plus, Search } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { Plus, Search } from "lucide-react"
 import * as React from "react"
-
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SkeletonTableRows } from "@/components/ui/skeletons"
 import {
   Table,
   TableBody,
@@ -15,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PersonDialog } from "./person-dialog"
 
@@ -29,6 +31,8 @@ export interface PersonListProps {
  * full working contacts view with zero additional code.
  */
 export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = {}) {
+  const messages = useAdminMessages()
+  const listMessages = messages.crm.personList
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -68,7 +72,7 @@ export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = 
             aria-hidden="true"
           />
           <Input
-            placeholder="Search people…"
+            placeholder={listMessages.searchPlaceholder}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -79,7 +83,7 @@ export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = 
         </div>
         <Button onClick={handleCreate} data-slot="person-list-create">
           <Plus className="mr-2 size-4" aria-hidden="true" />
-          New person
+          {listMessages.newAction}
         </Button>
       </div>
 
@@ -87,36 +91,37 @@ export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Relation</TableHead>
+              <TableHead>{listMessages.columnName}</TableHead>
+              <TableHead>{listMessages.columnEmail}</TableHead>
+              <TableHead>{listMessages.columnPhone}</TableHead>
+              <TableHead>{listMessages.columnRelation}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  <Loader2
-                    className="mx-auto size-4 animate-spin text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
+          {isPending ? (
+            <SkeletonTableRows
+              rows={8}
+              columns={4}
+              columnWidths={["w-40", "w-48", "w-32", "w-16"]}
+            />
+          ) : isError ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-sm text-destructive">
-                  Failed to load people.
+                  {listMessages.loadFailed}
                 </TableCell>
               </TableRow>
-            ) : people.length === 0 ? (
+            </TableBody>
+          ) : people.length === 0 ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
-                  No people found.
+                  {listMessages.empty}
                 </TableCell>
               </TableRow>
-            ) : (
-              people.map((person) => {
+            </TableBody>
+          ) : (
+            <TableBody>
+              {people.map((person) => {
                 const fullName =
                   [person.firstName, person.lastName].filter(Boolean).join(" ") || "—"
                 return (
@@ -139,9 +144,9 @@ export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = 
                     </TableCell>
                   </TableRow>
                 )
-              })
-            )}
-          </TableBody>
+              })}
+            </TableBody>
+          )}
         </Table>
       </div>
 
@@ -156,18 +161,16 @@ export function PersonList({ pageSize = 25, onSelectPerson }: PersonListProps = 
             disabled={offset === 0}
             onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
           >
-            Previous
+            {listMessages.previous}
           </Button>
-          <span>
-            Page {page} / {pageCount}
-          </span>
+          <span>{formatMessage(messages.settings.paginationPage, { page, pageCount })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={offset + pageSize >= total}
             onClick={() => setOffset((prev) => prev + pageSize)}
           >
-            Next
+            {listMessages.next}
           </Button>
         </div>
       </div>

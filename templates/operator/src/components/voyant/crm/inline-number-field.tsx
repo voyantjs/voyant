@@ -1,6 +1,8 @@
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Check, Loader2, Pencil, X } from "lucide-react"
 import { useState } from "react"
 import { Button, Input } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 interface InlineNumberFieldProps {
   icon?: React.ComponentType<{ className?: string }>
@@ -23,6 +25,7 @@ export function InlineNumberField({
   max,
   onSave,
 }: InlineNumberFieldProps) {
+  const messages = useAdminMessages().crm.shared
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value != null ? String(value) : "")
   const [saving, setSaving] = useState(false)
@@ -42,14 +45,18 @@ export function InlineNumberField({
         await onSave(null)
       } else {
         const parsed = Number.parseInt(draft, 10)
-        if (!Number.isFinite(parsed)) throw new Error("Invalid number")
-        if (min != null && parsed < min) throw new Error(`Must be at least ${min}`)
-        if (max != null && parsed > max) throw new Error(`Must be at most ${max}`)
+        if (!Number.isFinite(parsed)) throw new Error(messages.invalidNumber)
+        if (min != null && parsed < min) {
+          throw new Error(formatMessage(messages.minNumber, { min: String(min) }))
+        }
+        if (max != null && parsed > max) {
+          throw new Error(formatMessage(messages.maxNumber, { max: String(max) }))
+        }
         await onSave(parsed)
       }
       setEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : messages.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -113,7 +120,9 @@ export function InlineNumberField({
               {value != null ? (
                 value.toLocaleString()
               ) : (
-                <span className="text-muted-foreground italic">{placeholder || "Not set"}</span>
+                <span className="text-muted-foreground italic">
+                  {placeholder || messages.notSet}
+                </span>
               )}
             </div>
             {!disabled ? (

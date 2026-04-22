@@ -59,6 +59,7 @@ export const availabilityStartTimeListQuerySchema = paginationSchema.extend({
 
 export const availabilitySlotCoreSchema = z.object({
   productId: z.string(),
+  itineraryId: z.string().nullable().optional(),
   optionId: z.string().nullable().optional(),
   facilityId: z.string().nullable().optional(),
   availabilityRuleId: z.string().nullable().optional(),
@@ -85,6 +86,7 @@ export const insertAvailabilitySlotSchema = availabilitySlotCoreSchema
 export const updateAvailabilitySlotSchema = availabilitySlotCoreSchema.partial()
 export const availabilitySlotListQuerySchema = paginationSchema.extend({
   productId: z.string().optional(),
+  itineraryId: z.string().optional(),
   optionId: z.string().optional(),
   facilityId: z.string().optional(),
   availabilityRuleId: z.string().optional(),

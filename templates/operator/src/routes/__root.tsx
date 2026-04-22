@@ -6,6 +6,7 @@ import {
   Scripts,
   useRouteContext,
 } from "@tanstack/react-router"
+import { ThemeProvider } from "@voyantjs/voyant-admin"
 import { RefreshCcw } from "lucide-react"
 import type { ReactNode } from "react"
 import { Button, Toaster } from "@/components/ui"
@@ -46,7 +47,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-screen bg-background font-sans antialiased" suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -76,29 +77,34 @@ function RootErrorBoundary({ error, reset }: { error: unknown; reset: () => void
         ? error.message
         : "Something went wrong while loading this page."
 
+  // TanStack Router's errorComponent replaces RootComponent entirely, so the
+  // app's <Providers> tree (ThemeProvider etc.) isn't above us. Mount a local
+  // ThemeProvider so <Toaster />'s useTheme() call doesn't crash the boundary.
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <Empty className="max-w-xl border border-border bg-card p-8">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <RefreshCcw className="size-5" />
-          </EmptyMedia>
-          <EmptyTitle>Something went wrong</EmptyTitle>
-        </EmptyHeader>
-        <EmptyContent>
-          <Alert variant="destructive" className="text-left">
-            <AlertTitle>Request failed</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-          <div className="flex items-center gap-3">
-            <Button onClick={() => reset()}>Try again</Button>
-            <Button variant="outline" onClick={() => window.location.assign("/")}>
-              Go to dashboard
-            </Button>
-          </div>
-        </EmptyContent>
-      </Empty>
-      <Toaster />
-    </div>
+    <ThemeProvider defaultTheme="system" storageKey="theme">
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <Empty className="max-w-xl border border-border bg-card p-8">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <RefreshCcw className="size-5" />
+            </EmptyMedia>
+            <EmptyTitle>Something went wrong</EmptyTitle>
+          </EmptyHeader>
+          <EmptyContent>
+            <Alert variant="destructive" className="text-left">
+              <AlertTitle>Request failed</AlertTitle>
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => reset()}>Try again</Button>
+              <Button variant="outline" onClick={() => window.location.assign("/")}>
+                Go to dashboard
+              </Button>
+            </div>
+          </EmptyContent>
+        </Empty>
+        <Toaster />
+      </div>
+    </ThemeProvider>
   )
 }

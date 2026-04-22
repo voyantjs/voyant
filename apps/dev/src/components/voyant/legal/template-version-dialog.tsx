@@ -13,17 +13,11 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from "@/components/ui"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const versionFormSchema = z.object({
-  bodyFormat: z.enum(["markdown", "html", "lexical_json"]),
   body: z.string().min(1, "Body is required"),
   variableSchema: z.string().optional(),
   changelog: z.string().optional(),
@@ -40,12 +34,6 @@ type TemplateVersionDialogProps = {
   onSuccess: () => void
 }
 
-const BODY_FORMATS = [
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "lexical_json", label: "Lexical JSON" },
-] as const
-
 export function TemplateVersionDialog({
   open,
   onOpenChange,
@@ -56,7 +44,6 @@ export function TemplateVersionDialog({
   const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(versionFormSchema),
     defaultValues: {
-      bodyFormat: "markdown",
       body: "",
       variableSchema: "",
       changelog: "",
@@ -74,7 +61,6 @@ export function TemplateVersionDialog({
     await create.mutateAsync({
       templateId,
       input: {
-        bodyFormat: values.bodyFormat,
         body: values.body,
         variableSchema: values.variableSchema ? JSON.parse(values.variableSchema) : undefined,
         changelog: values.changelog || undefined,
@@ -92,25 +78,6 @@ export function TemplateVersionDialog({
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
-            <div className="flex flex-col gap-2">
-              <Label>Body Format</Label>
-              <Select
-                value={form.watch("bodyFormat")}
-                onValueChange={(v) => form.setValue("bodyFormat", v as FormValues["bodyFormat"])}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BODY_FORMATS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex flex-col gap-2">
               <Label>Body</Label>
               <Textarea {...form.register("body")} placeholder="Template content..." rows={10} />

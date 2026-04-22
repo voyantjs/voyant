@@ -114,6 +114,10 @@ export function ResourceDialog({
             <div className="grid gap-2">
               <Label>Supplier</Label>
               <Select
+                items={[
+                  { label: "No supplier", value: NONE_VALUE },
+                  ...suppliers.map((supplier) => ({ label: supplier.name, value: supplier.id })),
+                ]}
                 value={form.watch("supplierId")}
                 onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
               >
@@ -134,6 +138,7 @@ export function ResourceDialog({
               <div className="grid gap-2">
                 <Label>Kind</Label>
                 <Select
+                  items={resourceKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourceRow["kind"])}
                 >
@@ -277,6 +282,10 @@ export function ResourcePoolDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={[
+                  { label: "No product", value: NONE_VALUE },
+                  ...products.map((product) => ({ label: product.name, value: product.id })),
+                ]}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
               >
@@ -297,6 +306,7 @@ export function ResourcePoolDialog({
               <div className="grid gap-2">
                 <Label>Kind</Label>
                 <Select
+                  items={resourceKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourcePoolRow["kind"])}
                 >

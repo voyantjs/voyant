@@ -1,13 +1,13 @@
 import { relations } from "drizzle-orm"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
-import { bookingParticipants, bookings } from "./schema-core"
+import { bookings, bookingTravelers } from "./schema-core"
 import { bookingGroupMembers, bookingGroups } from "./schema-groups"
 import {
   bookingAllocations,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
+  bookingItemTravelers,
   bookingRedemptionEvents,
 } from "./schema-items"
 import {
@@ -17,9 +17,11 @@ import {
   bookingSessionStates,
   bookingSupplierStatuses,
 } from "./schema-operations"
+import { bookingStaffAssignments } from "./schema-staff"
 
 export const bookingsRelations = relations(bookings, ({ many }) => ({
-  participants: many(bookingParticipants),
+  participants: many(bookingTravelers),
+  staffAssignments: many(bookingStaffAssignments),
   supplierStatuses: many(bookingSupplierStatuses),
   activityLog: many(bookingActivityLog),
   notes: many(bookingNotes),
@@ -47,17 +49,20 @@ export const bookingGroupMembersRelations = relations(bookingGroupMembers, ({ on
   }),
 }))
 
-export const bookingParticipantsRelations = relations(bookingParticipants, ({ one, many }) => ({
-  booking: one(bookings, { fields: [bookingParticipants.bookingId], references: [bookings.id] }),
+export const bookingTravelersRelations = relations(bookingTravelers, ({ one, many }) => ({
+  booking: one(bookings, { fields: [bookingTravelers.bookingId], references: [bookings.id] }),
   documents: many(bookingDocuments),
   fulfillments: many(bookingFulfillments),
   redemptionEvents: many(bookingRedemptionEvents),
-  itemLinks: many(bookingItemParticipants),
+  itemLinks: many(bookingItemTravelers),
 }))
+
+export const bookingParticipantsRelations = bookingTravelersRelations
 
 export const bookingItemsRelations = relations(bookingItems, ({ one, many }) => ({
   booking: one(bookings, { fields: [bookingItems.bookingId], references: [bookings.id] }),
-  participantLinks: many(bookingItemParticipants),
+  participantLinks: many(bookingItemTravelers),
+  staffAssignments: many(bookingStaffAssignments),
   allocations: many(bookingAllocations),
   fulfillments: many(bookingFulfillments),
   redemptionEvents: many(bookingRedemptionEvents),
@@ -75,16 +80,18 @@ export const bookingAllocationsRelations = relations(bookingAllocations, ({ one 
   }),
 }))
 
-export const bookingItemParticipantsRelations = relations(bookingItemParticipants, ({ one }) => ({
+export const bookingItemTravelersRelations = relations(bookingItemTravelers, ({ one }) => ({
   bookingItem: one(bookingItems, {
-    fields: [bookingItemParticipants.bookingItemId],
+    fields: [bookingItemTravelers.bookingItemId],
     references: [bookingItems.id],
   }),
-  participant: one(bookingParticipants, {
-    fields: [bookingItemParticipants.participantId],
-    references: [bookingParticipants.id],
+  traveler: one(bookingTravelers, {
+    fields: [bookingItemTravelers.travelerId],
+    references: [bookingTravelers.id],
   }),
 }))
+
+export const bookingItemParticipantsRelations = bookingItemTravelersRelations
 
 export const bookingSupplierStatusesRelations = relations(bookingSupplierStatuses, ({ one }) => ({
   booking: one(bookings, {
@@ -99,9 +106,9 @@ export const bookingFulfillmentsRelations = relations(bookingFulfillments, ({ on
     fields: [bookingFulfillments.bookingItemId],
     references: [bookingItems.id],
   }),
-  participant: one(bookingParticipants, {
-    fields: [bookingFulfillments.participantId],
-    references: [bookingParticipants.id],
+  traveler: one(bookingTravelers, {
+    fields: [bookingFulfillments.travelerId],
+    references: [bookingTravelers.id],
   }),
 }))
 
@@ -114,9 +121,9 @@ export const bookingRedemptionEventsRelations = relations(bookingRedemptionEvent
     fields: [bookingRedemptionEvents.bookingItemId],
     references: [bookingItems.id],
   }),
-  participant: one(bookingParticipants, {
-    fields: [bookingRedemptionEvents.participantId],
-    references: [bookingParticipants.id],
+  traveler: one(bookingTravelers, {
+    fields: [bookingRedemptionEvents.travelerId],
+    references: [bookingTravelers.id],
   }),
 }))
 
@@ -137,8 +144,19 @@ export const bookingNotesRelations = relations(bookingNotes, ({ one }) => ({
 
 export const bookingDocumentsRelations = relations(bookingDocuments, ({ one }) => ({
   booking: one(bookings, { fields: [bookingDocuments.bookingId], references: [bookings.id] }),
-  participant: one(bookingParticipants, {
-    fields: [bookingDocuments.participantId],
-    references: [bookingParticipants.id],
+  traveler: one(bookingTravelers, {
+    fields: [bookingDocuments.travelerId],
+    references: [bookingTravelers.id],
+  }),
+}))
+
+export const bookingStaffAssignmentsRelations = relations(bookingStaffAssignments, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingStaffAssignments.bookingId],
+    references: [bookings.id],
+  }),
+  bookingItem: one(bookingItems, {
+    fields: [bookingStaffAssignments.bookingItemId],
+    references: [bookingItems.id],
   }),
 }))

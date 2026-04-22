@@ -1,3 +1,4 @@
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
@@ -29,58 +30,49 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { getTimezoneLabel, TIMEZONE_IDS, TIMEZONE_OPTIONS } from "@/lib/timezone-options"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const WEEKDAY_OPTIONS = [
-  { value: "MO", label: "Mon" },
-  { value: "TU", label: "Tue" },
-  { value: "WE", label: "Wed" },
-  { value: "TH", label: "Thu" },
-  { value: "FR", label: "Fri" },
-  { value: "SA", label: "Sat" },
-  { value: "SU", label: "Sun" },
-] as const
+type ScheduleMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["schedules"]
 
-const WEEKDAY_VALUES = WEEKDAY_OPTIONS.map((d) => d.value)
+const WEEKDAY_VALUES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const
 type Weekday = (typeof WEEKDAY_VALUES)[number]
 
-const FREQUENCY_OPTIONS = [
-  { value: "DAILY", label: "Daily" },
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-] as const
-type Frequency = (typeof FREQUENCY_OPTIONS)[number]["value"]
+const FREQUENCY_OPTIONS = ["DAILY", "WEEKLY", "MONTHLY"] as const
+type Frequency = (typeof FREQUENCY_OPTIONS)[number]
 
-const scheduleFormSchema = z
-  .object({
-    timezone: z.string().min(1, "Timezone is required"),
-    frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY"]),
-    interval: z.coerce.number().int().min(1).max(365),
-    byWeekdays: z.array(z.enum(WEEKDAY_VALUES)),
-    byMonthDays: z.array(z.coerce.number().int().min(1).max(31)),
-    maxCapacity: z.coerce.number().int().min(0),
-    cutoffMinutes: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-    active: z.boolean(),
-  })
-  .refine(
-    (v) => {
-      if (v.frequency !== "WEEKLY") return true
-      return v.byWeekdays.length > 0
-    },
-    { message: "Select at least one weekday", path: ["byWeekdays"] },
-  )
-  .refine(
-    (v) => {
-      if (v.frequency !== "MONTHLY") return true
-      return v.byMonthDays.length > 0
-    },
-    { message: "Select at least one day of the month", path: ["byMonthDays"] },
-  )
+const buildScheduleFormSchema = (messages: ScheduleMessages) =>
+  z
+    .object({
+      timezone: z.string().min(1, messages.validationTimezoneRequired),
+      frequency: z.enum(FREQUENCY_OPTIONS),
+      interval: z.coerce.number().int().min(1).max(365),
+      byWeekdays: z.array(z.enum(WEEKDAY_VALUES)),
+      byMonthDays: z.array(z.coerce.number().int().min(1).max(31)),
+      maxCapacity: z.coerce.number().int().min(0),
+      cutoffMinutes: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+      active: z.boolean(),
+    })
+    .refine(
+      (v) => {
+        if (v.frequency !== "WEEKLY") return true
+        return v.byWeekdays.length > 0
+      },
+      { message: messages.validationWeekdayRequired, path: ["byWeekdays"] },
+    )
+    .refine(
+      (v) => {
+        if (v.frequency !== "MONTHLY") return true
+        return v.byMonthDays.length > 0
+      },
+      { message: messages.validationMonthdayRequired, path: ["byMonthDays"] },
+    )
 
-type ScheduleFormValues = z.input<typeof scheduleFormSchema>
-type ScheduleFormOutput = z.output<typeof scheduleFormSchema>
+type ScheduleFormSchema = ReturnType<typeof buildScheduleFormSchema>
+type ScheduleFormValues = z.input<ScheduleFormSchema>
+type ScheduleFormOutput = z.output<ScheduleFormSchema>
 
 export type AvailabilityRule = {
   id: string
@@ -156,27 +148,46 @@ function buildRRule(values: {
   return parts.join(";")
 }
 
-function describeRRule(values: {
-  frequency: Frequency
-  interval: number
-  byWeekdays: Weekday[]
-  byMonthDays: number[]
-}): string {
+function describeRRule(
+  values: {
+    frequency: Frequency
+    interval: number
+    byWeekdays: Weekday[]
+    byMonthDays: number[]
+  },
+  messages: ScheduleMessages,
+  weekdayOptions: ReadonlyArray<{ value: Weekday; label: string }>,
+): string {
   const { frequency, interval, byWeekdays, byMonthDays } = values
-  const unit = frequency === "DAILY" ? "day" : frequency === "WEEKLY" ? "week" : "month"
-  const cadence = interval > 1 ? `every ${interval} ${unit}s` : `every ${unit}`
+
+  const cadence =
+    frequency === "DAILY"
+      ? interval > 1
+        ? formatMessage(messages.previewEveryDays, { interval })
+        : messages.previewEveryDay
+      : frequency === "WEEKLY"
+        ? interval > 1
+          ? formatMessage(messages.previewEveryWeeks, { interval })
+          : messages.previewEveryWeek
+        : interval > 1
+          ? formatMessage(messages.previewEveryMonths, { interval })
+          : messages.previewEveryMonth
 
   if (frequency === "WEEKLY") {
-    if (byWeekdays.length === 0) return `Generates ${cadence} — pick at least one weekday`
-    const labels = WEEKDAY_OPTIONS.filter((d) => byWeekdays.includes(d.value)).map((d) => d.label)
-    return `Generates ${cadence} on ${labels.join(", ")}`
+    if (byWeekdays.length === 0) return `${cadence}${messages.previewPickWeekday}`
+    const labels = weekdayOptions.filter((d) => byWeekdays.includes(d.value)).map((d) => d.label)
+    return formatMessage(messages.previewWeekly, { cadence, days: labels.join(", ") })
   }
   if (frequency === "MONTHLY") {
-    if (byMonthDays.length === 0) return `Generates ${cadence} — pick at least one day`
+    if (byMonthDays.length === 0) return `${cadence}${messages.previewPickMonthday}`
     const ordered = [...byMonthDays].sort((a, b) => a - b)
-    return `Generates ${cadence} on day${ordered.length === 1 ? "" : "s"} ${ordered.join(", ")}`
+    return formatMessage(messages.previewMonthly, {
+      cadence,
+      suffix: ordered.length === 1 ? "" : messages.previewSuffixDays,
+      days: ordered.join(", "),
+    })
   }
-  return `Generates ${cadence}`
+  return cadence
 }
 
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
@@ -188,7 +199,25 @@ export function ScheduleDialog({
   rule,
   onSuccess,
 }: ScheduleDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const scheduleMessages = messages.products.operations.schedules
   const isEditing = !!rule
+  const scheduleFormSchema = buildScheduleFormSchema(scheduleMessages)
+  const weekdayOptions = [
+    { value: "MO", label: scheduleMessages.weekdayMon },
+    { value: "TU", label: scheduleMessages.weekdayTue },
+    { value: "WE", label: scheduleMessages.weekdayWed },
+    { value: "TH", label: scheduleMessages.weekdayThu },
+    { value: "FR", label: scheduleMessages.weekdayFri },
+    { value: "SA", label: scheduleMessages.weekdaySat },
+    { value: "SU", label: scheduleMessages.weekdaySun },
+  ] as const satisfies ReadonlyArray<{ value: Weekday; label: string }>
+  const frequencyOptions = [
+    { value: "DAILY", label: scheduleMessages.frequencyDaily },
+    { value: "WEEKLY", label: scheduleMessages.frequencyWeekly },
+    { value: "MONTHLY", label: scheduleMessages.frequencyMonthly },
+  ] as const
 
   const defaultTz =
     typeof Intl !== "undefined"
@@ -218,13 +247,17 @@ export function ScheduleDialog({
 
   const preview = useMemo(
     () =>
-      describeRRule({
-        frequency,
-        interval: typeof interval === "number" ? interval : Number(interval) || 1,
-        byWeekdays,
-        byMonthDays,
-      }),
-    [frequency, interval, byWeekdays, byMonthDays],
+      describeRRule(
+        {
+          frequency,
+          interval: typeof interval === "number" ? interval : Number(interval) || 1,
+          byWeekdays,
+          byMonthDays,
+        },
+        scheduleMessages,
+        weekdayOptions,
+      ),
+    [byMonthDays, byWeekdays, frequency, interval, scheduleMessages, weekdayOptions],
   )
 
   useEffect(() => {
@@ -281,13 +314,19 @@ export function ScheduleDialog({
   }
 
   const unitLabel =
-    frequency === "DAILY" ? "day(s)" : frequency === "WEEKLY" ? "week(s)" : "month(s)"
+    frequency === "DAILY"
+      ? scheduleMessages.unitDays
+      : frequency === "WEEKLY"
+        ? scheduleMessages.unitWeeks
+        : scheduleMessages.unitMonths
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Schedule" : "New Recurring Schedule"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? scheduleMessages.editTitle : scheduleMessages.newTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -296,7 +335,7 @@ export function ScheduleDialog({
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-[160px_1fr] gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Repeats</Label>
+                <Label>{scheduleMessages.repeatsLabel}</Label>
                 <Select
                   value={frequency}
                   onValueChange={(v) =>
@@ -305,13 +344,13 @@ export function ScheduleDialog({
                       shouldDirty: true,
                     })
                   }
-                  items={FREQUENCY_OPTIONS}
+                  items={frequencyOptions}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {FREQUENCY_OPTIONS.map((f) => (
+                    {frequencyOptions.map((f) => (
                       <SelectItem key={f.value} value={f.value}>
                         {f.label}
                       </SelectItem>
@@ -320,7 +359,7 @@ export function ScheduleDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Every</Label>
+                <Label>{scheduleMessages.everyLabel}</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     {...form.register("interval")}
@@ -342,7 +381,7 @@ export function ScheduleDialog({
 
             {frequency === "WEEKLY" && (
               <div className="flex flex-col gap-2">
-                <Label>On these days</Label>
+                <Label>{scheduleMessages.weeklyDaysLabel}</Label>
                 <ToggleGroup
                   multiple
                   value={byWeekdays}
@@ -355,7 +394,7 @@ export function ScheduleDialog({
                   variant="outline"
                   spacing={1}
                 >
-                  {WEEKDAY_OPTIONS.map((d) => (
+                  {weekdayOptions.map((d) => (
                     <ToggleGroupItem key={d.value} value={d.value} className="w-14">
                       {d.label}
                     </ToggleGroupItem>
@@ -371,7 +410,7 @@ export function ScheduleDialog({
 
             {frequency === "MONTHLY" && (
               <div className="flex flex-col gap-2">
-                <Label>On days of the month</Label>
+                <Label>{scheduleMessages.monthlyDaysLabel}</Label>
                 <ToggleGroup
                   multiple
                   value={byMonthDays.map(String)}
@@ -404,7 +443,7 @@ export function ScheduleDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Timezone</Label>
+                <Label>{scheduleMessages.timezoneLabel}</Label>
                 <Combobox
                   items={TIMEZONE_IDS}
                   value={timezone || null}
@@ -419,9 +458,9 @@ export function ScheduleDialog({
                     }
                   }}
                 >
-                  <ComboboxInput placeholder="Search timezones…" />
+                  <ComboboxInput placeholder={scheduleMessages.timezoneSearchPlaceholder} />
                   <ComboboxContent>
-                    <ComboboxEmpty>No timezone found.</ComboboxEmpty>
+                    <ComboboxEmpty>{scheduleMessages.timezoneEmpty}</ComboboxEmpty>
                     <ComboboxList>
                       <ComboboxCollection>
                         {(id) => {
@@ -448,7 +487,7 @@ export function ScheduleDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max capacity</Label>
+                <Label>{scheduleMessages.maxCapacityLabel}</Label>
                 <Input {...form.register("maxCapacity")} type="number" min="0" step="1" />
                 {form.formState.errors.maxCapacity && (
                   <p className="text-xs text-destructive">
@@ -457,7 +496,7 @@ export function ScheduleDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cutoff (minutes)</Label>
+                <Label>{scheduleMessages.cutoffLabel}</Label>
                 <Input
                   {...form.register("cutoffMinutes")}
                   type="number"
@@ -475,17 +514,17 @@ export function ScheduleDialog({
                 onCheckedChange={(c) => form.setValue("active", c)}
               />
               <Label htmlFor="schedule-active" className="font-normal cursor-pointer">
-                Active (generates new departures)
+                {scheduleMessages.activeDescription}
               </Label>
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Schedule"}
+              {isEditing ? productMessages.saveChanges : scheduleMessages.create}
             </Button>
           </SheetFooter>
         </form>

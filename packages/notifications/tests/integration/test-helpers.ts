@@ -29,7 +29,7 @@ async function cleanupNotificationsTestData(
       contract_attachments,
       contracts,
       booking_payment_schedules,
-      booking_participants,
+      booking_travelers,
       bookings
     CASCADE
   `)
@@ -135,7 +135,7 @@ export function createNotificationsTestContext(options?: { eventBus?: EventBus }
       )
     `)
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS booking_participants (
+      CREATE TABLE IF NOT EXISTS booking_travelers (
         id text PRIMARY KEY NOT NULL,
         booking_id text NOT NULL,
         first_name text NOT NULL,

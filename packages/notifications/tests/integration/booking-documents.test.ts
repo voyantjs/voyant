@@ -1,4 +1,4 @@
-import { bookingParticipants, bookings } from "@voyantjs/bookings/schema"
+import { bookings, bookingTravelers } from "@voyantjs/bookings/schema"
 import { createEventBus } from "@voyantjs/core"
 import { invoiceRenditions, invoices } from "@voyantjs/finance/schema"
 import { contractAttachments, contracts } from "@voyantjs/legal/contracts/schema"
@@ -25,17 +25,20 @@ describe.skipIf(!DB_AVAILABLE)("Booking document notification routes", () => {
       id: "book_docs_1",
       bookingNumber: "BKG-1001",
       status: "confirmed",
+      contactFirstName: "Ana",
+      contactLastName: "Popescu",
+      contactEmail: "ana@example.com",
       sellCurrency: "EUR",
       sellAmountCents: 120000,
     })
 
-    await ctx.db.insert(bookingParticipants).values({
+    await ctx.db.insert(bookingTravelers).values({
       id: "bp_docs_1",
       bookingId: "book_docs_1",
       firstName: "Ana",
       lastName: "Popescu",
       email: "ana@example.com",
-      participantType: "booker",
+      participantType: "traveler",
       isPrimary: true,
     })
 

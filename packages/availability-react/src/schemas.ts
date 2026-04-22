@@ -65,6 +65,7 @@ export const availabilitySlotRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
   productName: z.string().nullable().optional(),
+  itineraryId: z.string().nullable(),
   optionId: z.string().nullable(),
   facilityId: z.string().nullable(),
   availabilityRuleId: z.string().nullable(),

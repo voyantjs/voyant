@@ -1,17 +1,17 @@
 import { useNavigate } from "@tanstack/react-router"
 
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { PersonList } from "./person-list"
 
 export function PeoplePage() {
   const navigate = useNavigate()
+  const messages = useAdminMessages().crm.peoplePage
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">People</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your clients, partners, and suppliers.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{messages.title}</h1>
+        <p className="text-sm text-muted-foreground">{messages.description}</p>
       </div>
 
       <PersonList

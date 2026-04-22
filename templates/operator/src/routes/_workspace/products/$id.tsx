@@ -4,12 +4,11 @@ import { ProductDetailPage } from "@/components/voyant/products/product-detail-p
 import {
   getChannelsQueryOptions,
   getProductChannelMappingsQueryOptions,
-  getProductDayServicesQueryOptions,
-  getProductDaysQueryOptions,
   getProductMediaQueryOptions,
   getProductRulesQueryOptions,
   getProductSlotsQueryOptions,
 } from "@/components/voyant/products/product-detail-shared"
+import { ProductDetailSkeleton } from "@/components/voyant/products/product-detail-skeleton"
 import {
   getOptionPriceRulesQueryOptions,
   getOptionUnitPriceRulesQueryOptions,
@@ -25,10 +24,6 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       getProductQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
     )
 
-    const daysData = await context.queryClient.ensureQueryData(
-      getProductDaysQueryOptions(params.id),
-    )
-
     const productOptionsData = await context.queryClient.ensureQueryData(
       getProductOptionsQueryOptions(params.id),
     )
@@ -40,9 +35,6 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       context.queryClient.ensureQueryData(getProductChannelMappingsQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getProductMediaQueryOptions(params.id)),
       context.queryClient.ensureQueryData(getPricingCategoriesQueryOptions()),
-      ...daysData.data.map((day) =>
-        context.queryClient.ensureQueryData(getProductDayServicesQueryOptions(params.id, day.id)),
-      ),
       ...productOptionsData.data.flatMap((option) => [
         context.queryClient.ensureQueryData(getOptionUnitsQueryOptions(option.id)),
         context.queryClient.ensureQueryData(getOptionPriceRulesQueryOptions(option.id)),
@@ -63,6 +55,7 @@ export const Route = createFileRoute("/_workspace/products/$id")({
       ),
     )
   },
+  pendingComponent: ProductDetailSkeleton,
   component: ProductDetailRoute,
 })
 

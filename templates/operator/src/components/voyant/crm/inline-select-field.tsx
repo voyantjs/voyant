@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 interface InlineSelectFieldOption {
   value: string
@@ -35,6 +36,7 @@ export function InlineSelectField({
   allowClear = true,
   onSave,
 }: InlineSelectFieldProps) {
+  const messages = useAdminMessages().crm.shared
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? "")
   const [saving, setSaving] = useState(false)
@@ -53,7 +55,7 @@ export function InlineSelectField({
       await onSave(draft === "" ? null : draft)
       setEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : messages.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -70,12 +72,12 @@ export function InlineSelectField({
           <div className="mt-1 flex items-center gap-2">
             <Select value={draft} onValueChange={(v) => setDraft(v ?? "")} disabled={saving}>
               <SelectTrigger className="h-8 text-sm flex-1">
-                <SelectValue placeholder={placeholder || "Select…"} />
+                <SelectValue placeholder={placeholder || messages.selectPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {allowClear ? (
                   <SelectItem value="__none__">
-                    <span className="text-muted-foreground italic">None</span>
+                    <span className="text-muted-foreground italic">{messages.noneOption}</span>
                   </SelectItem>
                 ) : null}
                 {options.map((o) => (
@@ -117,7 +119,9 @@ export function InlineSelectField({
               {matched ? (
                 matched.label
               ) : (
-                <span className="text-muted-foreground italic">{placeholder || "Not set"}</span>
+                <span className="text-muted-foreground italic">
+                  {placeholder || messages.notSet}
+                </span>
               )}
             </div>
             {!disabled ? (

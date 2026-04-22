@@ -2,7 +2,7 @@ import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import { boolean, date, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
-import { bookingParticipants, bookings } from "./schema-core"
+import { bookings, bookingTravelers } from "./schema-core"
 import {
   bookingAllocationStatusEnum,
   bookingAllocationTypeEnum,
@@ -101,7 +101,7 @@ export const bookingFulfillments = pgTable(
     bookingItemId: typeIdRef("booking_item_id").references(() => bookingItems.id, {
       onDelete: "set null",
     }),
-    participantId: typeIdRef("participant_id").references(() => bookingParticipants.id, {
+    travelerId: typeIdRef("traveler_id").references(() => bookingTravelers.id, {
       onDelete: "set null",
     }),
     fulfillmentType: bookingFulfillmentTypeEnum("fulfillment_type").notNull(),
@@ -118,7 +118,7 @@ export const bookingFulfillments = pgTable(
     index("idx_booking_fulfillments_booking").on(table.bookingId),
     index("idx_booking_fulfillments_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_fulfillments_item").on(table.bookingItemId),
-    index("idx_booking_fulfillments_participant").on(table.participantId),
+    index("idx_booking_fulfillments_traveler").on(table.travelerId),
     index("idx_booking_fulfillments_status").on(table.status),
   ],
 )
@@ -133,7 +133,7 @@ export const bookingRedemptionEvents = pgTable(
     bookingItemId: typeIdRef("booking_item_id").references(() => bookingItems.id, {
       onDelete: "set null",
     }),
-    participantId: typeIdRef("participant_id").references(() => bookingParticipants.id, {
+    travelerId: typeIdRef("traveler_id").references(() => bookingTravelers.id, {
       onDelete: "set null",
     }),
     redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -151,33 +151,33 @@ export const bookingRedemptionEvents = pgTable(
       table.createdAt,
     ),
     index("idx_booking_redemption_events_item").on(table.bookingItemId),
-    index("idx_booking_redemption_events_participant").on(table.participantId),
+    index("idx_booking_redemption_events_traveler").on(table.travelerId),
     index("idx_booking_redemption_events_redeemed_at").on(table.redeemedAt),
   ],
 )
 
-export const bookingItemParticipants = pgTable(
-  "booking_item_participants",
+export const bookingItemTravelers = pgTable(
+  "booking_item_travelers",
   {
-    id: typeId("booking_item_participants"),
+    id: typeId("booking_item_travelers"),
     bookingItemId: typeIdRef("booking_item_id")
       .notNull()
       .references(() => bookingItems.id, { onDelete: "cascade" }),
-    participantId: typeIdRef("participant_id")
+    travelerId: typeIdRef("traveler_id")
       .notNull()
-      .references(() => bookingParticipants.id, { onDelete: "cascade" }),
+      .references(() => bookingTravelers.id, { onDelete: "cascade" }),
     role: bookingItemParticipantRoleEnum("role").notNull().default("traveler"),
     isPrimary: boolean("is_primary").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_item_participants_item").on(table.bookingItemId),
-    index("idx_booking_item_participants_item_primary_created").on(
+    index("idx_booking_item_travelers_item").on(table.bookingItemId),
+    index("idx_booking_item_travelers_item_primary_created").on(
       table.bookingItemId,
       table.isPrimary,
       table.createdAt,
     ),
-    index("idx_booking_item_participants_participant").on(table.participantId),
+    index("idx_booking_item_travelers_traveler").on(table.travelerId),
   ],
 )
 
@@ -189,5 +189,5 @@ export type BookingFulfillment = typeof bookingFulfillments.$inferSelect
 export type NewBookingFulfillment = typeof bookingFulfillments.$inferInsert
 export type BookingRedemptionEvent = typeof bookingRedemptionEvents.$inferSelect
 export type NewBookingRedemptionEvent = typeof bookingRedemptionEvents.$inferInsert
-export type BookingItemParticipant = typeof bookingItemParticipants.$inferSelect
-export type NewBookingItemParticipant = typeof bookingItemParticipants.$inferInsert
+export type BookingItemTraveler = typeof bookingItemTravelers.$inferSelect
+export type NewBookingItemTraveler = typeof bookingItemTravelers.$inferInsert

@@ -22,24 +22,58 @@ import {
   Textarea,
 } from "@/components/ui"
 import { PricingCategoryCombobox } from "@/components/voyant/pricing/pricing-category-combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { OptionUnitData } from "./product-unit-dialog"
 
-const cellFormSchema = z.object({
-  unitId: z.string().min(1, "Unit is required"),
-  pricingCategoryId: z.string().optional().nullable(),
-  pricingMode: z.enum(["per_unit", "per_person", "per_booking", "included", "free", "on_request"]),
-  sell: z.coerce.number().min(0),
-  cost: z.coerce.number().min(0),
-  minQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  maxQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  sortOrder: z.coerce.number().int(),
-  active: z.boolean(),
-  notes: z.string().optional().nullable(),
-})
+type UnitPriceMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["unitPrices"]
 
-type CellFormValues = z.input<typeof cellFormSchema>
-type CellFormOutput = z.output<typeof cellFormSchema>
+function getUnitTypeLabel(
+  type: OptionUnitData["unitType"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["units"],
+) {
+  switch (type) {
+    case "person":
+      return messages.typePerson
+    case "group":
+      return messages.typeGroup
+    case "room":
+      return messages.typeRoom
+    case "vehicle":
+      return messages.typeVehicle
+    case "service":
+      return messages.typeService
+    case "other":
+      return messages.typeOther
+    default:
+      return type
+  }
+}
+
+const buildCellFormSchema = (messages: UnitPriceMessages) =>
+  z.object({
+    unitId: z.string().min(1, messages.validationUnitRequired),
+    pricingCategoryId: z.string().optional().nullable(),
+    pricingMode: z.enum([
+      "per_unit",
+      "per_person",
+      "per_booking",
+      "included",
+      "free",
+      "on_request",
+    ]),
+    sell: z.coerce.number().min(0),
+    cost: z.coerce.number().min(0),
+    minQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    maxQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    sortOrder: z.coerce.number().int(),
+    active: z.boolean(),
+    notes: z.string().optional().nullable(),
+  })
+
+type CellFormSchema = ReturnType<typeof buildCellFormSchema>
+type CellFormValues = z.input<CellFormSchema>
+type CellFormOutput = z.output<CellFormSchema>
 
 export type OptionUnitPriceRuleData = {
   id: string
@@ -69,15 +103,6 @@ type UnitPriceRuleDialogProps = {
   onSuccess: () => void
 }
 
-const UNIT_PRICING_MODES = [
-  { value: "per_unit", label: "Per Unit" },
-  { value: "per_person", label: "Per Person" },
-  { value: "per_booking", label: "Per Booking" },
-  { value: "included", label: "Included" },
-  { value: "free", label: "Free" },
-  { value: "on_request", label: "On Request" },
-] as const
-
 export function UnitPriceRuleDialog({
   open,
   onOpenChange,
@@ -89,8 +114,21 @@ export function UnitPriceRuleDialog({
   cell,
   onSuccess,
 }: UnitPriceRuleDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const unitPriceMessages = messages.products.operations.unitPrices
+  const unitMessages = messages.products.operations.units
   const isEditing = !!cell
   const { create, update } = useOptionUnitPriceRuleMutation()
+  const cellFormSchema = buildCellFormSchema(unitPriceMessages)
+  const pricingModes = [
+    { value: "per_unit", label: unitPriceMessages.pricingModePerUnit },
+    { value: "per_person", label: unitPriceMessages.pricingModePerPerson },
+    { value: "per_booking", label: unitPriceMessages.pricingModePerBooking },
+    { value: "included", label: unitPriceMessages.pricingModeIncluded },
+    { value: "free", label: unitPriceMessages.pricingModeFree },
+    { value: "on_request", label: unitPriceMessages.pricingModeOnRequest },
+  ] as const
 
   const form = useForm<CellFormValues, unknown, CellFormOutput>({
     resolver: zodResolver(cellFormSchema),
@@ -166,7 +204,9 @@ export function UnitPriceRuleDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Price" : "Set Price"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? unitPriceMessages.editTitle : unitPriceMessages.newTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -175,19 +215,22 @@ export function UnitPriceRuleDialog({
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Unit</Label>
+                <Label>{unitPriceMessages.unitLabel}</Label>
                 <Select
                   value={form.watch("unitId") || undefined}
                   onValueChange={(v) => form.setValue("unitId", v ?? "", { shouldValidate: true })}
-                  items={units.map((u) => ({ value: u.id, label: `${u.name} (${u.unitType})` }))}
+                  items={units.map((u) => ({
+                    value: u.id,
+                    label: `${u.name} (${getUnitTypeLabel(u.unitType, unitMessages)})`,
+                  }))}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select..." />
+                    <SelectValue placeholder={unitPriceMessages.unitPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {units.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.name} ({u.unitType})
+                        {u.name} ({getUnitTypeLabel(u.unitType, unitMessages)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -197,31 +240,31 @@ export function UnitPriceRuleDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Category</Label>
+                <Label>{unitPriceMessages.categoryLabel}</Label>
                 <PricingCategoryCombobox
                   value={form.watch("pricingCategoryId")}
                   onChange={(value) =>
                     form.setValue("pricingCategoryId", value ?? "", { shouldDirty: true })
                   }
-                  placeholder="Search pricing categories…"
+                  placeholder={unitPriceMessages.categoryPlaceholder}
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Pricing mode</Label>
+              <Label>{unitPriceMessages.pricingModeLabel}</Label>
               <Select
                 value={form.watch("pricingMode")}
                 onValueChange={(v) =>
                   form.setValue("pricingMode", v as CellFormValues["pricingMode"])
                 }
-                items={UNIT_PRICING_MODES}
+                items={pricingModes}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNIT_PRICING_MODES.map((m) => (
+                  {pricingModes.map((m) => (
                     <SelectItem key={m.value} value={m.value}>
                       {m.label}
                     </SelectItem>
@@ -232,29 +275,29 @@ export function UnitPriceRuleDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Sell</Label>
+                <Label>{unitPriceMessages.sellLabel}</Label>
                 <Input {...form.register("sell")} type="number" step="0.01" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cost</Label>
+                <Label>{unitPriceMessages.costLabel}</Label>
                 <Input {...form.register("cost")} type="number" step="0.01" min="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Min quantity</Label>
+                <Label>{unitPriceMessages.minQuantityLabel}</Label>
                 <Input {...form.register("minQuantity")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max quantity</Label>
+                <Label>{unitPriceMessages.maxQuantityLabel}</Label>
                 <Input {...form.register("maxQuantity")} type="number" min="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Sort order</Label>
+                <Label>{unitPriceMessages.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" />
               </div>
               <div className="flex items-center gap-2">
@@ -262,22 +305,22 @@ export function UnitPriceRuleDialog({
                   checked={form.watch("active")}
                   onCheckedChange={(v) => form.setValue("active", v)}
                 />
-                <Label>Active</Label>
+                <Label>{unitPriceMessages.activeLabel}</Label>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
+              <Label>{unitPriceMessages.notesLabel}</Label>
               <Textarea {...form.register("notes")} />
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Set Price"}
+              {isEditing ? productMessages.saveChanges : unitPriceMessages.create}
             </Button>
           </SheetFooter>
         </form>

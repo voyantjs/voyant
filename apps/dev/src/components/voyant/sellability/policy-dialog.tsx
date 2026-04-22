@@ -193,6 +193,7 @@ export function PolicyDialog({ open, onOpenChange, policy, onSuccess }: Props) {
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={POLICY_SCOPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("scope")}
                   onValueChange={(value) => form.setValue("scope", value as PolicyScope)}
                 >
@@ -211,6 +212,7 @@ export function PolicyDialog({ open, onOpenChange, policy, onSuccess }: Props) {
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={POLICY_TYPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("policyType")}
                   onValueChange={(value) => form.setValue("policyType", value as PolicyType)}
                 >

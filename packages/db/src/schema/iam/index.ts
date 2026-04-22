@@ -1,5 +1,6 @@
 export * from "./apikey"
 export * from "./auth"
+export * from "./invitations"
 export * from "./kms"
 export * from "./roles"
 export * from "./user_profiles"

@@ -115,6 +115,7 @@ export function ServiceDialog({
             <div className="flex flex-col gap-2">
               <Label>Service Type</Label>
               <Select
+                items={SERVICE_TYPES}
                 value={form.watch("serviceType")}
                 onValueChange={(v) =>
                   form.setValue("serviceType", v as ServiceFormValues["serviceType"])

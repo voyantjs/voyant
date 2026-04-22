@@ -12,17 +12,21 @@ import {
   Input,
   Label,
 } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { authClient } from "@/lib/auth"
-import { getCurrentUser } from "@/lib/current-user"
+import { getBootstrapStatus, getCurrentUser } from "@/lib/current-user"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/(auth)/sign-in")({
   loader: async () => {
-    const user = await getCurrentUser()
+    const [user, bootstrap] = await Promise.all([getCurrentUser(), getBootstrapStatus()])
 
     if (user) {
       throw redirect({ to: "/" })
+    }
+
+    if (!bootstrap.hasUsers) {
+      throw redirect({ to: "/sign-up" })
     }
 
     return null
@@ -39,6 +43,7 @@ function SignInPage() {
   const navigate = useNavigate()
   const { next, redirect_url } = Route.useSearch()
   const redirectTo = next || redirect_url || "/"
+  const messages = useAdminMessages().auth.signIn
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -60,11 +65,9 @@ function SignInPage() {
         const msg = result.error.message ?? ""
         if (msg.toLowerCase().includes("not verified") || result.error.status === 403) {
           setEmailNotVerified(true)
-          setError(
-            "Your email address has not been verified. Please check your inbox or resend the verification code.",
-          )
+          setError(messages.emailNotVerified)
         } else {
-          setError(msg || "Invalid email or password")
+          setError(msg || messages.invalidEmailOrPassword)
         }
         setLoading(false)
         return
@@ -75,7 +78,7 @@ function SignInPage() {
 
       void navigate({ to: redirectTo })
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError(messages.somethingWentWrong)
       setLoading(false)
     }
   }
@@ -88,7 +91,7 @@ function SignInPage() {
       await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" })
       void navigate({ to: "/verify-email", search: { email } })
     } catch {
-      setError("Failed to resend verification code. Please try again.")
+      setError(messages.somethingWentWrong)
       setResending(false)
     }
   }
@@ -103,8 +106,8 @@ function SignInPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>Sign in to your account to continue</CardDescription>
+        <CardTitle>{messages.title}</CardTitle>
+        <CardDescription>{messages.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -118,17 +121,17 @@ function SignInPage() {
                   disabled={resending}
                   className="mt-2 font-medium underline hover:no-underline disabled:opacity-50"
                 >
-                  {resending ? "Sending..." : "Resend verification code"}
+                  {resending ? messages.sending : messages.resendVerificationCode}
                 </button>
               )}
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{messages.emailLabel}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder={messages.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -138,9 +141,9 @@ function SignInPage() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{messages.passwordLabel}</Label>
               <Link to="/forgot-password" className="text-xs text-muted-foreground hover:underline">
-                Forgot password?
+                {messages.forgotPassword}
               </Link>
             </div>
             <Input
@@ -154,13 +157,13 @@ function SignInPage() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign in
+            {messages.submit}
           </Button>
         </form>
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
-          <span className="text-xs uppercase text-muted-foreground">or</span>
+          <span className="text-xs uppercase text-muted-foreground">{messages.or}</span>
           <div className="h-px flex-1 bg-border" />
         </div>
 
@@ -183,15 +186,8 @@ function SignInPage() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          {messages.continueWithGoogle}
         </Button>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link to="/sign-up" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
       </CardContent>
     </Card>
   )

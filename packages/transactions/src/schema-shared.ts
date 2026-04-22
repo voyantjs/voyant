@@ -21,8 +21,6 @@ export const orderStatusEnum = pgEnum("order_status", [
 
 export const transactionParticipantTypeEnum = pgEnum("transaction_participant_type", [
   "traveler",
-  "booker",
-  "contact",
   "occupant",
   "staff",
   "other",
@@ -62,6 +60,16 @@ export const transactionItemParticipantRoleEnum = pgEnum("transaction_item_parti
   "occupant",
   "primary_contact",
   "beneficiary",
+  "service_assignee",
+  "other",
+])
+
+export const transactionContactAssignmentRoleEnum = pgEnum("transaction_contact_assignment_role", [
+  "primary_contact",
+  "other",
+])
+
+export const transactionStaffAssignmentRoleEnum = pgEnum("transaction_staff_assignment_role", [
   "service_assignee",
   "other",
 ])

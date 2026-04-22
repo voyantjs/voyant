@@ -29,10 +29,11 @@ describe("Booking document schema", () => {
   }
 
   it("accepts valid input", () => {
-    const result = insertBookingDocumentSchema.parse(valid)
+    const result = insertBookingDocumentSchema.parse({ ...valid, travelerId: "bkpt_123" })
     expect(result.type).toBe("visa")
     expect(result.fileName).toBe("visa.pdf")
     expect(result.fileUrl).toBe("https://example.com/visa.pdf")
+    expect(result.travelerId).toBe("bkpt_123")
   })
 
   it("accepts valid document types", () => {

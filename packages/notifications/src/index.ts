@@ -9,6 +9,10 @@ import {
 } from "./routes.js"
 import { notificationsModule } from "./schema.js"
 
+export {
+  notificationLiquidEngine,
+  renderLiquidTemplate,
+} from "./liquid.js"
 export type { DefaultNotificationProviderOptions } from "./provider-resolution.js"
 export {
   createDefaultNotificationProviders,
@@ -62,6 +66,7 @@ export {
   createNotificationService,
   NotificationError,
   notificationsService,
+  previewNotificationTemplate,
   renderNotificationTemplate,
 } from "./service.js"
 export type {
@@ -78,6 +83,16 @@ export type {
 } from "./task-runtime.js"
 export { buildNotificationTaskRuntime } from "./task-runtime.js"
 export { deliverQueuedNotificationReminder, sendDueNotificationReminders } from "./tasks/index.js"
+export type {
+  NotificationLiquidSnippet,
+  NotificationTemplateVariableCategory,
+  NotificationTemplateVariableDefinition,
+  NotificationTemplateVariableType,
+} from "./template-authoring.js"
+export {
+  notificationLiquidSnippets,
+  notificationTemplateVariableCatalog,
+} from "./template-authoring.js"
 export type {
   NotificationAttachment,
   NotificationChannel,
@@ -109,6 +124,8 @@ export {
   notificationTargetTypeSchema,
   notificationTemplateListQuerySchema,
   notificationTemplateStatusSchema,
+  previewNotificationTemplateResultSchema,
+  previewNotificationTemplateSchema,
   runDueRemindersSchema,
   sendBookingDocumentsNotificationResultSchema,
   sendBookingDocumentsNotificationSchema,
@@ -120,6 +137,8 @@ export {
 } from "./validation.js"
 
 export function createNotificationsHonoModule(options?: NotificationsRoutesOptions): HonoModule {
+  const routes = createNotificationsRoutes(options)
+
   const module: Module = {
     ...notificationsModule,
     bootstrap: ({ bindings, container }) => {
@@ -132,6 +151,7 @@ export function createNotificationsHonoModule(options?: NotificationsRoutesOptio
 
   return {
     module,
-    routes: createNotificationsRoutes(options),
+    adminRoutes: routes,
+    routes,
   }
 }

@@ -1,9 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Loader2, Package, Trash2, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { getAllocationModeLabel } from "./resources-shared"
 
 type AllocationDetail = {
   id: string
@@ -88,6 +91,9 @@ export async function ensureResourceAllocationDetailPageData(queryClient: QueryC
 export function ResourceAllocationDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.resources.details
 
   const { data: allocationData, isPending } = useQuery(getResourceAllocationDetailQueryOptions(id))
 
@@ -97,17 +103,14 @@ export function ResourceAllocationDetailPage({ id }: { id: string }) {
     ...getResourceAllocationPoolQueryOptions(allocation?.poolId ?? ""),
     enabled: Boolean(allocation?.poolId),
   })
-
   const productQuery = useQuery({
     ...getResourceAllocationProductQueryOptions(allocation?.productId ?? ""),
     enabled: Boolean(allocation?.productId),
   })
-
   const ruleQuery = useQuery({
     ...getResourceAllocationRuleQueryOptions(allocation?.availabilityRuleId ?? ""),
     enabled: Boolean(allocation?.availabilityRuleId),
   })
-
   const startTimeQuery = useQuery({
     ...getResourceAllocationStartTimeQueryOptions(allocation?.startTimeId ?? ""),
     enabled: Boolean(allocation?.startTimeId),
@@ -132,9 +135,9 @@ export function ResourceAllocationDetailPage({ id }: { id: string }) {
   if (!allocation) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Allocation not found</p>
+        <p className="text-muted-foreground">{detailMessages.allocation.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/resources" })}>
-          Back to Resources
+          {detailMessages.backToResources}
         </Button>
       </div>
     )
@@ -147,12 +150,16 @@ export function ResourceAllocationDetailPage({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Resource Allocation</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {detailMessages.allocation.pageTitle}
+          </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {allocation.allocationMode}
+              {getAllocationModeLabel(allocation.allocationMode, messages)}
             </Badge>
-            <Badge variant="secondary">Qty {allocation.quantityRequired}</Badge>
+            <Badge variant="secondary">
+              {detailMessages.quantityPrefix} {allocation.quantityRequired}
+            </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -163,7 +170,7 @@ export function ResourceAllocationDetailPage({ id }: { id: string }) {
             }
           >
             <Wrench className="mr-2 h-4 w-4" />
-            Open Pool
+            {detailMessages.openPool}
           </Button>
           <Button
             variant="outline"
@@ -172,62 +179,68 @@ export function ResourceAllocationDetailPage({ id }: { id: string }) {
             }
           >
             <Package className="mr-2 h-4 w-4" />
-            Open Product
+            {detailMessages.openProduct}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this allocation?")) {
+              if (confirm(detailMessages.allocation.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Allocation Details</CardTitle>
+          <CardTitle>{detailMessages.allocation.detailsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm md:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Pool:</span>{" "}
+            <span className="text-muted-foreground">{messages.resources.poolLabel}:</span>{" "}
             <span>{poolQuery.data?.data.name ?? allocation.poolId}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Product:</span>{" "}
+            <span className="text-muted-foreground">{messages.resources.productLabel}:</span>{" "}
             <span>{productQuery.data?.data.name ?? allocation.productId}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Rule:</span>{" "}
+            <span className="text-muted-foreground">{detailMessages.allocation.ruleLabel}:</span>{" "}
             <span>
-              {ruleQuery.data?.data.recurrenceRule ?? allocation.availabilityRuleId ?? "-"}
+              {ruleQuery.data?.data.recurrenceRule ??
+                allocation.availabilityRuleId ??
+                detailMessages.noRule}
             </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Start Time:</span>{" "}
+            <span className="text-muted-foreground">
+              {detailMessages.allocation.startTimeLabel}:
+            </span>{" "}
             <span>
               {startTimeQuery.data?.data.label ??
                 startTimeQuery.data?.data.startTimeLocal ??
                 allocation.startTimeId ??
-                "-"}
+                detailMessages.noStartTime}
             </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Priority:</span>{" "}
+            <span className="text-muted-foreground">
+              {detailMessages.allocation.priorityLabel}:
+            </span>{" "}
             <span>{allocation.priority}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Created:</span>{" "}
-            <span>{new Date(allocation.createdAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{messages.resources.createdLabel}:</span>{" "}
+            <span>{new Date(allocation.createdAt).toLocaleString(resolvedLocale)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Updated:</span>{" "}
-            <span>{new Date(allocation.updatedAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{messages.resources.updatedLabel}:</span>{" "}
+            <span>{new Date(allocation.updatedAt).toLocaleString(resolvedLocale)}</span>
           </div>
         </CardContent>
       </Card>

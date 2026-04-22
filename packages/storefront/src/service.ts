@@ -88,8 +88,8 @@ export function resolveStorefrontSettings(input?: StorefrontSettingsInput): Stor
       billing: {
         fields: (parsed.forms?.billing?.fields ?? []).map(normalizeField),
       },
-      passengers: {
-        fields: (parsed.forms?.passengers?.fields ?? []).map(normalizeField),
+      travelers: {
+        fields: (parsed.forms?.travelers?.fields ?? []).map(normalizeField),
       },
     },
     payment: {

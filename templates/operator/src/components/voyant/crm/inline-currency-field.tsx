@@ -1,4 +1,5 @@
 import { currencies } from "@voyantjs/utils/currencies"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import {
@@ -10,6 +11,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 const CURRENCY_CODES = Object.keys(currencies).sort()
@@ -29,6 +31,7 @@ export function InlineCurrencyField({
   disabled,
   onSave,
 }: InlineCurrencyFieldProps) {
+  const messages = useAdminMessages().crm.shared
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +43,7 @@ export function InlineCurrencyField({
       await onSave(next)
       setEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : messages.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -75,12 +78,12 @@ export function InlineCurrencyField({
           >
             <ComboboxInput
               autoFocus
-              placeholder="Search currency..."
+              placeholder={messages.searchCurrencyPlaceholder}
               className="mt-0.5 h-8 text-sm"
               disabled={saving}
             />
             <ComboboxContent>
-              <ComboboxEmpty>No currencies found</ComboboxEmpty>
+              <ComboboxEmpty>{messages.noCurrenciesFound}</ComboboxEmpty>
               <ComboboxList>
                 <ComboboxCollection>
                   {(code: string) => {
@@ -118,7 +121,7 @@ export function InlineCurrencyField({
                   ) : null}
                 </span>
               ) : (
-                `Add ${label.toLowerCase()}`
+                formatMessage(messages.addTemplate, { label: label.toLowerCase() })
               )}
             </button>
             {!disabled ? (

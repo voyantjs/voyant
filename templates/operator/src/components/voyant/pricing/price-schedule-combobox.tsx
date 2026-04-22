@@ -14,6 +14,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Props = {
   priceCatalogId?: string | null
@@ -29,9 +30,10 @@ export function PriceScheduleCombobox({
   priceCatalogId,
   value,
   onChange,
-  placeholder = "Search price schedules…",
+  placeholder,
   disabled,
 }: Props) {
+  const messages = useAdminMessages()
   const [search, setSearch] = React.useState("")
   const listQuery = usePriceSchedules({
     priceCatalogId: priceCatalogId || undefined,
@@ -76,12 +78,15 @@ export function PriceScheduleCombobox({
         setInputValue(id ? (itemMap.get(id)?.name ?? "") : "")
       }}
     >
-      <ComboboxInput placeholder={placeholder} showClear={!!value} />
+      <ComboboxInput
+        placeholder={placeholder ?? messages.pricing.priceScheduleCombobox.placeholder}
+        showClear={!!value}
+      />
       <ComboboxContent>
         <ComboboxEmpty>
           {listQuery.isPending || selectedQuery.isPending
-            ? "Loading…"
-            : "No price schedules found."}
+            ? messages.pricing.priceScheduleCombobox.loading
+            : messages.pricing.priceScheduleCombobox.empty}
         </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>

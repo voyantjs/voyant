@@ -11,7 +11,6 @@ import {
   Globe,
   Loader2,
   Mail,
-  MapPin,
   Pencil,
   Phone,
   Plus,
@@ -1125,9 +1124,6 @@ export function PersonSidebar({
     email: string | null
     phone: string | null
     website: string | null
-    address: string | null
-    city: string | null
-    country: string | null
     jobTitle: string | null
     birthday: string | null
     source: string | null
@@ -1230,24 +1226,6 @@ export function PersonSidebar({
             href={websiteHref}
             placeholder="https://example.com"
             onSave={(next) => updateField({ website: next })}
-          />
-          <InlineField
-            icon={MapPin}
-            label="Address"
-            value={person.address}
-            onSave={(next) => updateField({ address: next })}
-          />
-          <InlineField
-            icon={MapPin}
-            label="City"
-            value={person.city}
-            onSave={(next) => updateField({ city: next })}
-          />
-          <InlineField
-            icon={MapPin}
-            label="Country"
-            value={person.country}
-            onSave={(next) => updateField({ country: next })}
           />
           <FieldRow icon={Building2} label="Organization" value={organization?.name ?? null} />
           <InlineField

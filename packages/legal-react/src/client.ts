@@ -81,7 +81,20 @@ async function safeJson(response: Response): Promise<unknown> {
 }
 
 function joinUrl(baseUrl: string, path: string): string {
-  const trimmedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl
+  const resolvedBaseUrl = resolveBaseUrl(baseUrl)
+  const trimmedBase = resolvedBaseUrl.endsWith("/") ? resolvedBaseUrl.slice(0, -1) : resolvedBaseUrl
   const trimmedPath = path.startsWith("/") ? path : `/${path}`
   return `${trimmedBase}${trimmedPath}`
+}
+
+function resolveBaseUrl(baseUrl: string): string {
+  if (baseUrl.trim()) {
+    return baseUrl
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api`
+  }
+
+  return "http://localhost:3300/api"
 }

@@ -165,6 +165,7 @@ export function FacilityDialog({ open, onOpenChange, facility, onSuccess }: Prop
               <div className="flex flex-col gap-2">
                 <Label>Kind</Label>
                 <Select
+                  items={FACILITY_KINDS.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as FacilityKind)}
                 >
@@ -183,6 +184,7 @@ export function FacilityDialog({ open, onOpenChange, facility, onSuccess }: Prop
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={FACILITY_STATUSES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as FacilityStatus)}
                 >

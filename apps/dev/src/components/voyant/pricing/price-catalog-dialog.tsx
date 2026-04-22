@@ -159,6 +159,7 @@ export function PriceCatalogDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={CATALOG_TYPES}
                   value={form.watch("catalogType")}
                   onValueChange={(value) =>
                     form.setValue("catalogType", value as CatalogFormValues["catalogType"])

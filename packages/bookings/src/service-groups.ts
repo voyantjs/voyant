@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
-import { type Booking, type BookingPassenger, bookingPassengers, bookings } from "./schema-core.js"
+import { type Booking, type BookingTraveler, bookings, bookingTravelers } from "./schema-core.js"
 import {
   type BookingGroup,
   type BookingGroupMember,
@@ -248,14 +248,10 @@ export async function cleanupGroupOnBookingCancelled(
   }
 }
 
-/**
- * Returns all passengers across every member booking in a group.
- * Used by rooming-list exports to show shared-room occupants as one unit.
- */
-export async function listGroupBookingPassengers(
+export async function listGroupBookingTravelers(
   db: PostgresJsDatabase,
   groupId: string,
-): Promise<BookingPassenger[]> {
+): Promise<BookingTraveler[]> {
   const members = await db
     .select({ bookingId: bookingGroupMembers.bookingId })
     .from(bookingGroupMembers)
@@ -266,9 +262,9 @@ export async function listGroupBookingPassengers(
   const bookingIds = members.map((m) => m.bookingId)
   return db
     .select()
-    .from(bookingPassengers)
-    .where(inArray(bookingPassengers.bookingId, bookingIds))
-    .orderBy(asc(bookingPassengers.createdAt))
+    .from(bookingTravelers)
+    .where(inArray(bookingTravelers.bookingId, bookingIds))
+    .orderBy(asc(bookingTravelers.createdAt))
 }
 
 export const bookingGroupsService = {
@@ -282,5 +278,5 @@ export const bookingGroupsService = {
   addGroupMember,
   removeGroupMember,
   cleanupGroupOnBookingCancelled,
-  listGroupBookingPassengers,
+  listGroupBookingTravelers,
 }

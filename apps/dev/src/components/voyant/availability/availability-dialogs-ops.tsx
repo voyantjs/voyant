@@ -113,6 +113,7 @@ export function AvailabilityCloseoutDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
@@ -131,6 +132,13 @@ export function AvailabilityCloseoutDialog({
             <div className="grid gap-2">
               <Label>Slot</Label>
               <Select
+                items={[
+                  { label: "Product-level closeout", value: NONE_VALUE },
+                  ...filteredSlots.map((slot) => ({
+                    label: `${slot.dateLocal} · ${formatDateTime(slot.startsAt)}`,
+                    value: slot.id,
+                  })),
+                ]}
                 value={form.watch("slotId") ?? NONE_VALUE}
                 onValueChange={(value) => form.setValue("slotId", value ?? NONE_VALUE)}
               >
@@ -263,6 +271,7 @@ export function AvailabilityPickupPointDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >

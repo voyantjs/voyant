@@ -1,6 +1,6 @@
 import { type LineItemRecord, useInvoiceLineItemMutation } from "@voyantjs/finance-react"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
@@ -15,19 +15,22 @@ import {
   Input,
   Label,
 } from "@/components/ui"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const lineItemFormSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  quantity: z.coerce.number().int().min(1).default(1),
-  unitPriceCents: z.coerce.number().int().min(0),
-  totalCents: z.coerce.number().int().min(0),
-  taxRate: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  sortOrder: z.coerce.number().int().min(0).default(0),
-})
+function getLineItemFormSchema(messages: AdminMessages) {
+  return z.object({
+    description: z.string().min(1, messages.finance.lineItemDialog.validationDescriptionRequired),
+    quantity: z.coerce.number().int().min(1).default(1),
+    unitPriceCents: z.coerce.number().int().min(0),
+    totalCents: z.coerce.number().int().min(0),
+    taxRate: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    sortOrder: z.coerce.number().int().min(0).default(0),
+  })
+}
 
-type LineItemFormValues = z.input<typeof lineItemFormSchema>
-type LineItemFormOutput = z.output<typeof lineItemFormSchema>
+type LineItemFormValues = z.input<ReturnType<typeof getLineItemFormSchema>>
+type LineItemFormOutput = z.output<ReturnType<typeof getLineItemFormSchema>>
 
 export interface LineItemDialogProps {
   open: boolean
@@ -44,8 +47,10 @@ export function LineItemDialog({
   lineItem,
   onSuccess,
 }: LineItemDialogProps) {
+  const messages = useAdminMessages()
   const isEditing = Boolean(lineItem)
   const { create, update } = useInvoiceLineItemMutation(invoiceId)
+  const lineItemFormSchema = useMemo(() => getLineItemFormSchema(messages), [messages])
 
   const form = useForm<LineItemFormValues, unknown, LineItemFormOutput>({
     resolver: zodResolver(lineItemFormSchema),
@@ -108,13 +113,20 @@ export function LineItemDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Line Item" : "Add Line Item"}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? messages.finance.lineItemDialog.editTitle
+              : messages.finance.lineItemDialog.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Input {...form.register("description")} placeholder="Service description..." />
+              <Label>{messages.finance.lineItemDialog.descriptionLabel}</Label>
+              <Input
+                {...form.register("description")}
+                placeholder={messages.finance.lineItemDialog.descriptionPlaceholder}
+              />
               {form.formState.errors.description ? (
                 <p className="text-xs text-destructive">
                   {form.formState.errors.description.message}
@@ -124,37 +136,44 @@ export function LineItemDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Quantity</Label>
+                <Label>{messages.finance.lineItemDialog.quantityLabel}</Label>
                 <Input {...form.register("quantity")} type="number" min="1" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Unit Price (cents)</Label>
+                <Label>{messages.finance.lineItemDialog.unitPriceLabel}</Label>
                 <Input {...form.register("unitPriceCents")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Total (cents)</Label>
+                <Label>{messages.finance.lineItemDialog.totalLabel}</Label>
                 <Input {...form.register("totalCents")} type="number" min="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Tax Rate (cents, e.g. 2000 = 20%)</Label>
-                <Input {...form.register("taxRate")} type="number" min="0" placeholder="0" />
+                <Label>{messages.finance.lineItemDialog.taxRateLabel}</Label>
+                <Input
+                  {...form.register("taxRate")}
+                  type="number"
+                  min="0"
+                  placeholder={messages.finance.lineItemDialog.taxRatePlaceholder}
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Sort Order</Label>
+                <Label>{messages.finance.lineItemDialog.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" min="0" />
               </div>
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.finance.lineItemDialog.cancel}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isEditing ? "Save Changes" : "Add Line Item"}
+              {isEditing
+                ? messages.finance.lineItemDialog.saveChanges
+                : messages.finance.lineItemDialog.createLineItem}
             </Button>
           </DialogFooter>
         </form>

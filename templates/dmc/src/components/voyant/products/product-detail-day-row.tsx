@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
 import { Badge, Button } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import {
   type DayService,
   getProductDayServicesQueryOptions,
@@ -28,6 +30,15 @@ export function DayRow({
   onEditService: (service: DayService) => void
   onDeleteService: (serviceId: string) => void
 }) {
+  const messages = useAdminMessages().products
+  const serviceTypeLabels: Record<DayService["serviceType"], string> = {
+    accommodation: messages.serviceTypeAccommodation,
+    transfer: messages.serviceTypeTransfer,
+    experience: messages.serviceTypeExperience,
+    guide: messages.serviceTypeGuide,
+    meal: messages.serviceTypeMeal,
+    other: messages.serviceTypeOther,
+  }
   const { data: servicesData } = useQuery({
     ...getProductDayServicesQueryOptions(productId, day.id),
     enabled: expanded,
@@ -45,7 +56,7 @@ export function DayRow({
         </button>
         <div className="flex-1">
           <span className="text-sm font-medium">
-            Day {day.dayNumber}
+            {formatMessage(messages.dayRowTitle, { dayNumber: String(day.dayNumber) })}
             {day.title ? `: ${day.title}` : ""}
           </span>
           {day.location && (
@@ -66,16 +77,16 @@ export function DayRow({
         <div className="border-t bg-muted/30 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Services
+              {messages.servicesTitle}
             </p>
             <Button variant="outline" size="sm" onClick={onAddService}>
               <Plus className="mr-1 h-3 w-3" />
-              Add Service
+              {messages.addServiceAction}
             </Button>
           </div>
 
           {(!servicesData?.data || servicesData.data.length === 0) && (
-            <p className="py-2 text-center text-xs text-muted-foreground">No services yet.</p>
+            <p className="py-2 text-center text-xs text-muted-foreground">{messages.noServices}</p>
           )}
 
           {servicesData?.data && servicesData.data.length > 0 && (
@@ -83,10 +94,10 @@ export function DayRow({
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b text-muted-foreground">
-                    <th className="p-2 text-left font-medium">Name</th>
-                    <th className="p-2 text-left font-medium">Type</th>
-                    <th className="p-2 text-left font-medium">Cost</th>
-                    <th className="p-2 text-left font-medium">Qty</th>
+                    <th className="p-2 text-left font-medium">{messages.serviceColumnName}</th>
+                    <th className="p-2 text-left font-medium">{messages.serviceColumnType}</th>
+                    <th className="p-2 text-left font-medium">{messages.serviceColumnCost}</th>
+                    <th className="p-2 text-left font-medium">{messages.serviceColumnQuantity}</th>
                     <th className="w-16 p-2" />
                   </tr>
                 </thead>
@@ -96,7 +107,7 @@ export function DayRow({
                       <td className="p-2">{service.name}</td>
                       <td className="p-2">
                         <Badge variant="outline" className="text-xs capitalize">
-                          {service.serviceType}
+                          {serviceTypeLabels[service.serviceType] ?? service.serviceType}
                         </Badge>
                       </td>
                       <td className="p-2 font-mono">

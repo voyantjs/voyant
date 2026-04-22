@@ -104,7 +104,7 @@ const formSchema = z.object({
   storefrontPromotionalOfferCurrency: z.string().optional().nullable(),
   storefrontPromotionalOfferValidFrom: z.string().optional().nullable(),
   storefrontPromotionalOfferValidTo: z.string().optional().nullable(),
-  storefrontPromotionalOfferMinPassengers: z.coerce.number().int().min(1).optional().nullable(),
+  storefrontPromotionalOfferMinTravelers: z.coerce.number().int().min(1).optional().nullable(),
   storefrontPromotionalOfferImageMobileUrl: z.string().optional().nullable(),
   storefrontPromotionalOfferImageDesktopUrl: z.string().optional().nullable(),
   storefrontPromotionalOfferStackable: z.boolean().default(false),
@@ -152,7 +152,7 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
       storefrontPromotionalOfferCurrency: "",
       storefrontPromotionalOfferValidFrom: "",
       storefrontPromotionalOfferValidTo: "",
-      storefrontPromotionalOfferMinPassengers: null,
+      storefrontPromotionalOfferMinTravelers: null,
       storefrontPromotionalOfferImageMobileUrl: "",
       storefrontPromotionalOfferImageDesktopUrl: "",
       storefrontPromotionalOfferStackable: false,
@@ -189,7 +189,7 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
         storefrontPromotionalOfferCurrency: storefrontPromotionalOffer?.currency ?? "",
         storefrontPromotionalOfferValidFrom: storefrontPromotionalOffer?.validFrom ?? "",
         storefrontPromotionalOfferValidTo: storefrontPromotionalOffer?.validTo ?? "",
-        storefrontPromotionalOfferMinPassengers: storefrontPromotionalOffer?.minPassengers ?? null,
+        storefrontPromotionalOfferMinTravelers: storefrontPromotionalOffer?.minTravelers ?? null,
         storefrontPromotionalOfferImageMobileUrl: storefrontPromotionalOffer?.imageMobileUrl ?? "",
         storefrontPromotionalOfferImageDesktopUrl:
           storefrontPromotionalOffer?.imageDesktopUrl ?? "",
@@ -228,7 +228,7 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
         storefrontPromotionalOfferCurrency: "",
         storefrontPromotionalOfferValidFrom: "",
         storefrontPromotionalOfferValidTo: "",
-        storefrontPromotionalOfferMinPassengers: null,
+        storefrontPromotionalOfferMinTravelers: null,
         storefrontPromotionalOfferImageMobileUrl: "",
         storefrontPromotionalOfferImageDesktopUrl: "",
         storefrontPromotionalOfferStackable: false,
@@ -256,7 +256,7 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
           ),
           validFrom: values.storefrontPromotionalOfferValidFrom || null,
           validTo: values.storefrontPromotionalOfferValidTo || null,
-          minPassengers: values.storefrontPromotionalOfferMinPassengers ?? null,
+          minTravelers: values.storefrontPromotionalOfferMinTravelers ?? null,
           imageMobileUrl: values.storefrontPromotionalOfferImageMobileUrl || null,
           imageDesktopUrl: values.storefrontPromotionalOfferImageDesktopUrl || null,
           stackable: values.storefrontPromotionalOfferStackable,
@@ -325,6 +325,7 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={OFFER_STATUSES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as OfferStatus)}
                 >
@@ -490,9 +491,9 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label>Minimum passengers</Label>
+                      <Label>Minimum travelers</Label>
                       <Input
-                        {...form.register("storefrontPromotionalOfferMinPassengers")}
+                        {...form.register("storefrontPromotionalOfferMinTravelers")}
                         type="number"
                         min="1"
                       />
@@ -503,6 +504,10 @@ export function OfferDialog({ open, onOpenChange, offer, onSuccess }: OfferDialo
                     <div className="flex flex-col gap-2">
                       <Label>Discount type</Label>
                       <Select
+                        items={[
+                          { label: "Percentage", value: "percentage" },
+                          { label: "Fixed amount", value: "fixed_amount" },
+                        ]}
                         value={form.watch("storefrontPromotionalOfferDiscountType")}
                         onValueChange={(value) =>
                           form.setValue(

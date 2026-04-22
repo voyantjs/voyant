@@ -23,6 +23,9 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    // SPA-mode via defaultSsr: false in src/start.ts — loaders run on the
+    // client with browser cookies. No need to dehydrate/hydrate queryClient
+    // because the server never populates it.
   })
 
   return router

@@ -12,21 +12,14 @@ import {
   authStatusSchema,
   currentUserSchema,
   currentWorkspaceSchema,
-  organizationInvitationsListSchema,
-  organizationMembersListSchema,
+  organizationInvitationsResponseSchema,
+  organizationMembersResponseSchema,
 } from "./schemas.js"
 
 export function getCurrentUserQueryOptions(client: FetchWithValidationOptions) {
   return queryOptions({
     queryKey: authQueryKeys.currentUser(),
     queryFn: () => fetchWithValidation("/auth/me", currentUserSchema, client),
-  })
-}
-
-export function getCurrentWorkspaceQueryOptions(client: FetchWithValidationOptions) {
-  return queryOptions({
-    queryKey: authQueryKeys.currentWorkspace(),
-    queryFn: () => fetchWithValidation("/auth/workspace", currentWorkspaceSchema, client),
   })
 }
 
@@ -37,16 +30,23 @@ export function getAuthStatusQueryOptions(client: FetchWithValidationOptions) {
   })
 }
 
+export function getCurrentWorkspaceQueryOptions(client: FetchWithValidationOptions) {
+  return queryOptions({
+    queryKey: authQueryKeys.currentWorkspace(),
+    queryFn: () => fetchWithValidation("/auth/workspace/current", currentWorkspaceSchema, client),
+  })
+}
+
 export function getOrganizationMembersQueryOptions(
   filters: OrganizationMembersListFilters,
   client: FetchWithValidationOptions,
 ) {
   return queryOptions({
-    queryKey: authQueryKeys.organizationMembersList(filters),
+    queryKey: authQueryKeys.organizationMembers(filters),
     queryFn: () =>
       fetchWithValidation(
         withQueryParams("/auth/organization/list-members", filters),
-        organizationMembersListSchema,
+        organizationMembersResponseSchema,
         client,
       ),
   })
@@ -57,17 +57,12 @@ export function getOrganizationInvitationsQueryOptions(
   client: FetchWithValidationOptions,
 ) {
   return queryOptions({
-    queryKey: authQueryKeys.organizationInvitationsList(filters),
+    queryKey: authQueryKeys.organizationInvitations(filters),
     queryFn: () =>
       fetchWithValidation(
         withQueryParams("/auth/organization/list-invitations", filters),
-        organizationInvitationsListSchema,
+        organizationInvitationsResponseSchema,
         client,
       ),
   })
 }
-
-export type {
-  OrganizationInvitationsListFilters,
-  OrganizationMembersListFilters,
-} from "./query-keys.js"

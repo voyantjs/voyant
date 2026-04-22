@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -6,22 +6,25 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
   Input,
   Label,
 } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { authClient } from "@/lib/auth"
-import { getCurrentUser } from "@/lib/current-user"
+import { getBootstrapStatus, getCurrentUser } from "@/lib/current-user"
 
 export const Route = createFileRoute("/(auth)/sign-up")({
   loader: async () => {
-    const user = await getCurrentUser()
+    const [user, bootstrap] = await Promise.all([getCurrentUser(), getBootstrapStatus()])
 
     if (user) {
       throw redirect({ to: "/" })
+    }
+
+    if (bootstrap.hasUsers) {
+      throw redirect({ to: "/sign-in" })
     }
 
     return null
@@ -31,6 +34,7 @@ export const Route = createFileRoute("/(auth)/sign-up")({
 
 function SignUpPage() {
   const navigate = useNavigate()
+  const messages = useAdminMessages().auth.signUp
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -47,7 +51,7 @@ function SignUpPage() {
       const result = await authClient.signUp.email({ email, password, name })
 
       if (result.error) {
-        setError(result.error.message || "Could not create account")
+        setError(result.error.message || messages.couldNotCreateAccount)
         setLoading(false)
         return
       }
@@ -56,7 +60,7 @@ function SignUpPage() {
       // Navigate to the OTP verification page.
       void navigate({ to: "/verify-email", search: { email } })
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError(messages.somethingWentWrong)
       setLoading(false)
     }
   }
@@ -72,8 +76,8 @@ function SignUpPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Get started with Voyant</CardDescription>
+        <CardTitle>{messages.title}</CardTitle>
+        <CardDescription>{messages.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,11 +85,11 @@ function SignUpPage() {
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
+            <Label htmlFor="name">{messages.fullNameLabel}</Label>
             <Input
               id="name"
               type="text"
-              placeholder="Jane Smith"
+              placeholder={messages.fullNamePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -94,11 +98,11 @@ function SignUpPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{messages.emailLabel}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder={messages.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -106,7 +110,7 @@ function SignUpPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{messages.passwordLabel}</Label>
             <Input
               id="password"
               type="password"
@@ -119,13 +123,13 @@ function SignUpPage() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create account
+            {messages.submit}
           </Button>
         </form>
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
-          <span className="text-xs uppercase text-muted-foreground">or</span>
+          <span className="text-xs uppercase text-muted-foreground">{messages.or}</span>
           <div className="h-px flex-1 bg-border" />
         </div>
 
@@ -148,17 +152,9 @@ function SignUpPage() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          {messages.continueWithGoogle}
         </Button>
       </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/sign-in" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </CardFooter>
     </Card>
   )
 }

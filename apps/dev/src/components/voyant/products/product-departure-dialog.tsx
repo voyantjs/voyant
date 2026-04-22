@@ -1,3 +1,4 @@
+import { useProductItineraries } from "@voyantjs/products-react"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -47,6 +48,7 @@ const departureFormSchema = z
     startTime: z.string().min(1, "Start time is required"),
     endDate: z.string().optional().nullable(),
     endTime: z.string().optional().nullable(),
+    itineraryId: z.string().optional().nullable(),
     timezone: z.string().min(1, "Timezone is required"),
     status: z.enum(["open", "closed", "sold_out", "cancelled"]),
     unlimited: z.boolean(),
@@ -85,6 +87,7 @@ type DepartureFormOutput = z.output<typeof departureFormSchema>
 export type DepartureSlot = {
   id: string
   productId: string
+  itineraryId: string | null
   dateLocal: string
   startsAt: string
   endsAt: string | null
@@ -149,6 +152,7 @@ export function DepartureDialog({
       startTime: "09:00",
       endDate: "",
       endTime: "",
+      itineraryId: "",
       timezone: defaultTz,
       status: "open",
       unlimited: false,
@@ -163,6 +167,9 @@ export function DepartureDialog({
   const startDate = form.watch("startDate")
   const endDate = form.watch("endDate")
   const timezone = form.watch("timezone")
+  const { data: itineraryData } = useProductItineraries(productId, { enabled: open })
+  const itineraries = itineraryData?.data ?? []
+  const defaultItinerary = itineraries.find((itinerary) => itinerary.isDefault) ?? itineraries[0]
 
   // Compute number of nights for user feedback
   const nights = (() => {
@@ -180,6 +187,7 @@ export function DepartureDialog({
         startTime: isoToLocalTime(slot.startsAt),
         endDate: slot.endsAt ? isoToLocalDate(slot.endsAt) : "",
         endTime: slot.endsAt ? isoToLocalTime(slot.endsAt) : "",
+        itineraryId: slot.itineraryId ?? "",
         timezone: slot.timezone,
         status: slot.status,
         unlimited: slot.unlimited,
@@ -194,6 +202,7 @@ export function DepartureDialog({
         startTime: "09:00",
         endDate: "",
         endTime: "",
+        itineraryId: "",
         timezone: defaultTz,
         status: "open",
         unlimited: false,
@@ -230,6 +239,7 @@ export function DepartureDialog({
 
     const payload = {
       productId,
+      itineraryId: values.itineraryId ? values.itineraryId : null,
       dateLocal: values.startDate,
       startsAt,
       endsAt,
@@ -356,6 +366,45 @@ export function DepartureDialog({
               </div>
             )}
 
+            {itineraries.length > 1 ? (
+              <div className="flex flex-col gap-2">
+                <Label>Itinerary</Label>
+                <Select
+                  items={[
+                    {
+                      label: `Default${defaultItinerary ? `: ${defaultItinerary.name}` : ""}`,
+                      value: "",
+                    },
+                    ...itineraries.map((itinerary) => ({
+                      label: itinerary.name,
+                      value: itinerary.id,
+                    })),
+                  ]}
+                  value={form.watch("itineraryId") ?? ""}
+                  onValueChange={(value) => form.setValue("itineraryId", value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      Default
+                      {defaultItinerary ? `: ${defaultItinerary.name}` : ""}
+                    </SelectItem>
+                    {itineraries.map((itinerary) => (
+                      <SelectItem key={itinerary.id} value={itinerary.id}>
+                        {itinerary.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Override which itinerary this departure follows. Default tracks whichever
+                  itinerary is marked as default.
+                </p>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Timezone</Label>
@@ -404,6 +453,7 @@ export function DepartureDialog({
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={SLOT_STATUSES}
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as DepartureFormValues["status"])}
                 >

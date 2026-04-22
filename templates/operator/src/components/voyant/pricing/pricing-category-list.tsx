@@ -5,7 +5,8 @@ import {
   usePricingCategories,
   usePricingCategoryMutation,
 } from "@voyantjs/pricing-react"
-import { Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { SkeletonTableRows } from "@/components/ui/skeletons"
 import {
   Table,
   TableBody,
@@ -25,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PricingCategoryDialog } from "./pricing-category-dialog"
 
@@ -33,6 +36,7 @@ export interface PricingCategoryListProps {
 }
 
 export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps = {}) {
+  const messages = useAdminMessages()
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<PricingCategoryRecord | undefined>(undefined)
   const [search, setSearch] = React.useState("")
@@ -50,6 +54,20 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
   const total = data?.total ?? 0
   const page = Math.floor(offset / pageSize) + 1
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const categoryTypeLabels = React.useMemo(
+    () => ({
+      adult: messages.pricing.categories.typeAdult,
+      child: messages.pricing.categories.typeChild,
+      infant: messages.pricing.categories.typeInfant,
+      senior: messages.pricing.categories.typeSenior,
+      group: messages.pricing.categories.typeGroup,
+      room: messages.pricing.categories.typeRoom,
+      vehicle: messages.pricing.categories.typeVehicle,
+      service: messages.pricing.categories.typeService,
+      other: messages.pricing.categories.typeOther,
+    }),
+    [messages],
+  )
 
   return (
     <div data-slot="pricing-category-list" className="flex flex-col gap-4">
@@ -57,7 +75,7 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search pricing categories…"
+            placeholder={messages.pricing.categories.searchPlaceholder}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
@@ -73,7 +91,7 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
           }}
         >
           <Plus className="mr-2 size-4" />
-          New category
+          {messages.pricing.categories.newCategory}
         </Button>
       </div>
 
@@ -81,37 +99,43 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Age</TableHead>
-              <TableHead>Seat</TableHead>
-              <TableHead>Sort</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[80px] text-right">Actions</TableHead>
+              <TableHead>{messages.pricing.categories.tableName}</TableHead>
+              <TableHead>{messages.pricing.categories.tableCode}</TableHead>
+              <TableHead>{messages.pricing.categories.tableType}</TableHead>
+              <TableHead>{messages.pricing.categories.tableAge}</TableHead>
+              <TableHead>{messages.pricing.categories.tableSeat}</TableHead>
+              <TableHead>{messages.pricing.categories.tableSort}</TableHead>
+              <TableHead>{messages.pricing.categories.tableStatus}</TableHead>
+              <TableHead className="w-[80px] text-right">
+                {messages.pricing.categories.tableActions}
+              </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
-                  <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
+          {isPending ? (
+            <SkeletonTableRows
+              rows={6}
+              columns={8}
+              columnWidths={["w-32", "w-20", "w-16", "w-20", "w-10", "w-10", "w-14", "w-8"]}
+            />
+          ) : isError ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-sm text-destructive">
-                  Failed to load pricing categories.
+                  {messages.pricing.categories.loadFailed}
                 </TableCell>
               </TableRow>
-            ) : categories.length === 0 ? (
+            </TableBody>
+          ) : categories.length === 0 ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-sm text-muted-foreground">
-                  No pricing categories found.
+                  {messages.pricing.categories.empty}
                 </TableCell>
               </TableRow>
-            ) : (
-              categories.map((category) => (
+            </TableBody>
+          ) : (
+            <TableBody>
+              {categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
@@ -119,19 +143,21 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize">
-                      {category.categoryType}
+                      {categoryTypeLabels[category.categoryType] ?? category.categoryType}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {category.isAgeQualified
-                      ? `${category.minAge ?? 0}–${category.maxAge ?? "∞"}`
+                      ? `${category.minAge ?? 0}${messages.pricing.categories.ageRangeSeparator}${category.maxAge ?? messages.pricing.categories.ageRangeOpenEnded}`
                       : "—"}
                   </TableCell>
                   <TableCell className="font-mono">{category.seatOccupancy}</TableCell>
                   <TableCell className="font-mono">{category.sortOrder}</TableCell>
                   <TableCell>
                     <Badge variant={category.active ? "default" : "outline"}>
-                      {category.active ? "Active" : "Inactive"}
+                      {category.active
+                        ? messages.pricing.categories.statusActive
+                        : messages.pricing.categories.statusInactive}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -147,33 +173,40 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
                           }}
                         >
                           <Pencil className="size-4" />
-                          Edit
+                          {messages.pricing.categories.edit}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           variant="destructive"
                           onClick={() => {
-                            if (confirm(`Delete category "${category.name}"?`)) {
+                            if (
+                              confirm(
+                                messages.pricing.categories.deleteConfirm.replace(
+                                  "{name}",
+                                  category.name,
+                                ),
+                              )
+                            ) {
                               remove.mutate(category.id)
                             }
                           }}
                         >
                           <Trash2 className="size-4" />
-                          Delete
+                          {messages.pricing.categories.delete}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ))}
+            </TableBody>
+          )}
         </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {categories.length} of {total}
+          {formatMessage(messages.settings.paginationShowing, { count: categories.length, total })}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -182,18 +215,16 @@ export function PricingCategoryList({ pageSize = 25 }: PricingCategoryListProps 
             disabled={offset === 0}
             onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
           >
-            Previous
+            {messages.settings.paginationPrevious}
           </Button>
-          <span>
-            Page {page} / {pageCount}
-          </span>
+          <span>{formatMessage(messages.settings.paginationPage, { page, pageCount })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={offset + pageSize >= total}
             onClick={() => setOffset((prev) => prev + pageSize)}
           >
-            Next
+            {messages.settings.paginationNext}
           </Button>
         </div>
       </div>

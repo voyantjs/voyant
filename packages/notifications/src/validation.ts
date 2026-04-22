@@ -259,6 +259,29 @@ export const sendNotificationSchema = z
     },
   )
 
+export const previewNotificationTemplateSchema = z
+  .object({
+    channel: notificationChannelSchema,
+    provider: z.string().optional().nullable(),
+    subjectTemplate: z.string().max(2000).optional().nullable(),
+    htmlTemplate: z.string().optional().nullable(),
+    textTemplate: z.string().optional().nullable(),
+    fromAddress: z.string().max(500).optional().nullable(),
+    data: z.record(z.string(), z.unknown()).optional().nullable(),
+  })
+  .refine((value) => Boolean(value.subjectTemplate || value.htmlTemplate || value.textTemplate), {
+    message: "subjectTemplate, htmlTemplate, or textTemplate is required",
+  })
+
+export const previewNotificationTemplateResultSchema = z.object({
+  channel: notificationChannelSchema,
+  provider: z.string().nullable(),
+  fromAddress: z.string().nullable(),
+  subject: z.string().nullable(),
+  html: z.string().nullable(),
+  text: z.string().nullable(),
+})
+
 export const bookingDocumentBundleItemSchema = z.object({
   key: z.string().min(1),
   source: notificationDocumentSourceSchema,

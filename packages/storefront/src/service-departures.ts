@@ -11,6 +11,7 @@ import {
   optionUnits,
   productDayServices,
   productDays,
+  productItineraries,
   productLocations,
   productMedia,
   productOptions,
@@ -28,6 +29,7 @@ import type {
 type SlotRow = {
   id: string
   productId: string
+  itineraryId: string | null
   optionId: string | null
   startTimeId: string | null
   dateLocal: Date | string
@@ -260,6 +262,31 @@ async function listMeetingPointsByProductIds(db: PostgresJsDatabase, productIds:
   return byProduct
 }
 
+async function listDefaultItineraryIdsByProductIds(
+  db: PostgresJsDatabase,
+  productIds: string[],
+): Promise<Map<string, string>> {
+  if (productIds.length === 0) {
+    return new Map()
+  }
+
+  const rows = await db
+    .select({
+      productId: productItineraries.productId,
+      itineraryId: productItineraries.id,
+    })
+    .from(productItineraries)
+    .where(
+      and(
+        inArray(productItineraries.productId, productIds),
+        eq(productItineraries.isDefault, true),
+      ),
+    )
+    .orderBy(asc(productItineraries.sortOrder), asc(productItineraries.createdAt))
+
+  return new Map(rows.map((row) => [row.productId, row.itineraryId] as const))
+}
+
 async function listSlots(
   db: PostgresJsDatabase,
   filters: {
@@ -309,6 +336,7 @@ async function listSlots(
     .select({
       id: availabilitySlots.id,
       productId: availabilitySlots.productId,
+      itineraryId: availabilitySlots.itineraryId,
       optionId: availabilitySlots.optionId,
       startTimeId: availabilitySlots.startTimeId,
       dateLocal: availabilitySlots.dateLocal,
@@ -691,7 +719,7 @@ function computeFallbackLineItems(args: {
         ? args.context.units.find((row) => row.id === request.unitId)
         : null
       lineItems.push({
-        name: unit?.name ?? args.context.option?.name ?? "Passenger",
+        name: unit?.name ?? args.context.option?.name ?? "Traveler",
         total: totalAmount,
         quantity: request.quantity,
         unitPrice: unitAmount,
@@ -804,14 +832,16 @@ async function applyExtraLineItems(args: {
 async function buildDeparture(
   db: PostgresJsDatabase,
   slot: SlotRow,
+  defaultItineraryByProduct: Map<string, string>,
   meetingPointByProduct?: Map<string, string>,
 ) {
   const context = await resolvePricingContext(db, slot.productId, slot.optionId)
+  const itineraryId = slot.itineraryId ?? defaultItineraryByProduct.get(slot.productId) ?? null
 
   return {
     id: slot.id,
     productId: slot.productId,
-    itineraryId: slot.id,
+    itineraryId: itineraryId ?? slot.id,
     optionId: slot.optionId,
     dateLocal: normalizeLocalDate(slot.dateLocal),
     startAt: normalizeIso(slot.startsAt),
@@ -842,8 +872,12 @@ export async function getStorefrontDeparture(db: PostgresJsDatabase, departureId
     return null
   }
 
-  const meetingPointByProduct = await listMeetingPointsByProductIds(db, [slot.productId])
-  return buildDeparture(db, slot, meetingPointByProduct)
+  const [meetingPointByProduct, defaultItineraryByProduct] = await Promise.all([
+    listMeetingPointsByProductIds(db, [slot.productId]),
+    listDefaultItineraryIdsByProductIds(db, [slot.productId]),
+  ])
+
+  return buildDeparture(db, slot, defaultItineraryByProduct, meetingPointByProduct)
 }
 
 export async function listStorefrontProductDepartures(
@@ -866,9 +900,12 @@ export async function listStorefrontProductDepartures(
     }),
     countSlots(db, filters),
   ])
-  const meetingPointByProduct = await listMeetingPointsByProductIds(db, [productId])
+  const [meetingPointByProduct, defaultItineraryByProduct] = await Promise.all([
+    listMeetingPointsByProductIds(db, [productId]),
+    listDefaultItineraryIdsByProductIds(db, [productId]),
+  ])
   const data = await Promise.all(
-    slots.map((slot) => buildDeparture(db, slot, meetingPointByProduct)),
+    slots.map((slot) => buildDeparture(db, slot, defaultItineraryByProduct, meetingPointByProduct)),
   )
 
   return {
@@ -1084,6 +1121,18 @@ export async function getStorefrontDepartureItinerary(
   db: PostgresJsDatabase,
   input: { departureId: string; productId: string },
 ) {
+  const [slot] = await listSlots(db, {
+    productId: input.productId,
+    slotId: input.departureId,
+    limit: 1,
+  })
+  const defaultItineraryByProduct = await listDefaultItineraryIdsByProductIds(db, [input.productId])
+  const itineraryId = slot?.itineraryId ?? defaultItineraryByProduct.get(input.productId)
+
+  if (!itineraryId) {
+    return null
+  }
+
   const days = await db
     .select({
       id: productDays.id,
@@ -1092,7 +1141,7 @@ export async function getStorefrontDepartureItinerary(
       description: productDays.description,
     })
     .from(productDays)
-    .where(eq(productDays.productId, input.productId))
+    .where(eq(productDays.itineraryId, itineraryId))
     .orderBy(asc(productDays.dayNumber))
 
   if (days.length === 0) {

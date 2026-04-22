@@ -17,6 +17,7 @@ import {
   productDestinations,
   productFaqs,
   productFeatures,
+  productItineraries,
   productLocations,
   productMedia,
   productNotes,
@@ -38,6 +39,7 @@ import type {
   insertDayServiceSchema,
   insertDestinationSchema,
   insertDestinationTranslationSchema,
+  insertItinerarySchema,
   insertOptionUnitSchema,
   insertOptionUnitTranslationSchema,
   insertProductActivationSettingSchema,
@@ -82,6 +84,7 @@ import type {
   updateDayServiceSchema,
   updateDestinationSchema,
   updateDestinationTranslationSchema,
+  updateItinerarySchema,
   updateOptionUnitSchema,
   updateOptionUnitTranslationSchema,
   updateProductActivationSettingSchema,
@@ -152,6 +155,8 @@ type DestinationTranslationListQuery = z.infer<typeof destinationTranslationList
 type CreateDestinationTranslationInput = z.infer<typeof insertDestinationTranslationSchema>
 type UpdateDestinationTranslationInput = z.infer<typeof updateDestinationTranslationSchema>
 type ProductDestinationListQuery = z.infer<typeof productDestinationListQuerySchema>
+type CreateItineraryInput = z.infer<typeof insertItinerarySchema>
+type UpdateItineraryInput = z.infer<typeof updateItinerarySchema>
 type CreateDayInput = z.infer<typeof insertDaySchema>
 type UpdateDayInput = z.infer<typeof updateDaySchema>
 type CreateDayServiceInput = z.infer<typeof insertDayServiceSchema>
@@ -180,7 +185,8 @@ async function recalculateProductCost(db: PostgresJsDatabase, productId: string)
     })
     .from(productDayServices)
     .innerJoin(productDays, eq(productDayServices.dayId, productDays.id))
-    .where(eq(productDays.productId, productId))
+    .innerJoin(productItineraries, eq(productDays.itineraryId, productItineraries.id))
+    .where(eq(productItineraries.productId, productId))
 
   const costAmountCents = result?.totalCost ?? 0
 
@@ -212,6 +218,97 @@ async function ensureProductExists(db: PostgresJsDatabase, productId: string) {
     .limit(1)
 
   return product ?? null
+}
+
+async function getDefaultItinerary(
+  db: PostgresJsDatabase,
+  productId: string,
+): Promise<{ id: string } | null> {
+  const [itinerary] = await db
+    .select({ id: productItineraries.id })
+    .from(productItineraries)
+    .where(and(eq(productItineraries.productId, productId), eq(productItineraries.isDefault, true)))
+    .orderBy(asc(productItineraries.sortOrder), asc(productItineraries.createdAt))
+    .limit(1)
+
+  return itinerary ?? null
+}
+
+async function ensureDefaultItinerary(db: PostgresJsDatabase, productId: string) {
+  const existing = await getDefaultItinerary(db, productId)
+  if (existing) {
+    return existing
+  }
+
+  const [row] = await db
+    .insert(productItineraries)
+    .values({
+      productId,
+      name: "Main itinerary",
+      isDefault: true,
+      sortOrder: 0,
+    })
+    .returning({ id: productItineraries.id })
+
+  if (!row) {
+    throw new Error(`Failed to create default itinerary for product ${productId}`)
+  }
+
+  return row
+}
+
+async function getItineraryById(db: PostgresJsDatabase, itineraryId: string) {
+  const [itinerary] = await db
+    .select()
+    .from(productItineraries)
+    .where(eq(productItineraries.id, itineraryId))
+    .limit(1)
+
+  return itinerary ?? null
+}
+
+async function getDayById(
+  db: PostgresJsDatabase,
+  dayId: string,
+): Promise<{ id: string; itineraryId: string; productId: string } | null> {
+  const [day] = await db
+    .select({
+      id: productDays.id,
+      itineraryId: productDays.itineraryId,
+      productId: productItineraries.productId,
+    })
+    .from(productDays)
+    .innerJoin(productItineraries, eq(productDays.itineraryId, productItineraries.id))
+    .where(eq(productDays.id, dayId))
+    .limit(1)
+
+  return day ?? null
+}
+
+async function setDefaultItinerary(db: PostgresJsDatabase, productId: string, itineraryId: string) {
+  await db
+    .update(productItineraries)
+    .set({
+      isDefault: sql`${productItineraries.id} = ${itineraryId}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(productItineraries.productId, productId))
+}
+
+async function promoteFallbackItinerary(db: PostgresJsDatabase, productId: string) {
+  const [fallback] = await db
+    .select({ id: productItineraries.id })
+    .from(productItineraries)
+    .where(eq(productItineraries.productId, productId))
+    .orderBy(asc(productItineraries.sortOrder), asc(productItineraries.createdAt))
+    .limit(1)
+
+  if (!fallback) {
+    return null
+  }
+
+  await setDefaultItinerary(db, productId, fallback.id)
+  return fallback
 }
 
 export const productsService = {
@@ -271,6 +368,10 @@ export const productsService = {
 
   async createProduct(db: PostgresJsDatabase, data: CreateProductInput) {
     const [row] = await db.insert(products).values(data).returning()
+    if (!row) {
+      throw new Error("Failed to create product")
+    }
+    await ensureDefaultItinerary(db, row.id)
     return row
   },
 
@@ -1796,28 +1897,282 @@ export const productsService = {
     return row ?? null
   },
 
-  listDays(db: PostgresJsDatabase, productId: string) {
+  listItineraries(db: PostgresJsDatabase, productId: string) {
+    return db
+      .select()
+      .from(productItineraries)
+      .where(eq(productItineraries.productId, productId))
+      .orderBy(desc(productItineraries.isDefault), asc(productItineraries.sortOrder))
+  },
+
+  async createItinerary(db: PostgresJsDatabase, productId: string, data: CreateItineraryInput) {
+    const product = await ensureProductExists(db, productId)
+    if (!product) {
+      return null
+    }
+
+    const [existingCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(productItineraries)
+      .where(eq(productItineraries.productId, productId))
+
+    const shouldBeDefault = (existingCount?.count ?? 0) === 0 || data.isDefault
+    const insertAsDefault = (existingCount?.count ?? 0) === 0
+    const [row] = await db
+      .insert(productItineraries)
+      .values({
+        productId,
+        name: data.name,
+        isDefault: insertAsDefault,
+        sortOrder: data.sortOrder,
+      })
+      .returning()
+
+    if (!row) {
+      throw new Error(`Failed to create itinerary for product ${productId}`)
+    }
+
+    if (shouldBeDefault && !insertAsDefault) {
+      await setDefaultItinerary(db, productId, row.id)
+    }
+
+    return shouldBeDefault && !insertAsDefault ? ((await getItineraryById(db, row.id)) ?? row) : row
+  },
+
+  async updateItinerary(db: PostgresJsDatabase, itineraryId: string, data: UpdateItineraryInput) {
+    const itinerary = await getItineraryById(db, itineraryId)
+    if (!itinerary) {
+      return null
+    }
+
+    const { isDefault, ...rest } = data
+    const [row] = await db
+      .update(productItineraries)
+      .set({
+        ...rest,
+        ...(isDefault === false ? { isDefault: false } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(productItineraries.id, itineraryId))
+      .returning()
+
+    if (!row) {
+      return null
+    }
+
+    if (isDefault === true) {
+      await setDefaultItinerary(db, itinerary.productId, itineraryId)
+      return (await getItineraryById(db, itineraryId)) as typeof row
+    }
+
+    if (isDefault === false && itinerary.isDefault) {
+      const [fallback] = await db
+        .select({ id: productItineraries.id })
+        .from(productItineraries)
+        .where(
+          and(
+            eq(productItineraries.productId, itinerary.productId),
+            sql`${productItineraries.id} <> ${itineraryId}`,
+          ),
+        )
+        .orderBy(asc(productItineraries.sortOrder), asc(productItineraries.createdAt))
+        .limit(1)
+
+      if (fallback) {
+        await setDefaultItinerary(db, itinerary.productId, fallback.id)
+      } else {
+        await setDefaultItinerary(db, itinerary.productId, itineraryId)
+      }
+
+      return (await getItineraryById(db, itineraryId)) as typeof row
+    }
+
+    return row
+  },
+
+  async deleteItinerary(db: PostgresJsDatabase, itineraryId: string) {
+    const itinerary = await getItineraryById(db, itineraryId)
+    if (!itinerary) {
+      return null
+    }
+
+    const [row] = await db
+      .delete(productItineraries)
+      .where(eq(productItineraries.id, itineraryId))
+      .returning({ id: productItineraries.id })
+
+    if (!row) {
+      return null
+    }
+
+    if (itinerary.isDefault) {
+      await promoteFallbackItinerary(db, itinerary.productId)
+    }
+
+    return row
+  },
+
+  async duplicateItinerary(
+    db: PostgresJsDatabase,
+    itineraryId: string,
+    options?: { name?: string },
+  ) {
+    const source = await getItineraryById(db, itineraryId)
+    if (!source) {
+      return null
+    }
+
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(productItineraries)
+      .where(eq(productItineraries.productId, source.productId))
+
+    const name = options?.name?.trim() || `${source.name} (Copy)`
+    const sortOrder = countRow?.count ?? 0
+
+    const [created] = await db
+      .insert(productItineraries)
+      .values({
+        productId: source.productId,
+        name,
+        isDefault: false,
+        sortOrder,
+      })
+      .returning()
+
+    if (!created) {
+      throw new Error(`Failed to duplicate itinerary ${itineraryId}`)
+    }
+
+    const sourceDays = await db
+      .select()
+      .from(productDays)
+      .where(eq(productDays.itineraryId, source.id))
+      .orderBy(asc(productDays.dayNumber))
+
+    if (sourceDays.length === 0) {
+      return created
+    }
+
+    const dayIdMap = new Map<string, string>()
+    const insertedDays = await db
+      .insert(productDays)
+      .values(
+        sourceDays.map((day) => ({
+          itineraryId: created.id,
+          dayNumber: day.dayNumber,
+          title: day.title,
+          description: day.description,
+          location: day.location,
+        })),
+      )
+      .returning({ id: productDays.id, dayNumber: productDays.dayNumber })
+
+    for (const sourceDay of sourceDays) {
+      const match = insertedDays.find((day) => day.dayNumber === sourceDay.dayNumber)
+      if (match) {
+        dayIdMap.set(sourceDay.id, match.id)
+      }
+    }
+
+    const sourceDayIds = sourceDays.map((day) => day.id)
+    const sourceServices = await db
+      .select()
+      .from(productDayServices)
+      .where(inArray(productDayServices.dayId, sourceDayIds))
+      .orderBy(asc(productDayServices.sortOrder))
+
+    if (sourceServices.length > 0) {
+      await db.insert(productDayServices).values(
+        sourceServices
+          .map((service) => {
+            const newDayId = dayIdMap.get(service.dayId)
+            if (!newDayId) return null
+            return {
+              dayId: newDayId,
+              supplierServiceId: service.supplierServiceId,
+              serviceType: service.serviceType,
+              name: service.name,
+              description: service.description,
+              costCurrency: service.costCurrency,
+              costAmountCents: service.costAmountCents,
+              quantity: service.quantity,
+              sortOrder: service.sortOrder,
+              notes: service.notes,
+            }
+          })
+          .filter((value): value is NonNullable<typeof value> => value !== null),
+      )
+    }
+
+    const sourceDayMedia = await db
+      .select()
+      .from(productMedia)
+      .where(inArray(productMedia.dayId, sourceDayIds))
+      .orderBy(asc(productMedia.sortOrder))
+
+    if (sourceDayMedia.length > 0) {
+      await db.insert(productMedia).values(
+        sourceDayMedia
+          .map((media) => {
+            const newDayId = media.dayId ? dayIdMap.get(media.dayId) : null
+            if (!newDayId) return null
+            return {
+              productId: media.productId,
+              dayId: newDayId,
+              mediaType: media.mediaType,
+              name: media.name,
+              url: media.url,
+              storageKey: media.storageKey,
+              mimeType: media.mimeType,
+              fileSize: media.fileSize,
+              altText: media.altText,
+              sortOrder: media.sortOrder,
+              isCover: media.isCover,
+              isBrochure: false,
+              isBrochureCurrent: false,
+              brochureVersion: null,
+            }
+          })
+          .filter((value): value is NonNullable<typeof value> => value !== null),
+      )
+    }
+
+    return created
+  },
+
+  async listDays(db: PostgresJsDatabase, productId: string) {
+    const itinerary = await ensureDefaultItinerary(db, productId)
+    return productsService.listItineraryDays(db, itinerary.id)
+  },
+
+  listItineraryDays(db: PostgresJsDatabase, itineraryId: string) {
     return db
       .select()
       .from(productDays)
-      .where(eq(productDays.productId, productId))
+      .where(eq(productDays.itineraryId, itineraryId))
       .orderBy(asc(productDays.dayNumber))
   },
 
   async createDay(db: PostgresJsDatabase, productId: string, data: CreateDayInput) {
-    const [product] = await db
-      .select({ id: products.id })
-      .from(products)
-      .where(eq(products.id, productId))
-      .limit(1)
+    const itinerary = await ensureDefaultItinerary(db, productId)
+    return productsService.createItineraryDay(db, productId, itinerary.id, data)
+  },
 
-    if (!product) {
+  async createItineraryDay(
+    db: PostgresJsDatabase,
+    productId: string,
+    itineraryId: string,
+    data: CreateDayInput,
+  ) {
+    const itinerary = await getItineraryById(db, itineraryId)
+    if (!itinerary || itinerary.productId !== productId) {
       return null
     }
 
     const [row] = await db
       .insert(productDays)
-      .values({ ...data, productId })
+      .values({ ...data, itineraryId })
       .returning()
 
     return row
@@ -1856,13 +2211,9 @@ export const productsService = {
     dayId: string,
     data: CreateDayServiceInput,
   ) {
-    const [day] = await db
-      .select({ id: productDays.id })
-      .from(productDays)
-      .where(eq(productDays.id, dayId))
-      .limit(1)
+    const day = await getDayById(db, dayId)
 
-    if (!day) {
+    if (!day || day.productId !== productId) {
       return null
     }
 
@@ -1930,11 +2281,13 @@ export const productsService = {
       return null
     }
 
-    const days = await db
+    const itineraries = await db
       .select()
-      .from(productDays)
-      .where(eq(productDays.productId, productId))
-      .orderBy(asc(productDays.dayNumber))
+      .from(productItineraries)
+      .where(eq(productItineraries.productId, productId))
+      .orderBy(desc(productItineraries.isDefault), asc(productItineraries.sortOrder))
+
+    const defaultItinerary = itineraries.find((itinerary) => itinerary.isDefault) ?? null
 
     const options = await db
       .select()
@@ -1954,17 +2307,32 @@ export const productsService = {
       }),
     )
 
-    const daysWithServices = await Promise.all(
-      days.map(async (day) => {
-        const services = await db
+    const itinerariesWithDays = await Promise.all(
+      itineraries.map(async (itinerary) => {
+        const days = await db
           .select()
-          .from(productDayServices)
-          .where(eq(productDayServices.dayId, day.id))
-          .orderBy(asc(productDayServices.sortOrder))
+          .from(productDays)
+          .where(eq(productDays.itineraryId, itinerary.id))
+          .orderBy(asc(productDays.dayNumber))
 
-        return { ...day, services }
+        const daysWithServices = await Promise.all(
+          days.map(async (day) => {
+            const services = await db
+              .select()
+              .from(productDayServices)
+              .where(eq(productDayServices.dayId, day.id))
+              .orderBy(asc(productDayServices.sortOrder))
+
+            return { ...day, services }
+          }),
+        )
+
+        return { ...itinerary, days: daysWithServices }
       }),
     )
+
+    const defaultDays =
+      itinerariesWithDays.find((itinerary) => itinerary.id === defaultItinerary?.id)?.days ?? []
 
     const [maxVersion] = await db
       .select({ max: sql<number>`coalesce(max(${productVersions.versionNumber}), 0)` })
@@ -1976,7 +2344,12 @@ export const productsService = {
       .values({
         productId,
         versionNumber: (maxVersion?.max ?? 0) + 1,
-        snapshot: { ...product, options: optionsWithUnits, days: daysWithServices },
+        snapshot: {
+          ...product,
+          options: optionsWithUnits,
+          itineraries: itinerariesWithDays,
+          days: defaultDays,
+        },
         authorId: userId,
         notes: data.notes,
       })
@@ -2427,11 +2800,7 @@ export const productsService = {
         return null
       }
 
-      const [day] = await db
-        .select({ id: productDays.id, productId: productDays.productId })
-        .from(productDays)
-        .where(eq(productDays.id, data.dayId))
-        .limit(1)
+      const day = await getDayById(db, data.dayId)
 
       if (!day || day.productId !== productId) {
         return null

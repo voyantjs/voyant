@@ -6,7 +6,7 @@ import {
   bootstrapCustomerPortal,
   createCustomerPortalCompanion,
   deleteCustomerPortalCompanion,
-  importCustomerPortalBookingParticipants,
+  importCustomerPortalBookingTravelers,
   updateCustomerPortalCompanion,
   updateCustomerPortalProfile,
 } from "../operations.js"
@@ -15,7 +15,7 @@ import { customerPortalQueryKeys } from "../query-keys.js"
 import type {
   BootstrapCustomerPortalInput,
   CreateCustomerPortalCompanionInput,
-  ImportCustomerPortalBookingParticipantsInput,
+  ImportCustomerPortalBookingTravelersInput,
   UpdateCustomerPortalCompanionInput,
   UpdateCustomerPortalProfileInput,
 } from "../schemas.js"
@@ -66,9 +66,9 @@ export function useCustomerPortalMutation() {
     },
   })
 
-  const importBookingParticipants = useMutation({
-    mutationFn: async (input: ImportCustomerPortalBookingParticipantsInput = {}) =>
-      importCustomerPortalBookingParticipants(client, input),
+  const importBookingTravelers = useMutation({
+    mutationFn: async (input: ImportCustomerPortalBookingTravelersInput = {}) =>
+      importCustomerPortalBookingTravelers(client, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: customerPortalQueryKeys.companions() })
     },
@@ -94,7 +94,8 @@ export function useCustomerPortalMutation() {
     bootstrap,
     updateProfile,
     createCompanion,
-    importBookingParticipants,
+    importBookingTravelers,
+    importBookingParticipants: importBookingTravelers,
     updateCompanion,
     removeCompanion,
   }

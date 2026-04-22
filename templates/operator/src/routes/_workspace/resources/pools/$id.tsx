@@ -3,9 +3,11 @@ import {
   ensureResourcePoolDetailPageData,
   ResourcePoolDetailPage,
 } from "@/components/voyant/resources/resource-pool-detail-page"
+import { ResourcePoolDetailSkeleton } from "@/components/voyant/resources/resource-pool-detail-skeleton"
 
 export const Route = createFileRoute("/_workspace/resources/pools/$id")({
   loader: ({ context, params }) => ensureResourcePoolDetailPageData(context.queryClient, params.id),
+  pendingComponent: ResourcePoolDetailSkeleton,
   component: ResourcePoolDetailRoute,
 })
 

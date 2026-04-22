@@ -6,6 +6,7 @@ import {
   getPeopleQueryOptions,
 } from "@/components/voyant/crm/crm-query-options"
 import { OrganizationDetailPage } from "@/components/voyant/crm/organization-detail-page"
+import { OrganizationDetailSkeleton } from "@/components/voyant/crm/organization-detail-skeleton"
 
 export const Route = createFileRoute("/_workspace/organizations/$id")({
   loader: async ({ context, params }) => {
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_workspace/organizations/$id")({
       ),
     ])
   },
+  pendingComponent: OrganizationDetailSkeleton,
   component: OrganizationDetailRoute,
 })
 

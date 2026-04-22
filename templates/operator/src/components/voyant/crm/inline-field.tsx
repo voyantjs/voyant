@@ -1,6 +1,7 @@
 import { Check, Loader2, Pencil, X } from "lucide-react"
 import { useState } from "react"
 import { Button, Input, Textarea } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 export type InlineFieldKind = "text" | "email" | "url" | "textarea"
@@ -26,6 +27,7 @@ export function InlineField({
   disabled,
   onSave,
 }: InlineFieldProps) {
+  const messages = useAdminMessages().crm.shared
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? "")
   const [saving, setSaving] = useState(false)
@@ -45,7 +47,7 @@ export function InlineField({
       await onSave(trimmed === "" ? null : trimmed)
       setEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : messages.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -62,7 +64,7 @@ export function InlineField({
   }
 
   const display = value || (
-    <span className="text-muted-foreground italic">{placeholder || "Not set"}</span>
+    <span className="text-muted-foreground italic">{placeholder || messages.notSet}</span>
   )
 
   return (

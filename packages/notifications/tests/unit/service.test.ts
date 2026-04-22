@@ -11,6 +11,7 @@ import {
   NotificationError,
   renderNotificationTemplate,
 } from "../../src/service.js"
+import { resolveReminderRecipient } from "../../src/service-shared.js"
 import type { NotificationProvider } from "../../src/types.js"
 
 function fakeProvider(name: string, channels: string[]): NotificationProvider {
@@ -130,16 +131,95 @@ describe("renderNotificationTemplate", () => {
     ).toBe("Hello Mihai")
   })
 
+  it("renders liquid conditionals and loops", () => {
+    expect(
+      renderNotificationTemplate(
+        "{% if booking.reference %}Booking {{ booking.reference }}{% endif %} {% for document in documents %}[{{ document.name }}]{% endfor %}",
+        {
+          booking: { reference: "BKG-1" },
+          documents: [{ name: "Invoice" }, { name: "Contract" }],
+        },
+      ),
+    ).toBe("Booking BKG-1 [Invoice][Contract]")
+  })
+
+  it("supports liquid filters", () => {
+    expect(
+      renderNotificationTemplate("{{ invoice.totalAmount | currency: invoice.currency }}", {
+        invoice: { totalAmount: 1200, currency: "EUR" },
+      }),
+    ).toContain("€")
+  })
+
   it("returns null for empty templates", () => {
     expect(renderNotificationTemplate(null, {})).toBeNull()
   })
 
-  it("stringifies complex values when needed", () => {
-    expect(
-      renderNotificationTemplate("Payload: {{ data }}", {
-        data: { bookingId: "book_1" },
-      }),
-    ).toBe('Payload: {"bookingId":"book_1"}')
+  it("supports explicit json stringification for complex values", () => {
+    const rendered = renderNotificationTemplate("Payload: {{ data | json }}", {
+      data: { bookingId: "book_1" },
+    })
+
+    expect(rendered).toContain('"bookingId":"book_1"')
+    expect(rendered).toContain('"booking_id":"book_1"')
+  })
+})
+
+describe("resolveReminderRecipient", () => {
+  it("prefers the booking contact snapshot over participant roles", () => {
+    const recipient = resolveReminderRecipient(
+      {
+        contactFirstName: "Mihai",
+        contactLastName: "Contact",
+        contactEmail: "mihai@example.com",
+        contactPhone: "+40123456789",
+        contactPreferredLanguage: "ro",
+      },
+      [
+        {
+          email: "legacy@example.com",
+          isPrimary: true,
+          participantType: "booker",
+          firstName: "Legacy",
+          lastName: "Booker",
+        },
+      ],
+    )
+
+    expect(recipient).toEqual({
+      email: "mihai@example.com",
+      firstName: "Mihai",
+      lastName: "Contact",
+      participantType: "booking_contact",
+      isPrimary: true,
+    })
+  })
+
+  it("prefers non-staff primary travelers over staff when no contact snapshot exists", () => {
+    const recipient = resolveReminderRecipient(null, [
+      {
+        email: "guide@example.com",
+        isPrimary: true,
+        participantType: "staff",
+        firstName: "Guide",
+        lastName: "Assigned",
+      },
+      {
+        email: "ana@example.com",
+        isPrimary: true,
+        participantType: "traveler",
+        firstName: "Ana",
+        lastName: "Traveler",
+      },
+    ])
+
+    expect(recipient).toEqual({
+      email: "ana@example.com",
+      isPrimary: true,
+      participantType: "traveler",
+      firstName: "Ana",
+      lastName: "Traveler",
+    })
   })
 })
 

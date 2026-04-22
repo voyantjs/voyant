@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { ProductForm } from "./product-form"
 
@@ -20,17 +21,19 @@ export interface ProductDialogProps {
 }
 
 export function ProductDialog({ open, onOpenChange, product, onSuccess }: ProductDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const isEdit = Boolean(product)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="product-dialog" className="sm:max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit product" : "New product"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? productMessages.dialogEditTitle : productMessages.dialogNewTitle}
+          </DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update product details, pricing, and classification."
-              : "Create a new product in your catalog."}
+            {isEdit ? productMessages.dialogEditDescription : productMessages.dialogNewDescription}
           </DialogDescription>
         </DialogHeader>
         <ProductForm

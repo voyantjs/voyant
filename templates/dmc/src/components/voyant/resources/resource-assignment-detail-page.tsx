@@ -1,9 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, CalendarDays, Loader2, Trash2, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { getAssignmentStatusLabel } from "./resources-shared"
 
 type AssignmentDetail = {
   id: string
@@ -67,8 +70,8 @@ export function getResourceAssignmentProductQueryOptions(productId: string) {
   })
 }
 
-function formatDateTime(value: string | null) {
-  return value ? value.replace("T", " ").slice(0, 16) : "-"
+function formatDateTime(value: string | null, noValue: string) {
+  return value ? value.replace("T", " ").slice(0, 16) : noValue
 }
 
 export async function ensureResourceAssignmentDetailPageData(queryClient: QueryClient, id: string) {
@@ -114,6 +117,10 @@ export async function ensureResourceAssignmentDetailPageData(queryClient: QueryC
 export function ResourceAssignmentDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.resources.details
+  const noValue = detailMessages.noValue
 
   const { data: assignmentData, isPending } = useQuery(getResourceAssignmentDetailQueryOptions(id))
 
@@ -123,22 +130,18 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
     ...getResourceAssignmentSlotQueryOptions(assignment?.slotId ?? ""),
     enabled: Boolean(assignment?.slotId),
   })
-
   const poolQuery = useQuery({
     ...getResourceAssignmentPoolQueryOptions(assignment?.poolId ?? ""),
     enabled: Boolean(assignment?.poolId),
   })
-
   const resourceQuery = useQuery({
     ...getResourceAssignmentResourceQueryOptions(assignment?.resourceId ?? ""),
     enabled: Boolean(assignment?.resourceId),
   })
-
   const bookingQuery = useQuery({
     ...getResourceAssignmentBookingQueryOptions(assignment?.bookingId ?? ""),
     enabled: Boolean(assignment?.bookingId),
   })
-
   const productQuery = useQuery({
     ...getResourceAssignmentProductQueryOptions(slotQuery.data?.data.productId ?? ""),
     enabled: Boolean(slotQuery.data?.data.productId),
@@ -163,9 +166,9 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
   if (!assignment) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Assignment not found</p>
+        <p className="text-muted-foreground">{detailMessages.assignment.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/resources" })}>
-          Back to Resources
+          {detailMessages.backToResources}
         </Button>
       </div>
     )
@@ -180,10 +183,12 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Slot Assignment</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {detailMessages.assignment.pageTitle}
+          </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {assignment.status}
+              {getAssignmentStatusLabel(assignment.status, messages)}
             </Badge>
             <Badge variant="secondary">{slot ? `${slot.dateLocal}` : assignment.slotId}</Badge>
           </div>
@@ -196,7 +201,7 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
             }
           >
             <CalendarDays className="mr-2 h-4 w-4" />
-            Open Slot
+            {detailMessages.openSlot}
           </Button>
           {assignment.resourceId ? (
             <Button
@@ -206,66 +211,78 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
               }
             >
               <Wrench className="mr-2 h-4 w-4" />
-              Open Resource
+              {detailMessages.openResource}
             </Button>
           ) : null}
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this assignment?")) {
+              if (confirm(detailMessages.assignment.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Assignment Details</CardTitle>
+          <CardTitle>{detailMessages.assignment.detailsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm md:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Slot:</span>{" "}
+            <span className="text-muted-foreground">{messages.resources.slotLabel}:</span>{" "}
             <span>
-              {slot ? `${slot.dateLocal} · ${formatDateTime(slot.startsAt)}` : assignment.slotId}
+              {slot
+                ? `${slot.dateLocal} · ${formatDateTime(slot.startsAt, noValue)}`
+                : assignment.slotId}
             </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Product:</span>{" "}
-            <span>{productQuery.data?.data.name ?? slot?.productId ?? "-"}</span>
+            <span className="text-muted-foreground">{messages.resources.productLabel}:</span>{" "}
+            <span>{productQuery.data?.data.name ?? slot?.productId ?? noValue}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Pool:</span>{" "}
-            <span>{poolQuery.data?.data.name ?? assignment.poolId ?? "-"}</span>
+            <span className="text-muted-foreground">{messages.resources.poolLabel}:</span>{" "}
+            <span>{poolQuery.data?.data.name ?? assignment.poolId ?? detailMessages.noPool}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Resource:</span>{" "}
-            <span>{resourceQuery.data?.data.name ?? assignment.resourceId ?? "-"}</span>
+            <span className="text-muted-foreground">{messages.resources.resourceLabel}:</span>{" "}
+            <span>
+              {resourceQuery.data?.data.name ?? assignment.resourceId ?? detailMessages.noResource}
+            </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Booking:</span>{" "}
-            <span>{bookingQuery.data?.data.bookingNumber ?? assignment.bookingId ?? "-"}</span>
+            <span className="text-muted-foreground">{messages.resources.bookingLabel}:</span>{" "}
+            <span>
+              {bookingQuery.data?.data.bookingNumber ??
+                assignment.bookingId ??
+                detailMessages.noBooking}
+            </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Assigned By:</span>{" "}
-            <span>{assignment.assignedBy ?? "-"}</span>
+            <span className="text-muted-foreground">
+              {detailMessages.assignment.assignedByLabel}:
+            </span>{" "}
+            <span>{assignment.assignedBy ?? noValue}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Released:</span>{" "}
-            <span>{formatDateTime(assignment.releasedAt)}</span>
+            <span className="text-muted-foreground">
+              {detailMessages.assignment.releasedLabel}:
+            </span>{" "}
+            <span>{formatDateTime(assignment.releasedAt, noValue)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Created:</span>{" "}
-            <span>{new Date(assignment.createdAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{messages.resources.createdLabel}:</span>{" "}
+            <span>{new Date(assignment.createdAt).toLocaleString(resolvedLocale)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Updated:</span>{" "}
-            <span>{new Date(assignment.updatedAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{messages.resources.updatedLabel}:</span>{" "}
+            <span>{new Date(assignment.updatedAt).toLocaleString(resolvedLocale)}</span>
           </div>
         </CardContent>
       </Card>
@@ -273,7 +290,7 @@ export function ResourceAssignmentDetailPage({ id }: { id: string }) {
       {assignment.notes ? (
         <Card>
           <CardHeader>
-            <CardTitle>Notes</CardTitle>
+            <CardTitle>{messages.resources.notesTitle}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm whitespace-pre-wrap">{assignment.notes}</CardContent>
         </Card>

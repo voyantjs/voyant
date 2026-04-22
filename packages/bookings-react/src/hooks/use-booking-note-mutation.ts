@@ -16,11 +16,18 @@ const bookingNoteSingleResponse = z.object({
   data: bookingNoteRecordSchema,
 })
 
+const successResponse = z.object({ success: z.boolean() })
+
 export function useBookingNoteMutation(bookingId: string) {
   const { baseUrl, fetcher } = useVoyantBookingsContext()
   const queryClient = useQueryClient()
 
-  return useMutation({
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: bookingsQueryKeys.notes(bookingId) })
+    void queryClient.invalidateQueries({ queryKey: bookingsQueryKeys.activity(bookingId) })
+  }
+
+  const create = useMutation({
     mutationFn: async (input: CreateBookingNoteInput) => {
       const { data } = await fetchWithValidation(
         `/v1/bookings/${bookingId}/notes`,
@@ -30,9 +37,24 @@ export function useBookingNoteMutation(bookingId: string) {
       )
       return data
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: bookingsQueryKeys.notes(bookingId) })
-      void queryClient.invalidateQueries({ queryKey: bookingsQueryKeys.activity(bookingId) })
-    },
+    onSuccess: invalidate,
   })
+
+  const remove = useMutation({
+    mutationFn: async (noteId: string) => {
+      return fetchWithValidation(
+        `/v1/bookings/${bookingId}/notes/${noteId}`,
+        successResponse,
+        { baseUrl, fetcher },
+        { method: "DELETE" },
+      )
+    },
+    onSuccess: invalidate,
+  })
+
+  // Back-compat: older callers invoke `mutation.mutateAsync({ content })` directly
+  // on the returned object (treating the hook as a single create mutation).
+  // Expose the create mutation's surface at the top level, plus named `create`
+  // and `remove` for new callers.
+  return Object.assign(create, { create, remove })
 }

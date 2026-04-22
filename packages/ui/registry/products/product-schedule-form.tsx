@@ -209,6 +209,7 @@ export function ProductScheduleForm({ mode, onSuccess, onCancel }: ProductSchedu
         <div className="flex flex-col gap-1.5">
           <Label>Repeats</Label>
           <Select
+            items={FREQUENCY_OPTIONS}
             value={state.frequency}
             onValueChange={(value) => field("frequency")(value as Frequency)}
           >
@@ -279,7 +280,11 @@ export function ProductScheduleForm({ mode, onSuccess, onCancel }: ProductSchedu
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>Timezone</Label>
-          <Select value={state.timezone} onValueChange={(value) => field("timezone")(value)}>
+          <Select
+            items={timezoneOptions.map((timezone) => ({ label: timezone, value: timezone }))}
+            value={state.timezone}
+            onValueChange={(value) => field("timezone")(value)}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>

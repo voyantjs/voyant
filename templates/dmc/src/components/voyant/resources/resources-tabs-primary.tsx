@@ -1,8 +1,10 @@
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { ConfirmActionButton, SelectionActionBar } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
 import { SectionHeader } from "@/components/voyant/resources/resources-section-header"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import type {
   ProductOption,
   ResourceAllocationRow,
@@ -12,7 +14,7 @@ import type {
 } from "./resources-shared"
 import {
   allocationColumns,
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   poolColumns,
   resourceColumns,
 } from "./resources-shared"
@@ -21,7 +23,8 @@ type BulkFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   payload: Record<string, unknown>
   successVerb: string
   clearSelection: () => void
@@ -31,7 +34,8 @@ type DeleteFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   clearSelection: () => void
 }) => Promise<void>
 
@@ -47,18 +51,20 @@ export function ResourcesTab(props: {
   onOpenRoute: (resourceId: string) => void
   onEdit: (row: ResourceRow) => void
 }) {
+  const messages = useAdminMessages()
+  const resourcesMessages = messages.resources.tabs.resources
   return (
     <TabsContent value="resources" className="space-y-4">
       <SectionHeader
-        title="Resources"
-        description="Guides, vehicles, rooms, and other assignable assets."
-        actionLabel="New Resource"
+        title={resourcesMessages.title}
+        description={resourcesMessages.description}
+        actionLabel={resourcesMessages.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={resourceColumns(props.suppliers, props.onOpenRoute)}
+        columns={resourceColumns(props.suppliers, props.onOpenRoute, messages)}
         data={props.filteredResources}
-        emptyMessage="No resources match the current filters."
+        emptyMessage={resourcesMessages.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.resourceSelection}
@@ -66,46 +72,66 @@ export function ResourcesTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Activate"
-              confirmLabel="Activate Resources"
-              title={`Activate ${formatSelectionLabel(selectedRows.length, "resource")}?`}
-              description="This makes the selected resources available again for assignment and planning."
+              buttonLabel={resourcesMessages.bulkActivateButton}
+              confirmLabel={resourcesMessages.bulkActivateConfirm}
+              title={formatMessage(resourcesMessages.bulkActivateTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.resourceSingular,
+                  messages.resources.nouns.resourcePlural,
+                ),
+              })}
+              description={resourcesMessages.bulkActivateDescription}
               disabled={props.bulkActionTarget === "resources-activate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/resources",
                   target: "resources-activate",
-                  noun: "resource",
+                  nounSingular: messages.resources.nouns.resourceSingular,
+                  nounPlural: messages.resources.nouns.resourcePlural,
                   payload: { active: true },
-                  successVerb: "Activated",
+                  successVerb: messages.resources.verbActivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Deactivate"
-              confirmLabel="Deactivate Resources"
-              title={`Deactivate ${formatSelectionLabel(selectedRows.length, "resource")}?`}
-              description="This preserves the selected resources but removes them from active operational use."
+              buttonLabel={resourcesMessages.bulkDeactivateButton}
+              confirmLabel={resourcesMessages.bulkDeactivateConfirm}
+              title={formatMessage(resourcesMessages.bulkDeactivateTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.resourceSingular,
+                  messages.resources.nouns.resourcePlural,
+                ),
+              })}
+              description={resourcesMessages.bulkDeactivateDescription}
               disabled={props.bulkActionTarget === "resources-deactivate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/resources",
                   target: "resources-deactivate",
-                  noun: "resource",
+                  nounSingular: messages.resources.nouns.resourceSingular,
+                  nounPlural: messages.resources.nouns.resourcePlural,
                   payload: { active: false },
-                  successVerb: "Deactivated",
+                  successVerb: messages.resources.verbDeactivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Resources"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "resource")}?`}
-              description="This permanently removes the selected resources. Use Deactivate if you only need to take them out of rotation."
+              buttonLabel={resourcesMessages.bulkDeleteButton}
+              confirmLabel={resourcesMessages.bulkDeleteConfirm}
+              title={formatMessage(resourcesMessages.bulkDeleteTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.resourceSingular,
+                  messages.resources.nouns.resourcePlural,
+                ),
+              })}
+              description={resourcesMessages.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "resources-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -114,7 +140,8 @@ export function ResourcesTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/resources",
                   target: "resources-delete",
-                  noun: "resource",
+                  nounSingular: messages.resources.nouns.resourceSingular,
+                  nounPlural: messages.resources.nouns.resourcePlural,
                   clearSelection,
                 })
               }
@@ -139,18 +166,20 @@ export function PoolsTab(props: {
   onOpenRoute: (poolId: string) => void
   onEdit: (row: ResourcePoolRow) => void
 }) {
+  const messages = useAdminMessages()
+  const poolsMessages = messages.resources.tabs.pools
   return (
     <TabsContent value="pools" className="space-y-4">
       <SectionHeader
-        title="Pools"
-        description="Shared capacity groups by product or operational need."
-        actionLabel="New Pool"
+        title={poolsMessages.title}
+        description={poolsMessages.description}
+        actionLabel={poolsMessages.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={poolColumns(props.products, props.onOpenRoute)}
+        columns={poolColumns(props.products, props.onOpenRoute, messages)}
         data={props.filteredPools}
-        emptyMessage="No pools match the current filters."
+        emptyMessage={poolsMessages.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.poolSelection}
@@ -158,46 +187,66 @@ export function PoolsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Activate"
-              confirmLabel="Activate Pools"
-              title={`Activate ${formatSelectionLabel(selectedRows.length, "pool")}?`}
-              description="This re-enables the selected resource pools for live capacity planning."
+              buttonLabel={poolsMessages.bulkActivateButton}
+              confirmLabel={poolsMessages.bulkActivateConfirm}
+              title={formatMessage(poolsMessages.bulkActivateTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.poolSingular,
+                  messages.resources.nouns.poolPlural,
+                ),
+              })}
+              description={poolsMessages.bulkActivateDescription}
               disabled={props.bulkActionTarget === "pools-activate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/pools",
                   target: "pools-activate",
-                  noun: "pool",
+                  nounSingular: messages.resources.nouns.poolSingular,
+                  nounPlural: messages.resources.nouns.poolPlural,
                   payload: { active: true },
-                  successVerb: "Activated",
+                  successVerb: messages.resources.verbActivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Deactivate"
-              confirmLabel="Deactivate Pools"
-              title={`Deactivate ${formatSelectionLabel(selectedRows.length, "pool")}?`}
-              description="This keeps the selected pools for reference but removes them from active planning."
+              buttonLabel={poolsMessages.bulkDeactivateButton}
+              confirmLabel={poolsMessages.bulkDeactivateConfirm}
+              title={formatMessage(poolsMessages.bulkDeactivateTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.poolSingular,
+                  messages.resources.nouns.poolPlural,
+                ),
+              })}
+              description={poolsMessages.bulkDeactivateDescription}
               disabled={props.bulkActionTarget === "pools-deactivate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/pools",
                   target: "pools-deactivate",
-                  noun: "pool",
+                  nounSingular: messages.resources.nouns.poolSingular,
+                  nounPlural: messages.resources.nouns.poolPlural,
                   payload: { active: false },
-                  successVerb: "Deactivated",
+                  successVerb: messages.resources.verbDeactivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Pools"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "pool")}?`}
-              description="This permanently removes the selected pools and any pool-level grouping they provide."
+              buttonLabel={poolsMessages.bulkDeleteButton}
+              confirmLabel={poolsMessages.bulkDeleteConfirm}
+              title={formatMessage(poolsMessages.bulkDeleteTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.poolSingular,
+                  messages.resources.nouns.poolPlural,
+                ),
+              })}
+              description={poolsMessages.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "pools-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -206,7 +255,8 @@ export function PoolsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/pools",
                   target: "pools-delete",
-                  noun: "pool",
+                  nounSingular: messages.resources.nouns.poolSingular,
+                  nounPlural: messages.resources.nouns.poolPlural,
                   clearSelection,
                 })
               }
@@ -231,18 +281,20 @@ export function AllocationsTab(props: {
   onOpenRoute: (allocationId: string) => void
   onEdit: (row: ResourceAllocationRow) => void
 }) {
+  const messages = useAdminMessages()
+  const allocationsMessages = messages.resources.tabs.allocations
   return (
     <TabsContent value="allocations" className="space-y-4">
       <SectionHeader
-        title="Allocations"
-        description="Attach pools to products, rules, and start times."
-        actionLabel="New Allocation"
+        title={allocationsMessages.title}
+        description={allocationsMessages.description}
+        actionLabel={allocationsMessages.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={allocationColumns(props.pools, props.products, props.onOpenRoute)}
+        columns={allocationColumns(props.pools, props.products, props.onOpenRoute, messages)}
         data={props.filteredAllocations}
-        emptyMessage="No allocations match the current filters."
+        emptyMessage={allocationsMessages.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.allocationSelection}
@@ -250,10 +302,16 @@ export function AllocationsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Allocations"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "allocation")}?`}
-              description="This permanently removes the selected allocation rules from resource planning."
+              buttonLabel={allocationsMessages.bulkDeleteButton}
+              confirmLabel={allocationsMessages.bulkDeleteConfirm}
+              title={formatMessage(allocationsMessages.bulkDeleteTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.allocationSingular,
+                  messages.resources.nouns.allocationPlural,
+                ),
+              })}
+              description={allocationsMessages.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "allocations-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -262,7 +320,8 @@ export function AllocationsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/allocations",
                   target: "allocations-delete",
-                  noun: "allocation",
+                  nounSingular: messages.resources.nouns.allocationSingular,
+                  nounPlural: messages.resources.nouns.allocationPlural,
                   clearSelection,
                 })
               }

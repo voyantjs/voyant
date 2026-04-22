@@ -8,9 +8,10 @@ import { publicBookingRoutes } from "./routes-public.js"
 export { bookingsSupplierExtension } from "./extensions/suppliers.js"
 export {
   type BookingPiiAuditEvent,
+  type BookingPiiService,
   type BookingPiiServiceOptions,
   createBookingPiiService,
-  type UpsertBookingParticipantTravelDetailInput,
+  type UpsertBookingTravelerTravelDetailInput,
 } from "./pii.js"
 export type { ConvertProductData } from "./service.js"
 export { bookingsService } from "./service.js"
@@ -20,6 +21,7 @@ export {
   type BookingGroupMemberWithBooking,
   bookingGroupsService,
   type CreateBookingGroupInput,
+  listGroupBookingTravelers,
   type UpdateBookingGroupInput,
 } from "./service-groups.js"
 export {
@@ -74,20 +76,20 @@ export type { BookingRoutes } from "./routes.js"
 export type { PublicBookingRoutes } from "./routes-public.js"
 export { publicBookingRoutes } from "./routes-public.js"
 export type {
-  BookingParticipantDietary,
-  BookingParticipantIdentity,
-  BookingParticipantTravelDetail,
-  DecryptedBookingParticipantTravelDetail,
-  NewBookingParticipantTravelDetail,
+  BookingTravelerDietary,
+  BookingTravelerIdentity,
+  BookingTravelerTravelDetail,
+  DecryptedBookingTravelerTravelDetail,
+  NewBookingTravelerTravelDetail,
 } from "./schema/travel-details.js"
 export {
-  bookingParticipantDietarySchema,
-  bookingParticipantIdentitySchema,
-  bookingParticipantTravelDetailInsertSchema,
-  bookingParticipantTravelDetailSelectSchema,
-  bookingParticipantTravelDetails,
-  bookingParticipantTravelDetailUpdateSchema,
-  decryptedBookingParticipantTravelDetailSchema,
+  bookingTravelerDietarySchema,
+  bookingTravelerIdentitySchema,
+  bookingTravelerTravelDetailInsertSchema,
+  bookingTravelerTravelDetailSelectSchema,
+  bookingTravelerTravelDetails,
+  bookingTravelerTravelDetailUpdateSchema,
+  decryptedBookingTravelerTravelDetailSchema,
 } from "./schema/travel-details.js"
 export type {
   Booking,
@@ -98,14 +100,14 @@ export type {
   BookingGroup,
   BookingGroupMember,
   BookingItem,
-  BookingItemParticipant,
+  BookingItemTraveler,
   BookingNote,
-  BookingParticipant,
-  BookingPassenger,
   BookingPiiAccessLog,
   BookingRedemptionEvent,
   BookingSessionState,
+  BookingStaffAssignment,
   BookingSupplierStatus,
+  BookingTraveler,
   NewBooking,
   NewBookingActivity,
   NewBookingAllocation,
@@ -114,14 +116,14 @@ export type {
   NewBookingGroup,
   NewBookingGroupMember,
   NewBookingItem,
-  NewBookingItemParticipant,
+  NewBookingItemTraveler,
   NewBookingNote,
-  NewBookingParticipant,
-  NewBookingPassenger,
   NewBookingPiiAccessLog,
   NewBookingRedemptionEvent,
   NewBookingSessionState,
+  NewBookingStaffAssignment,
   NewBookingSupplierStatus,
+  NewBookingTraveler,
 } from "./schema.js"
 export {
   bookingActivityLog,
@@ -132,16 +134,16 @@ export {
   bookingGroupMemberRoleEnum,
   bookingGroupMembers,
   bookingGroups,
-  bookingItemParticipants,
   bookingItems,
+  bookingItemTravelers,
   bookingNotes,
-  bookingParticipants,
-  bookingPassengers,
   bookingPiiAccessLog,
   bookingRedemptionEvents,
   bookingSessionStates,
+  bookingStaffAssignments,
   bookingSupplierStatuses,
   bookings,
+  bookingTravelers,
 } from "./schema.js"
 export { publicBookingsService } from "./service-public.js"
 export {
@@ -161,13 +163,13 @@ export {
   insertBookingDocumentSchema,
   insertBookingFulfillmentSchema,
   insertBookingGroupSchema,
-  insertBookingItemParticipantSchema,
   insertBookingItemSchema,
+  insertBookingItemTravelerSchema,
   insertBookingNoteSchema,
   insertBookingSchema,
-  insertParticipantSchema,
-  insertPassengerSchema,
+  insertBookingTravelerDocumentSchema,
   insertSupplierStatusSchema,
+  insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
@@ -188,8 +190,7 @@ export {
   updateBookingItemSchema,
   updateBookingSchema,
   updateBookingStatusSchema,
-  updateParticipantSchema,
-  updatePassengerSchema,
   updateSupplierStatusSchema,
-  upsertParticipantTravelDetailsSchema,
+  updateTravelerSchema,
+  upsertTravelerTravelDetailsSchema,
 } from "./validation.js"

@@ -27,6 +27,7 @@ export default defineVoyantConfig({
     "@voyantjs/distribution",
     "@voyantjs/resources",
     "@voyantjs/markets",
+    "@voyantjs/notifications",
     "@voyantjs/booking-requirements",
     "@voyantjs/external-refs",
     "@voyantjs/extras",

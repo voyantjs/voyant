@@ -10,8 +10,8 @@ import {
   customerPortalContactExistsResultSchema,
   customerPortalPhoneContactExistsResultSchema,
   customerPortalProfileSchema,
-  importCustomerPortalBookingParticipantsResultSchema,
-  importCustomerPortalBookingParticipantsSchema,
+  importCustomerPortalBookingTravelersResultSchema,
+  importCustomerPortalBookingTravelersSchema,
   updateCustomerPortalCompanionSchema,
   updateCustomerPortalProfileSchema,
 } from "@voyantjs/customer-portal"
@@ -20,6 +20,11 @@ import { z } from "zod"
 export const singleEnvelope = <T extends z.ZodTypeAny>(item: T) => z.object({ data: item })
 export const arrayEnvelope = <T extends z.ZodTypeAny>(item: T) => z.object({ data: z.array(item) })
 export const successEnvelope = z.object({ success: z.boolean() })
+
+export const importCustomerPortalBookingParticipantsSchema =
+  importCustomerPortalBookingTravelersSchema
+export const importCustomerPortalBookingParticipantsResultSchema =
+  importCustomerPortalBookingTravelersResultSchema
 
 export {
   bootstrapCustomerPortalResultSchema,
@@ -33,8 +38,8 @@ export {
   customerPortalContactExistsResultSchema,
   customerPortalPhoneContactExistsResultSchema,
   customerPortalProfileSchema,
-  importCustomerPortalBookingParticipantsResultSchema,
-  importCustomerPortalBookingParticipantsSchema,
+  importCustomerPortalBookingTravelersResultSchema,
+  importCustomerPortalBookingTravelersSchema,
   updateCustomerPortalCompanionSchema,
   updateCustomerPortalProfileSchema,
 }
@@ -46,7 +51,7 @@ export const customerPortalBootstrapResponseSchema = singleEnvelope(
 export const customerPortalCompanionsResponseSchema = arrayEnvelope(customerPortalCompanionSchema)
 export const customerPortalCompanionResponseSchema = singleEnvelope(customerPortalCompanionSchema)
 export const customerPortalCompanionImportResponseSchema = singleEnvelope(
-  importCustomerPortalBookingParticipantsResultSchema,
+  importCustomerPortalBookingTravelersResultSchema,
 )
 export const customerPortalBookingsResponseSchema = arrayEnvelope(
   customerPortalBookingSummarySchema,
@@ -72,12 +77,15 @@ export type UpdateCustomerPortalProfileInput = z.input<typeof updateCustomerPort
 export type CustomerPortalCompanionRecord = z.infer<typeof customerPortalCompanionSchema>
 export type CreateCustomerPortalCompanionInput = z.input<typeof createCustomerPortalCompanionSchema>
 export type UpdateCustomerPortalCompanionInput = z.input<typeof updateCustomerPortalCompanionSchema>
-export type ImportCustomerPortalBookingParticipantsInput = z.input<
-  typeof importCustomerPortalBookingParticipantsSchema
+export type ImportCustomerPortalBookingTravelersInput = z.input<
+  typeof importCustomerPortalBookingTravelersSchema
 >
-export type ImportCustomerPortalBookingParticipantsResult = z.infer<
-  typeof importCustomerPortalBookingParticipantsResultSchema
+export type ImportCustomerPortalBookingTravelersResult = z.infer<
+  typeof importCustomerPortalBookingTravelersResultSchema
 >
+export type ImportCustomerPortalBookingParticipantsInput = ImportCustomerPortalBookingTravelersInput
+export type ImportCustomerPortalBookingParticipantsResult =
+  ImportCustomerPortalBookingTravelersResult
 export type CustomerPortalBookingSummaryRecord = z.infer<typeof customerPortalBookingSummarySchema>
 export type CustomerPortalBookingRecord = z.infer<typeof customerPortalBookingDetailSchema>
 export type CustomerPortalBookingBillingContactRecord = z.infer<

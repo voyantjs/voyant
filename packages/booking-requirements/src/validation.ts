@@ -25,13 +25,13 @@ export const contactRequirementFieldSchema = z.enum([
 export const contactRequirementScopeSchema = z.enum([
   "booking",
   "lead_traveler",
-  "participant",
+  "traveler",
   "booker",
 ])
 
 export const bookingQuestionTargetSchema = z.enum([
   "booking",
-  "participant",
+  "traveler",
   "lead_traveler",
   "booker",
   "extra",
@@ -55,15 +55,15 @@ export const bookingQuestionFieldTypeSchema = z.enum([
 ])
 
 export const bookingQuestionTriggerModeSchema = z.enum(["required", "optional", "hidden"])
-export const bookingAnswerTargetSchema = z.enum(["booking", "participant", "extra"])
+export const bookingAnswerTargetSchema = z.enum(["booking", "traveler", "extra"])
 
 export const productContactRequirementCoreSchema = z.object({
   productId: z.string(),
   optionId: z.string().nullable().optional(),
   fieldKey: contactRequirementFieldSchema,
-  scope: contactRequirementScopeSchema.default("participant"),
+  scope: contactRequirementScopeSchema.default("traveler"),
   isRequired: z.boolean().default(false),
-  perParticipant: z.boolean().default(false),
+  perTraveler: z.boolean().default(false),
   active: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
   notes: z.string().nullable().optional(),
@@ -92,7 +92,7 @@ export const publicTransportRequirementSummarySchema = z.object({
   fieldKey: transportRequirementFieldSchema,
   scope: contactRequirementScopeSchema,
   isRequired: z.boolean(),
-  perParticipant: z.boolean(),
+  perTraveler: z.boolean(),
   notes: z.string().nullable(),
 })
 
@@ -108,7 +108,7 @@ export const publicTransportRequirementsSchema = z.object({
   fieldsByScope: z.object({
     booking: z.array(transportRequirementFieldSchema),
     lead_traveler: z.array(transportRequirementFieldSchema),
-    participant: z.array(transportRequirementFieldSchema),
+    traveler: z.array(transportRequirementFieldSchema),
     booker: z.array(transportRequirementFieldSchema),
   }),
   requirements: z.array(publicTransportRequirementSummarySchema),
@@ -225,7 +225,7 @@ export const bookingQuestionExtraTriggerListQuerySchema = paginationSchema.exten
 export const bookingAnswerCoreSchema = z.object({
   bookingId: z.string(),
   productBookingQuestionId: z.string(),
-  bookingParticipantId: z.string().nullable().optional(),
+  bookingTravelerId: z.string().nullable().optional(),
   bookingExtraId: z.string().nullable().optional(),
   target: bookingAnswerTargetSchema.default("booking"),
   valueText: z.string().nullable().optional(),
@@ -243,7 +243,7 @@ export const updateBookingAnswerSchema = bookingAnswerCoreSchema.partial()
 export const bookingAnswerListQuerySchema = paginationSchema.extend({
   bookingId: z.string().optional(),
   productBookingQuestionId: z.string().optional(),
-  bookingParticipantId: z.string().optional(),
+  bookingTravelerId: z.string().optional(),
   bookingExtraId: z.string().optional(),
   target: bookingAnswerTargetSchema.optional(),
 })

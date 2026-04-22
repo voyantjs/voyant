@@ -1,11 +1,10 @@
 "use client"
 
-import { useBookingDocumentMutation, usePassengers } from "@voyantjs/bookings-react"
+import { useBookingTravelerDocumentMutation, useTravelers } from "@voyantjs/bookings-react"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
-
 import {
   Button,
   Dialog,
@@ -23,6 +22,7 @@ import {
   Textarea,
 } from "@/components/ui"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
 import { FileDropzone } from "./file-dropzone"
@@ -30,18 +30,6 @@ import { FileDropzone } from "./file-dropzone"
 const documentTypes = ["visa", "insurance", "health", "passport_copy", "other"] as const
 
 const UNASSIGNED = "__unassigned__"
-
-const documentFormSchema = z.object({
-  type: z.enum(documentTypes).default("other"),
-  fileName: z.string().min(1, "File name is required").max(500),
-  fileUrl: z.string().url("Must be a valid URL"),
-  participantId: z.string().optional().nullable(),
-  expiresAt: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-})
-
-type DocumentFormValues = z.input<typeof documentFormSchema>
-type DocumentFormOutput = z.output<typeof documentFormSchema>
 
 export interface BookingDocumentDialogProps {
   open: boolean
@@ -56,9 +44,22 @@ export function BookingDocumentDialog({
   bookingId,
   onSuccess,
 }: BookingDocumentDialogProps) {
-  const { create } = useBookingDocumentMutation(bookingId)
-  const { data: passengersData } = usePassengers(bookingId)
-  const passengers = passengersData?.data ?? []
+  const documentMessages = useAdminMessages().bookings.detail.documentDialog
+  const { create } = useBookingTravelerDocumentMutation(bookingId)
+  const { data: travelersData } = useTravelers(bookingId)
+  const travelers = travelersData?.data ?? []
+
+  const documentFormSchema = z.object({
+    type: z.enum(documentTypes).default("other"),
+    fileName: z.string().min(1, documentMessages.validationFileNameRequired).max(500),
+    fileUrl: z.string().url(documentMessages.validationFileUrlInvalid),
+    travelerId: z.string().optional().nullable(),
+    expiresAt: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  })
+
+  type DocumentFormValues = z.input<typeof documentFormSchema>
+  type DocumentFormOutput = z.output<typeof documentFormSchema>
 
   const form = useForm<DocumentFormValues, unknown, DocumentFormOutput>({
     resolver: zodResolver(documentFormSchema),
@@ -66,7 +67,7 @@ export function BookingDocumentDialog({
       type: "other",
       fileName: "",
       fileUrl: "",
-      participantId: UNASSIGNED,
+      travelerId: UNASSIGNED,
       expiresAt: "",
       notes: "",
     },
@@ -83,8 +84,7 @@ export function BookingDocumentDialog({
       type: values.type,
       fileName: values.fileName,
       fileUrl: values.fileUrl,
-      participantId:
-        values.participantId && values.participantId !== UNASSIGNED ? values.participantId : null,
+      travelerId: values.travelerId && values.travelerId !== UNASSIGNED ? values.travelerId : null,
       expiresAt: values.expiresAt || null,
       notes: values.notes || null,
     })
@@ -97,7 +97,7 @@ export function BookingDocumentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Add Document</DialogTitle>
+          <DialogTitle>{documentMessages.title}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -106,8 +106,9 @@ export function BookingDocumentDialog({
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{documentMessages.typeLabel}</Label>
                 <Select
+                  items={documentTypes.map((t) => ({ label: t.replace(/_/g, " "), value: t }))}
                   value={form.watch("type")}
                   onValueChange={(v) =>
                     form.setValue("type", (v ?? "other") as (typeof documentTypes)[number])
@@ -119,26 +120,41 @@ export function BookingDocumentDialog({
                   <SelectContent>
                     {documentTypes.map((t) => (
                       <SelectItem key={t} value={t}>
-                        {t.replace(/_/g, " ")}
+                        {t === "visa"
+                          ? documentMessages.typeVisa
+                          : t === "insurance"
+                            ? documentMessages.typeInsurance
+                            : t === "health"
+                              ? documentMessages.typeHealth
+                              : t === "passport_copy"
+                                ? documentMessages.typePassportCopy
+                                : documentMessages.typeOther}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Passenger (optional)</Label>
+                <Label>{documentMessages.travelerLabel}</Label>
                 <Select
-                  value={form.watch("participantId") ?? UNASSIGNED}
-                  onValueChange={(v) => form.setValue("participantId", v ?? UNASSIGNED)}
+                  items={[
+                    { label: documentMessages.bookingWide, value: UNASSIGNED },
+                    ...travelers.map((traveler) => ({
+                      label: `${traveler.firstName} ${traveler.lastName}`,
+                      value: traveler.id,
+                    })),
+                  ]}
+                  value={form.watch("travelerId") ?? UNASSIGNED}
+                  onValueChange={(v) => form.setValue("travelerId", v ?? UNASSIGNED)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={UNASSIGNED}>Booking-wide</SelectItem>
-                    {passengers.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.firstName} {p.lastName}
+                    <SelectItem value={UNASSIGNED}>{documentMessages.bookingWide}</SelectItem>
+                    {travelers.map((traveler) => (
+                      <SelectItem key={traveler.id} value={traveler.id}>
+                        {traveler.firstName} {traveler.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -147,7 +163,7 @@ export function BookingDocumentDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>File</Label>
+              <Label>{documentMessages.fileLabel}</Label>
               <FileDropzone
                 accept="application/pdf,image/*"
                 maxSize={10 * 1024 * 1024}
@@ -155,7 +171,13 @@ export function BookingDocumentDialog({
                   form.setValue("fileUrl", upload.url, { shouldValidate: true })
                   form.setValue("fileName", upload.name, { shouldValidate: true })
                 }}
-                helperText="Drop passport, visa, or insurance document (PDF or image)"
+                helperText={documentMessages.fileHelperText}
+                idleText={documentMessages.uploadIdle}
+                acceptedPrefix={documentMessages.uploadAcceptedPrefix}
+                uploadingText={documentMessages.uploadUploading}
+                removeFileAriaLabel={documentMessages.uploadRemoveAriaLabel}
+                uploadFailedMessage={documentMessages.uploadFailed}
+                fileTooLargeMessage={documentMessages.uploadFileTooLarge}
               />
               {form.formState.errors.fileUrl && (
                 <p className="text-xs text-destructive">{form.formState.errors.fileUrl.message}</p>
@@ -163,7 +185,7 @@ export function BookingDocumentDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Expires At (optional)</Label>
+              <Label>{documentMessages.expiresAtLabel}</Label>
               <DatePicker
                 value={form.watch("expiresAt") || null}
                 onChange={(next) =>
@@ -172,23 +194,26 @@ export function BookingDocumentDialog({
                     shouldDirty: true,
                   })
                 }
-                placeholder="Select expiry date"
+                placeholder={documentMessages.expiresAtPlaceholder}
                 className="w-full"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional notes..." />
+              <Label>{documentMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={documentMessages.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {documentMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={create.isPending}>
               {create.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Document
+              {documentMessages.create}
             </Button>
           </DialogFooter>
         </form>

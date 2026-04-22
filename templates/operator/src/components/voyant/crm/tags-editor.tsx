@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import { useState } from "react"
 import { Badge, Input } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 interface TagsEditorProps {
   tags: string[]
@@ -10,6 +11,7 @@ interface TagsEditorProps {
 }
 
 export function TagsEditor({ tags, onChange, saving, disabled }: TagsEditorProps) {
+  const messages = useAdminMessages().crm.shared
   const [draft, setDraft] = useState("")
   const [error, setError] = useState<string | null>(null)
 
@@ -17,7 +19,7 @@ export function TagsEditor({ tags, onChange, saving, disabled }: TagsEditorProps
     const trimmed = value.trim()
     if (!trimmed) return
     if (tags.includes(trimmed)) {
-      setError("Tag already added")
+      setError(messages.tagAlreadyAdded)
       return
     }
     setError(null)
@@ -25,7 +27,7 @@ export function TagsEditor({ tags, onChange, saving, disabled }: TagsEditorProps
       await onChange([...tags, trimmed])
       setDraft("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add tag")
+      setError(err instanceof Error ? err.message : messages.addTagFailed)
     }
   }
 
@@ -34,7 +36,7 @@ export function TagsEditor({ tags, onChange, saving, disabled }: TagsEditorProps
     try {
       await onChange(tags.filter((t) => t !== tag))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove tag")
+      setError(err instanceof Error ? err.message : messages.removeTagFailed)
     }
   }
 
@@ -74,7 +76,7 @@ export function TagsEditor({ tags, onChange, saving, disabled }: TagsEditorProps
           onKeyDown={handleKeyDown}
           onBlur={() => void addTag(draft)}
           disabled={saving}
-          placeholder="Add tag…"
+          placeholder={messages.addTagPlaceholder}
           className="h-8 text-sm"
         />
       ) : null}

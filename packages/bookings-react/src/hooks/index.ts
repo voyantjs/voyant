@@ -9,10 +9,10 @@ export {
   useBookingConvertMutation,
 } from "./use-booking-convert-mutation.js"
 export {
-  type CreateBookingDocumentInput,
-  type UseBookingDocumentsOptions,
-  useBookingDocumentMutation,
-  useBookingDocuments,
+  type CreateBookingTravelerDocumentInput,
+  type UseBookingTravelerDocumentsOptions,
+  useBookingTravelerDocumentMutation,
+  useBookingTravelerDocuments,
 } from "./use-booking-documents.js"
 export { type UseBookingGroupOptions, useBookingGroup } from "./use-booking-group.js"
 export {
@@ -35,11 +35,11 @@ export {
   useBookingItemMutation,
 } from "./use-booking-item-mutation.js"
 export {
-  type AddItemParticipantInput,
-  type UseBookingItemParticipantsOptions,
-  useBookingItemParticipantMutation,
-  useBookingItemParticipants,
-} from "./use-booking-item-participants.js"
+  type AddItemTravelerInput,
+  type UseBookingItemTravelersOptions,
+  useBookingItemTravelerMutation,
+  useBookingItemTravelers,
+} from "./use-booking-item-travelers.js"
 export { type UseBookingItemsOptions, useBookingItems } from "./use-booking-items.js"
 export {
   type CreateBookingInput,
@@ -62,12 +62,6 @@ export {
 } from "./use-booking-status-mutation.js"
 export { type UseBookingsOptions, useBookings } from "./use-bookings.js"
 export {
-  type CreatePassengerInput,
-  type UpdatePassengerInput,
-  usePassengerMutation,
-} from "./use-passenger-mutation.js"
-export { type UsePassengersOptions, usePassengers } from "./use-passengers.js"
-export {
   type UsePublicBookingSessionOptions,
   usePublicBookingSession,
 } from "./use-public-booking-session.js"
@@ -82,3 +76,9 @@ export {
   useSupplierStatusMutation,
 } from "./use-supplier-status-mutation.js"
 export { type UseSupplierStatusesOptions, useSupplierStatuses } from "./use-supplier-statuses.js"
+export {
+  type CreateTravelerInput,
+  type UpdateTravelerInput,
+  useTravelerMutation,
+} from "./use-traveler-mutation.js"
+export { type UseTravelersOptions, useTravelers } from "./use-travelers.js"

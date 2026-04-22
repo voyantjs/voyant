@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { ProductTagForm } from "./product-tag-form"
 
@@ -20,17 +21,19 @@ export interface ProductTagDialogProps {
 }
 
 export function ProductTagDialog({ open, onOpenChange, tag, onSuccess }: ProductTagDialogProps) {
+  const messages = useAdminMessages()
+  const tagMessages = messages.products.taxonomy.tags
   const isEdit = Boolean(tag)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="product-tag-dialog" className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit product tag" : "New product tag"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? tagMessages.dialogEditTitle : tagMessages.dialogNewTitle}
+          </DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update the tag used to label and filter products."
-              : "Create a reusable tag for filtering and classification."}
+            {isEdit ? tagMessages.dialogEditDescription : tagMessages.dialogNewDescription}
           </DialogDescription>
         </DialogHeader>
         <ProductTagForm

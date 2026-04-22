@@ -220,6 +220,10 @@ export function VehicleDialog({ open, onOpenChange, vehicle, onSuccess }: Vehicl
               <div className="flex flex-col gap-2">
                 <Label>Category</Label>
                 <Select
+                  items={GROUND_VEHICLE_CATEGORIES.map((x) => ({
+                    label: x.replace(/_/g, " "),
+                    value: x,
+                  }))}
                   value={form.watch("category")}
                   onValueChange={(value) => form.setValue("category", value as VehicleCategory)}
                 >
@@ -238,6 +242,10 @@ export function VehicleDialog({ open, onOpenChange, vehicle, onSuccess }: Vehicl
               <div className="flex flex-col gap-2">
                 <Label>Class</Label>
                 <Select
+                  items={GROUND_VEHICLE_CLASSES.map((x) => ({
+                    label: x.replace(/_/g, " "),
+                    value: x,
+                  }))}
                   value={form.watch("vehicleClass")}
                   onValueChange={(value) => form.setValue("vehicleClass", value as VehicleClass)}
                 >

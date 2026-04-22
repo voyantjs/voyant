@@ -1,10 +1,10 @@
 "use client"
 
 import {
-  type BookingPassengerRecord,
-  useBookingDocumentMutation,
-  useBookingDocuments,
-  usePassengers,
+  type BookingTravelerRecord,
+  useBookingTravelerDocumentMutation,
+  useBookingTravelerDocuments,
+  useTravelers,
 } from "@voyantjs/bookings-react"
 import { ExternalLink, FileText, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
@@ -27,16 +27,16 @@ export interface BookingDocumentListProps {
 
 export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
   const [dialogOpen, setDialogOpen] = React.useState(false)
-  const { data } = useBookingDocuments(bookingId)
-  const { data: passengersData } = usePassengers(bookingId)
-  const { remove } = useBookingDocumentMutation(bookingId)
+  const { data } = useBookingTravelerDocuments(bookingId)
+  const { data: travelersData } = useTravelers(bookingId)
+  const { remove } = useBookingTravelerDocumentMutation(bookingId)
 
   const documents = data?.data ?? []
-  const passengers = passengersData?.data ?? []
+  const travelers = travelersData?.data ?? []
 
-  const passengerMap = new Map<string, BookingPassengerRecord>()
-  for (const p of passengers) {
-    passengerMap.set(p.id, p)
+  const travelerMap = new Map<string, BookingTravelerRecord>()
+  for (const traveler of travelers) {
+    travelerMap.set(traveler.id, traveler)
   }
 
   return (
@@ -61,7 +61,7 @@ export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
                 <tr className="border-b text-muted-foreground">
                   <th className="p-2 text-left font-medium">Type</th>
                   <th className="p-2 text-left font-medium">File</th>
-                  <th className="p-2 text-left font-medium">Passenger</th>
+                  <th className="p-2 text-left font-medium">Traveler</th>
                   <th className="p-2 text-left font-medium">Expires</th>
                   <th className="p-2 text-left font-medium">Notes</th>
                   <th className="w-20 p-2" />
@@ -69,9 +69,7 @@ export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
               </thead>
               <tbody>
                 {documents.map((doc) => {
-                  const passenger = doc.participantId
-                    ? passengerMap.get(doc.participantId)
-                    : undefined
+                  const traveler = doc.travelerId ? travelerMap.get(doc.travelerId) : undefined
                   return (
                     <tr key={doc.id} className="border-b last:border-b-0">
                       <td className="p-2">
@@ -91,10 +89,10 @@ export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
                         </a>
                       </td>
                       <td className="p-2">
-                        {passenger
-                          ? `${passenger.firstName} ${passenger.lastName}`
-                          : doc.participantId
-                            ? doc.participantId
+                        {traveler
+                          ? `${traveler.firstName} ${traveler.lastName}`
+                          : doc.travelerId
+                            ? doc.travelerId
                             : "—"}
                       </td>
                       <td className="p-2">

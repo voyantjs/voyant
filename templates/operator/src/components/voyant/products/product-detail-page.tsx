@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { productsQueryKeys, useProduct } from "@voyantjs/products-react"
-import { Loader2 } from "lucide-react"
+import { productsQueryKeys, useProduct, useProductItineraries } from "@voyantjs/products-react"
 import { useState } from "react"
 import { Button } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
-import { DayDialog } from "./product-day-dialog"
+import { QuickBookDialog } from "../bookings/quick-book-dialog"
 import { DepartureDialog, type DepartureSlot } from "./product-departure-dialog"
 import { ProductDialog } from "./product-detail-dialog"
 import { ProductDetailHeader } from "./product-detail-header"
@@ -20,40 +19,33 @@ import {
   ProductSchedulesSection,
 } from "./product-detail-sections"
 import {
-  type DayService,
   getChannelsQueryOptions,
   getProductChannelMappingsQueryOptions,
-  getProductDaysQueryOptions,
   getProductMediaQueryOptions,
   getProductRulesQueryOptions,
   getProductSlotsQueryOptions,
-  type ProductDay,
 } from "./product-detail-shared"
+import { ProductDetailSkeleton } from "./product-detail-skeleton"
 import { OptionsSection } from "./product-options-section"
 import { type AvailabilityRule, ScheduleDialog } from "./product-schedule-dialog"
-import { ServiceDialog } from "./product-service-dialog"
 
 // ---------- Main page ----------
 
 export function ProductDetailPage({ id }: { id: string }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [editOpen, setEditOpen] = useState(false)
-  const [dayDialogOpen, setDayDialogOpen] = useState(false)
-  const [editingDay, setEditingDay] = useState<ProductDay | undefined>()
-  const [expandedDayId, setExpandedDayId] = useState<string | null>(null)
-  const [serviceDialogOpen, setServiceDialogOpen] = useState(false)
-  const [serviceDialogDayId, setServiceDialogDayId] = useState<string>("")
-  const [editingService, setEditingService] = useState<DayService | undefined>()
+  const [quickBookOpen, setQuickBookOpen] = useState(false)
   const [departureDialogOpen, setDepartureDialogOpen] = useState(false)
   const [editingDeparture, setEditingDeparture] = useState<DepartureSlot | undefined>()
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<AvailabilityRule | undefined>()
 
   const { data: product, isPending } = useProduct(id)
-
-  const { data: daysData, refetch: refetchDays } = useQuery(getProductDaysQueryOptions(id))
+  const itineraryQuery = useProductItineraries(id)
 
   const { data: slotsData, refetch: refetchSlots } = useQuery(getProductSlotsQueryOptions(id))
 
@@ -90,16 +82,6 @@ export function ProductDetailPage({ id }: { id: string }) {
     },
   })
 
-  const deleteDayMutation = useMutation({
-    mutationFn: (dayId: string) => api.delete(`/v1/products/${id}/days/${dayId}`),
-    onSuccess: () => void refetchDays(),
-  })
-
-  const deleteServiceMutation = useMutation({
-    mutationFn: ({ dayId, serviceId }: { dayId: string; serviceId: string }) =>
-      api.delete(`/v1/products/${id}/days/${dayId}/services/${serviceId}`),
-  })
-
   const deleteSlotMutation = useMutation({
     mutationFn: (slotId: string) => api.delete(`/v1/availability/slots/${slotId}`),
     onSuccess: () => void refetchSlots(),
@@ -108,22 +90,6 @@ export function ProductDetailPage({ id }: { id: string }) {
   const deleteRuleMutation = useMutation({
     mutationFn: (ruleId: string) => api.delete(`/v1/availability/rules/${ruleId}`),
     onSuccess: () => void refetchRules(),
-  })
-
-  const convertToBookingMutation = useMutation({
-    mutationFn: () => {
-      const now = new Date()
-      const y = now.getFullYear().toString().slice(-2)
-      const m = String(now.getMonth() + 1).padStart(2, "0")
-      const seq = String(Math.floor(Math.random() * 9000) + 1000)
-      return api.post<{ data: { id: string } }>("/v1/bookings/from-product", {
-        productId: id,
-        bookingNumber: `BK-${y}${m}-${seq}`,
-      })
-    },
-    onSuccess: (result) => {
-      void navigate({ to: "/bookings/$id", params: { id: result.data.id } })
-    },
   })
 
   const uploadMediaMutation = useMutation({
@@ -135,7 +101,7 @@ export function ProductDetailPage({ id }: { id: string }) {
         body: formData,
         credentials: "include",
       })
-      if (!uploadRes.ok) throw new Error("Upload failed")
+      if (!uploadRes.ok) throw new Error(productMessages.uploadFailed)
       const upload = (await uploadRes.json()) as {
         key: string
         url: string
@@ -174,42 +140,34 @@ export function ProductDetailPage({ id }: { id: string }) {
   })
 
   if (isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <ProductDetailSkeleton />
   }
 
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Product not found</p>
+        <p className="text-muted-foreground">{productMessages.detailNotFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/products" })}>
-          Back to Products
+          {productMessages.backToProducts}
         </Button>
       </div>
     )
   }
 
-  const nextDayNumber = (daysData?.data.length ?? 0) + 1
   const slots = slotsData?.data ?? []
   const rules = rulesData?.data ?? []
-  const days = daysData?.data ?? []
+  const itineraryNameById = new Map(
+    (itineraryQuery.data?.data ?? []).map((itinerary) => [itinerary.id, itinerary.name] as const),
+  )
   return (
     <div className="flex flex-col gap-6 p-6">
       <ProductDetailHeader
         product={product}
-        isConvertingToBooking={convertToBookingMutation.isPending}
         isDeleting={deleteMutation.isPending}
         onEdit={() => setEditOpen(true)}
-        onConvertToBooking={() => {
-          if (confirm("Convert this product to a booking?")) {
-            convertToBookingMutation.mutate()
-          }
-        }}
+        onAddBooking={() => setQuickBookOpen(true)}
         onDelete={() => {
-          if (confirm("Are you sure you want to delete this product?")) {
+          if (confirm(productMessages.deleteConfirm)) {
             deleteMutation.mutate()
           }
         }}
@@ -222,9 +180,24 @@ export function ProductDetailPage({ id }: { id: string }) {
           {/* Product Details */}
           <ProductDetailsSection product={product} onEdit={() => setEditOpen(true)} />
 
+          {/* Media */}
+          <ProductMediaSection
+            productId={id}
+            media={mediaData?.data ?? []}
+            isUploading={uploadMediaMutation.isPending}
+            onUpload={(file) => uploadMediaMutation.mutate({ file })}
+            onSetCover={(mediaId) => setCoverMutation.mutate(mediaId)}
+            onDelete={(mediaId) => {
+              if (confirm(productMessages.deleteMediaConfirm)) {
+                deleteMediaMutation.mutate(mediaId)
+              }
+            }}
+          />
+
           {/* Departures */}
           <ProductDeparturesSection
             slots={slots}
+            itineraryNameById={itineraryNameById}
             onCreate={() => {
               setEditingDeparture(undefined)
               setDepartureDialogOpen(true)
@@ -234,7 +207,7 @@ export function ProductDetailPage({ id }: { id: string }) {
               setDepartureDialogOpen(true)
             }}
             onDelete={(slotId) => {
-              if (confirm("Delete this departure?")) {
+              if (confirm(productMessages.deleteDepartureConfirm)) {
                 deleteSlotMutation.mutate(slotId)
               }
             }}
@@ -252,68 +225,14 @@ export function ProductDetailPage({ id }: { id: string }) {
               setScheduleDialogOpen(true)
             }}
             onDelete={(ruleId) => {
-              if (confirm("Delete this schedule?")) {
+              if (confirm(productMessages.deleteScheduleConfirm)) {
                 deleteRuleMutation.mutate(ruleId)
               }
             }}
           />
 
           {/* Itinerary */}
-          <ProductDetailItinerarySection
-            productId={id}
-            days={days}
-            expandedDayId={expandedDayId}
-            onExpandedDayIdChange={setExpandedDayId}
-            onCreateDay={() => {
-              setEditingDay(undefined)
-              setDayDialogOpen(true)
-            }}
-            onEditDay={(day) => {
-              setEditingDay(day)
-              setDayDialogOpen(true)
-            }}
-            onDeleteDay={(dayId) => {
-              if (confirm("Delete this day and all its services?")) {
-                deleteDayMutation.mutate(dayId)
-              }
-            }}
-            onAddService={(dayId) => {
-              setServiceDialogDayId(dayId)
-              setEditingService(undefined)
-              setServiceDialogOpen(true)
-            }}
-            onEditService={(dayId, service) => {
-              setServiceDialogDayId(dayId)
-              setEditingService(service)
-              setServiceDialogOpen(true)
-            }}
-            onDeleteService={(dayId, serviceId) => {
-              if (confirm("Delete this service?")) {
-                deleteServiceMutation.mutate(
-                  { dayId, serviceId },
-                  {
-                    onSuccess: () => {
-                      void queryClient.invalidateQueries({
-                        queryKey: ["product-day-services", id, dayId],
-                      })
-                    },
-                  },
-                )
-              }
-            }}
-            onUploadMedia={(dayId, file) =>
-              uploadMediaMutation.mutate(
-                { file, dayId },
-                {
-                  onSuccess: () =>
-                    void queryClient.invalidateQueries({
-                      queryKey: ["day-media", id, dayId],
-                    }),
-                },
-              )
-            }
-            isUploadingMedia={uploadMediaMutation.isPending}
-          />
+          <ProductDetailItinerarySection productId={id} />
 
           {/* Options */}
           <OptionsSection productId={id} />
@@ -331,23 +250,20 @@ export function ProductDetailPage({ id }: { id: string }) {
 
           {/* Organize */}
           <ProductOrganizeSection product={product} onEdit={() => setEditOpen(true)} />
-
-          {/* Media */}
-          <ProductMediaSection
-            media={mediaData?.data ?? []}
-            isUploading={uploadMediaMutation.isPending}
-            onUpload={(file) => uploadMediaMutation.mutate({ file })}
-            onSetCover={(mediaId) => setCoverMutation.mutate(mediaId)}
-            onDelete={(mediaId) => {
-              if (confirm("Delete this media?")) {
-                deleteMediaMutation.mutate(mediaId)
-              }
-            }}
-          />
         </div>
       </div>
 
       {/* Dialogs */}
+      <QuickBookDialog
+        open={quickBookOpen}
+        onOpenChange={setQuickBookOpen}
+        defaultProductId={id}
+        onCreated={(booking) => {
+          setQuickBookOpen(false)
+          void navigate({ to: "/bookings/$id", params: { id: booking.id } })
+        }}
+      />
+
       <ProductDialog
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -356,34 +272,6 @@ export function ProductDetailPage({ id }: { id: string }) {
           setEditOpen(false)
           void queryClient.invalidateQueries({ queryKey: productsQueryKeys.product(id) })
           void queryClient.invalidateQueries({ queryKey: productsQueryKeys.products() })
-        }}
-      />
-
-      <DayDialog
-        open={dayDialogOpen}
-        onOpenChange={setDayDialogOpen}
-        productId={id}
-        day={editingDay}
-        nextDayNumber={nextDayNumber}
-        onSuccess={() => {
-          setDayDialogOpen(false)
-          setEditingDay(undefined)
-          void refetchDays()
-        }}
-      />
-
-      <ServiceDialog
-        open={serviceDialogOpen}
-        onOpenChange={setServiceDialogOpen}
-        productId={id}
-        dayId={serviceDialogDayId}
-        service={editingService}
-        onSuccess={() => {
-          setServiceDialogOpen(false)
-          setEditingService(undefined)
-          void queryClient.invalidateQueries({
-            queryKey: ["product-day-services", id, serviceDialogDayId],
-          })
         }}
       />
 

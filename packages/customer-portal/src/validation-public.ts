@@ -10,14 +10,7 @@ const bookingStatusSchema = z.enum([
   "cancelled",
 ])
 
-const bookingParticipantTypeSchema = z.enum([
-  "traveler",
-  "booker",
-  "contact",
-  "occupant",
-  "staff",
-  "other",
-])
+const customerPortalBookingTravelerTypeSchema = z.enum(["traveler", "occupant", "other"])
 
 const bookingItemTypeSchema = z.enum([
   "unit",
@@ -41,14 +34,7 @@ const bookingItemStatusSchema = z.enum([
   "fulfilled",
 ])
 
-const bookingItemParticipantRoleSchema = z.enum([
-  "traveler",
-  "occupant",
-  "primary_contact",
-  "service_assignee",
-  "beneficiary",
-  "other",
-])
+const bookingItemParticipantRoleSchema = z.enum(["traveler", "occupant", "beneficiary", "other"])
 
 const bookingDocumentTypeSchema = z.enum([
   "visa",
@@ -193,9 +179,6 @@ export const customerPortalRecordSchema = z.object({
   birthday: z.string().nullable(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
-  address: z.string().nullable(),
-  city: z.string().nullable(),
-  country: z.string().nullable(),
   billingAddress: customerPortalAddressSchema.nullable(),
   relation: z.string().nullable(),
   status: z.string(),
@@ -252,9 +235,6 @@ export const updateCustomerPortalRecordSchema = z.object({
   preferredCurrency: z.string().min(3).max(3).nullable().optional(),
   birthday: z.string().date().nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  country: z.string().nullable().optional(),
   billingAddress: updateCustomerPortalAddressSchema.optional(),
 })
 
@@ -453,14 +433,19 @@ export const updateCustomerPortalCompanionSchema = createCustomerPortalCompanion
     message: "At least one field must be provided",
   })
 
-export const importCustomerPortalBookingParticipantsSchema = z.object({
+export const importCustomerPortalBookingTravelersSchema = z.object({
   bookingIds: z.array(z.string()).min(1).optional(),
 })
 
-export const importCustomerPortalBookingParticipantsResultSchema = z.object({
+export const importCustomerPortalBookingTravelersResultSchema = z.object({
   created: z.array(customerPortalCompanionSchema),
   skippedCount: z.number().int().nonnegative(),
 })
+
+export const importCustomerPortalBookingParticipantsSchema =
+  importCustomerPortalBookingTravelersSchema
+export const importCustomerPortalBookingParticipantsResultSchema =
+  importCustomerPortalBookingTravelersResultSchema
 
 export const customerPortalBookingSummarySchema = z.object({
   bookingId: z.string(),
@@ -475,16 +460,18 @@ export const customerPortalBookingSummarySchema = z.object({
   pax: z.number().int().nullable(),
   confirmedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
-  participantCount: z.number().int(),
+  travelerCount: z.number().int(),
   primaryTravelerName: z.string().nullable(),
 })
 
-export const customerPortalBookingItemParticipantSchema = z.object({
+export const customerPortalBookingItemTravelerSchema = z.object({
   id: z.string(),
-  participantId: z.string(),
+  travelerId: z.string(),
   role: bookingItemParticipantRoleSchema,
   isPrimary: z.boolean(),
 })
+
+export const customerPortalBookingItemParticipantSchema = customerPortalBookingItemTravelerSchema
 
 export const customerPortalBookingItemSchema = z.object({
   id: z.string(),
@@ -500,16 +487,18 @@ export const customerPortalBookingItemSchema = z.object({
   unitSellAmountCents: z.number().int().nullable(),
   totalSellAmountCents: z.number().int().nullable(),
   notes: z.string().nullable(),
-  participantLinks: z.array(customerPortalBookingItemParticipantSchema),
+  travelerLinks: z.array(customerPortalBookingItemTravelerSchema),
 })
 
-export const customerPortalBookingParticipantSchema = z.object({
+export const customerPortalBookingTravelerSchema = z.object({
   id: z.string(),
-  participantType: bookingParticipantTypeSchema,
+  participantType: customerPortalBookingTravelerTypeSchema,
   firstName: z.string(),
   lastName: z.string(),
   isPrimary: z.boolean(),
 })
+
+export const customerPortalBookingParticipantSchema = customerPortalBookingTravelerSchema
 
 export const customerPortalBookingBillingContactSchema = z.object({
   email: z.string().nullable(),
@@ -526,7 +515,7 @@ export const customerPortalBookingBillingContactSchema = z.object({
 export const customerPortalBookingDocumentSchema = z.object({
   id: z.string(),
   source: bookingDocumentSourceSchema,
-  participantId: z.string().nullable(),
+  travelerId: z.string().nullable(),
   type: bookingDocumentTypeSchema,
   fileName: z.string(),
   fileUrl: z.string(),
@@ -573,7 +562,7 @@ export const customerPortalBookingFinancialsSchema = z.object({
 export const customerPortalBookingFulfillmentSchema = z.object({
   id: z.string(),
   bookingItemId: z.string().nullable(),
-  participantId: z.string().nullable(),
+  travelerId: z.string().nullable(),
   fulfillmentType: bookingFulfillmentTypeSchema,
   deliveryChannel: bookingFulfillmentDeliveryChannelSchema,
   status: bookingFulfillmentStatusSchema,
@@ -592,7 +581,7 @@ export const customerPortalBookingDetailSchema = z.object({
   confirmedAt: z.string().nullable(),
   cancelledAt: z.string().nullable(),
   completedAt: z.string().nullable(),
-  participants: z.array(customerPortalBookingParticipantSchema),
+  travelers: z.array(customerPortalBookingTravelerSchema),
   items: z.array(customerPortalBookingItemSchema),
   billingContact: customerPortalBookingBillingContactSchema.nullable(),
   documents: z.array(customerPortalBookingDocumentSchema),
@@ -622,12 +611,15 @@ export type CustomerPortalBootstrapCandidate = z.infer<
 export type CustomerPortalCompanion = z.infer<typeof customerPortalCompanionSchema>
 export type CreateCustomerPortalCompanionInput = z.infer<typeof createCustomerPortalCompanionSchema>
 export type UpdateCustomerPortalCompanionInput = z.infer<typeof updateCustomerPortalCompanionSchema>
-export type ImportCustomerPortalBookingParticipantsInput = z.infer<
-  typeof importCustomerPortalBookingParticipantsSchema
+export type ImportCustomerPortalBookingTravelersInput = z.infer<
+  typeof importCustomerPortalBookingTravelersSchema
 >
-export type ImportCustomerPortalBookingParticipantsResult = z.infer<
-  typeof importCustomerPortalBookingParticipantsResultSchema
+export type ImportCustomerPortalBookingTravelersResult = z.infer<
+  typeof importCustomerPortalBookingTravelersResultSchema
 >
+export type ImportCustomerPortalBookingParticipantsInput = ImportCustomerPortalBookingTravelersInput
+export type ImportCustomerPortalBookingParticipantsResult =
+  ImportCustomerPortalBookingTravelersResult
 export type CustomerPortalBookingSummary = z.infer<typeof customerPortalBookingSummarySchema>
 export type CustomerPortalBookingBillingContact = z.infer<
   typeof customerPortalBookingBillingContactSchema

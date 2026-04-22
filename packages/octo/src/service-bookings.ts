@@ -2,12 +2,12 @@ import { bookingsService } from "@voyantjs/bookings"
 import {
   bookingAllocations,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
-  bookingParticipants,
+  bookingItemTravelers,
   bookingRedemptionEvents,
   bookingSupplierStatuses,
   bookings,
+  bookingTravelers,
 } from "@voyantjs/bookings/schema"
 import { offers, orders } from "@voyantjs/transactions/schema"
 import { asc, eq, inArray } from "drizzle-orm"
@@ -36,9 +36,9 @@ export async function getProjectedBookingById(db: PostgresJsDatabase, id: string
   ] = await Promise.all([
     db
       .select()
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.bookingId, booking.id))
-      .orderBy(asc(bookingParticipants.createdAt)),
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(asc(bookingTravelers.createdAt)),
     db
       .select()
       .from(bookingItems)
@@ -76,14 +76,14 @@ export async function getProjectedBookingById(db: PostgresJsDatabase, id: string
     items.length > 0
       ? await db
           .select()
-          .from(bookingItemParticipants)
+          .from(bookingItemTravelers)
           .where(
             inArray(
-              bookingItemParticipants.bookingItemId,
+              bookingItemTravelers.bookingItemId,
               items.map((item) => item.id),
             ),
           )
-          .orderBy(asc(bookingItemParticipants.createdAt))
+          .orderBy(asc(bookingItemTravelers.createdAt))
       : []
 
   const activeAllocation =
@@ -115,7 +115,7 @@ export async function getProjectedBookingById(db: PostgresJsDatabase, id: string
     bookingNumber: booking.bookingNumber,
     status: mapBookingStatus(booking.status),
     availabilityId: activeAllocation?.availabilitySlotId ?? null,
-    contact: pickBookingContact(participants),
+    contact: pickBookingContact({ booking, participants }),
     unitItems: items.map((item) => {
       const itemAllocation =
         allocations.find((allocation) => allocation.bookingItemId === item.id) ?? null
@@ -130,15 +130,15 @@ export async function getProjectedBookingById(db: PostgresJsDatabase, id: string
         unitId: item.optionUnitId,
         pricingCategoryId: item.pricingCategoryId,
         availabilityId: itemAllocation?.availabilitySlotId ?? null,
-        participantIds: itemParticipants
+        travelerIds: itemParticipants
           .filter((link) => link.bookingItemId === item.id)
-          .map((link) => link.participantId),
+          .map((link) => link.travelerId),
       }
     }),
     fulfillments: fulfillments.map((fulfillment) => ({
       id: fulfillment.id,
       bookingItemId: fulfillment.bookingItemId,
-      participantId: fulfillment.participantId,
+      travelerId: fulfillment.travelerId,
       type: fulfillment.fulfillmentType,
       deliveryChannel: fulfillment.deliveryChannel,
       status: fulfillment.status,
@@ -151,7 +151,7 @@ export async function getProjectedBookingById(db: PostgresJsDatabase, id: string
     redemptions: redemptions.map((event) => ({
       id: event.id,
       bookingItemId: event.bookingItemId,
-      participantId: event.participantId,
+      travelerId: event.travelerId,
       redeemedAt: event.redeemedAt.toISOString(),
       redeemedBy: event.redeemedBy,
       location: event.location,
@@ -276,7 +276,7 @@ export async function listProjectedRedemptions(db: PostgresJsDatabase, bookingId
   return events.map((event) => ({
     id: event.id,
     bookingItemId: event.bookingItemId,
-    participantId: event.participantId,
+    travelerId: event.travelerId,
     redeemedAt: event.redeemedAt.toISOString(),
     redeemedBy: event.redeemedBy,
     location: event.location,
@@ -301,7 +301,7 @@ export async function recordProjectedRedemption(
     event: {
       id: event.id,
       bookingItemId: event.bookingItemId,
-      participantId: event.participantId,
+      travelerId: event.travelerId,
       redeemedAt: event.redeemedAt.toISOString(),
       redeemedBy: event.redeemedBy,
       location: event.location,

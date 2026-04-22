@@ -1,7 +1,6 @@
 "use client"
 
 import type { PersonRecord } from "@voyantjs/crm-react"
-
 import {
   Dialog,
   DialogContent,
@@ -9,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PersonForm } from "./person-form"
 
@@ -25,16 +25,15 @@ export interface PersonDialogProps {
  */
 export function PersonDialog({ open, onOpenChange, person, onSuccess }: PersonDialogProps) {
   const isEdit = Boolean(person)
+  const messages = useAdminMessages().crm.personDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="person-dialog" className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit person" : "New person"}</DialogTitle>
+          <DialogTitle>{isEdit ? messages.editTitle : messages.newTitle}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update contact details and reference information."
-              : "Add a new person to your CRM."}
+            {isEdit ? messages.editDescription : messages.newDescription}
           </DialogDescription>
         </DialogHeader>
         <PersonForm

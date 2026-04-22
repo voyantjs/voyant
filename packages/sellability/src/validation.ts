@@ -71,9 +71,7 @@ export const sellabilityExplanationTypeSchema = z.enum([
 
 export const sellabilityOfferParticipantSchema = z.object({
   personId: z.string().nullable().optional(),
-  participantType: z
-    .enum(["traveler", "booker", "contact", "occupant", "staff", "other"])
-    .default("traveler"),
+  participantType: z.enum(["traveler", "occupant", "staff", "other"]).default("traveler"),
   travelerCategory: z.enum(["adult", "child", "infant", "senior", "other"]).nullable().optional(),
   firstName: z.string().min(1).max(255),
   lastName: z.string().min(1).max(255),
@@ -87,8 +85,22 @@ export const sellabilityOfferParticipantSchema = z.object({
   requestedUnitRefs: z.array(z.string().min(1).max(100)).default([]),
   assignToAllItems: z.boolean().default(false),
   itemParticipantRole: z
-    .enum(["traveler", "occupant", "primary_contact", "beneficiary", "service_assignee", "other"])
+    .enum(["traveler", "occupant", "beneficiary", "service_assignee", "other"])
     .optional(),
+})
+
+export const sellabilityOfferContactAssignmentSchema = z.object({
+  personId: z.string().nullable().optional(),
+  role: z.enum(["primary_contact", "other"]).default("primary_contact"),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  preferredLanguage: z.string().max(35).nullable().optional(),
+  isPrimary: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
+  requestedUnitRefs: z.array(z.string().min(1).max(100)).default([]),
+  assignToAllItems: z.boolean().default(false),
 })
 
 export const sellabilityConstructOfferSchema = z.object({
@@ -106,12 +118,23 @@ export const sellabilityConstructOfferSchema = z.object({
     organizationId: z.string().nullable().optional(),
     opportunityId: z.string().nullable().optional(),
     quoteId: z.string().nullable().optional(),
+    contactFirstName: z.string().max(255).nullable().optional(),
+    contactLastName: z.string().max(255).nullable().optional(),
+    contactEmail: z.string().email().nullable().optional(),
+    contactPhone: z.string().max(50).nullable().optional(),
+    contactPreferredLanguage: z.string().max(35).nullable().optional(),
+    contactCountry: z.string().max(100).nullable().optional(),
+    contactRegion: z.string().max(255).nullable().optional(),
+    contactCity: z.string().max(255).nullable().optional(),
+    contactAddressLine1: z.string().max(255).nullable().optional(),
+    contactPostalCode: z.string().max(50).nullable().optional(),
     validFrom: z.string().nullable().optional(),
     validUntil: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   }),
   participants: z.array(sellabilityOfferParticipantSchema).default([]),
+  contactAssignments: z.array(sellabilityOfferContactAssignmentSchema).default([]),
 })
 
 export const sellabilityPersistSnapshotSchema = z.object({

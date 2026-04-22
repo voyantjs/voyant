@@ -1,42 +1,48 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router"
 import type { LucideIcon } from "lucide-react"
-import { Hash, Layers, Package, Tag, Tags } from "lucide-react"
+import { Hash, Layers, Package, Tag, Tags, Users } from "lucide-react"
 
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 type NavItem = { label: string; href: string; icon: LucideIcon }
 type NavGroup = { group: string; items: NavItem[] }
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    group: "General",
-    items: [
-      { label: "Channels", href: "/settings/channels", icon: Hash },
-      { label: "Pricing Categories", href: "/settings/pricing-categories", icon: Tags },
-      { label: "Price Catalogs", href: "/settings/price-catalogs", icon: Layers },
-    ],
-  },
-  {
-    group: "Products",
-    items: [
-      { label: "Product Types", href: "/settings/product-types", icon: Package },
-      { label: "Product Tags", href: "/settings/product-tags", icon: Tag },
-    ],
-  },
-]
-
 export function SettingsLayout() {
+  const messages = useAdminMessages()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const navGroups: NavGroup[] = [
+    {
+      group: messages.settings.generalGroup,
+      items: [
+        { label: messages.settings.team, href: "/settings/team", icon: Users },
+        { label: messages.settings.channels, href: "/settings/channels", icon: Hash },
+        {
+          label: messages.settings.pricingCategories,
+          href: "/settings/pricing-categories",
+          icon: Tags,
+        },
+        { label: messages.settings.priceCatalogs, href: "/settings/price-catalogs", icon: Layers },
+      ],
+    },
+    {
+      group: messages.settings.productsGroup,
+      items: [
+        { label: messages.settings.productTypes, href: "/settings/product-types", icon: Package },
+        { label: messages.settings.productTags, href: "/settings/product-tags", icon: Tag },
+      ],
+    },
+  ]
 
   const isActive = (href: string) => pathname.replace(/\/$/, "") === href
 
   return (
     <div className="flex h-[calc(100vh-0px)]">
       <aside className="w-64 shrink-0 overflow-y-auto border-r p-6">
-        <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your workspace configuration</p>
+        <h1 className="text-xl font-semibold tracking-tight">{messages.settings.title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{messages.settings.description}</p>
         <nav className="mt-6 flex flex-col gap-6">
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.group}>
               <h3 className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {group.group}

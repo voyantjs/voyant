@@ -4,10 +4,11 @@ import {
   getBookingActivityQueryOptions,
   getBookingNotesQueryOptions,
   getBookingQueryOptions,
-  getPassengersQueryOptions,
   getSupplierStatusesQueryOptions,
+  getTravelersQueryOptions,
 } from "@voyantjs/bookings-react"
 import { BookingDetailPage } from "@/components/voyant/bookings/booking-detail-page"
+import { BookingDetailSkeleton } from "@/components/voyant/bookings/booking-detail-skeleton"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/bookings/$id")({
@@ -16,12 +17,13 @@ export const Route = createFileRoute("/_workspace/bookings/$id")({
 
     await Promise.all([
       context.queryClient.ensureQueryData(getBookingQueryOptions(client, params.id)),
-      context.queryClient.ensureQueryData(getPassengersQueryOptions(client, params.id)),
+      context.queryClient.ensureQueryData(getTravelersQueryOptions(client, params.id)),
       context.queryClient.ensureQueryData(getSupplierStatusesQueryOptions(client, params.id)),
       context.queryClient.ensureQueryData(getBookingActivityQueryOptions(client, params.id)),
       context.queryClient.ensureQueryData(getBookingNotesQueryOptions(client, params.id)),
     ])
   },
+  pendingComponent: BookingDetailSkeleton,
   component: BookingDetailRoute,
 })
 function BookingDetailRoute() {

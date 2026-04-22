@@ -5,36 +5,40 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { fetchWithValidation } from "../client.js"
 import { useVoyantBookingsContext } from "../provider.js"
 import { bookingsQueryKeys } from "../query-keys.js"
-import { getBookingDocumentsQueryOptions } from "../query-options.js"
-import { bookingDocumentsResponse, bookingSingleResponse, successEnvelope } from "../schemas.js"
+import { getBookingTravelerDocumentsQueryOptions } from "../query-options.js"
+import {
+  bookingSingleResponse,
+  bookingTravelerDocumentsResponse,
+  successEnvelope,
+} from "../schemas.js"
 
-export interface UseBookingDocumentsOptions {
+export interface UseBookingTravelerDocumentsOptions {
   enabled?: boolean
 }
 
-export function useBookingDocuments(
+export function useBookingTravelerDocuments(
   bookingId: string | null | undefined,
-  options: UseBookingDocumentsOptions = {},
+  options: UseBookingTravelerDocumentsOptions = {},
 ) {
   const { baseUrl, fetcher } = useVoyantBookingsContext()
   const { enabled = true } = options
 
   return useQuery({
-    ...getBookingDocumentsQueryOptions({ baseUrl, fetcher }, bookingId),
+    ...getBookingTravelerDocumentsQueryOptions({ baseUrl, fetcher }, bookingId),
     enabled: enabled && Boolean(bookingId),
   })
 }
 
-export interface CreateBookingDocumentInput {
+export interface CreateBookingTravelerDocumentInput {
   type: string
   fileName: string
   fileUrl: string
-  participantId?: string | null
+  travelerId?: string | null
   expiresAt?: string | null
   notes?: string | null
 }
 
-export function useBookingDocumentMutation(bookingId: string) {
+export function useBookingTravelerDocumentMutation(bookingId: string) {
   const { baseUrl, fetcher } = useVoyantBookingsContext()
   const queryClient = useQueryClient()
 
@@ -43,14 +47,24 @@ export function useBookingDocumentMutation(bookingId: string) {
   }
 
   const create = useMutation({
-    mutationFn: async (input: CreateBookingDocumentInput) => {
+    mutationFn: async (input: CreateBookingTravelerDocumentInput) => {
       const { data } = await fetchWithValidation(
         `/v1/bookings/${bookingId}/documents`,
         bookingSingleResponse.extend({
-          data: bookingDocumentsResponse.shape.data.element,
+          data: bookingTravelerDocumentsResponse.shape.data.element,
         }),
         { baseUrl, fetcher },
-        { method: "POST", body: JSON.stringify(input) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: input.type,
+            fileName: input.fileName,
+            fileUrl: input.fileUrl,
+            travelerId: input.travelerId,
+            expiresAt: input.expiresAt,
+            notes: input.notes,
+          }),
+        },
       )
       return data
     },

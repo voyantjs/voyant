@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import type { RowSelectionState } from "@tanstack/react-table"
-import { Loader2 } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,7 +14,7 @@ import type {
   BatchMutationResponse,
 } from "@/components/voyant/availability/availability-shared"
 import {
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   getAvailabilityCloseoutsQueryOptions,
   getAvailabilityPickupPointsQueryOptions,
   getAvailabilityProductsQueryOptions,
@@ -23,6 +23,7 @@ import {
   getAvailabilityStartTimesQueryOptions,
   productNameById,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import {
   AvailabilityCloseoutDialog,
@@ -32,6 +33,7 @@ import {
   AvailabilityStartTimeDialog,
 } from "./availability-dialogs"
 import { AvailabilityOverview } from "./availability-overview"
+import { AvailabilityBodySkeleton } from "./availability-page-skeleton"
 import {
   AvailabilityRulesTab,
   AvailabilitySlotsTab,
@@ -43,6 +45,7 @@ import {
 } from "./availability-tabs-secondary"
 
 export function AvailabilityPage() {
+  const messages = useAdminMessages()
   const navigate = useNavigate()
   const [search, setSearch] = useState("")
   const [productFilter, setProductFilter] = useState("all")
@@ -172,7 +175,8 @@ export function AvailabilityPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nounSingular,
+    nounPlural,
     payload,
     successVerb,
     clearSelection,
@@ -180,7 +184,8 @@ export function AvailabilityPage() {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nounSingular: string
+    nounPlural: string
     payload: Record<string, unknown>
     successVerb: string
     clearSelection: () => void
@@ -198,13 +203,29 @@ export function AvailabilityPage() {
     clearSelection()
     setBulkActionTarget(null)
 
+    const succeededSelection = formatLocalizedSelectionLabel(
+      result.succeeded,
+      nounSingular,
+      nounPlural,
+    )
+    const totalSelection = formatLocalizedSelectionLabel(result.total, nounSingular, nounPlural)
+
     if (result.failed.length === 0) {
-      toast.success(`${successVerb} ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.availability.toasts.bulkUpdated, {
+          verb: successVerb,
+          selection: succeededSelection,
+        }),
+      )
       return
     }
 
     toast.error(
-      `${successVerb} ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`,
+      formatMessage(messages.availability.toasts.bulkUpdatedPartial, {
+        verb: successVerb,
+        succeeded: result.succeeded,
+        selection: totalSelection,
+      }),
     )
   }
 
@@ -212,13 +233,15 @@ export function AvailabilityPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nounSingular,
+    nounPlural,
     clearSelection,
   }: {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nounSingular: string
+    nounPlural: string
     clearSelection: () => void
   }) => {
     if (ids.length === 0) return
@@ -231,27 +254,39 @@ export function AvailabilityPage() {
     clearSelection()
     setBulkActionTarget(null)
 
+    const succeededSelection = formatLocalizedSelectionLabel(
+      result.succeeded,
+      nounSingular,
+      nounPlural,
+    )
+    const totalSelection = formatLocalizedSelectionLabel(result.total, nounSingular, nounPlural)
+
     if (result.failed.length === 0) {
-      toast.success(`Deleted ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.availability.toasts.bulkDeleted, {
+          selection: succeededSelection,
+        }),
+      )
       return
     }
 
-    toast.error(`Deleted ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`)
+    toast.error(
+      formatMessage(messages.availability.toasts.bulkDeletedPartial, {
+        succeeded: result.succeeded,
+        selection: totalSelection,
+      }),
+    )
   }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Availability</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage recurrence rules, departures, closeouts, and pickup capacity.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{messages.availability.title}</h1>
+        <p className="text-sm text-muted-foreground">{messages.availability.description}</p>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <AvailabilityBodySkeleton />
       ) : (
         <>
           <AvailabilityOverview
@@ -279,11 +314,13 @@ export function AvailabilityPage() {
 
           <Tabs defaultValue="slots">
             <TabsList variant="line">
-              <TabsTrigger value="slots">Slots</TabsTrigger>
-              <TabsTrigger value="rules">Rules</TabsTrigger>
-              <TabsTrigger value="start-times">Start Times</TabsTrigger>
-              <TabsTrigger value="closeouts">Closeouts</TabsTrigger>
-              <TabsTrigger value="pickup-points">Pickup Points</TabsTrigger>
+              <TabsTrigger value="slots">{messages.availability.tabSlots}</TabsTrigger>
+              <TabsTrigger value="rules">{messages.availability.tabRules}</TabsTrigger>
+              <TabsTrigger value="start-times">{messages.availability.tabStartTimes}</TabsTrigger>
+              <TabsTrigger value="closeouts">{messages.availability.tabCloseouts}</TabsTrigger>
+              <TabsTrigger value="pickup-points">
+                {messages.availability.tabPickupPoints}
+              </TabsTrigger>
             </TabsList>
 
             <AvailabilitySlotsTab

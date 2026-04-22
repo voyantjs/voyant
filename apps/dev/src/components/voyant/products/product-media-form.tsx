@@ -151,6 +151,7 @@ export function ProductMediaForm({ mode, onSuccess, onCancel }: ProductMediaForm
         <div className="flex flex-col gap-1.5">
           <Label>Media type</Label>
           <Select
+            items={MEDIA_TYPES}
             value={state.mediaType}
             onValueChange={(value) => field("mediaType")(value as FormState["mediaType"])}
           >

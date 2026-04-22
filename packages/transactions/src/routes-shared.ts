@@ -48,8 +48,8 @@ export type Env = {
       callerType?: "session" | "api_key" | "internal"
       scopes?: string[] | null
       isInternalRequest?: boolean
-      participantKind: "offer" | "order"
-      participantId: string
+      travelerKind: "offer" | "order"
+      travelerId: string
       parentId: string
       action: "read" | "update" | "delete"
     }) => boolean | Promise<boolean>
@@ -68,16 +68,18 @@ function hasPiiScope(scopes: string[] | null | undefined, action: "read" | "upda
   )
 }
 
-export function hasParticipantIdentityInput(body: Record<string, unknown>) {
+export function hasTravelerIdentityInput(body: Record<string, unknown>) {
   return "dateOfBirth" in body || "nationality" in body
 }
+
+export const hasParticipantIdentityInput = hasTravelerIdentityInput
 
 export async function logTransactionPiiAccess(
   c: Context<Env>,
   input: {
-    participantKind: "offer" | "order"
+    travelerKind: "offer" | "order"
     parentId?: string
-    participantId?: string
+    travelerId?: string
     action: "read" | "update" | "delete"
     outcome: "allowed" | "denied"
     reason?: string
@@ -88,9 +90,9 @@ export async function logTransactionPiiAccess(
     .get("db")
     .insert(transactionPiiAccessLog)
     .values({
-      participantKind: input.participantKind,
+      travelerKind: input.travelerKind,
       parentId: input.parentId ?? null,
-      participantId: input.participantId ?? null,
+      travelerId: input.travelerId ?? null,
       actorId: c.get("userId") ?? null,
       actorType: c.get("actor") ?? null,
       callerType: c.get("callerType") ?? null,
@@ -104,8 +106,8 @@ export async function logTransactionPiiAccess(
 export async function authorizeTransactionPiiAccess(
   c: Context<Env>,
   input: {
-    participantKind: "offer" | "order"
-    participantId: string
+    travelerKind: "offer" | "order"
+    travelerId: string
     parentId: string
     action: "read" | "update" | "delete"
   },
@@ -177,7 +179,7 @@ function getRouteRuntime(c: Context<Env>): TransactionsRouteRuntime {
 
 export function createPiiService(
   c: Context<Env>,
-  _participantKind: "offer" | "order",
+  _travelerKind: "offer" | "order",
   parentId: string,
 ) {
   const runtime = getRouteRuntime(c)
@@ -186,9 +188,9 @@ export function createPiiService(
     kms: runtime.getKmsProvider(),
     onAudit: async (event) => {
       await logTransactionPiiAccess(c, {
-        participantKind: event.participantKind,
+        travelerKind: event.travelerKind,
         parentId,
-        participantId: event.participantId,
+        travelerId: event.travelerId,
         action: event.action,
         outcome: "allowed",
       })

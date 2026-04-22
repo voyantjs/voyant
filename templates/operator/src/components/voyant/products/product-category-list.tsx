@@ -5,7 +5,8 @@ import {
   useProductCategories,
   useProductCategoryMutation,
 } from "@voyantjs/products-react"
-import { CheckCircle2, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { CheckCircle2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { SkeletonTableRows } from "@/components/ui/skeletons"
 import {
   Table,
   TableBody,
@@ -26,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { ProductCategoryDialog } from "./product-category-dialog"
 
@@ -34,6 +37,8 @@ export interface ProductCategoryListProps {
 }
 
 export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps = {}) {
+  const messages = useAdminMessages()
+  const categoryMessages = messages.products.taxonomy.categories
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -57,7 +62,7 @@ export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps 
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search product categories…"
+            placeholder={categoryMessages.searchPlaceholder}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
@@ -73,7 +78,7 @@ export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps 
           }}
         >
           <Plus className="mr-2 size-4" aria-hidden="true" />
-          Add category
+          {categoryMessages.addCategory}
         </Button>
       </div>
 
@@ -81,48 +86,55 @@ export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Parent</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[80px] text-right">Actions</TableHead>
+              <TableHead>{categoryMessages.tableName}</TableHead>
+              <TableHead>{categoryMessages.tableSlug}</TableHead>
+              <TableHead>{categoryMessages.tableParent}</TableHead>
+              <TableHead>{categoryMessages.tableStatus}</TableHead>
+              <TableHead className="w-[80px] text-right">{categoryMessages.tableActions}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
+          {isPending ? (
+            <SkeletonTableRows
+              rows={6}
+              columns={5}
+              columnWidths={["w-40", "w-32", "w-32", "w-20", "w-8"]}
+            />
+          ) : isError ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-destructive">
-                  Failed to load product categories.
+                  {categoryMessages.loadFailed}
                 </TableCell>
               </TableRow>
-            ) : categories.length === 0 ? (
+            </TableBody>
+          ) : categories.length === 0 ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                  No product categories found.
+                  {categoryMessages.empty}
                 </TableCell>
               </TableRow>
-            ) : (
-              categories.map((category) => (
+            </TableBody>
+          ) : (
+            <TableBody>
+              {categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
-                    {category.parentId ? (categoryById.get(category.parentId)?.name ?? "—") : "—"}
+                    {category.parentId
+                      ? (categoryById.get(category.parentId)?.name ??
+                        categoryMessages.parentFallback)
+                      : categoryMessages.parentFallback}
                   </TableCell>
                   <TableCell>
                     {category.active ? (
                       <Badge variant="default" className="gap-1">
                         <CheckCircle2 className="size-3.5" />
-                        Active
+                        {categoryMessages.statusActive}
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Inactive</Badge>
+                      <Badge variant="secondary">{categoryMessages.statusInactive}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -138,33 +150,42 @@ export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps 
                           }}
                         >
                           <Pencil className="size-4" />
-                          Edit
+                          {categoryMessages.edit}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           variant="destructive"
                           onClick={() => {
-                            if (confirm("Delete this product category?")) {
+                            if (
+                              confirm(
+                                formatMessage(categoryMessages.deleteConfirm, {
+                                  name: category.name,
+                                }),
+                              )
+                            ) {
                               remove.mutate(category.id)
                             }
                           }}
                         >
                           <Trash2 className="size-4" />
-                          Delete
+                          {categoryMessages.delete}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ))}
+            </TableBody>
+          )}
         </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {categories.length} of {total}
+          {formatMessage(messages.settings.paginationShowing, {
+            count: categories.length,
+            total,
+          })}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -173,18 +194,16 @@ export function ProductCategoryList({ pageSize = 25 }: ProductCategoryListProps 
             disabled={offset === 0}
             onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
           >
-            Previous
+            {messages.settings.paginationPrevious}
           </Button>
-          <span>
-            Page {page} / {pageCount}
-          </span>
+          <span>{formatMessage(messages.settings.paginationPage, { page, pageCount })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={offset + pageSize >= total}
             onClick={() => setOffset((prev) => prev + pageSize)}
           >
-            Next
+            {messages.settings.paginationNext}
           </Button>
         </div>
       </div>

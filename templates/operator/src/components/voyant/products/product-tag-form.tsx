@@ -11,6 +11,7 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Mode = { kind: "create" } | { kind: "edit"; tag: ProductTagRecord }
 
@@ -31,6 +32,8 @@ function toPayload(state: { name: string }): CreateProductTagInput {
 }
 
 export function ProductTagForm({ mode, onSuccess, onCancel }: ProductTagFormProps) {
+  const messages = useAdminMessages()
+  const tagMessages = messages.products.taxonomy.tags
   const [state, setState] = React.useState(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductTagMutation()
@@ -47,7 +50,7 @@ export function ProductTagForm({ mode, onSuccess, onCancel }: ProductTagFormProp
     setError(null)
 
     if (!state.name.trim()) {
-      setError("Tag name is required.")
+      setError(tagMessages.validationNameRequired)
       return
     }
 
@@ -58,21 +61,21 @@ export function ProductTagForm({ mode, onSuccess, onCancel }: ProductTagFormProp
           : await update.mutateAsync({ id: mode.tag.id, input: toPayload(state) })
       onSuccess?.(tag)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save product tag.")
+      setError(err instanceof Error ? err.message : tagMessages.saveFailed)
     }
   }
 
   return (
     <form data-slot="product-tag-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="product-tag-name">Name</Label>
+        <Label htmlFor="product-tag-name">{tagMessages.nameLabel}</Label>
         <Input
           id="product-tag-name"
           required
           autoFocus
           value={state.name}
           onChange={(event) => setState({ name: event.target.value })}
-          placeholder="Family Friendly"
+          placeholder={tagMessages.namePlaceholder}
         />
       </div>
 
@@ -81,14 +84,14 @@ export function ProductTagForm({ mode, onSuccess, onCancel }: ProductTagFormProp
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
+            {tagMessages.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
           ) : null}
-          {mode.kind === "edit" ? "Save changes" : "Create tag"}
+          {mode.kind === "edit" ? tagMessages.saveChanges : tagMessages.createTag}
         </Button>
       </div>
     </form>

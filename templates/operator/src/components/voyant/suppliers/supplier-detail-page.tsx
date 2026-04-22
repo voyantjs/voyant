@@ -6,24 +6,32 @@ import {
   useSupplierRateMutation,
   useSupplierServiceMutation,
 } from "@voyantjs/suppliers-react"
-import { ArrowLeft, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { useLocale } from "@voyantjs/voyant-admin"
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { RateDialog } from "./rate-dialog"
 import { ServiceDialog } from "./service-dialog"
 import {
   getSupplierNotesQueryOptions,
   getSupplierQueryOptions,
   getSupplierServicesQueryOptions,
+  getSupplierStatusLabel,
+  getSupplierTypeLabel,
   type SupplierRate,
   type SupplierService,
   statusVariant,
 } from "./shared"
+import { SupplierDetailSkeleton } from "./supplier-detail-skeleton"
 import { SupplierDialog } from "./supplier-dialog"
 import { ServiceRow } from "./supplier-service-row"
 
 export function SupplierDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.suppliers.details
   const [editOpen, setEditOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false)
@@ -42,20 +50,16 @@ export function SupplierDetailPage({ id }: { id: string }) {
   const { data: notesData } = useQuery(getSupplierNotesQueryOptions(id))
 
   if (isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <SupplierDetailSkeleton />
   }
 
   const supplier = supplierData?.data
   if (!supplier) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Supplier not found</p>
+        <p className="text-muted-foreground">{detailMessages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/suppliers" })}>
-          Back to Suppliers
+          {detailMessages.backToSuppliers}
         </Button>
       </div>
     )
@@ -70,23 +74,21 @@ export function SupplierDetailPage({ id }: { id: string }) {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{supplier.name}</h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge variant="outline" className="capitalize">
-              {supplier.type}
-            </Badge>
-            <Badge variant={statusVariant[supplier.status] ?? "secondary"} className="capitalize">
-              {supplier.status}
+            <Badge variant="outline">{getSupplierTypeLabel(supplier.type, messages)}</Badge>
+            <Badge variant={statusVariant[supplier.status] ?? "secondary"}>
+              {getSupplierStatusLabel(supplier.status, messages)}
             </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {detailMessages.edit}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this supplier?")) {
+              if (confirm(detailMessages.deleteConfirm)) {
                 supplierMutation.remove.mutate(id, {
                   onSuccess: () => void navigate({ to: "/suppliers" }),
                 })
@@ -95,7 +97,7 @@ export function SupplierDetailPage({ id }: { id: string }) {
             disabled={supplierMutation.remove.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
@@ -103,51 +105,56 @@ export function SupplierDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Supplier Details</CardTitle>
+            <CardTitle>{detailMessages.supplierDetailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             {supplier.description && (
               <div>
-                <span className="text-muted-foreground">Description:</span>{" "}
+                <span className="text-muted-foreground">{detailMessages.descriptionLabel}:</span>{" "}
                 <span>{supplier.description}</span>
               </div>
             )}
             {supplier.email && (
               <div>
-                <span className="text-muted-foreground">Email:</span> <span>{supplier.email}</span>
+                <span className="text-muted-foreground">{detailMessages.emailLabel}:</span>{" "}
+                <span>{supplier.email}</span>
               </div>
             )}
             {supplier.phone && (
               <div>
-                <span className="text-muted-foreground">Phone:</span> <span>{supplier.phone}</span>
+                <span className="text-muted-foreground">{detailMessages.phoneLabel}:</span>{" "}
+                <span>{supplier.phone}</span>
               </div>
             )}
             {supplier.website && (
               <div>
-                <span className="text-muted-foreground">Website:</span>{" "}
+                <span className="text-muted-foreground">{detailMessages.websiteLabel}:</span>{" "}
                 <span>{supplier.website}</span>
               </div>
             )}
             {supplier.address && (
               <div>
-                <span className="text-muted-foreground">Address:</span>{" "}
+                <span className="text-muted-foreground">{detailMessages.addressLabel}:</span>{" "}
                 <span>{supplier.address}</span>
               </div>
             )}
             {supplier.city && (
               <div>
-                <span className="text-muted-foreground">City:</span> <span>{supplier.city}</span>
+                <span className="text-muted-foreground">{detailMessages.cityLabel}:</span>{" "}
+                <span>{supplier.city}</span>
               </div>
             )}
             {supplier.country && (
               <div>
-                <span className="text-muted-foreground">Country:</span>{" "}
+                <span className="text-muted-foreground">{detailMessages.countryLabel}:</span>{" "}
                 <span>{supplier.country}</span>
               </div>
             )}
             {supplier.defaultCurrency && (
               <div>
-                <span className="text-muted-foreground">Default Currency:</span>{" "}
+                <span className="text-muted-foreground">
+                  {detailMessages.defaultCurrencyLabel}:
+                </span>{" "}
                 <span>{supplier.defaultCurrency}</span>
               </div>
             )}
@@ -156,38 +163,44 @@ export function SupplierDetailPage({ id }: { id: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Primary Contact</CardTitle>
+            <CardTitle>{detailMessages.primaryContactTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             {supplier.contactName && (
               <div>
-                <span className="text-muted-foreground">Name:</span>{" "}
+                <span className="text-muted-foreground">
+                  {messages.suppliers.dialogs.supplier.contactNameLabel}:
+                </span>{" "}
                 <span>{supplier.contactName}</span>
               </div>
             )}
             {supplier.contactEmail && (
               <div>
-                <span className="text-muted-foreground">Email:</span>{" "}
+                <span className="text-muted-foreground">
+                  {messages.suppliers.dialogs.supplier.contactEmailLabel}:
+                </span>{" "}
                 <span>{supplier.contactEmail}</span>
               </div>
             )}
             {supplier.contactPhone && (
               <div>
-                <span className="text-muted-foreground">Phone:</span>{" "}
+                <span className="text-muted-foreground">
+                  {messages.suppliers.dialogs.supplier.contactPhoneLabel}:
+                </span>{" "}
                 <span>{supplier.contactPhone}</span>
               </div>
             )}
             {!supplier.contactName && !supplier.contactEmail && !supplier.contactPhone && (
-              <p className="text-muted-foreground">No contact information.</p>
+              <p className="text-muted-foreground">{detailMessages.noContactInfo}</p>
             )}
             <div className="mt-2 border-t pt-3">
               <div>
-                <span className="text-muted-foreground">Created:</span>{" "}
-                <span>{new Date(supplier.createdAt).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">{detailMessages.createdLabel}:</span>{" "}
+                <span>{new Date(supplier.createdAt).toLocaleDateString(resolvedLocale)}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Updated:</span>{" "}
-                <span>{new Date(supplier.updatedAt).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">{detailMessages.updatedLabel}:</span>{" "}
+                <span>{new Date(supplier.updatedAt).toLocaleDateString(resolvedLocale)}</span>
               </div>
             </div>
           </CardContent>
@@ -196,7 +209,7 @@ export function SupplierDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Services</CardTitle>
+          <CardTitle>{detailMessages.servicesTitle}</CardTitle>
           <Button
             size="sm"
             onClick={() => {
@@ -205,12 +218,14 @@ export function SupplierDetailPage({ id }: { id: string }) {
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Service
+            {detailMessages.addService}
           </Button>
         </CardHeader>
         <CardContent>
           {(!servicesData?.data || servicesData.data.length === 0) && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No services yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {detailMessages.noServices}
+            </p>
           )}
 
           <div className="flex flex-col gap-2">
@@ -228,7 +243,7 @@ export function SupplierDetailPage({ id }: { id: string }) {
                   setServiceDialogOpen(true)
                 }}
                 onDelete={() => {
-                  if (confirm("Delete this service and all its rates?")) {
+                  if (confirm(detailMessages.serviceDeleteConfirm)) {
                     serviceMutation.remove.mutate(service.id)
                   }
                 }}
@@ -243,7 +258,7 @@ export function SupplierDetailPage({ id }: { id: string }) {
                   setRateDialogOpen(true)
                 }}
                 onDeleteRate={(rateId) => {
-                  if (confirm("Delete this rate?")) {
+                  if (confirm(detailMessages.rateDeleteConfirm)) {
                     rateMutation.remove.mutate({ serviceId: service.id, rateId })
                   }
                 }}
@@ -255,12 +270,12 @@ export function SupplierDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>{detailMessages.notesTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex gap-2">
             <Textarea
-              placeholder="Add a note..."
+              placeholder={detailMessages.addNotePlaceholder}
               value={noteContent}
               onChange={(event) => setNoteContent(event.target.value)}
               className="min-h-[80px]"
@@ -275,19 +290,21 @@ export function SupplierDetailPage({ id }: { id: string }) {
                 )
               }
             >
-              {noteMutation.create.isPending ? "Saving..." : "Add"}
+              {noteMutation.create.isPending ? detailMessages.saving : detailMessages.add}
             </Button>
           </div>
 
           {notesData?.data.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No notes yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {detailMessages.noNotes}
+            </p>
           )}
 
           {notesData?.data.map((note) => (
             <div key={note.id} className="rounded-md border p-3">
               <p className="whitespace-pre-wrap text-sm">{note.content}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {new Date(note.createdAt).toLocaleString()}
+                {new Date(note.createdAt).toLocaleString(resolvedLocale)}
               </p>
             </div>
           ))}

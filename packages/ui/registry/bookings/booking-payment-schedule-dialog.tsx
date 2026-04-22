@@ -127,6 +127,7 @@ export function BookingPaymentScheduleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={scheduleTypes.map((t) => ({ label: t.replace("_", " "), value: t }))}
                   value={form.watch("scheduleType")}
                   onValueChange={(v) =>
                     form.setValue(
@@ -150,6 +151,7 @@ export function BookingPaymentScheduleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={scheduleStatuses.map((s) => ({ label: s.replace("_", " "), value: s }))}
                   value={form.watch("status")}
                   onValueChange={(v) =>
                     form.setValue("status", (v ?? "pending") as (typeof scheduleStatuses)[number])

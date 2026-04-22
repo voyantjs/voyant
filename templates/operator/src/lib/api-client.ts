@@ -34,19 +34,6 @@ interface ApiCallOptions extends Omit<RequestInit, "headers"> {
   headers?: Record<string, string>
 }
 
-async function getServerCookieHeader(): Promise<string | undefined> {
-  if (!import.meta.env.SSR) {
-    return undefined
-  }
-
-  try {
-    const { getServerCookieHeader: readServerCookieHeader } = await import("./api-client.server")
-    return readServerCookieHeader()
-  } catch {
-    return undefined
-  }
-}
-
 function extractErrorMessage(status: number, statusText: string, body: unknown): string {
   let message = `API error: ${status} ${statusText}`
   if (typeof body === "object" && body !== null && "error" in body) {
@@ -63,16 +50,11 @@ function extractErrorMessage(status: number, statusText: string, body: unknown):
 export async function apiCall<T = unknown>(path: string, options: ApiCallOptions = {}): Promise<T> {
   const { headers: customHeaders, ...fetchOptions } = options
   const apiUrl = getApiUrl()
-  const serverCookie = await getServerCookieHeader()
 
   const headers = new Headers({
     "Content-Type": "application/json",
     ...customHeaders,
   })
-
-  if (serverCookie && !headers.has("cookie")) {
-    headers.set("cookie", serverCookie)
-  }
 
   const response = await fetch(`${apiUrl}${path}`, {
     ...fetchOptions,

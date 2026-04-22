@@ -46,7 +46,7 @@ export const bookingWindowConditionSchema = z.object({
 export type BookingWindowCondition = z.infer<typeof bookingWindowConditionSchema>
 
 /**
- * Condition: Minimum passengers
+ * Condition: Minimum travelers
  * Used for group booking discounts
  */
 export const minPaxConditionSchema = z.object({

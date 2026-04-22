@@ -1,8 +1,10 @@
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { ConfirmActionButton, SelectionActionBar } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
 import { SectionHeader } from "@/components/voyant/resources/resources-section-header"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import type {
   BookingOption,
   ResourceCloseoutRow,
@@ -10,13 +12,18 @@ import type {
   ResourceSlotAssignmentRow,
   SlotOption,
 } from "./resources-shared"
-import { assignmentColumns, closeoutColumns, formatSelectionLabel } from "./resources-shared"
+import {
+  assignmentColumns,
+  closeoutColumns,
+  formatLocalizedSelectionLabel,
+} from "./resources-shared"
 
 type BulkFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   payload: Record<string, unknown>
   successVerb: string
   clearSelection: () => void
@@ -26,7 +33,8 @@ type DeleteFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   clearSelection: () => void
 }) => Promise<void>
 
@@ -44,18 +52,26 @@ export function AssignmentsTab(props: {
   onOpenRoute: (assignmentId: string) => void
   onEdit: (row: ResourceSlotAssignmentRow) => void
 }) {
+  const messages = useAdminMessages()
+  const assignmentsMessages = messages.resources.tabs.assignments
   return (
     <TabsContent value="assignments" className="space-y-4">
       <SectionHeader
-        title="Slot Assignments"
-        description="Reserve or assign specific resources against live slots and bookings."
-        actionLabel="New Assignment"
+        title={assignmentsMessages.title}
+        description={assignmentsMessages.description}
+        actionLabel={assignmentsMessages.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={assignmentColumns(props.slots, props.resources, props.bookings, props.onOpenRoute)}
+        columns={assignmentColumns(
+          props.slots,
+          props.resources,
+          props.bookings,
+          props.onOpenRoute,
+          messages,
+        )}
         data={props.filteredAssignments}
-        emptyMessage="No assignments match the current filters."
+        emptyMessage={assignmentsMessages.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.assignmentSelection}
@@ -63,46 +79,66 @@ export function AssignmentsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Assign"
-              confirmLabel="Mark Assigned"
-              title={`Mark ${formatSelectionLabel(selectedRows.length, "assignment")} as assigned?`}
-              description="This marks the selected reservations as actively assigned without deleting any linkage."
+              buttonLabel={assignmentsMessages.bulkAssignButton}
+              confirmLabel={assignmentsMessages.bulkAssignConfirm}
+              title={formatMessage(assignmentsMessages.bulkAssignTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.assignmentSingular,
+                  messages.resources.nouns.assignmentPlural,
+                ),
+              })}
+              description={assignmentsMessages.bulkAssignDescription}
               disabled={props.bulkActionTarget === "assignments-assigned"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/slot-assignments",
                   target: "assignments-assigned",
-                  noun: "assignment",
+                  nounSingular: messages.resources.nouns.assignmentSingular,
+                  nounPlural: messages.resources.nouns.assignmentPlural,
                   payload: { status: "assigned" },
-                  successVerb: "Updated",
+                  successVerb: messages.resources.verbAssigned,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Release"
-              confirmLabel="Release Assignments"
-              title={`Release ${formatSelectionLabel(selectedRows.length, "assignment")}?`}
-              description="This marks the selected reservations as released while keeping the assignment history intact."
+              buttonLabel={assignmentsMessages.bulkReleaseButton}
+              confirmLabel={assignmentsMessages.bulkReleaseConfirm}
+              title={formatMessage(assignmentsMessages.bulkReleaseTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.assignmentSingular,
+                  messages.resources.nouns.assignmentPlural,
+                ),
+              })}
+              description={assignmentsMessages.bulkReleaseDescription}
               disabled={props.bulkActionTarget === "assignments-released"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/slot-assignments",
                   target: "assignments-released",
-                  noun: "assignment",
+                  nounSingular: messages.resources.nouns.assignmentSingular,
+                  nounPlural: messages.resources.nouns.assignmentPlural,
                   payload: { status: "released" },
-                  successVerb: "Released",
+                  successVerb: messages.resources.verbReleased,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Assignments"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "assignment")}?`}
-              description="This permanently removes the selected slot assignments. Use Release if you only need to free the resource."
+              buttonLabel={assignmentsMessages.bulkDeleteButton}
+              confirmLabel={assignmentsMessages.bulkDeleteConfirm}
+              title={formatMessage(assignmentsMessages.bulkDeleteTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.assignmentSingular,
+                  messages.resources.nouns.assignmentPlural,
+                ),
+              })}
+              description={assignmentsMessages.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "assignments-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -111,7 +147,8 @@ export function AssignmentsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/slot-assignments",
                   target: "assignments-delete",
-                  noun: "assignment",
+                  nounSingular: messages.resources.nouns.assignmentSingular,
+                  nounPlural: messages.resources.nouns.assignmentPlural,
                   clearSelection,
                 })
               }
@@ -134,18 +171,20 @@ export function CloseoutsTab(props: {
   onCreate: () => void
   onEdit: (row: ResourceCloseoutRow) => void
 }) {
+  const messages = useAdminMessages()
+  const closeoutsMessages = messages.resources.tabs.closeouts
   return (
     <TabsContent value="closeouts" className="space-y-4">
       <SectionHeader
-        title="Resource Closeouts"
-        description="Block assets for maintenance, charter use, or operational conflicts."
-        actionLabel="New Closeout"
+        title={closeoutsMessages.title}
+        description={closeoutsMessages.description}
+        actionLabel={closeoutsMessages.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={closeoutColumns(props.resources)}
+        columns={closeoutColumns(props.resources, messages)}
         data={props.filteredCloseouts}
-        emptyMessage="No closeouts match the current filters."
+        emptyMessage={closeoutsMessages.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.closeoutSelection}
@@ -153,10 +192,16 @@ export function CloseoutsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Closeouts"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "closeout")}?`}
-              description="This permanently removes the selected closeouts and may return the resources to operational use."
+              buttonLabel={closeoutsMessages.bulkDeleteButton}
+              confirmLabel={closeoutsMessages.bulkDeleteConfirm}
+              title={formatMessage(closeoutsMessages.bulkDeleteTitle, {
+                selection: formatLocalizedSelectionLabel(
+                  selectedRows.length,
+                  messages.resources.nouns.closeoutSingular,
+                  messages.resources.nouns.closeoutPlural,
+                ),
+              })}
+              description={closeoutsMessages.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "closeouts-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -165,7 +210,8 @@ export function CloseoutsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/resources/closeouts",
                   target: "closeouts-delete",
-                  noun: "closeout",
+                  nounSingular: messages.resources.nouns.closeoutSingular,
+                  nounPlural: messages.resources.nouns.closeoutPlural,
                   clearSelection,
                 })
               }

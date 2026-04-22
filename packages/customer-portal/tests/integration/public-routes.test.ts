@@ -2,9 +2,10 @@ import {
   bookingDocuments,
   bookingFulfillments,
   bookingItems,
-  bookingParticipants,
   bookingSessionStates,
+  bookingStaffAssignments,
   bookings,
+  bookingTravelers,
 } from "@voyantjs/bookings/schema"
 import { crmService } from "@voyantjs/crm"
 import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
@@ -509,7 +510,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
     ).toHaveLength(0)
   })
 
-  it("imports booking participants as companions with duplicate detection", async () => {
+  it("imports booking travelers as companions with duplicate detection", async () => {
     const person = await seedLinkedCustomer()
 
     const [booking] = await db
@@ -522,7 +523,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       })
       .returning()
 
-    await db.insert(bookingParticipants).values([
+    await db.insert(bookingTravelers).values([
       {
         bookingId: booking.id,
         personId: person.id,
@@ -540,13 +541,13 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
         email: "mihai@example.com",
         phone: "+40111111111",
       },
-      {
-        bookingId: booking.id,
-        participantType: "staff",
-        firstName: "Guide",
-        lastName: "Local",
-      },
     ])
+    await db.insert(bookingStaffAssignments).values({
+      bookingId: booking.id,
+      role: "service_assignee",
+      firstName: "Guide",
+      lastName: "Local",
+    })
 
     await identityService.createNamedContact(db, {
       entityType: "person",
@@ -561,7 +562,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       metadata: { kind: "companion" },
     })
 
-    const res = await app.request("/companions/import-booking-participants", {
+    const res = await app.request("/companions/import-booking-travelers", {
       method: "POST",
       ...json({ bookingIds: [booking.id] }),
     })
@@ -605,7 +606,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       })
       .returning()
 
-    await db.insert(bookingParticipants).values({
+    await db.insert(bookingTravelers).values({
       bookingId: booking.id,
       personId: person.id,
       firstName: "Ana",
@@ -671,7 +672,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       })
       .returning()
 
-    await db.insert(bookingParticipants).values({
+    await db.insert(bookingTravelers).values({
       bookingId: booking.id,
       personId: person.id,
       firstName: "Ana",
@@ -739,7 +740,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       .returning()
 
     const [ownedParticipant] = await db
-      .insert(bookingParticipants)
+      .insert(bookingTravelers)
       .values({
         bookingId: ownedBooking.id,
         personId: person.id,
@@ -749,6 +750,25 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
         isPrimary: true,
       })
       .returning()
+
+    await db.insert(bookingTravelers).values([
+      {
+        bookingId: ownedBooking.id,
+        firstName: "Billing",
+        lastName: "Contact",
+        email: "billing@example.com",
+        participantType: "contact",
+        isPrimary: false,
+      },
+      {
+        bookingId: ownedBooking.id,
+        firstName: "Guide",
+        lastName: "Local",
+        email: "guide@example.com",
+        participantType: "staff",
+        isPrimary: false,
+      },
+    ])
 
     const [ownedItem] = await db
       .insert(bookingItems)
@@ -845,7 +865,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       })
       .returning()
 
-    await db.insert(bookingParticipants).values({
+    await db.insert(bookingTravelers).values({
       bookingId: emailBooking.id,
       firstName: "Ana",
       lastName: "Popescu",
@@ -863,7 +883,7 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
       })
       .returning()
 
-    await db.insert(bookingParticipants).values({
+    await db.insert(bookingTravelers).values({
       bookingId: otherBooking.id,
       firstName: "Other",
       lastName: "Traveler",
@@ -940,6 +960,14 @@ describe.skipIf(!DB_AVAILABLE)("Public customer portal routes", () => {
     )
     expect(detail.fulfillments).toHaveLength(1)
     expect(detail.items[0]?.title).toBe("Danube package")
+    expect(detail.travelers).toEqual([
+      expect.objectContaining({
+        id: ownedParticipant.id,
+        participantType: "traveler",
+        firstName: "Ana",
+        lastName: "Popescu",
+      }),
+    ])
 
     const docsRes = await app.request(`/bookings/${ownedBooking.id}/documents`)
     expect(docsRes.status).toBe(200)

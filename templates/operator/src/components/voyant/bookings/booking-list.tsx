@@ -3,15 +3,16 @@
 import {
   type BookingRecord,
   bookingStatusBadgeVariant,
-  formatBookingStatus,
   useBookings,
 } from "@voyantjs/bookings-react"
-import { Loader2, Plus, Search, Zap } from "lucide-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { Plus, Search, Zap } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SkeletonTableRows } from "@/components/ui/skeletons"
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { BookingDialog } from "./booking-dialog"
 import { QuickBookDialog } from "./quick-book-dialog"
@@ -29,12 +31,33 @@ export interface BookingListProps {
   onSelectBooking?: (booking: BookingRecord) => void
 }
 
-function formatAmount(cents: number | null, currency: string): string {
-  if (cents == null) return "—"
+function formatAmount(cents: number | null, currency: string, noValue: string): string {
+  if (cents == null) return noValue
   return `${(cents / 100).toFixed(2)} ${currency}`
 }
 
+function getBookingStatusLabel(
+  status: BookingRecord["status"],
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["list"],
+) {
+  switch (status) {
+    case "draft":
+      return messages.statusDraft
+    case "confirmed":
+      return messages.statusConfirmed
+    case "in_progress":
+      return messages.statusInProgress
+    case "completed":
+      return messages.statusCompleted
+    case "cancelled":
+      return messages.statusCancelled
+    default:
+      return status
+  }
+}
+
 export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps = {}) {
+  const bookingMessages = useAdminMessages().bookings.list
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -67,7 +90,7 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search bookings…"
+            placeholder={bookingMessages.searchPlaceholder}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
@@ -79,7 +102,7 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setQuickBookOpen(true)}>
             <Zap className="mr-2 size-4" />
-            Quick Book
+            {bookingMessages.quickBook}
           </Button>
           <Button
             onClick={() => {
@@ -88,7 +111,7 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
             }}
           >
             <Plus className="mr-2 size-4" />
-            New booking
+            {bookingMessages.newBooking}
           </Button>
         </div>
       </div>
@@ -97,34 +120,38 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Booking #</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Sell Amount</TableHead>
-              <TableHead>Pax</TableHead>
-              <TableHead>Start Date</TableHead>
+              <TableHead>{bookingMessages.tableBookingNumber}</TableHead>
+              <TableHead>{bookingMessages.tableStatus}</TableHead>
+              <TableHead>{bookingMessages.tableSellAmount}</TableHead>
+              <TableHead>{bookingMessages.tablePax}</TableHead>
+              <TableHead>{bookingMessages.tableStartDate}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isPending ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
+          {isPending ? (
+            <SkeletonTableRows
+              rows={8}
+              columns={5}
+              columnWidths={["w-28", "w-20", "w-24", "w-6", "w-24"]}
+            />
+          ) : isError ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-destructive">
-                  Failed to load bookings.
+                  {bookingMessages.loadFailed}
                 </TableCell>
               </TableRow>
-            ) : bookings.length === 0 ? (
+            </TableBody>
+          ) : bookings.length === 0 ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                  No bookings found.
+                  {bookingMessages.empty}
                 </TableCell>
               </TableRow>
-            ) : (
-              bookings.map((booking) => (
+            </TableBody>
+          ) : (
+            <TableBody>
+              {bookings.map((booking) => (
                 <TableRow
                   key={booking.id}
                   onClick={() => handleSelect(booking)}
@@ -133,24 +160,31 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
                   <TableCell className="font-medium">{booking.bookingNumber}</TableCell>
                   <TableCell>
                     <Badge variant={bookingStatusBadgeVariant[booking.status]}>
-                      {formatBookingStatus(booking.status)}
+                      {getBookingStatusLabel(booking.status, bookingMessages)}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatAmount(booking.sellAmountCents, booking.sellCurrency)}
+                    {formatAmount(
+                      booking.sellAmountCents,
+                      booking.sellCurrency,
+                      bookingMessages.noValue,
+                    )}
                   </TableCell>
-                  <TableCell>{booking.pax ?? "—"}</TableCell>
-                  <TableCell>{booking.startDate ?? "—"}</TableCell>
+                  <TableCell>{booking.pax ?? bookingMessages.noValue}</TableCell>
+                  <TableCell>{booking.startDate ?? bookingMessages.noValue}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ))}
+            </TableBody>
+          )}
         </Table>
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {bookings.length} of {total}
+          {formatMessage(bookingMessages.paginationShowing, {
+            count: bookings.length,
+            total,
+          })}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -159,18 +193,16 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
             disabled={offset === 0}
             onClick={() => setOffset((prev) => Math.max(0, prev - pageSize))}
           >
-            Previous
+            {bookingMessages.paginationPrevious}
           </Button>
-          <span>
-            Page {page} / {pageCount}
-          </span>
+          <span>{formatMessage(bookingMessages.paginationPage, { page, pageCount })}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={offset + pageSize >= total}
             onClick={() => setOffset((prev) => prev + pageSize)}
           >
-            Next
+            {bookingMessages.paginationNext}
           </Button>
         </div>
       </div>

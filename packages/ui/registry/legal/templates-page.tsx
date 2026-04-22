@@ -1,4 +1,5 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 import {
   defaultFetcher,
   getLegalContractTemplatesQueryOptions,
@@ -36,6 +37,7 @@ export function loadTemplatesPage(ensureQueryData: EnsureQueryData) {
 }
 
 export function TemplatesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState("")
   const [scope, setScope] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -62,7 +64,7 @@ export function TemplatesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contract Templates</h1>
           <p className="text-sm text-muted-foreground">
-            Reusable contract templates with version history.
+            Reusable contract templates with Liquid variables and version history.
           </p>
         </div>
         <Button
@@ -123,6 +125,9 @@ export function TemplatesPage() {
               template={template}
               expanded={expandedIds.has(template.id)}
               onToggle={() => toggleExpand(template.id)}
+              onOpen={() => {
+                void navigate({ to: "/legal/templates/$id", params: { id: template.id } })
+              }}
               onEdit={() => {
                 setEditingTemplate(template)
                 setDialogOpen(true)
@@ -171,6 +176,7 @@ function TemplateRow({
   template,
   expanded,
   onToggle,
+  onOpen,
   onEdit,
   onDelete,
   onAddVersion,
@@ -178,6 +184,7 @@ function TemplateRow({
   template: LegalContractTemplateRecord
   expanded: boolean
   onToggle: () => void
+  onOpen: () => void
   onEdit: () => void
   onDelete: () => void
   onAddVersion: () => void
@@ -202,7 +209,13 @@ function TemplateRow({
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{template.name}</span>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="text-left text-sm font-medium hover:underline"
+            >
+              {template.name}
+            </button>
             <span className="font-mono text-xs text-muted-foreground">{template.slug}</span>
             <Badge variant="outline" className="capitalize">
               {template.scope}
@@ -216,6 +229,9 @@ function TemplateRow({
           ) : null}
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={onOpen}>
+            Open
+          </Button>
           <Button variant="ghost" size="sm" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
@@ -245,7 +261,6 @@ function TemplateRow({
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="p-2 text-left font-medium">Version</th>
-                    <th className="p-2 text-left font-medium">Format</th>
                     <th className="p-2 text-left font-medium">Changelog</th>
                     <th className="p-2 text-left font-medium">Created By</th>
                     <th className="p-2 text-left font-medium">Created At</th>
@@ -255,7 +270,6 @@ function TemplateRow({
                   {versions.map((version) => (
                     <tr key={version.id} className="border-b last:border-b-0">
                       <td className="p-2 font-mono">v{version.version}</td>
-                      <td className="p-2">{version.bodyFormat}</td>
                       <td className="p-2">{version.changelog ?? "-"}</td>
                       <td className="p-2">{version.createdBy ?? "-"}</td>
                       <td className="p-2">{new Date(version.createdAt).toLocaleDateString()}</td>

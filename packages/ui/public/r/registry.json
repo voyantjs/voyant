@@ -555,19 +555,37 @@
       ]
     },
     {
+      "name": "voyant-products-product-itinerary-dialog",
+      "type": "registry:component",
+      "title": "Product Itinerary Dialog",
+      "description": "Create or rename a product itinerary variant with default-state toggle.",
+      "dependencies": ["lucide-react", "@voyantjs/products-react"],
+      "registryDependencies": ["button", "checkbox", "dialog", "input", "label"],
+      "files": [
+        {
+          "path": "registry/products/product-itinerary-dialog.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/products/product-itinerary-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-products-product-itinerary-section",
       "type": "registry:component",
       "title": "Product Itinerary Section",
-      "description": "Expandable day and service management surface for a single product.",
+      "description": "Expandable day and service management surface with multi-itinerary support.",
       "dependencies": ["lucide-react", "@voyantjs/products-react"],
       "registryDependencies": [
+        "alert-dialog",
         "badge",
         "button",
         "card",
         "dialog",
+        "dropdown-menu",
         "table",
         "voyant-products-product-day-dialog",
-        "voyant-products-product-day-service-dialog"
+        "voyant-products-product-day-service-dialog",
+        "voyant-products-product-itinerary-dialog"
       ],
       "files": [
         {
@@ -757,47 +775,47 @@
       ]
     },
     {
-      "name": "voyant-bookings-passenger-dialog",
+      "name": "voyant-bookings-traveler-dialog",
       "type": "registry:component",
-      "title": "Passenger Dialog",
-      "description": "Create/edit passenger dialog wired to bookings-react passenger mutations.",
+      "title": "Traveler Dialog",
+      "description": "Create/edit traveler dialog wired to bookings-react traveler mutations.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
       "registryDependencies": ["dialog", "input", "label", "textarea"],
       "files": [
         {
-          "path": "registry/bookings/passenger-dialog.tsx",
+          "path": "registry/bookings/traveler-dialog.tsx",
           "type": "registry:component",
-          "target": "components/voyant/bookings/passenger-dialog.tsx"
+          "target": "components/voyant/bookings/traveler-dialog.tsx"
         }
       ]
     },
     {
-      "name": "voyant-bookings-passenger-list",
+      "name": "voyant-bookings-traveler-list",
       "type": "registry:component",
-      "title": "Passenger List",
-      "description": "Passenger section for a booking detail page, including create, edit, and delete actions.",
+      "title": "Traveler List",
+      "description": "Traveler section for a booking detail page, including create, edit, and delete actions.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-      "registryDependencies": ["button", "card", "voyant-bookings-passenger-dialog"],
+      "registryDependencies": ["button", "card", "voyant-bookings-traveler-dialog"],
       "files": [
         {
-          "path": "registry/bookings/passenger-list.tsx",
+          "path": "registry/bookings/traveler-list.tsx",
           "type": "registry:component",
-          "target": "components/voyant/bookings/passenger-list.tsx"
+          "target": "components/voyant/bookings/traveler-list.tsx"
         }
       ]
     },
     {
-      "name": "voyant-bookings-booking-item-participants",
+      "name": "voyant-bookings-booking-item-travelers",
       "type": "registry:component",
-      "title": "Booking Item Participants",
-      "description": "Inline participant assignment panel for booking items. Assign passengers to items with roles.",
+      "title": "Booking Item Travelers",
+      "description": "Inline traveler assignment panel for booking items. Assign travelers to items with roles.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
       "registryDependencies": ["badge", "button", "select"],
       "files": [
         {
-          "path": "registry/bookings/booking-item-participants.tsx",
+          "path": "registry/bookings/booking-item-travelers.tsx",
           "type": "registry:component",
-          "target": "components/voyant/bookings/booking-item-participants.tsx"
+          "target": "components/voyant/bookings/booking-item-travelers.tsx"
         }
       ]
     },
@@ -827,7 +845,7 @@
         "button",
         "card",
         "voyant-bookings-booking-item-dialog",
-        "voyant-bookings-booking-item-participants"
+        "voyant-bookings-booking-item-travelers"
       ],
       "files": [
         {

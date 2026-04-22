@@ -52,6 +52,51 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
     }
   }
 
+  async function ensureItineraryTables(db: { execute: (statement: SQL) => Promise<unknown> }) {
+    const statements: SQL[] = [
+      sql`CREATE TABLE IF NOT EXISTS product_itineraries (
+        id text PRIMARY KEY NOT NULL,
+        product_id text NOT NULL REFERENCES products(id) ON DELETE cascade,
+        name text NOT NULL,
+        is_default boolean DEFAULT false NOT NULL,
+        sort_order integer DEFAULT 0 NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+      )`,
+      sql`CREATE INDEX IF NOT EXISTS idx_product_itineraries_product
+        ON product_itineraries (product_id)`,
+      sql`CREATE INDEX IF NOT EXISTS idx_product_itineraries_product_sort
+        ON product_itineraries (product_id, sort_order, created_at)`,
+      sql`CREATE INDEX IF NOT EXISTS idx_product_itineraries_product_default
+        ON product_itineraries (product_id, is_default)`,
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS uidx_product_itineraries_default
+        ON product_itineraries (product_id)
+        WHERE is_default = true`,
+      sql`ALTER TABLE product_days ADD COLUMN IF NOT EXISTS itinerary_id text`,
+      sql`CREATE INDEX IF NOT EXISTS idx_product_days_itinerary
+        ON product_days (itinerary_id)`,
+      sql`CREATE INDEX IF NOT EXISTS idx_product_days_itinerary_day_number
+        ON product_days (itinerary_id, day_number)`,
+    ]
+
+    for (const statement of statements) {
+      await db.execute(statement)
+    }
+
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'product_days' AND column_name = 'product_id'
+        ) THEN
+          ALTER TABLE product_days ALTER COLUMN product_id DROP NOT NULL;
+        END IF;
+      END $$;
+    `)
+  }
+
   async function createProduct() {
     const res = await app.request("/", {
       method: "POST",
@@ -69,6 +114,7 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
     const db = createTestDb()
     await ensureDestinationTables(db)
+    await ensureItineraryTables(db)
     await cleanupTestDb(db)
 
     app = new Hono()
@@ -84,6 +130,7 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
     const db = createTestDb()
     await ensureDestinationTables(db)
+    await ensureItineraryTables(db)
     await cleanupTestDb(db)
   })
 
@@ -108,6 +155,142 @@ describe.skipIf(!DB_AVAILABLE)("Product routes", () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.data).toBeInstanceOf(Array)
+  })
+
+  it("creates a new default itinerary without violating the unique default constraint", async () => {
+    const product = await createProduct()
+
+    const createRes = await app.request(`/${product.id}/itineraries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Weather fallback",
+        isDefault: true,
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    expect((await createRes.json()).data.isDefault).toBe(true)
+
+    const listRes = await app.request(`/${product.id}/itineraries`, { method: "GET" })
+    expect(listRes.status).toBe(200)
+    const { data } = await listRes.json()
+    expect(data).toHaveLength(2)
+    expect(data.filter((row: { isDefault: boolean }) => row.isDefault)).toHaveLength(1)
+    expect(data[0]?.name).toBe("Weather fallback")
+  })
+
+  it("promotes an existing itinerary to default", async () => {
+    const product = await createProduct()
+
+    const createRes = await app.request(`/${product.id}/itineraries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Late season variation",
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    const { data: itinerary } = await createRes.json()
+
+    const updateRes = await app.request(`/itineraries/${itinerary.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        isDefault: true,
+      }),
+    })
+
+    expect(updateRes.status).toBe(200)
+    expect((await updateRes.json()).data.isDefault).toBe(true)
+
+    const listRes = await app.request(`/${product.id}/itineraries`, { method: "GET" })
+    const { data } = await listRes.json()
+    expect(data).toHaveLength(2)
+    expect(data.filter((row: { isDefault: boolean }) => row.isDefault)).toHaveLength(1)
+    expect(data[0]?.id).toBe(itinerary.id)
+  })
+
+  it("duplicates an itinerary with its days and services", async () => {
+    const product = await createProduct()
+
+    const createRes = await app.request(`/${product.id}/itineraries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Main" }),
+    })
+    const { data: source } = await createRes.json()
+
+    const dayRes = await app.request(`/${product.id}/itineraries/${source.id}/days`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayNumber: 1, title: "Arrival", location: "Split" }),
+    })
+    const { data: day } = await dayRes.json()
+
+    await app.request(`/${product.id}/days/${day.id}/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        serviceType: "accommodation",
+        name: "Seaside hotel",
+        costCurrency: "EUR",
+        costAmountCents: 15000,
+        quantity: 1,
+      }),
+    })
+
+    await app.request(`/${product.id}/days/${day.id}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mediaType: "image",
+        name: "Arrival photo",
+        url: "https://cdn.example.com/arrival.jpg",
+        storageKey: "products/arrival.jpg",
+        mimeType: "image/jpeg",
+        sortOrder: 0,
+        isCover: true,
+      }),
+    })
+
+    const duplicateRes = await app.request(`/itineraries/${source.id}/duplicate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+
+    expect(duplicateRes.status).toBe(201)
+    const { data: copy } = await duplicateRes.json()
+    expect(copy.id).not.toBe(source.id)
+    expect(copy.name).toBe("Main (Copy)")
+    expect(copy.isDefault).toBe(false)
+
+    const copiedDaysRes = await app.request(`/${product.id}/itineraries/${copy.id}/days`, {
+      method: "GET",
+    })
+    const { data: copiedDays } = await copiedDaysRes.json()
+    expect(copiedDays).toHaveLength(1)
+    expect(copiedDays[0]?.title).toBe("Arrival")
+    expect(copiedDays[0]?.id).not.toBe(day.id)
+
+    const copiedServicesRes = await app.request(
+      `/${product.id}/days/${copiedDays[0]?.id}/services`,
+      { method: "GET" },
+    )
+    const { data: copiedServices } = await copiedServicesRes.json()
+    expect(copiedServices).toHaveLength(1)
+    expect(copiedServices[0]?.name).toBe("Seaside hotel")
+
+    const copiedMediaRes = await app.request(`/${product.id}/days/${copiedDays[0]?.id}/media`, {
+      method: "GET",
+    })
+    const { data: copiedMedia } = await copiedMediaRes.json()
+    expect(copiedMedia).toHaveLength(1)
+    expect(copiedMedia[0]?.url).toBe("https://cdn.example.com/arrival.jpg")
+    expect(copiedMedia[0]?.storageKey).toBe("products/arrival.jpg")
+    expect(copiedMedia[0]?.isCover).toBe(true)
   })
 
   it("recalculates product cost", async () => {

@@ -146,6 +146,13 @@ export function PropertyGroupsPage() {
         <div className="flex flex-col gap-2">
           <Label>Type</Label>
           <Select
+            items={[
+              { label: "All types", value: "all" },
+              ...PROPERTY_GROUP_TYPES.map((type) => ({
+                label: type.replace(/_/g, " "),
+                value: type,
+              })),
+            ]}
             value={groupType || "all"}
             onValueChange={(value) => {
               setGroupType(value && value !== "all" ? value : "")
@@ -168,6 +175,10 @@ export function PropertyGroupsPage() {
         <div className="flex flex-col gap-2">
           <Label>Status</Label>
           <Select
+            items={[
+              { label: "All statuses", value: "all" },
+              ...PROPERTY_GROUP_STATUSES.map((item) => ({ label: item, value: item })),
+            ]}
             value={status || "all"}
             onValueChange={(value) => {
               setStatus(value && value !== "all" ? value : "")

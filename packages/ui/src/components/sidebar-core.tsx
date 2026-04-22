@@ -61,6 +61,7 @@ function SidebarProvider({
         _setOpen(openState)
       }
 
+      // biome-ignore lint/suspicious/noDocumentCookie: Sidebar state cookie needs broad browser support beyond the Cookie Store API.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
     [setOpenProp, open],

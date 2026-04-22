@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PersonForm } from "./person-form"
 
@@ -24,17 +25,16 @@ export interface PersonDialogProps {
  * the presence of `person`. Closes the dialog on successful save.
  */
 export function PersonDialog({ open, onOpenChange, person, onSuccess }: PersonDialogProps) {
+  const messages = useAdminMessages().contacts.dialog
   const isEdit = Boolean(person)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="person-dialog" className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit person" : "New person"}</DialogTitle>
+          <DialogTitle>{isEdit ? messages.editTitle : messages.newTitle}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update contact details and reference information."
-              : "Add a new person to your CRM."}
+            {isEdit ? messages.editDescription : messages.newDescription}
           </DialogDescription>
         </DialogHeader>
         <PersonForm

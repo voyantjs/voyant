@@ -1,6 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useOptionUnitMutation, useProductOptionMutation } from "@voyantjs/products-react"
-import { ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { useDuplicateOptionPricingMutation } from "@voyantjs/pricing-react"
+import {
+  useDuplicateProductOptionMutation,
+  useOptionUnitMutation,
+  useProductOptionMutation,
+} from "@voyantjs/products-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { ChevronDown, ChevronRight, Copy, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
   Badge,
@@ -12,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui"
 import { Separator } from "@/components/ui/separator"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { OptionDialog, type ProductOptionData } from "./product-option-dialog"
 import { PricingPanel } from "./product-options-pricing"
 import {
@@ -20,6 +27,44 @@ import {
   optionStatusVariant,
 } from "./product-options-shared"
 import { type OptionUnitData, UnitDialog } from "./product-unit-dialog"
+
+function getOptionStatusLabel(
+  status: ProductOptionData["status"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["options"],
+) {
+  switch (status) {
+    case "draft":
+      return messages.statusDraft
+    case "active":
+      return messages.statusActive
+    case "archived":
+      return messages.statusArchived
+    default:
+      return status
+  }
+}
+
+function getUnitTypeLabel(
+  type: OptionUnitData["unitType"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["units"],
+) {
+  switch (type) {
+    case "person":
+      return messages.typePerson
+    case "group":
+      return messages.typeGroup
+    case "room":
+      return messages.typeRoom
+    case "vehicle":
+      return messages.typeVehicle
+    case "service":
+      return messages.typeService
+    case "other":
+      return messages.typeOther
+    default:
+      return type
+  }
+}
 
 function ActionMenu({ children }: { children: React.ReactNode }) {
   return (
@@ -35,6 +80,8 @@ function ActionMenu({ children }: { children: React.ReactNode }) {
 }
 
 export function OptionsSection({ productId }: { productId: string }) {
+  const messages = useAdminMessages()
+  const optionMessages = messages.products.operations.options
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null)
   const [optionDialogOpen, setOptionDialogOpen] = useState(false)
   const [editingOption, setEditingOption] = useState<ProductOptionData | undefined>()
@@ -43,6 +90,8 @@ export function OptionsSection({ productId }: { productId: string }) {
     getProductOptionsQueryOptions(productId),
   )
   const { remove: removeOption } = useProductOptionMutation()
+  const duplicateOption = useDuplicateProductOptionMutation()
+  const duplicatePricing = useDuplicateOptionPricingMutation()
 
   const deleteOptionMutation = useMutation({
     mutationFn: (optionId: string) => removeOption.mutateAsync(optionId),
@@ -55,7 +104,7 @@ export function OptionsSection({ productId }: { productId: string }) {
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
       <div className="flex items-center justify-between px-6 py-4">
-        <h2 className="font-semibold leading-none tracking-tight">Options</h2>
+        <h2 className="font-semibold leading-none tracking-tight">{optionMessages.sectionTitle}</h2>
         <ActionMenu>
           <DropdownMenuItem
             onClick={() => {
@@ -64,14 +113,14 @@ export function OptionsSection({ productId }: { productId: string }) {
             }}
           >
             <Plus className="h-4 w-4" />
-            Add Option
+            {optionMessages.addAction}
           </DropdownMenuItem>
         </ActionMenu>
       </div>
       <Separator />
       <div className="px-6 py-4">
         {options.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No options yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{optionMessages.empty}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {options.map((option) => (
@@ -87,8 +136,24 @@ export function OptionsSection({ productId }: { productId: string }) {
                   setEditingOption(option)
                   setOptionDialogOpen(true)
                 }}
+                onDuplicate={() => {
+                  duplicateOption.mutate(
+                    { sourceOptionId: option.id, productId },
+                    {
+                      onSuccess: async ({ option: duplicatedOption, unitIdMap }) => {
+                        await duplicatePricing.mutateAsync({
+                          sourceOptionId: option.id,
+                          targetOptionId: duplicatedOption.id,
+                          productId,
+                          unitIdMap,
+                        })
+                        await refetchOptions()
+                      },
+                    },
+                  )
+                }}
                 onDelete={() => {
-                  if (confirm(`Delete option "${option.name}" and all its units and prices?`)) {
+                  if (confirm(formatMessage(optionMessages.deleteConfirm, { name: option.name }))) {
                     deleteOptionMutation.mutate(option.id)
                   }
                 }}
@@ -120,6 +185,7 @@ function OptionRow({
   expanded,
   onToggle,
   onEdit,
+  onDuplicate,
   onDelete,
 }: {
   option: ProductOptionData
@@ -127,8 +193,11 @@ function OptionRow({
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
+  onDuplicate: () => void
   onDelete: () => void
 }) {
+  const messages = useAdminMessages()
+  const optionMessages = messages.products.operations.options
   return (
     <div className="rounded-lg border">
       <div className="flex items-center gap-3 px-4 py-3">
@@ -145,19 +214,24 @@ function OptionRow({
             <span className="font-mono text-xs text-muted-foreground">{option.code}</span>
           )}
           <Badge variant={optionStatusVariant[option.status] ?? "outline"} className="capitalize">
-            {option.status}
+            {getOptionStatusLabel(option.status, optionMessages)}
           </Badge>
-          {option.isDefault && <Badge variant="secondary">Default</Badge>}
+          {option.isDefault && <Badge variant="secondary">{optionMessages.defaultBadge}</Badge>}
         </div>
         <ActionMenu>
+          <DropdownMenuItem onClick={onDuplicate}>
+            <Copy className="h-4 w-4" />
+            Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="h-4 w-4" />
-            Edit
+            {optionMessages.editAction}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
-            Delete
+            {optionMessages.deleteAction}
           </DropdownMenuItem>
         </ActionMenu>
       </div>
@@ -173,6 +247,8 @@ function OptionRow({
 }
 
 function UnitsPanel({ optionId }: { optionId: string }) {
+  const messages = useAdminMessages()
+  const unitMessages = messages.products.operations.units
   const [unitDialogOpen, setUnitDialogOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState<OptionUnitData | undefined>()
 
@@ -190,7 +266,9 @@ function UnitsPanel({ optionId }: { optionId: string }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Units</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {unitMessages.sectionTitle}
+        </p>
         <Button
           variant="outline"
           size="sm"
@@ -200,22 +278,22 @@ function UnitsPanel({ optionId }: { optionId: string }) {
           }}
         >
           <Plus className="mr-1 h-3 w-3" />
-          Add Unit
+          {unitMessages.addAction}
         </Button>
       </div>
 
       {units.length === 0 ? (
-        <p className="py-2 text-center text-xs text-muted-foreground">No units yet.</p>
+        <p className="py-2 text-center text-xs text-muted-foreground">{unitMessages.empty}</p>
       ) : (
         <div className="rounded border bg-background">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="p-2 text-left font-medium">Type</th>
-                <th className="p-2 text-left font-medium">Name</th>
-                <th className="p-2 text-left font-medium">Qty</th>
-                <th className="p-2 text-left font-medium">Age</th>
-                <th className="p-2 text-left font-medium">Occupancy</th>
+                <th className="p-2 text-left font-medium">{unitMessages.tableType}</th>
+                <th className="p-2 text-left font-medium">{unitMessages.tableName}</th>
+                <th className="p-2 text-left font-medium">{unitMessages.tableQuantity}</th>
+                <th className="p-2 text-left font-medium">{unitMessages.tableAge}</th>
+                <th className="p-2 text-left font-medium">{unitMessages.tableOccupancy}</th>
                 <th className="w-10 p-2" />
               </tr>
             </thead>
@@ -224,7 +302,7 @@ function UnitsPanel({ optionId }: { optionId: string }) {
                 <tr key={unit.id} className="border-b last:border-b-0">
                   <td className="p-2">
                     <Badge variant="outline" className="text-xs capitalize">
-                      {unit.unitType}
+                      {getUnitTypeLabel(unit.unitType, unitMessages)}
                     </Badge>
                   </td>
                   <td className="p-2">
@@ -255,19 +333,21 @@ function UnitsPanel({ optionId }: { optionId: string }) {
                         }}
                       >
                         <Pencil className="h-4 w-4" />
-                        Edit
+                        {unitMessages.editAction}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => {
-                          if (confirm(`Delete unit "${unit.name}"?`)) {
+                          if (
+                            confirm(formatMessage(unitMessages.deleteConfirm, { name: unit.name }))
+                          ) {
                             deleteMutation.mutate(unit.id)
                           }
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
+                        {unitMessages.deleteAction}
                       </DropdownMenuItem>
                     </ActionMenu>
                   </td>

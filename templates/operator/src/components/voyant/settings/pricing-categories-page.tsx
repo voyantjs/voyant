@@ -1,12 +1,17 @@
 import { PricingCategoryList } from "@/components/voyant/pricing/pricing-category-list"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 export function PricingCategoriesPage() {
+  const messages = useAdminMessages()
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Pricing Categories</h2>
+        <h2 className="text-lg font-semibold tracking-tight">
+          {messages.settings.pricingCategoriesPage.title}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Global categories like adult, child, and room reused across your pricing rules.
+          {messages.settings.pricingCategoriesPage.description}
         </p>
       </div>
 

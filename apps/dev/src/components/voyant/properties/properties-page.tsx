@@ -153,6 +153,10 @@ export function PropertiesPage() {
         <div className="flex flex-col gap-2">
           <Label>Property type</Label>
           <Select
+            items={[
+              { label: "All types", value: "all" },
+              ...PROPERTY_TYPES.map((type) => ({ label: type, value: type })),
+            ]}
             value={propertyType || "all"}
             onValueChange={(value) => {
               setPropertyType(value === "all" ? "" : (value ?? ""))

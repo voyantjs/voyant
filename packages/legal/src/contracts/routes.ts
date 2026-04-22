@@ -127,9 +127,8 @@ export function createContractsAdminRoutes(options: ContractsRouteOptions = {}) 
       const template = await contractsService.getTemplateById(c.get("db"), c.req.param("id"))
       if (!template) return c.json({ error: "Template not found" }, 404)
       const body = input.body ?? template.body
-      const bodyFormat = input.bodyFormat ?? template.bodyFormat
-      const rendered = contractsService.renderPreview({ ...input, body, bodyFormat })
-      return c.json({ data: { rendered, bodyFormat } })
+      const rendered = contractsService.renderPreview({ ...input, body })
+      return c.json({ data: { rendered } })
     })
     .get("/templates/:id/versions", async (c) => {
       const rows = await contractsService.listTemplateVersions(c.get("db"), c.req.param("id"))
@@ -392,9 +391,8 @@ export function createContractsPublicRoutes() {
       const rendered = contractsService.renderPreview({
         variables: input.variables,
         body: template.body,
-        bodyFormat: template.bodyFormat,
       })
-      return c.json({ data: { rendered, bodyFormat: template.bodyFormat } })
+      return c.json({ data: { rendered } })
     })
     .get("/:id", async (c) => {
       const row = await contractsService.getContractById(c.get("db"), c.req.param("id"))

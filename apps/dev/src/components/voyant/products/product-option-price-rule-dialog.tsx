@@ -233,6 +233,7 @@ export function OptionPriceRuleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Pricing mode</Label>
                 <Select
+                  items={PRICING_MODES}
                   value={form.watch("pricingMode")}
                   onValueChange={(v) =>
                     form.setValue("pricingMode", v as RuleFormValues["pricingMode"])

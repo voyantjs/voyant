@@ -14,19 +14,19 @@ export {
 export { bookingsQueryKeys } from "./query-keys.js"
 export {
   getBookingActivityQueryOptions,
-  getBookingDocumentsQueryOptions,
   getBookingGroupForBookingQueryOptions,
   getBookingGroupQueryOptions,
   getBookingGroupsQueryOptions,
-  getBookingItemParticipantsQueryOptions,
   getBookingItemsQueryOptions,
+  getBookingItemTravelersQueryOptions,
   getBookingNotesQueryOptions,
   getBookingQueryOptions,
   getBookingsQueryOptions,
-  getPassengersQueryOptions,
+  getBookingTravelerDocumentsQueryOptions,
   getPublicBookingSessionQueryOptions,
   getPublicBookingSessionStateQueryOptions,
   getSupplierStatusesQueryOptions,
+  getTravelersQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"
 export {

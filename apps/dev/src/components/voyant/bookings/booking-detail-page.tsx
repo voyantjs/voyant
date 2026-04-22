@@ -22,9 +22,9 @@ import { BookingItemList } from "./booking-item-list"
 import { BookingNotes } from "./booking-notes"
 import { BookingPaymentScheduleList } from "./booking-payment-schedule-list"
 import { BookingPaymentsSummary } from "./booking-payments-summary"
-import { PassengerList } from "./passenger-list"
 import { StatusChangeDialog } from "./status-change-dialog"
 import { SupplierStatusList } from "./supplier-status-list"
+import { TravelerList } from "./traveler-list"
 
 function formatAmount(cents: number | null, currency: string): string {
   if (cents == null) return "-"
@@ -194,7 +194,7 @@ export function BookingDetailPage({ id }: { id: string }) {
         </Card>
       </div>
 
-      <PassengerList bookingId={id} />
+      <TravelerList bookingId={id} />
       <BookingItemList bookingId={id} />
       <BookingGroupSection bookingId={id} />
       <BookingPaymentScheduleList bookingId={id} />

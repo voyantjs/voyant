@@ -26,27 +26,30 @@ import {
   Textarea,
 } from "@/components/ui"
 import { CountryCombobox } from "@/components/ui/country-combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const supplierFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  type: z.enum(["hotel", "transfer", "guide", "experience", "airline", "restaurant", "other"]),
-  status: z.enum(["active", "inactive", "pending"]),
-  description: z.string().optional().nullable(),
-  email: z.string().email().optional().or(z.literal("")).nullable(),
-  phone: z.string().optional().nullable(),
-  website: z.string().url().optional().or(z.literal("")).nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  country: z.string().optional().nullable(),
-  defaultCurrency: z.string().optional().nullable(),
-  contactName: z.string().optional().nullable(),
-  contactEmail: z.string().email().optional().or(z.literal("")).nullable(),
-  contactPhone: z.string().optional().nullable(),
-})
-
-type SupplierFormValues = z.input<typeof supplierFormSchema>
-type SupplierFormOutput = z.output<typeof supplierFormSchema>
+const getSupplierFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    name: z.string().min(1, messages.suppliers.dialogs.supplier.validationNameRequired),
+    type: z.enum(["hotel", "transfer", "guide", "experience", "airline", "restaurant", "other"]),
+    status: z.enum(["active", "inactive", "pending"]),
+    description: z.string().optional().nullable(),
+    email: z.string().email().optional().or(z.literal("")).nullable(),
+    phone: z.string().optional().nullable(),
+    website: z.string().url().optional().or(z.literal("")).nullable(),
+    address: z.string().optional().nullable(),
+    city: z.string().optional().nullable(),
+    country: z.string().optional().nullable(),
+    defaultCurrency: z
+      .string()
+      .max(3, messages.suppliers.dialogs.supplier.validationIsoCurrency)
+      .optional()
+      .nullable(),
+    contactName: z.string().optional().nullable(),
+    contactEmail: z.string().email().optional().or(z.literal("")).nullable(),
+    contactPhone: z.string().optional().nullable(),
+  })
 
 export type SupplierData = Supplier
 
@@ -60,8 +63,15 @@ export type SupplierDialogProps = {
 export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: SupplierDialogProps) {
   const isEditing = !!supplier
   const supplierMutation = useSupplierMutation()
+  const messages = useAdminMessages()
+  const dialogMessages = messages.suppliers.dialogs.supplier
+  const supplierFormSchema = getSupplierFormSchema(messages)
 
-  const form = useForm<SupplierFormValues, unknown, SupplierFormOutput>({
+  const form = useForm<
+    z.input<typeof supplierFormSchema>,
+    unknown,
+    z.output<typeof supplierFormSchema>
+  >({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
       name: "",
@@ -104,7 +114,7 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
     }
   }, [open, supplier, form])
 
-  const onSubmit = async (values: SupplierFormOutput) => {
+  const onSubmit = async (values: z.output<typeof supplierFormSchema>) => {
     const payload = {
       ...values,
       description: values.description || null,
@@ -132,16 +142,21 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Supplier" : "New Supplier"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{dialogMessages.typeLabel}</Label>
                 <Select
+                  items={SUPPLIER_TYPES}
                   value={form.watch("type")}
-                  onValueChange={(v) => form.setValue("type", v as SupplierFormValues["type"])}
+                  onValueChange={(v) =>
+                    form.setValue("type", v as z.input<typeof supplierFormSchema>["type"])
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -149,7 +164,7 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
                   <SelectContent>
                     {SUPPLIER_TYPES.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                        {messages.suppliers.typeLabels[t.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -157,10 +172,13 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{dialogMessages.statusLabel}</Label>
                 <Select
+                  items={SUPPLIER_STATUSES}
                   value={form.watch("status")}
-                  onValueChange={(v) => form.setValue("status", v as SupplierFormValues["status"])}
+                  onValueChange={(v) =>
+                    form.setValue("status", v as z.input<typeof supplierFormSchema>["status"])
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -168,7 +186,7 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
                   <SelectContent>
                     {SUPPLIER_STATUSES.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
-                        {s.label}
+                        {messages.suppliers.statusLabels[s.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -177,35 +195,45 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Name</Label>
-              <Input {...form.register("name")} placeholder="Supplier name" />
+              <Label>{dialogMessages.nameLabel}</Label>
+              <Input {...form.register("name")} placeholder={dialogMessages.namePlaceholder} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} placeholder="Brief description..." />
+              <Label>{dialogMessages.descriptionLabel}</Label>
+              <Textarea
+                {...form.register("description")}
+                placeholder={dialogMessages.descriptionPlaceholder}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Email</Label>
-                <Input {...form.register("email")} type="email" placeholder="info@supplier.com" />
+                <Label>{dialogMessages.emailLabel}</Label>
+                <Input
+                  {...form.register("email")}
+                  type="email"
+                  placeholder={dialogMessages.emailPlaceholder}
+                />
                 {form.formState.errors.email && (
                   <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Phone</Label>
-                <Input {...form.register("phone")} placeholder="+1 234 567 890" />
+                <Label>{dialogMessages.phoneLabel}</Label>
+                <Input {...form.register("phone")} placeholder={dialogMessages.phonePlaceholder} />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Website</Label>
-              <Input {...form.register("website")} placeholder="https://supplier.com" />
+              <Label>{dialogMessages.websiteLabel}</Label>
+              <Input
+                {...form.register("website")}
+                placeholder={dialogMessages.websitePlaceholder}
+              />
               {form.formState.errors.website && (
                 <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
               )}
@@ -213,15 +241,18 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Address</Label>
-                <Input {...form.register("address")} placeholder="123 Main St" />
+                <Label>{dialogMessages.addressLabel}</Label>
+                <Input
+                  {...form.register("address")}
+                  placeholder={dialogMessages.addressPlaceholder}
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>City</Label>
-                <Input {...form.register("city")} placeholder="Dubrovnik" />
+                <Label>{dialogMessages.cityLabel}</Label>
+                <Input {...form.register("city")} placeholder={dialogMessages.cityPlaceholder} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Country</Label>
+                <Label>{dialogMessages.countryLabel}</Label>
                 <CountryCombobox
                   value={form.watch("country") ?? null}
                   onChange={(code) => form.setValue("country", code)}
@@ -230,28 +261,31 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Default Currency</Label>
+              <Label>{dialogMessages.defaultCurrencyLabel}</Label>
               <Input
                 {...form.register("defaultCurrency")}
-                placeholder="EUR"
+                placeholder={dialogMessages.defaultCurrencyPlaceholder}
                 maxLength={3}
                 className="max-w-[120px]"
               />
             </div>
 
             <div className="border-t pt-4">
-              <p className="text-sm font-medium mb-3">Primary Contact</p>
+              <p className="mb-3 text-sm font-medium">{dialogMessages.primaryContactTitle}</p>
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label>Name</Label>
-                  <Input {...form.register("contactName")} placeholder="John Doe" />
+                  <Label>{dialogMessages.contactNameLabel}</Label>
+                  <Input
+                    {...form.register("contactName")}
+                    placeholder={dialogMessages.contactNamePlaceholder}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Email</Label>
+                  <Label>{dialogMessages.contactEmailLabel}</Label>
                   <Input
                     {...form.register("contactEmail")}
                     type="email"
-                    placeholder="john@supplier.com"
+                    placeholder={dialogMessages.contactEmailPlaceholder}
                   />
                   {form.formState.errors.contactEmail && (
                     <p className="text-xs text-destructive">
@@ -260,19 +294,22 @@ export function SupplierDialog({ open, onOpenChange, supplier, onSuccess }: Supp
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Phone</Label>
-                  <Input {...form.register("contactPhone")} placeholder="+1 234 567 890" />
+                  <Label>{dialogMessages.contactPhoneLabel}</Label>
+                  <Input
+                    {...form.register("contactPhone")}
+                    placeholder={dialogMessages.contactPhonePlaceholder}
+                  />
                 </div>
               </div>
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Supplier"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>

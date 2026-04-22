@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, DollarSign, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import {
   getDistributionCommissionRuleChannelQueryOptions,
@@ -9,6 +11,7 @@ import {
   getDistributionCommissionRuleProductQueryOptions,
   getDistributionCommissionRuleQueryOptions,
 } from "./distribution-detail-query-options"
+import { formatDistributionDateTime } from "./distribution-shared"
 
 type DistributionCommissionRuleDetailPageProps = {
   id: string
@@ -19,6 +22,12 @@ export function DistributionCommissionRuleDetailPage({
 }: DistributionCommissionRuleDetailPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages()
+  const { resolvedLocale } = useLocale()
+  const commonMessages = messages.distribution.details.common
+  const detailMessages = messages.distribution.details.commission
+  const valueMessages = messages.distribution.values
+  const noValue = messages.distribution.table.noValue
 
   const { data: ruleData, isPending } = useQuery(getDistributionCommissionRuleQueryOptions(id))
   const rule = ruleData?.data
@@ -55,9 +64,9 @@ export function DistributionCommissionRuleDetailPage({
   if (!rule) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Commission rule not found</p>
+        <p className="text-muted-foreground">{detailMessages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/distribution" })}>
-          Back to Distribution
+          {commonMessages.back}
         </Button>
       </div>
     )
@@ -70,13 +79,13 @@ export function DistributionCommissionRuleDetailPage({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Commission Rule</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{detailMessages.title}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {rule.scope}
+              {valueMessages.commissionScope[rule.scope] ?? rule.scope}
             </Badge>
             <Badge variant="secondary" className="capitalize">
-              {rule.commissionType}
+              {valueMessages.commissionType[rule.commissionType] ?? rule.commissionType}
             </Badge>
           </div>
         </div>
@@ -88,7 +97,7 @@ export function DistributionCommissionRuleDetailPage({
             }
           >
             <DollarSign className="mr-2 h-4 w-4" />
-            Open Contract
+            {commonMessages.openContract}
           </Button>
           {rule.productId ? (
             <Button
@@ -98,70 +107,72 @@ export function DistributionCommissionRuleDetailPage({
               }
             >
               <Package className="mr-2 h-4 w-4" />
-              Open Product
+              {commonMessages.openProduct}
             </Button>
           ) : null}
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this commission rule?")) {
+              if (confirm(detailMessages.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {commonMessages.delete}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Rule Details</CardTitle>
+          <CardTitle>{detailMessages.detailsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm md:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Contract:</span>{" "}
+            <span className="text-muted-foreground">{detailMessages.fields.contract}:</span>{" "}
             <span>{contractQuery.data?.data.id ?? rule.contractId}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Channel:</span>{" "}
-            <span>{channelQuery.data?.data.name ?? contractQuery.data?.data.channelId ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Product:</span>{" "}
-            <span>{productQuery.data?.data.name ?? rule.productId ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Amount:</span>{" "}
-            <span>{rule.amountCents ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Basis Points:</span>{" "}
-            <span>{rule.percentBasisPoints ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">External Rate:</span>{" "}
-            <span>{rule.externalRateId ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">External Category:</span>{" "}
-            <span>{rule.externalCategoryId ?? "-"}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Valid:</span>{" "}
+            <span className="text-muted-foreground">{detailMessages.fields.channel}:</span>{" "}
             <span>
-              {rule.validFrom ?? "-"} to {rule.validTo ?? "-"}
+              {channelQuery.data?.data.name ?? contractQuery.data?.data.channelId ?? noValue}
             </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Created:</span>{" "}
-            <span>{new Date(rule.createdAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.product}:</span>{" "}
+            <span>{productQuery.data?.data.name ?? rule.productId ?? noValue}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Updated:</span>{" "}
-            <span>{new Date(rule.updatedAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.amount}:</span>{" "}
+            <span>{rule.amountCents ?? noValue}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.basisPoints}:</span>{" "}
+            <span>{rule.percentBasisPoints ?? noValue}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.externalRate}:</span>{" "}
+            <span>{rule.externalRateId ?? noValue}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.externalCategory}:</span>{" "}
+            <span>{rule.externalCategoryId ?? noValue}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.valid}:</span>{" "}
+            <span>
+              {rule.validFrom ?? noValue} to {rule.validTo ?? noValue}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.created}:</span>{" "}
+            <span>{formatDistributionDateTime(rule.createdAt, resolvedLocale, noValue)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{detailMessages.fields.updated}:</span>{" "}
+            <span>{formatDistributionDateTime(rule.updatedAt, resolvedLocale, noValue)}</span>
           </div>
         </CardContent>
       </Card>

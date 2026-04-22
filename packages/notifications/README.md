@@ -94,7 +94,7 @@ For finance-aware collection sends, the routes also support:
 - `GET /bookings/:id/document-bundle`
 - `POST /bookings/:id/send-documents`
 
-Those routes resolve recipients from the payment session, invoice, and linked booking participants, then render the selected notification template with finance context such as payment links, invoice balances, and booking references.
+Those routes resolve recipients from the payment session, invoice, and linked booking travelers, then render the selected notification template with finance context such as payment links, invoice balances, and booking references.
 
 Booking document sends bundle the latest customer-facing contract attachment and
 ready invoice/proforma rendition for a booking. By default they use the stored

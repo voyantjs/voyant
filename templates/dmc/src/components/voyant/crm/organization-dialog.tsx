@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { OrganizationForm } from "./organization-form"
 
@@ -26,16 +27,15 @@ export function OrganizationDialog({
   onSuccess,
 }: OrganizationDialogProps) {
   const isEdit = Boolean(organization)
+  const messages = useAdminMessages().organizationsModule
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="organization-dialog" className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit organization" : "New organization"}</DialogTitle>
+          <DialogTitle>{isEdit ? messages.dialogEditTitle : messages.dialogNewTitle}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update company details and account metadata."
-              : "Add a new company to your CRM."}
+            {isEdit ? messages.dialogEditDescription : messages.dialogNewDescription}
           </DialogDescription>
         </DialogHeader>
         <OrganizationForm

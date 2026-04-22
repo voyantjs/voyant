@@ -11,7 +11,7 @@ import * as React from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 
 import { BookingItemDialog } from "./booking-item-dialog"
-import { BookingItemParticipants } from "./booking-item-participants"
+import { BookingItemTravelers } from "./booking-item-travelers"
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   draft: "outline",
@@ -139,7 +139,7 @@ export function BookingItemList({ bookingId }: BookingItemListProps) {
                       {isExpanded && (
                         <tr className="border-b last:border-b-0">
                           <td colSpan={8} className="p-2">
-                            <BookingItemParticipants bookingId={bookingId} itemId={item.id} />
+                            <BookingItemTravelers bookingId={bookingId} itemId={item.id} />
                           </td>
                         </tr>
                       )}

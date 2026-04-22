@@ -7,9 +7,9 @@ export const transactionPiiAccessLog = pgTable(
   "transaction_pii_access_log",
   {
     id: typeId("transaction_pii_access_log"),
-    participantKind: text("participant_kind").notNull(),
+    travelerKind: text("traveler_kind").notNull(),
     parentId: text("parent_id"),
-    participantId: text("participant_id"),
+    travelerId: text("traveler_id"),
     actorId: text("actor_id"),
     actorType: text("actor_type"),
     callerType: text("caller_type"),
@@ -21,7 +21,7 @@ export const transactionPiiAccessLog = pgTable(
   },
   (table) => [
     index("idx_transaction_pii_access_log_parent").on(table.parentId),
-    index("idx_transaction_pii_access_log_participant").on(table.participantId),
+    index("idx_transaction_pii_access_log_participant").on(table.travelerId),
     index("idx_transaction_pii_access_log_actor").on(table.actorId),
     index("idx_transaction_pii_access_log_created_at").on(table.createdAt),
   ],

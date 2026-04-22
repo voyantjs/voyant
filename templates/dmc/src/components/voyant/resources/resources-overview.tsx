@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import type {
   BookingOption,
   ResourceCloseoutRow,
@@ -20,7 +21,13 @@ import type {
   ResourceSlotAssignmentRow,
   SlotOption,
 } from "./resources-shared"
-import { labelById, resourceKindOptions, slotLabel } from "./resources-shared"
+import {
+  getAssignmentStatusLabel,
+  getResourceKindLabel,
+  labelById,
+  resourceKindOptions,
+  slotLabel,
+} from "./resources-shared"
 
 export function ResourcesOverview({
   bookings,
@@ -57,6 +64,8 @@ export function ResourcesOverview({
   onOpenAssignment: (assignmentId: string) => void
   onOpenResource: (resourceId: string) => void
 }) {
+  const messages = useAdminMessages()
+  const overviewMessages = messages.resources.overview
   const activeResourcesCount = filteredResources.filter((resource) => resource.active).length
   const activePoolsCount = filteredPools.filter((pool) => pool.active).length
 
@@ -64,27 +73,27 @@ export function ResourcesOverview({
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <OverviewMetric
-          title="Active Resources"
+          title={overviewMessages.activeResourcesTitle}
           value={activeResourcesCount}
-          description="Assignable assets ready for use"
+          description={overviewMessages.activeResourcesDescription}
           icon={Wrench}
         />
         <OverviewMetric
-          title="Active Pools"
+          title={overviewMessages.activePoolsTitle}
           value={activePoolsCount}
-          description="Shared-capacity pools live"
+          description={overviewMessages.activePoolsDescription}
           icon={Users}
         />
         <OverviewMetric
-          title="Live Assignments"
+          title={overviewMessages.liveAssignmentsTitle}
           value={liveAssignments.length}
-          description="Reserved or assigned slot coverage"
+          description={overviewMessages.liveAssignmentsDescription}
           icon={CalendarDays}
         />
         <OverviewMetric
-          title="Closeouts"
+          title={overviewMessages.closeoutsTitle}
           value={closeouts.length}
-          description="Active maintenance or conflict blocks"
+          description={overviewMessages.closeoutsDescription}
           icon={ExternalLink}
         />
       </div>
@@ -92,11 +101,11 @@ export function ResourcesOverview({
       <div className="grid gap-4 xl:grid-cols-2">
         <Card size="sm">
           <CardHeader>
-            <CardTitle>Assignment Gaps</CardTitle>
+            <CardTitle>{overviewMessages.assignmentGapsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {unassignedReservations.length === 0 ? (
-              <p className="text-muted-foreground">Every live reservation has a named resource.</p>
+              <p className="text-muted-foreground">{overviewMessages.assignmentGapsEmpty}</p>
             ) : (
               unassignedReservations.slice(0, 4).map((assignment) => (
                 <button
@@ -116,7 +125,9 @@ export function ResourcesOverview({
                     )}
                   </div>
                   <div className="text-muted-foreground">
-                    Status: {assignment.status} · Booking:{" "}
+                    {overviewMessages.assignmentGapStatusLabel}:{" "}
+                    {getAssignmentStatusLabel(assignment.status, messages)} ·{" "}
+                    {overviewMessages.assignmentGapBookingLabel}:{" "}
                     {labelById(bookings, assignment.bookingId)}
                   </div>
                 </button>
@@ -127,11 +138,11 @@ export function ResourcesOverview({
 
         <Card size="sm">
           <CardHeader>
-            <CardTitle>Ownership Gaps</CardTitle>
+            <CardTitle>{overviewMessages.ownershipGapsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {resourcesWithoutSupplier.length === 0 ? (
-              <p className="text-muted-foreground">Every resource is linked to a supplier.</p>
+              <p className="text-muted-foreground">{overviewMessages.ownershipGapsEmpty}</p>
             ) : (
               resourcesWithoutSupplier.slice(0, 4).map((resource) => (
                 <button
@@ -141,8 +152,11 @@ export function ResourcesOverview({
                   onClick={() => onOpenResource(resource.id)}
                 >
                   <div className="font-medium">{resource.name}</div>
-                  <div className="text-muted-foreground capitalize">
-                    {resource.kind} · Capacity {resource.capacity ?? "-"} · No supplier assigned
+                  <div className="text-muted-foreground">
+                    {getResourceKindLabel(resource.kind, messages)} ·{" "}
+                    {messages.resources.capacityLabel}{" "}
+                    {resource.capacity ?? messages.resources.details.noValue} ·{" "}
+                    {overviewMessages.ownershipGapNoSupplier}
                   </div>
                 </button>
               ))
@@ -156,7 +170,7 @@ export function ResourcesOverview({
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search resources..."
+              placeholder={messages.resources.searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="pl-9"
@@ -164,13 +178,13 @@ export function ResourcesOverview({
           </div>
           <Select value={kindFilter} onValueChange={(value) => setKindFilter(value ?? "all")}>
             <SelectTrigger className="w-full md:w-56">
-              <SelectValue placeholder="All kinds" />
+              <SelectValue placeholder={messages.resources.allKinds} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All kinds</SelectItem>
+              <SelectItem value="all">{messages.resources.allKinds}</SelectItem>
               {resourceKindOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {messages.resources.kindLabels[option.value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -178,7 +192,7 @@ export function ResourcesOverview({
         </div>
         {hasFilters ? (
           <Button variant="outline" onClick={onClearFilters}>
-            Clear Filters
+            {messages.resources.clearFilters}
           </Button>
         ) : null}
       </div>

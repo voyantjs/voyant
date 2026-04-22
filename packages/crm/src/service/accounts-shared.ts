@@ -1,4 +1,4 @@
-import { identityAddresses, identityContactPoints } from "@voyantjs/identity/schema"
+import { identityContactPoints } from "@voyantjs/identity/schema"
 import { identityService } from "@voyantjs/identity/service"
 import type {
   insertAddressSchema,
@@ -23,12 +23,7 @@ import type {
   updateOrganizationSchema,
   updatePersonSchema,
 } from "../validation.js"
-import {
-  formatAddress,
-  isManagedBySource,
-  normalizeContactValue,
-  toNullableTrimmed,
-} from "./helpers.js"
+import { isManagedBySource, normalizeContactValue, toNullableTrimmed } from "./helpers.js"
 
 export type OrganizationListQuery = z.infer<typeof organizationListQuerySchema>
 export type CreateOrganizationInput = z.infer<typeof insertOrganizationSchema>
@@ -50,18 +45,12 @@ export const organizationEntityType = "organization"
 export const personEntityType = "person"
 export const personBaseIdentitySource = "crm.person.base"
 
-type PersonIdentityInput = Pick<
-  CreatePersonInput,
-  "email" | "phone" | "website" | "address" | "city" | "country"
->
+type PersonIdentityInput = Pick<CreatePersonInput, "email" | "phone" | "website">
 
 export type PersonHydratedFields = {
   email: string | null
   phone: string | null
   website: string | null
-  address: string | null
-  city: string | null
-  country: string | null
 }
 
 type PersonDirectoryProjectionValues = Omit<
@@ -74,9 +63,6 @@ function emptyPersonHydratedFields(): PersonHydratedFields {
     email: null,
     phone: null,
     website: null,
-    address: null,
-    city: null,
-    country: null,
   }
 }
 
@@ -108,29 +94,17 @@ async function buildPersonDirectoryProjectionRows(
   }
 
   const ids = [...new Set(personIds)]
-  const [contactPoints, addresses] = await Promise.all([
-    db
-      .select()
-      .from(identityContactPoints)
-      .where(
-        and(
-          eq(identityContactPoints.entityType, personEntityType),
-          inArray(identityContactPoints.entityId, ids),
-        ),
+  const contactPoints = await db
+    .select()
+    .from(identityContactPoints)
+    .where(
+      and(
+        eq(identityContactPoints.entityType, personEntityType),
+        inArray(identityContactPoints.entityId, ids),
       ),
-    db
-      .select()
-      .from(identityAddresses)
-      .where(
-        and(
-          eq(identityAddresses.entityType, personEntityType),
-          inArray(identityAddresses.entityId, ids),
-        ),
-      ),
-  ])
+    )
 
   const contactPointMap = new Map<string, typeof contactPoints>()
-  const addressMap = new Map<string, typeof addresses>()
 
   for (const point of contactPoints) {
     const bucket = contactPointMap.get(point.entityId) ?? []
@@ -138,32 +112,19 @@ async function buildPersonDirectoryProjectionRows(
     contactPointMap.set(point.entityId, bucket)
   }
 
-  for (const address of addresses) {
-    const bucket = addressMap.get(address.entityId) ?? []
-    bucket.push(address)
-    addressMap.set(address.entityId, bucket)
-  }
-
   return ids.map((personId) => {
     const entityContactPoints = contactPointMap.get(personId) ?? []
-    const entityAddresses = addressMap.get(personId) ?? []
 
     const findPrimaryContactPoint = (kind: "email" | "phone" | "website") =>
       entityContactPoints.find((point) => point.kind === kind && point.isPrimary)?.value ??
       entityContactPoints.find((point) => point.kind === kind)?.value ??
       null
 
-    const primaryAddress =
-      entityAddresses.find((address) => address.isPrimary) ?? entityAddresses[0] ?? null
-
     return {
       personId,
       email: findPrimaryContactPoint("email"),
       phone: findPrimaryContactPoint("phone"),
       website: findPrimaryContactPoint("website"),
-      address: primaryAddress ? formatAddress(primaryAddress) : null,
-      city: primaryAddress?.city ?? null,
-      country: primaryAddress?.country ?? null,
     }
   })
 }
@@ -205,9 +166,6 @@ async function ensurePersonDirectoryProjectionMap(db: PostgresJsDatabase, person
       email: projection.email,
       phone: projection.phone,
       website: projection.website,
-      address: projection.address,
-      city: projection.city,
-      country: projection.country,
     })
   }
 
@@ -224,9 +182,6 @@ async function ensurePersonDirectoryProjectionMap(db: PostgresJsDatabase, person
         email: projection.email,
         phone: projection.phone,
         website: projection.website,
-        address: projection.address,
-        city: projection.city,
-        country: projection.country,
       })
     }
   }
@@ -298,35 +253,8 @@ export async function syncPersonIdentity(
     }
   }
 
-  const addressLine = toNullableTrimmed(data.address)
-  const city = toNullableTrimmed(data.city)
-  const country = toNullableTrimmed(data.country)
-  const hasAddress = Boolean(addressLine || city || country)
-
-  if (!hasAddress) {
-    if (managedAddress) {
-      await identityService.deleteAddress(db, managedAddress.id)
-    }
-    await rebuildPersonDirectoryProjection(db, personId)
-    return
-  }
-
-  const addressPayload = {
-    entityType: personEntityType,
-    entityId: personId,
-    label: "primary" as const,
-    fullText: addressLine,
-    line1: addressLine,
-    city,
-    country,
-    isPrimary: true,
-    metadata: { managedBy: personBaseIdentitySource },
-  }
-
   if (managedAddress) {
-    await identityService.updateAddress(db, managedAddress.id, addressPayload)
-  } else {
-    await identityService.createAddress(db, addressPayload)
+    await identityService.deleteAddress(db, managedAddress.id)
   }
 
   await rebuildPersonDirectoryProjection(db, personId)

@@ -1,152 +1,184 @@
 import { queryOptions, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import {
+  BookingStatusWidget,
+  DashboardStatCard,
+  MonthlyBookingsWidget,
+  OutstandingInvoicesWidget,
+  RevenueWidget,
+} from "@voyantjs/voyant-ui/components/dashboard-widgets"
+import {
+  BarChart3,
   Building2,
   CalendarCheck,
+  Clock3,
   DollarSign,
-  type LucideIcon,
   Package,
+  PlaneTakeoff,
+  Receipt,
   UserRound,
   Users,
 } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import type { DashboardSummary } from "@/api/dashboard-summary"
 import { TypographyH1, TypographyLead } from "@/components/ui/typography"
-import { getApiUrl } from "@/lib/env"
+import { api } from "@/lib/api-client"
 
 export const Route = createFileRoute("/_workspace/")({
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/crm/people")),
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/crm/organizations")),
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/bookings/")),
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/suppliers/")),
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/products/")),
-      context.queryClient.ensureQueryData(getDashboardCountQueryOptions("/v1/finance/invoices")),
-    ]),
+  loader: ({ context }) => context.queryClient.ensureQueryData(getDashboardSummaryQueryOptions()),
   component: Dashboard,
 })
 
-type ListEnvelope = { total: number }
-
-function getDashboardCountQueryOptions(path: string) {
+function getDashboardSummaryQueryOptions() {
   return queryOptions({
-    queryKey: ["dashboard-count", path],
-    queryFn: async (): Promise<ListEnvelope> => {
-      const res = await fetch(`${getApiUrl()}${path}?limit=1`, {
-        credentials: "include",
-      })
-      if (!res.ok) {
-        throw new Error(`Failed to load ${path} (${res.status})`)
-      }
-      return res.json()
-    },
+    queryKey: ["dashboard-summary"],
+    queryFn: () => api.get<DashboardSummary>("/v1/dashboard/summary"),
   })
 }
 
-function useModuleCount(path: string) {
-  return useQuery(getDashboardCountQueryOptions(path))
-}
-
-function StatCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  isLoading,
-  isError,
-}: {
-  title: string
-  value: number | undefined
-  description: string
-  icon: LucideIcon
-  isLoading: boolean
-  isError: boolean
-}) {
-  return (
-    <Card size="sm">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent className="space-y-1">
-        {isLoading ? (
-          <Skeleton className="h-8 w-16" />
-        ) : isError ? (
-          <div className="text-2xl font-semibold tracking-tight text-muted-foreground">—</div>
-        ) : (
-          <div className="text-2xl font-semibold tracking-tight">{value ?? 0}</div>
-        )}
-        <p className="text-xs text-muted-foreground">{isError ? "Failed to load" : description}</p>
-      </CardContent>
-    </Card>
-  )
+function useDashboardSummary() {
+  return useQuery(getDashboardSummaryQueryOptions())
 }
 
 function Dashboard() {
-  const people = useModuleCount("/v1/crm/people")
-  const organizations = useModuleCount("/v1/crm/organizations")
-  const bookings = useModuleCount("/v1/bookings/")
-  const suppliers = useModuleCount("/v1/suppliers/")
-  const products = useModuleCount("/v1/products/")
-  const invoices = useModuleCount("/v1/finance/invoices")
+  const summary = useDashboardSummary()
+  const revenueSeries = summary.data?.revenueByCurrency.slice(0, 2) ?? []
+  const outstandingCurrencies = summary.data?.outstandingInvoices.byCurrency.length ?? 0
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-6 md:p-8">
       <header className="space-y-1">
         <TypographyH1 className="text-2xl">Dashboard</TypographyH1>
-        <TypographyLead className="text-sm">Overview of your travel operations.</TypographyLead>
+        <TypographyLead className="text-sm">
+          Server-side aggregates for bookings, revenue, departures, and receivables.
+        </TypographyLead>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <StatCard
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <DashboardStatCard
           title="People"
-          value={people.data?.total}
+          value={summary.data?.counts.people}
           description="People in your CRM"
           icon={UserRound}
-          isLoading={people.isLoading}
-          isError={people.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
-        <StatCard
+        <DashboardStatCard
           title="Organizations"
-          value={organizations.data?.total}
+          value={summary.data?.counts.organizations}
           description="Companies in your CRM"
           icon={Users}
-          isLoading={organizations.isLoading}
-          isError={organizations.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
-        <StatCard
+        <DashboardStatCard
           title="Bookings"
-          value={bookings.data?.total}
-          description="Total bookings on file"
+          value={summary.data?.counts.bookings}
+          description="All bookings on file"
           icon={CalendarCheck}
-          isLoading={bookings.isLoading}
-          isError={bookings.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
-        <StatCard
+        <DashboardStatCard
+          title="Confirmed"
+          value={summary.data?.counts.confirmedBookings}
+          description="Bookings ready to operate"
+          icon={Clock3}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+        <DashboardStatCard
           title="Suppliers"
-          value={suppliers.data?.total}
+          value={summary.data?.counts.suppliers}
           description="Supplier accounts"
           icon={Building2}
-          isLoading={suppliers.isLoading}
-          isError={suppliers.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
-        <StatCard
+        <DashboardStatCard
           title="Products"
-          value={products.data?.total}
-          description="Itineraries and tours"
+          value={summary.data?.counts.products}
+          description="Catalog inventory"
           icon={Package}
-          isLoading={products.isLoading}
-          isError={products.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
-        <StatCard
+        <DashboardStatCard
+          title="Live Products"
+          value={summary.data?.counts.liveProducts}
+          description="Active and activated"
+          icon={BarChart3}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+        <DashboardStatCard
           title="Invoices"
-          value={invoices.data?.total}
-          description="Issued invoices"
+          value={summary.data?.counts.invoices}
+          description="Issued invoice records"
           icon={DollarSign}
-          isLoading={invoices.isLoading}
-          isError={invoices.isError}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+        <DashboardStatCard
+          title="Outstanding"
+          value={summary.data?.outstandingInvoices.count}
+          description={
+            outstandingCurrencies > 0
+              ? `Open receivables across ${outstandingCurrencies} currenc${outstandingCurrencies === 1 ? "y" : "ies"}`
+              : "No unpaid invoice balances"
+          }
+          icon={Receipt}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+        <DashboardStatCard
+          title="Departures · 30d"
+          value={summary.data?.counts.departuresNext30Days}
+          description="Confirmed trips starting soon"
+          icon={PlaneTakeoff}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <MonthlyBookingsWidget
+          points={summary.data?.monthlyBookings ?? []}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+        <BookingStatusWidget
+          rows={summary.data?.bookingsByStatus ?? []}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
+        />
+      </section>
+
+      <section
+        className={`grid gap-4 ${
+          revenueSeries.length > 1 ? "xl:grid-cols-[1fr_1fr_0.9fr]" : "xl:grid-cols-[1.4fr_0.9fr]"
+        }`}
+      >
+        {revenueSeries.length > 0 ? (
+          revenueSeries.map((series) => (
+            <RevenueWidget
+              key={series.currency}
+              series={series}
+              isLoading={summary.isLoading}
+              isError={summary.isError}
+            />
+          ))
+        ) : (
+          <RevenueWidget
+            series={undefined}
+            isLoading={summary.isLoading}
+            isError={summary.isError}
+          />
+        )}
+        <OutstandingInvoicesWidget
+          rows={summary.data?.outstandingInvoices.byCurrency ?? []}
+          isLoading={summary.isLoading}
+          isError={summary.isError}
         />
       </section>
     </div>

@@ -171,6 +171,7 @@ export function AddressDialog({
               <div className="flex flex-col gap-2">
                 <Label>Label</Label>
                 <Select
+                  items={ADDRESS_LABELS.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("label")}
                   onValueChange={(value) => form.setValue("label", value as AddressLabel)}
                 >

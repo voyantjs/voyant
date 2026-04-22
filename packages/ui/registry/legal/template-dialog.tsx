@@ -1,13 +1,20 @@
+import type { Editor } from "@tiptap/core"
 import {
   type LegalContractTemplateRecord,
+  useLegalContractTemplateAuthoring,
   useLegalContractTemplateMutation,
 } from "@voyantjs/legal-react"
+import {
+  insertPlainText,
+  insertVariableToken,
+} from "@voyantjs/voyant-ui/components/rich-text-variable-extension"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
   Button,
+  ContractTemplateAuthoringHelp,
   Dialog,
   DialogBody,
   DialogContent,
@@ -16,6 +23,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  RichTextEditor,
   Select,
   SelectContent,
   SelectItem,
@@ -35,9 +43,7 @@ const templateFormSchema = z.object({
   scope: z.enum(["customer", "supplier", "partner", "channel", "other"]),
   language: z.string().min(2).max(10).optional(),
   description: z.string().optional(),
-  bodyFormat: z.enum(["markdown", "html", "lexical_json"]),
   body: z.string().min(1, "Body is required"),
-  variableSchema: z.string().optional(),
   active: z.boolean(),
 })
 
@@ -59,15 +65,22 @@ const SCOPES = [
   { value: "other", label: "Other" },
 ] as const
 
-const BODY_FORMATS = [
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "lexical_json", label: "Lexical JSON" },
-] as const
-
 export function TemplateDialog({ open, onOpenChange, template, onSuccess }: TemplateDialogProps) {
   const isEditing = !!template
   const { create, update } = useLegalContractTemplateMutation()
+  const { variableCatalog, liquidSnippets } = useLegalContractTemplateAuthoring()
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const variableGroups = useMemo(
+    () =>
+      variableCatalog.map((group) => ({
+        ...group,
+        variables: group.variables.map((variable) => ({
+          ...variable,
+          example: String(variable.example),
+        })),
+      })),
+    [variableCatalog],
+  )
 
   const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(templateFormSchema),
@@ -77,9 +90,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
       scope: "customer",
       language: "en",
       description: "",
-      bodyFormat: "markdown",
       body: "",
-      variableSchema: "",
       active: true,
     },
   })
@@ -92,11 +103,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
         scope: template.scope as FormValues["scope"],
         language: template.language,
         description: template.description ?? "",
-        bodyFormat: template.bodyFormat as FormValues["bodyFormat"],
         body: template.body,
-        variableSchema: template.variableSchema
-          ? JSON.stringify(template.variableSchema, null, 2)
-          : "",
         active: template.active,
       })
     } else if (open) {
@@ -111,9 +118,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
       scope: values.scope,
       language: values.language || "en",
       description: values.description || undefined,
-      bodyFormat: values.bodyFormat,
       body: values.body,
-      variableSchema: values.variableSchema ? JSON.parse(values.variableSchema) : undefined,
       active: values.active,
     }
 
@@ -122,6 +127,7 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
     } else {
       await create.mutateAsync(payload)
     }
+
     onSuccess()
   }
 
@@ -137,33 +143,34 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input {...form.register("name")} placeholder="Template name" />
-                {form.formState.errors.name && (
+                {form.formState.errors.name ? (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-                )}
+                ) : null}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Slug</Label>
                 <Input {...form.register("slug")} placeholder="template-slug" />
-                {form.formState.errors.slug && (
+                {form.formState.errors.slug ? (
                   <p className="text-xs text-destructive">{form.formState.errors.slug.message}</p>
-                )}
+                ) : null}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={SCOPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("scope")}
-                  onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
+                  onValueChange={(value) => form.setValue("scope", value as FormValues["scope"])}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SCOPES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
+                    {SCOPES.map((scope) => (
+                      <SelectItem key={scope.value} value={scope.value}>
+                        {scope.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -172,24 +179,6 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
               <div className="flex flex-col gap-2">
                 <Label>Language</Label>
                 <Input {...form.register("language")} placeholder="en" maxLength={10} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Body Format</Label>
-                <Select
-                  value={form.watch("bodyFormat")}
-                  onValueChange={(v) => form.setValue("bodyFormat", v as FormValues["bodyFormat"])}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BODY_FORMATS.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
@@ -200,24 +189,36 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
 
             <div className="flex flex-col gap-2">
               <Label>Body</Label>
-              <Textarea
-                {...form.register("body")}
-                placeholder="Template content with {{variables}}..."
-                rows={8}
+              <RichTextEditor
+                value={form.watch("body")}
+                onChange={(value) =>
+                  form.setValue("body", value, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Template body with Liquid variables and conditionals..."
+                enableVariables
+                onEditorReady={setEditorInstance}
               />
-              {form.formState.errors.body && (
+              {form.formState.errors.body ? (
                 <p className="text-xs text-destructive">{form.formState.errors.body.message}</p>
-              )}
+              ) : null}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Variable Schema (JSON)</Label>
-              <Textarea
-                {...form.register("variableSchema")}
-                placeholder='{"type": "object", "properties": {...}}'
-                rows={3}
-              />
-            </div>
+            <ContractTemplateAuthoringHelp
+              variableGroups={variableGroups}
+              snippets={liquidSnippets}
+              onInsertVariable={(variable) => {
+                if (!editorInstance) return
+                insertVariableToken(editorInstance, variable.key)
+              }}
+              onInsertSnippet={(snippet) => {
+                if (!editorInstance) return
+                insertPlainText(editorInstance, snippet.code)
+              }}
+            />
 
             <div className="flex items-center gap-2">
               <Switch
@@ -232,7 +233,9 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
               Cancel
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {form.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               {isEditing ? "Save Changes" : "Create Template"}
             </Button>
           </DialogFooter>

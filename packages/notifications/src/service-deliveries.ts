@@ -13,6 +13,7 @@ import type {
 } from "./service-shared.js"
 import {
   buildWhereClause,
+  listBookingNotificationItems,
   listBookingNotificationParticipants,
   NotificationError,
   paginate,
@@ -249,8 +250,13 @@ export async function sendPaymentSessionNotification(
       null)
     : null
 
-  const participants = booking ? await listBookingNotificationParticipants(db, booking.id) : []
-  const recipient = resolveReminderRecipient(participants)
+  const [participants, items] = booking
+    ? await Promise.all([
+        listBookingNotificationParticipants(db, booking.id),
+        listBookingNotificationItems(db, booking.id),
+      ])
+    : [[], []]
+  const recipient = resolveReminderRecipient(booking ?? null, participants)
   const to = input.to ?? session.payerEmail ?? recipient?.email ?? null
 
   if (!to) {
@@ -304,13 +310,17 @@ export async function sendPaymentSessionNotification(
             dueDate: invoice.dueDate,
           }
         : null,
-      participant: recipient
+      traveler: recipient
         ? {
             firstName: recipient.firstName,
             lastName: recipient.lastName,
             email: recipient.email,
+            participantType: recipient.participantType,
+            isPrimary: recipient.isPrimary,
           }
         : null,
+      travelers: participants,
+      items,
       ...(input.data ?? {}),
     },
     targetType: "payment_session",
@@ -341,8 +351,13 @@ export async function sendInvoiceNotification(
     .from(bookings)
     .where(eq(bookings.id, invoice.bookingId))
     .limit(1)
-  const participants = booking ? await listBookingNotificationParticipants(db, booking.id) : []
-  const recipient = resolveReminderRecipient(participants)
+  const [participants, items] = booking
+    ? await Promise.all([
+        listBookingNotificationParticipants(db, booking.id),
+        listBookingNotificationItems(db, booking.id),
+      ])
+    : [[], []]
+  const recipient = resolveReminderRecipient(booking ?? null, participants)
 
   const [latestSession] = await db
     .select()
@@ -402,13 +417,17 @@ export async function sendInvoiceNotification(
             currency: latestSession.currency,
           }
         : null,
-      participant: recipient
+      traveler: recipient
         ? {
             firstName: recipient.firstName,
             lastName: recipient.lastName,
             email: recipient.email,
+            participantType: recipient.participantType,
+            isPrimary: recipient.isPrimary,
           }
         : null,
+      travelers: participants,
+      items,
       ...(input.data ?? {}),
     },
     targetType: "invoice",

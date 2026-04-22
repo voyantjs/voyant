@@ -84,12 +84,12 @@ export const bookingGroupRoutes = new Hono<Env>()
     if (!row) return c.json({ error: "Membership not found" }, 404)
     return c.json({ success: true })
   })
-  .get("/:id/passengers", async (c) => {
-    const passengers = await bookingGroupsService.listGroupBookingPassengers(
+  .get("/:id/travelers", async (c) => {
+    const travelers = await bookingGroupsService.listGroupBookingTravelers(
       c.get("db"),
       c.req.param("id"),
     )
-    return c.json({ data: passengers })
+    return c.json({ data: travelers })
   })
 
 export type BookingGroupRoutes = typeof bookingGroupRoutes

@@ -33,18 +33,22 @@ import {
   NONE_VALUE,
   nullableString,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const closeoutFormSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  slotId: z.string().optional(),
-  dateLocal: z.string().min(1, "Date is required"),
-  reason: z.string().optional(),
-})
+function getCloseoutFormSchema(messages: ReturnType<typeof useAdminMessages>) {
+  return z.object({
+    productId: z.string().min(1, messages.availability.dialogs.closeout.validationProductRequired),
+    slotId: z.string().optional(),
+    dateLocal: z.string().min(1, messages.availability.dialogs.closeout.validationDateRequired),
+    reason: z.string().optional(),
+  })
+}
 
-type CloseoutFormValues = z.input<typeof closeoutFormSchema>
-type CloseoutFormOutput = z.output<typeof closeoutFormSchema>
+type CloseoutFormSchema = ReturnType<typeof getCloseoutFormSchema>
+type CloseoutFormValues = z.input<CloseoutFormSchema>
+type CloseoutFormOutput = z.output<CloseoutFormSchema>
 
 export function AvailabilityCloseoutDialog({
   open,
@@ -61,6 +65,9 @@ export function AvailabilityCloseoutDialog({
   slots: AvailabilitySlotRow[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const closeoutMessages = messages.availability.dialogs.closeout
+  const closeoutFormSchema = getCloseoutFormSchema(messages)
   const { user } = useUser()
   const form = useForm<CloseoutFormValues, unknown, CloseoutFormOutput>({
     resolver: zodResolver(closeoutFormSchema),
@@ -110,18 +117,21 @@ export function AvailabilityCloseoutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Closeout" : "New Closeout"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? closeoutMessages.editTitle : closeoutMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{closeoutMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={closeoutMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -133,16 +143,16 @@ export function AvailabilityCloseoutDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Slot</Label>
+              <Label>{closeoutMessages.slotLabel}</Label>
               <Select
                 value={form.watch("slotId") ?? NONE_VALUE}
                 onValueChange={(value) => form.setValue("slotId", value ?? NONE_VALUE)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Optional slot" />
+                  <SelectValue placeholder={closeoutMessages.optionalSlotPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_VALUE}>Product-level closeout</SelectItem>
+                  <SelectItem value={NONE_VALUE}>{closeoutMessages.productLevelOption}</SelectItem>
                   {filteredSlots.map((slot) => (
                     <SelectItem key={slot.id} value={slot.id}>
                       {slot.dateLocal} · {formatDateTime(slot.startsAt)}
@@ -152,7 +162,7 @@ export function AvailabilityCloseoutDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Date</Label>
+              <Label>{closeoutMessages.dateLabel}</Label>
               <DatePicker
                 value={form.watch("dateLocal") || null}
                 onChange={(nextValue) =>
@@ -161,25 +171,25 @@ export function AvailabilityCloseoutDialog({
                     shouldValidate: true,
                   })
                 }
-                placeholder="Pick date"
+                placeholder={closeoutMessages.datePlaceholder}
                 className="w-full"
               />
             </div>
             <div className="grid gap-2">
-              <Label>Reason</Label>
+              <Label>{closeoutMessages.reasonLabel}</Label>
               <Textarea
                 {...form.register("reason")}
-                placeholder="Weather, charter hold, operational blackout..."
+                placeholder={closeoutMessages.reasonPlaceholder}
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {closeoutMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Closeout" : "Create Closeout"}
+              {isEditing ? closeoutMessages.save : closeoutMessages.create}
             </Button>
           </DialogFooter>
         </form>
@@ -188,16 +198,21 @@ export function AvailabilityCloseoutDialog({
   )
 }
 
-const pickupPointFormSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  locationText: z.string().optional(),
-  active: z.boolean(),
-})
+function getPickupPointFormSchema(messages: ReturnType<typeof useAdminMessages>) {
+  return z.object({
+    productId: z
+      .string()
+      .min(1, messages.availability.dialogs.pickupPoint.validationProductRequired),
+    name: z.string().min(1, messages.availability.dialogs.pickupPoint.validationNameRequired),
+    description: z.string().optional(),
+    locationText: z.string().optional(),
+    active: z.boolean(),
+  })
+}
 
-type PickupPointFormValues = z.input<typeof pickupPointFormSchema>
-type PickupPointFormOutput = z.output<typeof pickupPointFormSchema>
+type PickupPointFormSchema = ReturnType<typeof getPickupPointFormSchema>
+type PickupPointFormValues = z.input<PickupPointFormSchema>
+type PickupPointFormOutput = z.output<PickupPointFormSchema>
 
 export function AvailabilityPickupPointDialog({
   open,
@@ -212,6 +227,9 @@ export function AvailabilityPickupPointDialog({
   products: ProductOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const pickupPointMessages = messages.availability.dialogs.pickupPoint
+  const pickupPointFormSchema = getPickupPointFormSchema(messages)
   const form = useForm<PickupPointFormValues, unknown, PickupPointFormOutput>({
     resolver: zodResolver(pickupPointFormSchema),
     defaultValues: {
@@ -260,18 +278,21 @@ export function AvailabilityPickupPointDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Pickup Point" : "New Pickup Point"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? pickupPointMessages.editTitle : pickupPointMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{pickupPointMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={pickupPointMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -283,25 +304,28 @@ export function AvailabilityPickupPointDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Name</Label>
-              <Input {...form.register("name")} placeholder="Port Gate A" />
+              <Label>{pickupPointMessages.nameLabel}</Label>
+              <Input {...form.register("name")} placeholder={pickupPointMessages.namePlaceholder} />
             </div>
             <div className="grid gap-2">
-              <Label>Location Text</Label>
-              <Input {...form.register("locationText")} placeholder="Main harbor pickup lane" />
+              <Label>{pickupPointMessages.locationTextLabel}</Label>
+              <Input
+                {...form.register("locationText")}
+                placeholder={pickupPointMessages.locationTextPlaceholder}
+              />
             </div>
             <div className="grid gap-2">
-              <Label>Description</Label>
+              <Label>{pickupPointMessages.descriptionLabel}</Label>
               <Textarea
                 {...form.register("description")}
-                placeholder="Instructions, landmark notes, timing..."
+                placeholder={pickupPointMessages.descriptionPlaceholder}
               />
             </div>
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
+                <p className="text-sm font-medium">{pickupPointMessages.activeTitle}</p>
                 <p className="text-xs text-muted-foreground">
-                  Allow this pickup point to be used in slot planning.
+                  {pickupPointMessages.activeDescription}
                 </p>
               </div>
               <Switch
@@ -312,11 +336,11 @@ export function AvailabilityPickupPointDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {pickupPointMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Pickup Point" : "Create Pickup Point"}
+              {isEditing ? pickupPointMessages.save : pickupPointMessages.create}
             </Button>
           </DialogFooter>
         </form>

@@ -1,7 +1,7 @@
 "use client"
 
 import type { PersonRecord } from "@voyantjs/crm-react"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail, Phone } from "lucide-react"
 import type * as React from "react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -20,7 +20,6 @@ export function PersonCard({ person, onEdit, className, ...props }: PersonCardPr
     .filter(Boolean)
     .join("")
     .toUpperCase()
-  const location = [person.city, person.country].filter(Boolean).join(", ")
 
   return (
     <Card
@@ -56,12 +55,6 @@ export function PersonCard({ person, onEdit, className, ...props }: PersonCardPr
           <div className="flex items-center gap-2 text-muted-foreground">
             <Phone className="size-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{person.phone}</span>
-          </div>
-        ) : null}
-        {location ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{location}</span>
           </div>
         ) : null}
       </CardContent>

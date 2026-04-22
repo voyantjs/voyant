@@ -40,10 +40,10 @@ describe("renderTemplate — mustache (markdown/html)", () => {
   })
 
   it("resolves array index accessors", () => {
-    const body = "First: {{passengers[0].name}}, Second: {{passengers[1].name}}"
+    const body = "First: {{travelers[0].name}}, Second: {{travelers[1].name}}"
     expect(
       renderTemplate(body, "markdown", {
-        passengers: [{ name: "Alice" }, { name: "Bob" }],
+        travelers: [{ name: "Alice" }, { name: "Bob" }],
       }),
     ).toBe("First: Alice, Second: Bob")
   })
@@ -107,14 +107,14 @@ describe("renderTemplate — mustache (markdown/html)", () => {
 
   it("supports liquid loops and conditionals in html/markdown templates", () => {
     const body =
-      "{% if passengers.size > 0 %}{% for passenger in passengers %}{{ passenger.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No passengers{% endif %}"
+      "{% if travelers.size > 0 %}{% for traveler in travelers %}{{ traveler.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No travelers{% endif %}"
 
     expect(
       renderTemplate(body, "html", {
-        passengers: [{ name: "Alice" }, { name: "Bob" }],
+        travelers: [{ name: "Alice" }, { name: "Bob" }],
       }),
     ).toBe("Alice, Bob")
-    expect(renderTemplate(body, "markdown", { passengers: [] })).toBe("No passengers")
+    expect(renderTemplate(body, "markdown", { travelers: [] })).toBe("No travelers")
   })
 })
 
@@ -196,17 +196,17 @@ describe("renderTemplate — lexical_json", () => {
         children: [
           {
             type: "paragraph",
-            children: [{ type: "text", text: "Passengers: {{ passengers | json }}" }],
+            children: [{ type: "text", text: "Travelers: {{ travelers | json }}" }],
           },
         ],
       },
     })
 
     const output = renderTemplate(lexical, "lexical_json", {
-      passengers: [{ name: "Alice" }],
+      travelers: [{ name: "Alice" }],
     })
     const parsed = JSON.parse(output)
-    expect(parsed.root.children[0].children[0].text).toBe('Passengers: [{"name":"Alice"}]')
+    expect(parsed.root.children[0].children[0].text).toBe('Travelers: [{"name":"Alice"}]')
   })
 })
 

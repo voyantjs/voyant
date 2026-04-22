@@ -15,7 +15,7 @@ import {
   customerPortalContactExistsResponseSchema,
   customerPortalPhoneContactExistsResponseSchema,
   customerPortalProfileResponseSchema,
-  type ImportCustomerPortalBookingParticipantsInput,
+  type ImportCustomerPortalBookingTravelersInput,
   successEnvelope,
   type UpdateCustomerPortalCompanionInput,
   type UpdateCustomerPortalProfileInput,
@@ -101,12 +101,12 @@ export function createCustomerPortalCompanion(
   )
 }
 
-export function importCustomerPortalBookingParticipants(
+export function importCustomerPortalBookingTravelers(
   client: FetchWithValidationOptions,
-  input: ImportCustomerPortalBookingParticipantsInput = {},
+  input: ImportCustomerPortalBookingTravelersInput = {},
 ) {
   return fetchWithValidation(
-    "/v1/public/customer-portal/companions/import-booking-participants",
+    "/v1/public/customer-portal/companions/import-booking-travelers",
     customerPortalCompanionImportResponseSchema,
     client,
     {
@@ -115,6 +115,8 @@ export function importCustomerPortalBookingParticipants(
     },
   )
 }
+
+export const importCustomerPortalBookingParticipants = importCustomerPortalBookingTravelers
 
 export function updateCustomerPortalCompanion(
   client: FetchWithValidationOptions,

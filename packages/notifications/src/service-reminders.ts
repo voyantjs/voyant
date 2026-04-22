@@ -1,4 +1,4 @@
-import { bookingParticipants, bookings } from "@voyantjs/bookings/schema"
+import { bookings, bookingTravelers } from "@voyantjs/bookings/schema"
 import { bookingPaymentSchedules, invoices } from "@voyantjs/finance"
 import { and, desc, eq, gt, or } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
@@ -16,6 +16,7 @@ import type {
 import {
   addUtcDays,
   buildReminderDedupeKey,
+  listBookingNotificationItems,
   resolveReminderRecipient,
   startOfUtcDay,
   toDateString,
@@ -235,26 +236,28 @@ async function queueBookingPaymentScheduleReminder(
     return markReminderRunSkipped(db, reminderRun.id, now, "Booking not found for payment schedule")
   }
 
-  const participants = await db
-    .select({
-      id: bookingParticipants.id,
-      firstName: bookingParticipants.firstName,
-      lastName: bookingParticipants.lastName,
-      email: bookingParticipants.email,
-      participantType: bookingParticipants.participantType,
-      isPrimary: bookingParticipants.isPrimary,
-    })
-    .from(bookingParticipants)
-    .where(eq(bookingParticipants.bookingId, booking.id))
-    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+  const [participants] = await Promise.all([
+    db
+      .select({
+        id: bookingTravelers.id,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        participantType: bookingTravelers.participantType,
+        isPrimary: bookingTravelers.isPrimary,
+      })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
+  ])
 
-  const recipient = resolveReminderRecipient(participants)
+  const recipient = resolveReminderRecipient(booking, participants)
   if (!recipient?.email) {
     return markReminderRunSkipped(
       db,
       reminderRun.id,
       now,
-      "No participant email available for booking payment reminder",
+      "No traveler email available for booking payment reminder",
     )
   }
 
@@ -333,26 +336,28 @@ async function queueInvoiceReminder(
     return markReminderRunSkipped(db, reminderRun.id, now, "Booking not found for invoice reminder")
   }
 
-  const participants = await db
-    .select({
-      id: bookingParticipants.id,
-      firstName: bookingParticipants.firstName,
-      lastName: bookingParticipants.lastName,
-      email: bookingParticipants.email,
-      participantType: bookingParticipants.participantType,
-      isPrimary: bookingParticipants.isPrimary,
-    })
-    .from(bookingParticipants)
-    .where(eq(bookingParticipants.bookingId, booking.id))
-    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+  const [participants] = await Promise.all([
+    db
+      .select({
+        id: bookingTravelers.id,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        participantType: bookingTravelers.participantType,
+        isPrimary: bookingTravelers.isPrimary,
+      })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
+  ])
 
-  const recipient = resolveReminderRecipient(participants)
+  const recipient = resolveReminderRecipient(booking, participants)
   if (!recipient?.email) {
     return markReminderRunSkipped(
       db,
       reminderRun.id,
       now,
-      "No participant email available for invoice reminder",
+      "No traveler email available for invoice reminder",
     )
   }
 
@@ -415,20 +420,23 @@ async function sendBookingPaymentScheduleReminder(
     return run ?? null
   }
 
-  const participants = await db
-    .select({
-      id: bookingParticipants.id,
-      firstName: bookingParticipants.firstName,
-      lastName: bookingParticipants.lastName,
-      email: bookingParticipants.email,
-      participantType: bookingParticipants.participantType,
-      isPrimary: bookingParticipants.isPrimary,
-    })
-    .from(bookingParticipants)
-    .where(eq(bookingParticipants.bookingId, booking.id))
-    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+  const [participants, items] = await Promise.all([
+    db
+      .select({
+        id: bookingTravelers.id,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        participantType: bookingTravelers.participantType,
+        isPrimary: bookingTravelers.isPrimary,
+      })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
+    listBookingNotificationItems(db, booking.id),
+  ])
 
-  const recipient = resolveReminderRecipient(participants)
+  const recipient = resolveReminderRecipient(booking, participants)
   const [processingRun] = await db
     .insert(notificationReminderRuns)
     .values({
@@ -464,7 +472,7 @@ async function sendBookingPaymentScheduleReminder(
       db,
       processingRun.id,
       now,
-      "No participant email available for booking payment reminder",
+      "No traveler email available for booking payment reminder",
     )
   }
 
@@ -483,11 +491,14 @@ async function sendBookingPaymentScheduleReminder(
         currency: schedule.currency,
         scheduleType: schedule.scheduleType,
         reminderOffsetDays: rule.relativeDaysFromDueDate,
-        participant: {
+        traveler: {
           firstName: recipient.firstName,
           lastName: recipient.lastName,
           email: recipient.email,
+          participantType: recipient.participantType,
+          isPrimary: recipient.isPrimary,
         },
+        travelers: participants,
         booking: {
           id: booking.id,
           bookingNumber: booking.bookingNumber,
@@ -504,6 +515,7 @@ async function sendBookingPaymentScheduleReminder(
           scheduleType: schedule.scheduleType,
           status: schedule.status,
         },
+        items,
       },
       targetType: "booking_payment_schedule",
       targetId: schedule.id,
@@ -578,20 +590,22 @@ async function sendInvoiceReminder(
     return run ?? null
   }
 
-  const participants = await db
-    .select({
-      id: bookingParticipants.id,
-      firstName: bookingParticipants.firstName,
-      lastName: bookingParticipants.lastName,
-      email: bookingParticipants.email,
-      participantType: bookingParticipants.participantType,
-      isPrimary: bookingParticipants.isPrimary,
-    })
-    .from(bookingParticipants)
-    .where(eq(bookingParticipants.bookingId, booking.id))
-    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+  const [participants] = await Promise.all([
+    db
+      .select({
+        id: bookingTravelers.id,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        participantType: bookingTravelers.participantType,
+        isPrimary: bookingTravelers.isPrimary,
+      })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
+  ])
 
-  const recipient = resolveReminderRecipient(participants)
+  const recipient = resolveReminderRecipient(booking, participants)
   const [processingRun] = await db
     .insert(notificationReminderRuns)
     .values({
@@ -629,7 +643,7 @@ async function sendInvoiceReminder(
       db,
       processingRun.id,
       now,
-      "No participant email available for invoice reminder",
+      "No traveler email available for invoice reminder",
     )
   }
 
@@ -690,30 +704,33 @@ async function sendQueuedBookingPaymentScheduleReminder(
     return markReminderRunSkipped(db, run.id, now, "Booking not found for payment schedule")
   }
 
-  const participants = await db
-    .select({
-      id: bookingParticipants.id,
-      firstName: bookingParticipants.firstName,
-      lastName: bookingParticipants.lastName,
-      email: bookingParticipants.email,
-      participantType: bookingParticipants.participantType,
-      isPrimary: bookingParticipants.isPrimary,
-    })
-    .from(bookingParticipants)
-    .where(eq(bookingParticipants.bookingId, booking.id))
-    .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt)
+  const [participants, items] = await Promise.all([
+    db
+      .select({
+        id: bookingTravelers.id,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        participantType: bookingTravelers.participantType,
+        isPrimary: bookingTravelers.isPrimary,
+      })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
+    listBookingNotificationItems(db, booking.id),
+  ])
 
-  const fallbackRecipient = resolveReminderRecipient(participants)
-  const participant =
+  const fallbackRecipient = resolveReminderRecipient(booking, participants)
+  const traveler =
     participants.find((entry) => entry.email === run.recipient) ?? fallbackRecipient ?? null
-  const recipientEmail = run.recipient ?? participant?.email ?? null
+  const recipientEmail = run.recipient ?? traveler?.email ?? null
 
   if (!recipientEmail) {
     return markReminderRunSkipped(
       db,
       run.id,
       now,
-      "No participant email available for booking payment reminder",
+      "No traveler email available for booking payment reminder",
     )
   }
 
@@ -732,13 +749,16 @@ async function sendQueuedBookingPaymentScheduleReminder(
         currency: schedule.currency,
         scheduleType: schedule.scheduleType,
         reminderOffsetDays: rule.relativeDaysFromDueDate,
-        participant: participant
+        traveler: traveler
           ? {
-              firstName: participant.firstName,
-              lastName: participant.lastName,
+              firstName: traveler.firstName,
+              lastName: traveler.lastName,
               email: recipientEmail,
+              participantType: traveler.participantType,
+              isPrimary: traveler.isPrimary,
             }
           : null,
+        travelers: participants,
         booking: {
           id: booking.id,
           bookingNumber: booking.bookingNumber,
@@ -755,6 +775,7 @@ async function sendQueuedBookingPaymentScheduleReminder(
           scheduleType: schedule.scheduleType,
           status: schedule.status,
         },
+        items,
       },
       targetType: "booking_payment_schedule",
       targetId: schedule.id,

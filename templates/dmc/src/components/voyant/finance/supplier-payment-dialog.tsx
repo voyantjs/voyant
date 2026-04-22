@@ -1,6 +1,6 @@
 import { useSupplierPaymentMutation } from "@voyantjs/finance-react"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
@@ -23,22 +23,32 @@ import {
 } from "@/components/ui"
 import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DatePicker } from "@/components/ui/date-picker"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const supplierPaymentFormSchema = z.object({
-  bookingId: z.string().min(1, "Booking ID is required"),
-  supplierId: z.string().optional().nullable(),
-  amountCents: z.coerce.number().int().min(1, "Amount must be at least 1"),
-  currency: z.string().min(3).max(3),
-  paymentMethod: z.enum(["bank_transfer", "credit_card", "cash", "cheque", "other"]),
-  status: z.enum(["pending", "completed", "failed", "refunded"]),
-  referenceNumber: z.string().optional().nullable(),
-  paymentDate: z.string().min(1, "Payment date is required"),
-  notes: z.string().optional().nullable(),
-})
+function getSupplierPaymentFormSchema(messages: AdminMessages) {
+  return z.object({
+    bookingId: z
+      .string()
+      .min(1, messages.finance.supplierPaymentDialog.validationBookingIdRequired),
+    supplierId: z.string().optional().nullable(),
+    amountCents: z.coerce
+      .number()
+      .int()
+      .min(1, messages.finance.supplierPaymentDialog.validationAmountMin),
+    currency: z.string().min(3).max(3),
+    paymentMethod: z.enum(["bank_transfer", "credit_card", "cash", "cheque", "other"]),
+    status: z.enum(["pending", "completed", "failed", "refunded"]),
+    referenceNumber: z.string().optional().nullable(),
+    paymentDate: z
+      .string()
+      .min(1, messages.finance.supplierPaymentDialog.validationPaymentDateRequired),
+    notes: z.string().optional().nullable(),
+  })
+}
 
-type SupplierPaymentFormValues = z.input<typeof supplierPaymentFormSchema>
-type SupplierPaymentFormOutput = z.output<typeof supplierPaymentFormSchema>
+type SupplierPaymentFormValues = z.input<ReturnType<typeof getSupplierPaymentFormSchema>>
+type SupplierPaymentFormOutput = z.output<ReturnType<typeof getSupplierPaymentFormSchema>>
 
 export interface SupplierPaymentDialogProps {
   open: boolean
@@ -46,27 +56,38 @@ export interface SupplierPaymentDialogProps {
   onSuccess?: () => void
 }
 
-const PAYMENT_METHODS = [
-  { value: "bank_transfer", label: "Bank Transfer" },
-  { value: "credit_card", label: "Credit Card" },
-  { value: "cash", label: "Cash" },
-  { value: "cheque", label: "Cheque" },
-  { value: "other", label: "Other" },
-] as const
-
-const PAYMENT_STATUSES = [
-  { value: "pending", label: "Pending" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "refunded", label: "Refunded" },
-] as const
-
 export function SupplierPaymentDialog({
   open,
   onOpenChange,
   onSuccess,
 }: SupplierPaymentDialogProps) {
+  const messages = useAdminMessages()
   const { create } = useSupplierPaymentMutation()
+  const supplierPaymentFormSchema = useMemo(
+    () => getSupplierPaymentFormSchema(messages),
+    [messages],
+  )
+  const paymentMethods = useMemo(
+    () =>
+      [
+        { value: "bank_transfer", label: messages.finance.paymentMethodBankTransfer },
+        { value: "credit_card", label: messages.finance.paymentMethodCreditCard },
+        { value: "cash", label: messages.finance.paymentMethodCash },
+        { value: "cheque", label: messages.finance.paymentMethodCheque },
+        { value: "other", label: messages.finance.paymentMethodOther },
+      ] as const,
+    [messages],
+  )
+  const paymentStatuses = useMemo(
+    () =>
+      [
+        { value: "pending", label: messages.finance.paymentStatusPending },
+        { value: "completed", label: messages.finance.paymentStatusCompleted },
+        { value: "failed", label: messages.finance.paymentStatusFailed },
+        { value: "refunded", label: messages.finance.paymentStatusRefunded },
+      ] as const,
+    [messages],
+  )
 
   const form = useForm<SupplierPaymentFormValues, unknown, SupplierPaymentFormOutput>({
     resolver: zodResolver(supplierPaymentFormSchema),
@@ -121,14 +142,17 @@ export function SupplierPaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Record Supplier Payment</DialogTitle>
+          <DialogTitle>{messages.finance.supplierPaymentDialog.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Booking ID</Label>
-                <Input {...form.register("bookingId")} placeholder="book_..." />
+                <Label>{messages.finance.supplierPaymentDialog.bookingIdLabel}</Label>
+                <Input
+                  {...form.register("bookingId")}
+                  placeholder={messages.finance.supplierPaymentDialog.bookingIdPlaceholder}
+                />
                 {form.formState.errors.bookingId ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.bookingId.message}
@@ -136,14 +160,17 @@ export function SupplierPaymentDialog({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Supplier ID (optional)</Label>
-                <Input {...form.register("supplierId")} placeholder="supp_..." />
+                <Label>{messages.finance.supplierPaymentDialog.supplierIdLabel}</Label>
+                <Input
+                  {...form.register("supplierId")}
+                  placeholder={messages.finance.supplierPaymentDialog.supplierIdPlaceholder}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Amount (cents)</Label>
+                <Label>{messages.finance.supplierPaymentDialog.amountLabel}</Label>
                 <Input {...form.register("amountCents")} type="number" min="1" />
                 {form.formState.errors.amountCents ? (
                   <p className="text-xs text-destructive">
@@ -152,7 +179,7 @@ export function SupplierPaymentDialog({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{messages.finance.supplierPaymentDialog.currencyLabel}</Label>
                 <CurrencyCombobox
                   value={form.watch("currency") || null}
                   onChange={(next) =>
@@ -164,7 +191,7 @@ export function SupplierPaymentDialog({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Payment Date</Label>
+                <Label>{messages.finance.supplierPaymentDialog.paymentDateLabel}</Label>
                 <DatePicker
                   value={form.watch("paymentDate") || null}
                   onChange={(next) =>
@@ -173,7 +200,7 @@ export function SupplierPaymentDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select payment date"
+                  placeholder={messages.finance.supplierPaymentDialog.paymentDatePlaceholder}
                   className="w-full"
                 />
                 {form.formState.errors.paymentDate ? (
@@ -186,8 +213,9 @@ export function SupplierPaymentDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Payment Method</Label>
+                <Label>{messages.finance.supplierPaymentDialog.paymentMethodLabel}</Label>
                 <Select
+                  items={paymentMethods}
                   value={form.watch("paymentMethod")}
                   onValueChange={(value) =>
                     form.setValue(
@@ -200,7 +228,7 @@ export function SupplierPaymentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
+                    {paymentMethods.map((method) => (
                       <SelectItem key={method.value} value={method.value}>
                         {method.label}
                       </SelectItem>
@@ -209,8 +237,9 @@ export function SupplierPaymentDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{messages.finance.supplierPaymentDialog.statusLabel}</Label>
                 <Select
+                  items={paymentStatuses}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as SupplierPaymentFormValues["status"])
@@ -220,7 +249,7 @@ export function SupplierPaymentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_STATUSES.map((status) => (
+                    {paymentStatuses.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
                       </SelectItem>
@@ -229,23 +258,29 @@ export function SupplierPaymentDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Reference Number</Label>
-                <Input {...form.register("referenceNumber")} placeholder="TXN-12345" />
+                <Label>{messages.finance.supplierPaymentDialog.referenceNumberLabel}</Label>
+                <Input
+                  {...form.register("referenceNumber")}
+                  placeholder={messages.finance.supplierPaymentDialog.referenceNumberPlaceholder}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Payment notes..." />
+              <Label>{messages.finance.supplierPaymentDialog.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={messages.finance.supplierPaymentDialog.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.finance.supplierPaymentDialog.cancel}
             </Button>
             <Button type="submit" disabled={create.isPending}>
               {create.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Record Payment
+              {messages.finance.supplierPaymentDialog.submit}
             </Button>
           </DialogFooter>
         </form>

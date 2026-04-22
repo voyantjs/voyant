@@ -2,30 +2,45 @@ import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import {
+  orderContactAssignments,
   orderItemParticipants,
   orderItems,
   orderParticipants,
+  orderStaffAssignments,
   orders,
   orderTerms,
 } from "./schema.js"
 import type {
+  CreateOrderContactAssignmentInput,
   CreateOrderInput,
   CreateOrderItemInput,
-  CreateOrderItemParticipantInput,
-  CreateOrderParticipantInput,
+  CreateOrderItemTravelerInput,
+  CreateOrderStaffAssignmentInput,
   CreateOrderTermInput,
+  CreateOrderTravelerInput,
+  OrderContactAssignmentListQuery,
   OrderItemListQuery,
-  OrderItemParticipantListQuery,
+  OrderItemTravelerListQuery,
   OrderListQuery,
-  OrderParticipantListQuery,
+  OrderStaffAssignmentListQuery,
   OrderTermListQuery,
+  OrderTravelerListQuery,
+  UpdateOrderContactAssignmentInput,
   UpdateOrderInput,
   UpdateOrderItemInput,
-  UpdateOrderItemParticipantInput,
-  UpdateOrderParticipantInput,
+  UpdateOrderItemTravelerInput,
+  UpdateOrderStaffAssignmentInput,
   UpdateOrderTermInput,
+  UpdateOrderTravelerInput,
 } from "./service-shared.js"
-import { normalizeTimestamp, paginate, toOrderParticipantResponse } from "./service-shared.js"
+import {
+  normalizeTimestamp,
+  paginate,
+  toOrderContactAssignmentResponse,
+  toOrderItemTravelerResponse,
+  toOrderStaffAssignmentResponse,
+  toOrderTravelerResponse,
+} from "./service-shared.js"
 
 export async function listOrders(db: PostgresJsDatabase, query: OrderListQuery) {
   const conditions = []
@@ -97,10 +112,7 @@ export async function deleteOrder(db: PostgresJsDatabase, id: string) {
   return row ?? null
 }
 
-export async function listOrderParticipants(
-  db: PostgresJsDatabase,
-  query: OrderParticipantListQuery,
-) {
+export async function listOrderTravelers(db: PostgresJsDatabase, query: OrderTravelerListQuery) {
   const conditions = []
   if (query.orderId) conditions.push(eq(orderParticipants.orderId, query.orderId))
   if (query.personId) conditions.push(eq(orderParticipants.personId, query.personId))
@@ -112,7 +124,7 @@ export async function listOrderParticipants(
     .limit(query.limit)
     .offset(query.offset)
     .orderBy(asc(orderParticipants.createdAt))
-    .then((items) => items.map(toOrderParticipantResponse))
+    .then((items) => items.map(toOrderTravelerResponse))
   return paginate(
     rows,
     db.select({ count: sql<number>`count(*)::int` }).from(orderParticipants).where(where),
@@ -120,31 +132,31 @@ export async function listOrderParticipants(
     query.offset,
   )
 }
+export const listOrderParticipants = listOrderTravelers
 
-export async function getOrderParticipantById(db: PostgresJsDatabase, id: string) {
+export async function getOrderTravelerById(db: PostgresJsDatabase, id: string) {
   const [row] = await db
     .select()
     .from(orderParticipants)
     .where(eq(orderParticipants.id, id))
     .limit(1)
-  return row ? toOrderParticipantResponse(row) : null
+  return row ? toOrderTravelerResponse(row) : null
 }
+export const getOrderParticipantById = getOrderTravelerById
 
-export async function createOrderParticipant(
-  db: PostgresJsDatabase,
-  data: CreateOrderParticipantInput,
-) {
+export async function createOrderTraveler(db: PostgresJsDatabase, data: CreateOrderTravelerInput) {
   const { dateOfBirth, nationality, ...rest } = data
   void dateOfBirth
   void nationality
   const [row] = await db.insert(orderParticipants).values(rest).returning()
-  return row ? toOrderParticipantResponse(row) : null
+  return row ? toOrderTravelerResponse(row) : null
 }
+export const createOrderParticipant = createOrderTraveler
 
-export async function updateOrderParticipant(
+export async function updateOrderTraveler(
   db: PostgresJsDatabase,
   id: string,
-  data: UpdateOrderParticipantInput,
+  data: UpdateOrderTravelerInput,
 ) {
   const { dateOfBirth, nationality, ...rest } = data
   void dateOfBirth
@@ -154,14 +166,142 @@ export async function updateOrderParticipant(
     .set({ ...rest, updatedAt: new Date() })
     .where(eq(orderParticipants.id, id))
     .returning()
-  return row ? toOrderParticipantResponse(row) : null
+  return row ? toOrderTravelerResponse(row) : null
 }
+export const updateOrderParticipant = updateOrderTraveler
 
-export async function deleteOrderParticipant(db: PostgresJsDatabase, id: string) {
+export async function deleteOrderTraveler(db: PostgresJsDatabase, id: string) {
   const [row] = await db
     .delete(orderParticipants)
     .where(eq(orderParticipants.id, id))
     .returning({ id: orderParticipants.id })
+  return row ?? null
+}
+export const deleteOrderParticipant = deleteOrderTraveler
+
+export async function listOrderContactAssignments(
+  db: PostgresJsDatabase,
+  query: OrderContactAssignmentListQuery,
+) {
+  const conditions = []
+  if (query.orderId) conditions.push(eq(orderContactAssignments.orderId, query.orderId))
+  if (query.orderItemId) conditions.push(eq(orderContactAssignments.orderItemId, query.orderItemId))
+  if (query.personId) conditions.push(eq(orderContactAssignments.personId, query.personId))
+  if (query.role) conditions.push(eq(orderContactAssignments.role, query.role))
+  const where = conditions.length ? and(...conditions) : undefined
+  return paginate(
+    db
+      .select()
+      .from(orderContactAssignments)
+      .where(where)
+      .limit(query.limit)
+      .offset(query.offset)
+      .orderBy(asc(orderContactAssignments.createdAt))
+      .then((items) => items.map(toOrderContactAssignmentResponse)),
+    db.select({ count: sql<number>`count(*)::int` }).from(orderContactAssignments).where(where),
+    query.limit,
+    query.offset,
+  )
+}
+
+export async function getOrderContactAssignmentById(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .select()
+    .from(orderContactAssignments)
+    .where(eq(orderContactAssignments.id, id))
+    .limit(1)
+  return row ? toOrderContactAssignmentResponse(row) : null
+}
+
+export async function createOrderContactAssignment(
+  db: PostgresJsDatabase,
+  data: CreateOrderContactAssignmentInput,
+) {
+  const [row] = await db.insert(orderContactAssignments).values(data).returning()
+  return row ? toOrderContactAssignmentResponse(row) : null
+}
+
+export async function updateOrderContactAssignment(
+  db: PostgresJsDatabase,
+  id: string,
+  data: UpdateOrderContactAssignmentInput,
+) {
+  const [row] = await db
+    .update(orderContactAssignments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(orderContactAssignments.id, id))
+    .returning()
+  return row ? toOrderContactAssignmentResponse(row) : null
+}
+
+export async function deleteOrderContactAssignment(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .delete(orderContactAssignments)
+    .where(eq(orderContactAssignments.id, id))
+    .returning({ id: orderContactAssignments.id })
+  return row ?? null
+}
+
+export async function listOrderStaffAssignments(
+  db: PostgresJsDatabase,
+  query: OrderStaffAssignmentListQuery,
+) {
+  const conditions = []
+  if (query.orderId) conditions.push(eq(orderStaffAssignments.orderId, query.orderId))
+  if (query.orderItemId) conditions.push(eq(orderStaffAssignments.orderItemId, query.orderItemId))
+  if (query.personId) conditions.push(eq(orderStaffAssignments.personId, query.personId))
+  if (query.role) conditions.push(eq(orderStaffAssignments.role, query.role))
+  const where = conditions.length ? and(...conditions) : undefined
+  return paginate(
+    db
+      .select()
+      .from(orderStaffAssignments)
+      .where(where)
+      .limit(query.limit)
+      .offset(query.offset)
+      .orderBy(asc(orderStaffAssignments.createdAt))
+      .then((items) => items.map(toOrderStaffAssignmentResponse)),
+    db.select({ count: sql<number>`count(*)::int` }).from(orderStaffAssignments).where(where),
+    query.limit,
+    query.offset,
+  )
+}
+
+export async function getOrderStaffAssignmentById(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .select()
+    .from(orderStaffAssignments)
+    .where(eq(orderStaffAssignments.id, id))
+    .limit(1)
+  return row ? toOrderStaffAssignmentResponse(row) : null
+}
+
+export async function createOrderStaffAssignment(
+  db: PostgresJsDatabase,
+  data: CreateOrderStaffAssignmentInput,
+) {
+  const [row] = await db.insert(orderStaffAssignments).values(data).returning()
+  return row ? toOrderStaffAssignmentResponse(row) : null
+}
+
+export async function updateOrderStaffAssignment(
+  db: PostgresJsDatabase,
+  id: string,
+  data: UpdateOrderStaffAssignmentInput,
+) {
+  const [row] = await db
+    .update(orderStaffAssignments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(orderStaffAssignments.id, id))
+    .returning()
+  return row ? toOrderStaffAssignmentResponse(row) : null
+}
+
+export async function deleteOrderStaffAssignment(db: PostgresJsDatabase, id: string) {
+  const [row] = await db
+    .delete(orderStaffAssignments)
+    .where(eq(orderStaffAssignments.id, id))
+    .returning({ id: orderStaffAssignments.id })
   return row ?? null
 }
 
@@ -234,14 +374,13 @@ export async function deleteOrderItem(db: PostgresJsDatabase, id: string) {
   return row ?? null
 }
 
-export async function listOrderItemParticipants(
+export async function listOrderItemTravelers(
   db: PostgresJsDatabase,
-  query: OrderItemParticipantListQuery,
+  query: OrderItemTravelerListQuery,
 ) {
   const conditions = []
   if (query.orderItemId) conditions.push(eq(orderItemParticipants.orderItemId, query.orderItemId))
-  if (query.participantId)
-    conditions.push(eq(orderItemParticipants.participantId, query.participantId))
+  if (query.travelerId) conditions.push(eq(orderItemParticipants.travelerId, query.travelerId))
   const where = conditions.length ? and(...conditions) : undefined
   return paginate(
     db
@@ -250,50 +389,56 @@ export async function listOrderItemParticipants(
       .where(where)
       .limit(query.limit)
       .offset(query.offset)
-      .orderBy(asc(orderItemParticipants.createdAt)),
+      .orderBy(asc(orderItemParticipants.createdAt))
+      .then((items) => items.map(toOrderItemTravelerResponse)),
     db.select({ count: sql<number>`count(*)::int` }).from(orderItemParticipants).where(where),
     query.limit,
     query.offset,
   )
 }
+export const listOrderItemParticipants = listOrderItemTravelers
 
-export async function getOrderItemParticipantById(db: PostgresJsDatabase, id: string) {
+export async function getOrderItemTravelerById(db: PostgresJsDatabase, id: string) {
   const [row] = await db
     .select()
     .from(orderItemParticipants)
     .where(eq(orderItemParticipants.id, id))
     .limit(1)
-  return row ?? null
+  return row ? toOrderItemTravelerResponse(row) : null
 }
+export const getOrderItemParticipantById = getOrderItemTravelerById
 
-export async function createOrderItemParticipant(
+export async function createOrderItemTraveler(
   db: PostgresJsDatabase,
-  data: CreateOrderItemParticipantInput,
+  data: CreateOrderItemTravelerInput,
 ) {
   const [row] = await db.insert(orderItemParticipants).values(data).returning()
-  return row ?? null
+  return row ? toOrderItemTravelerResponse(row) : null
 }
+export const createOrderItemParticipant = createOrderItemTraveler
 
-export async function updateOrderItemParticipant(
+export async function updateOrderItemTraveler(
   db: PostgresJsDatabase,
   id: string,
-  data: UpdateOrderItemParticipantInput,
+  data: UpdateOrderItemTravelerInput,
 ) {
   const [row] = await db
     .update(orderItemParticipants)
     .set(data)
     .where(eq(orderItemParticipants.id, id))
     .returning()
-  return row ?? null
+  return row ? toOrderItemTravelerResponse(row) : null
 }
+export const updateOrderItemParticipant = updateOrderItemTraveler
 
-export async function deleteOrderItemParticipant(db: PostgresJsDatabase, id: string) {
+export async function deleteOrderItemTraveler(db: PostgresJsDatabase, id: string) {
   const [row] = await db
     .delete(orderItemParticipants)
     .where(eq(orderItemParticipants.id, id))
     .returning({ id: orderItemParticipants.id })
   return row ?? null
 }
+export const deleteOrderItemParticipant = deleteOrderItemTraveler
 
 export async function listOrderTerms(db: PostgresJsDatabase, query: OrderTermListQuery) {
   const conditions = []

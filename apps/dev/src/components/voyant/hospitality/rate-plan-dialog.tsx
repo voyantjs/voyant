@@ -201,6 +201,7 @@ export function RatePlanDialog({
               <div className="flex flex-col gap-2">
                 <Label>Charge frequency</Label>
                 <Select
+                  items={CHARGE_FREQUENCIES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("chargeFrequency")}
                   onValueChange={(value) =>
                     form.setValue("chargeFrequency", value as ChargeFrequency)
@@ -221,6 +222,7 @@ export function RatePlanDialog({
               <div className="flex flex-col gap-2">
                 <Label>Guarantee</Label>
                 <Select
+                  items={GUARANTEE_MODES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("guaranteeMode")}
                   onValueChange={(value) => form.setValue("guaranteeMode", value as GuaranteeMode)}
                 >

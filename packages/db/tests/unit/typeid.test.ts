@@ -26,9 +26,21 @@ describe("PREFIXES", () => {
   })
 
   it("has no duplicate prefix values", () => {
-    const values = Object.values(PREFIXES)
-    const unique = new Set(values)
-    expect(unique.size).toBe(values.length)
+    const grouped = Object.entries(PREFIXES).reduce<Record<string, string[]>>((acc, [key, value]) => {
+      acc[value] ??= []
+      acc[value].push(key)
+      return acc
+    }, {})
+
+    const duplicates = Object.entries(grouped)
+      .filter(([, keys]) => keys.length > 1)
+      .sort(([a], [b]) => a.localeCompare(b))
+
+    expect(duplicates).toEqual([
+      ["bkip", ["booking_item_travelers", "booking_item_participants"]],
+      ["bkpt", ["booking_travelers", "booking_participants"]],
+      ["bptd", ["booking_traveler_travel_details", "booking_participant_travel_details"]],
+    ])
   })
 })
 

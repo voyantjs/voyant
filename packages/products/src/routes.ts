@@ -7,10 +7,12 @@ import { productsService } from "./service.js"
 import {
   destinationListQuerySchema,
   destinationTranslationListQuerySchema,
+  duplicateItinerarySchema,
   insertDaySchema,
   insertDayServiceSchema,
   insertDestinationSchema,
   insertDestinationTranslationSchema,
+  insertItinerarySchema,
   insertOptionUnitSchema,
   insertOptionUnitTranslationSchema,
   insertProductActivationSettingSchema,
@@ -56,6 +58,7 @@ import {
   updateDayServiceSchema,
   updateDestinationSchema,
   updateDestinationTranslationSchema,
+  updateItinerarySchema,
   updateOptionUnitSchema,
   updateOptionUnitTranslationSchema,
   updateProductActivationSettingSchema,
@@ -1257,8 +1260,90 @@ export const productRoutes = new Hono<Env>()
   })
 
   // ==========================================================================
+  // Itineraries
+  // ==========================================================================
+
+  .get("/:id/itineraries", async (c) => {
+    return c.json({ data: await productsService.listItineraries(c.get("db"), c.req.param("id")) })
+  })
+
+  .post("/:id/itineraries", async (c) => {
+    const row = await productsService.createItinerary(
+      c.get("db"),
+      c.req.param("id"),
+      await parseJsonBody(c, insertItinerarySchema),
+    )
+
+    if (!row) {
+      return c.json({ error: "Product not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  .patch("/itineraries/:itineraryId", async (c) => {
+    const row = await productsService.updateItinerary(
+      c.get("db"),
+      c.req.param("itineraryId"),
+      await parseJsonBody(c, updateItinerarySchema),
+    )
+
+    if (!row) {
+      return c.json({ error: "Itinerary not found" }, 404)
+    }
+
+    return c.json({ data: row })
+  })
+
+  .delete("/itineraries/:itineraryId", async (c) => {
+    const row = await productsService.deleteItinerary(c.get("db"), c.req.param("itineraryId"))
+
+    if (!row) {
+      return c.json({ error: "Itinerary not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
+  })
+
+  .post("/itineraries/:itineraryId/duplicate", async (c) => {
+    const body = await parseJsonBody(c, duplicateItinerarySchema)
+    const row = await productsService.duplicateItinerary(
+      c.get("db"),
+      c.req.param("itineraryId"),
+      body,
+    )
+
+    if (!row) {
+      return c.json({ error: "Itinerary not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
+
+  // ==========================================================================
   // Days
   // ==========================================================================
+
+  .get("/:id/itineraries/:itineraryId/days", async (c) => {
+    return c.json({
+      data: await productsService.listItineraryDays(c.get("db"), c.req.param("itineraryId")),
+    })
+  })
+
+  .post("/:id/itineraries/:itineraryId/days", async (c) => {
+    const row = await productsService.createItineraryDay(
+      c.get("db"),
+      c.req.param("id"),
+      c.req.param("itineraryId"),
+      await parseJsonBody(c, insertDaySchema),
+    )
+
+    if (!row) {
+      return c.json({ error: "Itinerary not found" }, 404)
+    }
+
+    return c.json({ data: row }, 201)
+  })
 
   // GET /:id/days — List days for product
   .get("/:id/days", async (c) => {

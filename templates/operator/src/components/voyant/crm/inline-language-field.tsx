@@ -1,4 +1,5 @@
 import { languages } from "@voyantjs/utils/languages"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import {
@@ -10,6 +11,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 const LANGUAGE_CODES = Object.keys(languages).sort()
@@ -29,6 +31,7 @@ export function InlineLanguageField({
   disabled,
   onSave,
 }: InlineLanguageFieldProps) {
+  const messages = useAdminMessages().crm.shared
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +43,7 @@ export function InlineLanguageField({
       await onSave(next)
       setEditing(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save")
+      setError(err instanceof Error ? err.message : messages.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -72,12 +75,12 @@ export function InlineLanguageField({
           >
             <ComboboxInput
               autoFocus
-              placeholder="Search language..."
+              placeholder={messages.searchLanguagePlaceholder}
               className="mt-0.5 h-8 text-sm"
               disabled={saving}
             />
             <ComboboxContent>
-              <ComboboxEmpty>No languages found</ComboboxEmpty>
+              <ComboboxEmpty>{messages.noLanguagesFound}</ComboboxEmpty>
               <ComboboxList>
                 <ComboboxCollection>
                   {(code: string) => {
@@ -115,7 +118,7 @@ export function InlineLanguageField({
                   ) : null}
                 </span>
               ) : (
-                `Add ${label.toLowerCase()}`
+                formatMessage(messages.addTemplate, { label: label.toLowerCase() })
               )}
             </button>
             {!disabled ? (

@@ -20,22 +20,24 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const rateFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  currency: z.string().min(3).max(3, "Use 3-letter ISO code"),
-  amount: z.coerce.number().min(0, "Amount must be non-negative"),
-  unit: z.enum(["per_person", "per_group", "per_night", "per_vehicle", "flat"]),
-  validFrom: z.string().optional().nullable(),
-  validTo: z.string().optional().nullable(),
-  minPax: z.coerce.number().int().positive().optional().or(z.literal("")).nullable(),
-  maxPax: z.coerce.number().int().positive().optional().or(z.literal("")).nullable(),
-  notes: z.string().optional().nullable(),
-})
-
-type RateFormValues = z.input<typeof rateFormSchema>
-type RateFormOutput = z.output<typeof rateFormSchema>
+const getRateFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    name: z.string().min(1, messages.suppliers.dialogs.rate.validationNameRequired),
+    currency: z
+      .string()
+      .min(3, messages.suppliers.dialogs.rate.validationIsoCurrency)
+      .max(3, messages.suppliers.dialogs.rate.validationIsoCurrency),
+    amount: z.coerce.number().min(0, messages.suppliers.dialogs.rate.validationNonNegative),
+    unit: z.enum(["per_person", "per_group", "per_night", "per_vehicle", "flat"]),
+    validFrom: z.string().optional().nullable(),
+    validTo: z.string().optional().nullable(),
+    minPax: z.coerce.number().int().positive().optional().or(z.literal("")).nullable(),
+    maxPax: z.coerce.number().int().positive().optional().or(z.literal("")).nullable(),
+    notes: z.string().optional().nullable(),
+  })
 
 export type RateData = SupplierRate
 
@@ -58,8 +60,11 @@ export function RateDialog({
 }: RateDialogProps) {
   const isEditing = !!rate
   const rateMutation = useSupplierRateMutation(supplierId)
+  const messages = useAdminMessages()
+  const dialogMessages = messages.suppliers.dialogs.rate
+  const rateFormSchema = getRateFormSchema(messages)
 
-  const form = useForm<RateFormValues, unknown, RateFormOutput>({
+  const form = useForm<z.input<typeof rateFormSchema>, unknown, z.output<typeof rateFormSchema>>({
     resolver: zodResolver(rateFormSchema),
     defaultValues: {
       name: "",
@@ -92,7 +97,7 @@ export function RateDialog({
     }
   }, [open, rate, form])
 
-  const onSubmit = async (values: RateFormOutput) => {
+  const onSubmit = async (values: z.output<typeof rateFormSchema>) => {
     const payload = {
       name: values.name,
       currency: values.currency,
@@ -117,13 +122,18 @@ export function RateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Rate" : "Add Rate"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Name / Season</Label>
-              <Input {...form.register("name")} placeholder="Summer 2025" />
+              <Label>{dialogMessages.seasonNameLabel}</Label>
+              <Input
+                {...form.register("name")}
+                placeholder={dialogMessages.seasonNamePlaceholder}
+              />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
@@ -131,10 +141,10 @@ export function RateDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{dialogMessages.currencyLabel}</Label>
                 <Input
                   {...form.register("currency")}
-                  placeholder="EUR"
+                  placeholder={dialogMessages.currencyPlaceholder}
                   maxLength={3}
                   className="uppercase"
                 />
@@ -145,23 +155,26 @@ export function RateDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Amount</Label>
+                <Label>{dialogMessages.amountLabel}</Label>
                 <Input
                   {...form.register("amount")}
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="150.00"
+                  placeholder={dialogMessages.amountPlaceholder}
                 />
                 {form.formState.errors.amount && (
                   <p className="text-xs text-destructive">{form.formState.errors.amount.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Unit</Label>
+                <Label>{dialogMessages.unitLabel}</Label>
                 <Select
+                  items={RATE_UNITS}
                   value={form.watch("unit")}
-                  onValueChange={(v) => form.setValue("unit", v as RateFormValues["unit"])}
+                  onValueChange={(v) =>
+                    form.setValue("unit", v as z.input<typeof rateFormSchema>["unit"])
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -169,7 +182,7 @@ export function RateDialog({
                   <SelectContent>
                     {RATE_UNITS.map((u) => (
                       <SelectItem key={u.value} value={u.value}>
-                        {u.label}
+                        {messages.suppliers.rateUnitLabels[u.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -179,38 +192,48 @@ export function RateDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Valid From</Label>
+                <Label>{dialogMessages.validFromLabel}</Label>
                 <Input {...form.register("validFrom")} type="date" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Valid To</Label>
+                <Label>{dialogMessages.validToLabel}</Label>
                 <Input {...form.register("validTo")} type="date" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Min Pax</Label>
-                <Input {...form.register("minPax")} type="number" min="1" placeholder="1" />
+                <Label>{dialogMessages.minPaxLabel}</Label>
+                <Input
+                  {...form.register("minPax")}
+                  type="number"
+                  min="1"
+                  placeholder={dialogMessages.minPaxPlaceholder}
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max Pax</Label>
-                <Input {...form.register("maxPax")} type="number" min="1" placeholder="50" />
+                <Label>{dialogMessages.maxPaxLabel}</Label>
+                <Input
+                  {...form.register("maxPax")}
+                  type="number"
+                  min="1"
+                  placeholder={dialogMessages.maxPaxPlaceholder}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional pricing notes..." />
+              <Label>{dialogMessages.notesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={dialogMessages.notesPlaceholder} />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Rate"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>

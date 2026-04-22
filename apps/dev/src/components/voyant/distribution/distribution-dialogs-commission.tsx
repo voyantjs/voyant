@@ -133,6 +133,7 @@ export function ChannelCommissionRuleDialog({
               <div className="grid gap-2">
                 <Label>Contract</Label>
                 <Select
+                  items={contracts.map((contract) => ({ label: contract.id, value: contract.id }))}
                   value={form.watch("contractId")}
                   onValueChange={(value) => form.setValue("contractId", value ?? "")}
                 >
@@ -151,6 +152,7 @@ export function ChannelCommissionRuleDialog({
               <div className="grid gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={commissionScopeOptions}
                   value={form.watch("scope")}
                   onValueChange={(value) =>
                     form.setValue("scope", value as ChannelCommissionRuleRow["scope"])
@@ -171,6 +173,10 @@ export function ChannelCommissionRuleDialog({
               <div className="grid gap-2">
                 <Label>Product</Label>
                 <Select
+                  items={[
+                    { label: "No product", value: NONE_VALUE },
+                    ...products.map((product) => ({ label: product.name, value: product.id })),
+                  ]}
                   value={form.watch("productId")}
                   onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
                 >
@@ -190,6 +196,7 @@ export function ChannelCommissionRuleDialog({
               <div className="grid gap-2">
                 <Label>Commission Type</Label>
                 <Select
+                  items={commissionTypeOptions}
                   value={form.watch("commissionType")}
                   onValueChange={(value) =>
                     form.setValue(

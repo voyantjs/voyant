@@ -1,4 +1,5 @@
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { ConfirmActionButton, SelectionActionBar } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
@@ -9,18 +10,20 @@ import type {
   ProductOption,
 } from "@/components/voyant/availability/availability-shared"
 import {
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   ruleColumns,
   slotColumns,
   startTimeColumns,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { SectionHeader } from "./availability-dialogs"
 
 type BulkFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   payload: Record<string, unknown>
   successVerb: string
   clearSelection: () => void
@@ -30,7 +33,8 @@ type DeleteFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   clearSelection: () => void
 }) => Promise<void>
 
@@ -46,18 +50,26 @@ export function AvailabilitySlotsTab(props: {
   onOpenRoute: (slotId: string) => void
   onEdit: (row: AvailabilitySlotRow) => void
 }) {
+  const messages = useAdminMessages()
+  const selection = (count: number) =>
+    formatLocalizedSelectionLabel(
+      count,
+      messages.availability.nouns.slotSingular,
+      messages.availability.nouns.slotPlural,
+    )
+
   return (
     <TabsContent value="slots" className="space-y-4">
       <SectionHeader
-        title="Departure Slots"
-        description="Dated availability instances with live capacity and cutoff state."
-        actionLabel="New Slot"
+        title={messages.availability.tabs.slots.title}
+        description={messages.availability.tabs.slots.description}
+        actionLabel={messages.availability.tabs.slots.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={slotColumns(props.products, props.onOpenRoute)}
+        columns={slotColumns(props.products, props.onOpenRoute, messages)}
         data={props.filteredSlots}
-        emptyMessage="No slots match the current filters."
+        emptyMessage={messages.availability.tabs.slots.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.slotSelection}
@@ -65,46 +77,54 @@ export function AvailabilitySlotsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Open"
-              confirmLabel="Open Slots"
-              title={`Open ${formatSelectionLabel(selectedRows.length, "slot")}?`}
-              description="This will mark the selected departures as open and bookable again."
+              buttonLabel={messages.availability.tabs.slots.bulkOpenButton}
+              confirmLabel={messages.availability.tabs.slots.bulkOpenConfirm}
+              title={formatMessage(messages.availability.tabs.slots.bulkOpenTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.slots.bulkOpenDescription}
               disabled={props.bulkActionTarget === "slots-open"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/slots",
                   target: "slots-open",
-                  noun: "slot",
+                  nounSingular: messages.availability.nouns.slotSingular,
+                  nounPlural: messages.availability.nouns.slotPlural,
                   payload: { status: "open" },
-                  successVerb: "Opened",
+                  successVerb: messages.availability.verbOpened,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Close"
-              confirmLabel="Close Slots"
-              title={`Close ${formatSelectionLabel(selectedRows.length, "slot")}?`}
-              description="This keeps the selected departures in place but stops them from being bookable."
+              buttonLabel={messages.availability.tabs.slots.bulkCloseButton}
+              confirmLabel={messages.availability.tabs.slots.bulkCloseConfirm}
+              title={formatMessage(messages.availability.tabs.slots.bulkCloseTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.slots.bulkCloseDescription}
               disabled={props.bulkActionTarget === "slots-close"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/slots",
                   target: "slots-close",
-                  noun: "slot",
+                  nounSingular: messages.availability.nouns.slotSingular,
+                  nounPlural: messages.availability.nouns.slotPlural,
                   payload: { status: "closed" },
-                  successVerb: "Closed",
+                  successVerb: messages.availability.verbClosed,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Slots"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "slot")}?`}
-              description="This permanently removes the selected departures. Use Close if you only need to stop new bookings."
+              buttonLabel={messages.availability.tabs.slots.bulkDeleteButton}
+              confirmLabel={messages.availability.tabs.slots.bulkDeleteConfirm}
+              title={formatMessage(messages.availability.tabs.slots.bulkDeleteTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.slots.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "slots-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -113,7 +133,8 @@ export function AvailabilitySlotsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/slots",
                   target: "slots-delete",
-                  noun: "slot",
+                  nounSingular: messages.availability.nouns.slotSingular,
+                  nounPlural: messages.availability.nouns.slotPlural,
                   clearSelection,
                 })
               }
@@ -138,18 +159,26 @@ export function AvailabilityRulesTab(props: {
   onOpenRoute: (ruleId: string) => void
   onEdit: (row: AvailabilityRuleRow) => void
 }) {
+  const messages = useAdminMessages()
+  const selection = (count: number) =>
+    formatLocalizedSelectionLabel(
+      count,
+      messages.availability.nouns.ruleSingular,
+      messages.availability.nouns.rulePlural,
+    )
+
   return (
     <TabsContent value="rules" className="space-y-4">
       <SectionHeader
-        title="Availability Rules"
-        description="Recurring operating patterns, timezone, cutoff, and baseline capacity."
-        actionLabel="New Rule"
+        title={messages.availability.tabs.rules.title}
+        description={messages.availability.tabs.rules.description}
+        actionLabel={messages.availability.tabs.rules.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={ruleColumns(props.products, props.onOpenRoute)}
+        columns={ruleColumns(props.products, props.onOpenRoute, messages)}
         data={props.filteredRules}
-        emptyMessage="No rules match the current filters."
+        emptyMessage={messages.availability.tabs.rules.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.ruleSelection}
@@ -157,46 +186,54 @@ export function AvailabilityRulesTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Activate"
-              confirmLabel="Activate Rules"
-              title={`Activate ${formatSelectionLabel(selectedRows.length, "rule")}?`}
-              description="This enables the selected availability rules for scheduling and downstream operations."
+              buttonLabel={messages.availability.tabs.rules.bulkActivateButton}
+              confirmLabel={messages.availability.tabs.rules.bulkActivateConfirm}
+              title={formatMessage(messages.availability.tabs.rules.bulkActivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.rules.bulkActivateDescription}
               disabled={props.bulkActionTarget === "rules-activate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/rules",
                   target: "rules-activate",
-                  noun: "rule",
+                  nounSingular: messages.availability.nouns.ruleSingular,
+                  nounPlural: messages.availability.nouns.rulePlural,
                   payload: { active: true },
-                  successVerb: "Activated",
+                  successVerb: messages.availability.verbActivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Deactivate"
-              confirmLabel="Deactivate Rules"
-              title={`Deactivate ${formatSelectionLabel(selectedRows.length, "rule")}?`}
-              description="This keeps the rules for reference but removes them from active operating coverage."
+              buttonLabel={messages.availability.tabs.rules.bulkDeactivateButton}
+              confirmLabel={messages.availability.tabs.rules.bulkDeactivateConfirm}
+              title={formatMessage(messages.availability.tabs.rules.bulkDeactivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.rules.bulkDeactivateDescription}
               disabled={props.bulkActionTarget === "rules-deactivate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/rules",
                   target: "rules-deactivate",
-                  noun: "rule",
+                  nounSingular: messages.availability.nouns.ruleSingular,
+                  nounPlural: messages.availability.nouns.rulePlural,
                   payload: { active: false },
-                  successVerb: "Deactivated",
+                  successVerb: messages.availability.verbDeactivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Rules"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "rule")}?`}
-              description="This permanently removes the selected availability rules and any rule-specific operating setup."
+              buttonLabel={messages.availability.tabs.rules.bulkDeleteButton}
+              confirmLabel={messages.availability.tabs.rules.bulkDeleteConfirm}
+              title={formatMessage(messages.availability.tabs.rules.bulkDeleteTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.rules.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "rules-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -205,7 +242,8 @@ export function AvailabilityRulesTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/rules",
                   target: "rules-delete",
-                  noun: "rule",
+                  nounSingular: messages.availability.nouns.ruleSingular,
+                  nounPlural: messages.availability.nouns.rulePlural,
                   clearSelection,
                 })
               }
@@ -230,18 +268,26 @@ export function AvailabilityStartTimesTab(props: {
   onOpenRoute: (startTimeId: string) => void
   onEdit: (row: AvailabilityStartTimeRow) => void
 }) {
+  const messages = useAdminMessages()
+  const selection = (count: number) =>
+    formatLocalizedSelectionLabel(
+      count,
+      messages.availability.nouns.startTimeSingular,
+      messages.availability.nouns.startTimePlural,
+    )
+
   return (
     <TabsContent value="start-times" className="space-y-4">
       <SectionHeader
-        title="Start Times"
-        description="Bookable departure times attached to products."
-        actionLabel="New Start Time"
+        title={messages.availability.tabs.startTimes.title}
+        description={messages.availability.tabs.startTimes.description}
+        actionLabel={messages.availability.tabs.startTimes.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={startTimeColumns(props.products, props.onOpenRoute)}
+        columns={startTimeColumns(props.products, props.onOpenRoute, messages)}
         data={props.filteredStartTimes}
-        emptyMessage="No start times match the current filters."
+        emptyMessage={messages.availability.tabs.startTimes.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.startTimeSelection}
@@ -249,46 +295,54 @@ export function AvailabilityStartTimesTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Activate"
-              confirmLabel="Activate Start Times"
-              title={`Activate ${formatSelectionLabel(selectedRows.length, "start time")}?`}
-              description="This makes the selected departure times available again anywhere they are referenced."
+              buttonLabel={messages.availability.tabs.startTimes.bulkActivateButton}
+              confirmLabel={messages.availability.tabs.startTimes.bulkActivateConfirm}
+              title={formatMessage(messages.availability.tabs.startTimes.bulkActivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.startTimes.bulkActivateDescription}
               disabled={props.bulkActionTarget === "start-times-activate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/start-times",
                   target: "start-times-activate",
-                  noun: "start time",
+                  nounSingular: messages.availability.nouns.startTimeSingular,
+                  nounPlural: messages.availability.nouns.startTimePlural,
                   payload: { active: true },
-                  successVerb: "Activated",
+                  successVerb: messages.availability.verbActivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Deactivate"
-              confirmLabel="Deactivate Start Times"
-              title={`Deactivate ${formatSelectionLabel(selectedRows.length, "start time")}?`}
-              description="This keeps the selected times for reference but removes them from active operating use."
+              buttonLabel={messages.availability.tabs.startTimes.bulkDeactivateButton}
+              confirmLabel={messages.availability.tabs.startTimes.bulkDeactivateConfirm}
+              title={formatMessage(messages.availability.tabs.startTimes.bulkDeactivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.startTimes.bulkDeactivateDescription}
               disabled={props.bulkActionTarget === "start-times-deactivate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/start-times",
                   target: "start-times-deactivate",
-                  noun: "start time",
+                  nounSingular: messages.availability.nouns.startTimeSingular,
+                  nounPlural: messages.availability.nouns.startTimePlural,
                   payload: { active: false },
-                  successVerb: "Deactivated",
+                  successVerb: messages.availability.verbDeactivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Start Times"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "start time")}?`}
-              description="This permanently removes the selected departure times from the catalog."
+              buttonLabel={messages.availability.tabs.startTimes.bulkDeleteButton}
+              confirmLabel={messages.availability.tabs.startTimes.bulkDeleteConfirm}
+              title={formatMessage(messages.availability.tabs.startTimes.bulkDeleteTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.startTimes.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "start-times-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -297,7 +351,8 @@ export function AvailabilityStartTimesTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/start-times",
                   target: "start-times-delete",
-                  noun: "start time",
+                  nounSingular: messages.availability.nouns.startTimeSingular,
+                  nounPlural: messages.availability.nouns.startTimePlural,
                   clearSelection,
                 })
               }

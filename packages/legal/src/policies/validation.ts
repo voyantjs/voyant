@@ -32,8 +32,6 @@ export const policyAssignmentScopeSchema = z.enum([
   "global",
 ])
 
-export const policyBodyFormatSchema = z.enum(["markdown", "html", "plain"])
-
 export const policyAcceptanceMethodSchema = z.enum(["implicit", "explicit_checkbox", "signature"])
 
 const paginationSchema = z.object({
@@ -69,7 +67,6 @@ export const policyListQuerySchema = paginationSchema.extend({
 
 const policyVersionCoreSchema = z.object({
   title: z.string().min(1).max(500),
-  bodyFormat: policyBodyFormatSchema.default("markdown"),
   body: z.string().optional().nullable(),
   publishedBy: z.string().max(255).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),

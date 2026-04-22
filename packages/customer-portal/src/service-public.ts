@@ -1,11 +1,12 @@
 import {
   bookingDocuments,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
-  bookingParticipants,
+  bookingItemTravelers,
   bookingSessionStates,
+  bookingStaffAssignments,
   bookings,
+  bookingTravelers,
 } from "@voyantjs/bookings/schema"
 import { crmService, people } from "@voyantjs/crm"
 import {
@@ -43,8 +44,8 @@ import type {
   CustomerPortalContactExistsResult,
   CustomerPortalPhoneContactExistsResult,
   CustomerPortalProfile,
-  ImportCustomerPortalBookingParticipantsInput,
-  ImportCustomerPortalBookingParticipantsResult,
+  ImportCustomerPortalBookingTravelersInput,
+  ImportCustomerPortalBookingTravelersResult,
   UpdateCustomerPortalAddressInput,
   UpdateCustomerPortalCompanionInput,
   UpdateCustomerPortalProfileInput,
@@ -198,31 +199,6 @@ function getRecord(value: unknown) {
   }
 
   return value as Record<string, unknown>
-}
-
-function formatCustomerAddress(address: {
-  fullText?: string | null
-  line1?: string | null
-  line2?: string | null
-  city?: string | null
-  region?: string | null
-  postalCode?: string | null
-  country?: string | null
-}) {
-  if (address.fullText) {
-    return address.fullText
-  }
-
-  const parts = [
-    address.line1,
-    address.line2,
-    address.city,
-    address.region,
-    address.postalCode,
-    address.country,
-  ].filter((value): value is string => Boolean(value))
-
-  return parts.length > 0 ? parts.join(", ") : null
 }
 
 function toCustomerAddress(
@@ -563,7 +539,7 @@ async function listLegalDocumentsForBooking(
       {
         id: attachment.id,
         source: "legal" as const,
-        participantId: null,
+        travelerId: null,
         type: "contract" as const,
         fileName: attachment.name,
         fileUrl: downloadUrl,
@@ -739,7 +715,7 @@ async function getFinanceDataForBooking(
       {
         id: document.invoiceId,
         source: "finance",
-        participantId: null,
+        travelerId: null,
         type: document.invoiceType,
         fileName: resolveFinanceDocumentFileName(
           document.invoiceNumber,
@@ -908,9 +884,6 @@ async function listCustomerRecordCandidatesByEmail(
     birthday: row.birthday ?? null,
     email: normalizedEmail,
     phone: null,
-    address: null,
-    city: null,
-    country: null,
     billingAddress: null,
     relation: row.relation ?? null,
     status: row.status,
@@ -970,9 +943,6 @@ async function listCustomerRecordCandidatesByPhone(
     birthday: row.birthday ?? null,
     email: null,
     phone: normalizedPhone,
-    address: null,
-    city: null,
-    country: null,
     billingAddress: null,
     relation: row.relation ?? null,
     status: row.status,
@@ -1006,9 +976,6 @@ async function getCustomerRecord(db: PostgresJsDatabase, userId: string) {
     birthday: person.birthday ?? null,
     email: person.email ?? null,
     phone: person.phone ?? null,
-    address: person.address ?? null,
-    city: person.city ?? null,
-    country: person.country ?? null,
     billingAddress: billingAddress ? toCustomerAddress(billingAddress) : null,
     relation: person.relation ?? null,
     status: person.status,
@@ -1019,32 +986,19 @@ async function upsertCustomerBillingAddress(
   db: PostgresJsDatabase,
   personId: string,
   input: UpdateCustomerPortalAddressInput,
-  fallback?: {
-    address?: string | null
-    city?: string | null
-    country?: string | null
-  },
 ) {
   const existingAddresses = await identityService.listAddressesForEntity(db, "person", personId)
   const existingAddress = selectPreferredAddress(existingAddresses)
-  const fallbackAddress = normalizeNullableString(fallback?.address)
-  const fallbackCity = normalizeNullableString(fallback?.city)
-  const fallbackCountry = normalizeNullableString(fallback?.country)
 
   const merged = {
     label: input.label ?? existingAddress?.label ?? "billing",
-    fullText:
-      normalizeNullableString(input.fullText) ??
-      (input.line1 === undefined ? fallbackAddress : null) ??
-      existingAddress?.fullText ??
-      null,
+    fullText: normalizeNullableString(input.fullText) ?? existingAddress?.fullText ?? null,
     line1: normalizeNullableString(input.line1) ?? existingAddress?.line1 ?? null,
     line2: normalizeNullableString(input.line2) ?? existingAddress?.line2 ?? null,
-    city: normalizeNullableString(input.city) ?? fallbackCity ?? existingAddress?.city ?? null,
+    city: normalizeNullableString(input.city) ?? existingAddress?.city ?? null,
     region: normalizeNullableString(input.region) ?? existingAddress?.region ?? null,
     postalCode: normalizeNullableString(input.postalCode) ?? existingAddress?.postalCode ?? null,
-    country:
-      normalizeNullableString(input.country) ?? fallbackCountry ?? existingAddress?.country ?? null,
+    country: normalizeNullableString(input.country) ?? existingAddress?.country ?? null,
     isPrimary: input.isPrimary ?? existingAddress?.isPrimary ?? existingAddresses.length === 0,
   }
 
@@ -1075,14 +1029,14 @@ async function getAccessibleBookingIds(
       : Promise.resolve([]),
     linkedPersonId
       ? db
-          .select({ bookingId: bookingParticipants.bookingId })
-          .from(bookingParticipants)
-          .where(eq(bookingParticipants.personId, linkedPersonId))
+          .select({ bookingId: bookingTravelers.bookingId })
+          .from(bookingTravelers)
+          .where(eq(bookingTravelers.personId, linkedPersonId))
       : Promise.resolve([]),
     db
-      .select({ bookingId: bookingParticipants.bookingId })
-      .from(bookingParticipants)
-      .where(sql`lower(${bookingParticipants.email}) = ${email}`),
+      .select({ bookingId: bookingTravelers.bookingId })
+      .from(bookingTravelers)
+      .where(sql`lower(${bookingTravelers.email}) = ${email}`),
   ])
 
   return Array.from(
@@ -1101,17 +1055,17 @@ async function hasBookingAccess(params: {
   authEmail: string
   linkedPersonId: string | null
 }) {
-  const ownershipConditions = [sql`lower(${bookingParticipants.email}) = ${params.authEmail}`]
+  const ownershipConditions = [sql`lower(${bookingTravelers.email}) = ${params.authEmail}`]
 
   if (params.linkedPersonId) {
-    ownershipConditions.push(eq(bookingParticipants.personId, params.linkedPersonId))
+    ownershipConditions.push(eq(bookingTravelers.personId, params.linkedPersonId))
   }
 
   const [participantMatch, bookingMatch] = await Promise.all([
     params.db
-      .select({ bookingId: bookingParticipants.bookingId })
-      .from(bookingParticipants)
-      .where(and(eq(bookingParticipants.bookingId, params.bookingId), or(...ownershipConditions)))
+      .select({ bookingId: bookingTravelers.bookingId })
+      .from(bookingTravelers)
+      .where(and(eq(bookingTravelers.bookingId, params.bookingId), or(...ownershipConditions)))
       .limit(1),
     params.linkedPersonId
       ? params.db
@@ -1132,7 +1086,22 @@ async function getBookingBillingContact(
   bookingId: string,
   customerRecord: Awaited<ReturnType<typeof getCustomerRecord>> | null,
 ): Promise<CustomerPortalBookingBillingContact | null> {
-  const [stateRows, primaryParticipantRows] = await Promise.all([
+  const [bookingRows, stateRows, primaryParticipantRows] = await Promise.all([
+    db
+      .select({
+        contactFirstName: bookings.contactFirstName,
+        contactLastName: bookings.contactLastName,
+        contactEmail: bookings.contactEmail,
+        contactPhone: bookings.contactPhone,
+        contactCountry: bookings.contactCountry,
+        contactRegion: bookings.contactRegion,
+        contactCity: bookings.contactCity,
+        contactAddressLine1: bookings.contactAddressLine1,
+        contactPostalCode: bookings.contactPostalCode,
+      })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1),
     db
       .select({ payload: bookingSessionStates.payload })
       .from(bookingSessionStates)
@@ -1145,19 +1114,18 @@ async function getBookingBillingContact(
       .limit(1),
     db
       .select({
-        firstName: bookingParticipants.firstName,
-        lastName: bookingParticipants.lastName,
-        email: bookingParticipants.email,
-        phone: bookingParticipants.phone,
+        firstName: bookingTravelers.firstName,
+        lastName: bookingTravelers.lastName,
+        email: bookingTravelers.email,
+        phone: bookingTravelers.phone,
       })
-      .from(bookingParticipants)
-      .where(
-        and(eq(bookingParticipants.bookingId, bookingId), eq(bookingParticipants.isPrimary, true)),
-      )
-      .orderBy(asc(bookingParticipants.createdAt))
+      .from(bookingTravelers)
+      .where(and(eq(bookingTravelers.bookingId, bookingId), eq(bookingTravelers.isPrimary, true)))
+      .orderBy(asc(bookingTravelers.createdAt))
       .limit(1),
   ])
 
+  const booking = bookingRows[0] ?? null
   const stateRow = stateRows[0] ?? null
   const primaryParticipant = primaryParticipantRows[0] ?? null
 
@@ -1166,25 +1134,43 @@ async function getBookingBillingContact(
 
   const result: CustomerPortalBookingBillingContact = {
     email:
-      sessionBillingContact?.email ?? primaryParticipant?.email ?? customerRecord?.email ?? null,
+      booking?.contactEmail ??
+      sessionBillingContact?.email ??
+      primaryParticipant?.email ??
+      customerRecord?.email ??
+      null,
     phone:
-      sessionBillingContact?.phone ?? primaryParticipant?.phone ?? customerRecord?.phone ?? null,
+      booking?.contactPhone ??
+      sessionBillingContact?.phone ??
+      primaryParticipant?.phone ??
+      customerRecord?.phone ??
+      null,
     firstName:
+      booking?.contactFirstName ??
       sessionBillingContact?.firstName ??
       primaryParticipant?.firstName ??
       customerRecord?.firstName ??
       null,
     lastName:
+      booking?.contactLastName ??
       sessionBillingContact?.lastName ??
       primaryParticipant?.lastName ??
       customerRecord?.lastName ??
       null,
     country:
-      sessionBillingContact?.country ?? billingAddress?.country ?? customerRecord?.country ?? null,
-    state: sessionBillingContact?.state ?? billingAddress?.region ?? null,
-    city: sessionBillingContact?.city ?? billingAddress?.city ?? customerRecord?.city ?? null,
-    address1: sessionBillingContact?.address1 ?? billingAddress?.line1 ?? null,
-    postal: sessionBillingContact?.postal ?? billingAddress?.postalCode ?? null,
+      booking?.contactCountry ?? sessionBillingContact?.country ?? billingAddress?.country ?? null,
+    state: booking?.contactRegion ?? sessionBillingContact?.state ?? billingAddress?.region ?? null,
+    city: booking?.contactCity ?? sessionBillingContact?.city ?? billingAddress?.city ?? null,
+    address1:
+      booking?.contactAddressLine1 ??
+      sessionBillingContact?.address1 ??
+      billingAddress?.line1 ??
+      null,
+    postal:
+      booking?.contactPostalCode ??
+      sessionBillingContact?.postal ??
+      billingAddress?.postalCode ??
+      null,
   }
 
   const hasValue = Object.values(result).some(
@@ -1216,9 +1202,9 @@ async function buildBookingDetail(
   ] = await Promise.all([
     db
       .select()
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.bookingId, booking.id))
-      .orderBy(asc(bookingParticipants.createdAt)),
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(asc(bookingTravelers.createdAt)),
     db
       .select()
       .from(bookingItems)
@@ -1226,16 +1212,16 @@ async function buildBookingDetail(
       .orderBy(asc(bookingItems.createdAt)),
     db
       .select({
-        id: bookingItemParticipants.id,
-        bookingItemId: bookingItemParticipants.bookingItemId,
-        participantId: bookingItemParticipants.participantId,
-        role: bookingItemParticipants.role,
-        isPrimary: bookingItemParticipants.isPrimary,
+        id: bookingItemTravelers.id,
+        bookingItemId: bookingItemTravelers.bookingItemId,
+        travelerId: bookingItemTravelers.travelerId,
+        role: bookingItemTravelers.role,
+        isPrimary: bookingItemTravelers.isPrimary,
       })
-      .from(bookingItemParticipants)
-      .innerJoin(bookingItems, eq(bookingItems.id, bookingItemParticipants.bookingItemId))
+      .from(bookingItemTravelers)
+      .innerJoin(bookingItems, eq(bookingItems.id, bookingItemTravelers.bookingItemId))
       .where(eq(bookingItems.bookingId, booking.id))
-      .orderBy(asc(bookingItemParticipants.createdAt)),
+      .orderBy(asc(bookingItemTravelers.createdAt)),
     db
       .select()
       .from(bookingDocuments)
@@ -1255,7 +1241,7 @@ async function buildBookingDetail(
     string,
     Array<{
       id: string
-      participantId: string
+      travelerId: string
       role: string
       isPrimary: boolean
     }>
@@ -1265,7 +1251,7 @@ async function buildBookingDetail(
     const existing = itemLinksByItemId.get(link.bookingItemId) ?? []
     existing.push({
       id: link.id,
-      participantId: link.participantId,
+      travelerId: link.travelerId,
       role: link.role,
       isPrimary: link.isPrimary,
     })
@@ -1276,7 +1262,7 @@ async function buildBookingDetail(
     ...documents.map((document: (typeof documents)[number]) => ({
       id: document.id,
       source: "booking_document" as const,
-      participantId: document.participantId ?? null,
+      travelerId: document.travelerId ?? null,
       type: document.type,
       fileName: document.fileName,
       fileUrl: document.fileUrl,
@@ -1292,6 +1278,10 @@ async function buildBookingDetail(
     payments: financeData.payments,
   }
 
+  const travelerParticipants = participants.filter((participant: (typeof participants)[number]) =>
+    ["traveler", "occupant", "other"].includes(participant.participantType),
+  )
+
   return customerPortalBookingDetailSchema.parse({
     bookingId: booking.id,
     bookingNumber: booking.bookingNumber,
@@ -1304,7 +1294,7 @@ async function buildBookingDetail(
     confirmedAt: normalizeDateTime(booking.confirmedAt),
     cancelledAt: normalizeDateTime(booking.cancelledAt),
     completedAt: normalizeDateTime(booking.completedAt),
-    participants: participants.map((participant: (typeof participants)[number]) => ({
+    travelers: travelerParticipants.map((participant: (typeof participants)[number]) => ({
       id: participant.id,
       participantType: participant.participantType,
       firstName: participant.firstName,
@@ -1325,7 +1315,7 @@ async function buildBookingDetail(
       unitSellAmountCents: item.unitSellAmountCents ?? null,
       totalSellAmountCents: item.totalSellAmountCents ?? null,
       notes: item.notes ?? null,
-      participantLinks: itemLinksByItemId.get(item.id) ?? [],
+      travelerLinks: itemLinksByItemId.get(item.id) ?? [],
     })),
     billingContact,
     documents: unifiedDocuments,
@@ -1333,7 +1323,7 @@ async function buildBookingDetail(
     fulfillments: fulfillments.map((fulfillment: (typeof fulfillments)[number]) => ({
       id: fulfillment.id,
       bookingItemId: fulfillment.bookingItemId ?? null,
-      participantId: fulfillment.participantId ?? null,
+      travelerId: fulfillment.travelerId ?? null,
       fulfillmentType: fulfillment.fulfillmentType,
       deliveryChannel: fulfillment.deliveryChannel,
       status: fulfillment.status,
@@ -1490,8 +1480,6 @@ export const publicCustomerPortalService = {
     const nextAddressRecord =
       input.address !== undefined
         ? {
-            city: input.address.city,
-            country: input.address.country,
             billingAddress: {
               line1: input.address.addressLine1,
               line2: input.address.addressLine2,
@@ -1596,19 +1584,13 @@ export const publicCustomerPortalService = {
           : undefined
 
       if (nextCustomerRecord || input.firstName !== undefined || input.lastName !== undefined) {
-        const billingAddress =
-          nextCustomerRecord?.billingAddress !== undefined
-            ? await upsertCustomerBillingAddress(
-                db,
-                customerRecordId,
-                nextCustomerRecord.billingAddress,
-                {
-                  address: nextCustomerRecord.address,
-                  city: nextCustomerRecord.city,
-                  country: nextCustomerRecord.country,
-                },
-              )
-            : null
+        if (nextCustomerRecord?.billingAddress !== undefined) {
+          await upsertCustomerBillingAddress(
+            db,
+            customerRecordId,
+            nextCustomerRecord.billingAddress,
+          )
+        }
 
         await crmService.updatePerson(db, customerRecordId, {
           ...(input.firstName !== undefined ? { firstName: input.firstName ?? "" } : {}),
@@ -1623,33 +1605,6 @@ export const publicCustomerPortalService = {
             ? { birthday: nextCustomerRecord.birthday }
             : {}),
           ...(nextCustomerRecord?.phone !== undefined ? { phone: nextCustomerRecord.phone } : {}),
-          ...(nextCustomerRecord?.address !== undefined
-            ? { address: nextCustomerRecord.address }
-            : {}),
-          ...(nextCustomerRecord?.city !== undefined ? { city: nextCustomerRecord.city } : {}),
-          ...(nextCustomerRecord?.country !== undefined
-            ? { country: nextCustomerRecord.country }
-            : {}),
-          ...(nextCustomerRecord?.billingAddress !== undefined
-            ? {
-                address:
-                  nextCustomerRecord.address !== undefined
-                    ? nextCustomerRecord.address
-                    : formatCustomerAddress(billingAddress ?? nextCustomerRecord.billingAddress),
-                city:
-                  nextCustomerRecord.city !== undefined
-                    ? nextCustomerRecord.city
-                    : (normalizeNullableString(nextCustomerRecord.billingAddress.city) ??
-                      billingAddress?.city ??
-                      null),
-                country:
-                  nextCustomerRecord.country !== undefined
-                    ? nextCustomerRecord.country
-                    : (normalizeNullableString(nextCustomerRecord.billingAddress.country) ??
-                      billingAddress?.country ??
-                      null),
-              }
-            : {}),
         })
       }
     }
@@ -1748,29 +1703,6 @@ export const publicCustomerPortalService = {
           ? { birthday: input.customerRecord.birthday }
           : {}),
         ...(input.customerRecord?.phone !== undefined ? { phone: input.customerRecord.phone } : {}),
-        ...(input.customerRecord?.address !== undefined
-          ? { address: input.customerRecord.address }
-          : {}),
-        ...(input.customerRecord?.city !== undefined ? { city: input.customerRecord.city } : {}),
-        ...(input.customerRecord?.country !== undefined
-          ? { country: input.customerRecord.country }
-          : {}),
-        ...(input.customerRecord?.billingAddress !== undefined
-          ? {
-              address:
-                input.customerRecord.address !== undefined
-                  ? input.customerRecord.address
-                  : formatCustomerAddress(input.customerRecord.billingAddress),
-              city:
-                input.customerRecord.city !== undefined
-                  ? input.customerRecord.city
-                  : (normalizeNullableString(input.customerRecord.billingAddress.city) ?? null),
-              country:
-                input.customerRecord.country !== undefined
-                  ? input.customerRecord.country
-                  : (normalizeNullableString(input.customerRecord.billingAddress.country) ?? null),
-            }
-          : {}),
       })
 
       if (!updated) {
@@ -1782,11 +1714,6 @@ export const publicCustomerPortalService = {
           db,
           input.customerRecordId,
           input.customerRecord.billingAddress,
-          {
-            address: input.customerRecord.address,
-            city: input.customerRecord.city,
-            country: input.customerRecord.country,
-          },
         )
       }
 
@@ -1833,24 +1760,6 @@ export const publicCustomerPortalService = {
       email: normalizedEmail,
       phone: input.customerRecord?.phone ?? null,
       website: null,
-      address:
-        input.customerRecord?.billingAddress !== undefined
-          ? input.customerRecord.address !== undefined
-            ? input.customerRecord.address
-            : formatCustomerAddress(input.customerRecord.billingAddress)
-          : (input.customerRecord?.address ?? null),
-      city:
-        input.customerRecord?.billingAddress !== undefined
-          ? input.customerRecord.city !== undefined
-            ? input.customerRecord.city
-            : (normalizeNullableString(input.customerRecord.billingAddress.city) ?? null)
-          : (input.customerRecord?.city ?? null),
-      country:
-        input.customerRecord?.billingAddress !== undefined
-          ? input.customerRecord.country !== undefined
-            ? input.customerRecord.country
-            : (normalizeNullableString(input.customerRecord.billingAddress.country) ?? null)
-          : (input.customerRecord?.country ?? null),
     })
 
     if (!created) {
@@ -1858,11 +1767,7 @@ export const publicCustomerPortalService = {
     }
 
     if (input.customerRecord?.billingAddress) {
-      await upsertCustomerBillingAddress(db, created.id, input.customerRecord.billingAddress, {
-        address: input.customerRecord.address,
-        city: input.customerRecord.city,
-        country: input.customerRecord.country,
-      })
+      await upsertCustomerBillingAddress(db, created.id, input.customerRecord.billingAddress)
     }
 
     const profile = await this.getProfile(db, userId)
@@ -1889,11 +1794,11 @@ export const publicCustomerPortalService = {
       .map(toCustomerCompanion)
   },
 
-  async importBookingParticipantsAsCompanions(
+  async importBookingTravelersAsCompanions(
     db: PostgresJsDatabase,
     userId: string,
-    input: ImportCustomerPortalBookingParticipantsInput,
-  ): Promise<ImportCustomerPortalBookingParticipantsResult | null> {
+    input: ImportCustomerPortalBookingTravelersInput,
+  ): Promise<ImportCustomerPortalBookingTravelersResult | null> {
     const authProfile = await getAuthProfileRow(db, userId)
     const personId = await resolveLinkedCustomerRecordId(db, userId)
     if (!authProfile || !personId) {
@@ -1912,13 +1817,18 @@ export const publicCustomerPortalService = {
       return { created: [], skippedCount: 0 }
     }
 
-    const [existingCompanionRows, participantRows] = await Promise.all([
+    const [existingCompanionRows, participantRows, staffAssignmentRows] = await Promise.all([
       identityService.listNamedContactsForEntity(db, "person", personId),
       db
         .select()
-        .from(bookingParticipants)
-        .where(inArray(bookingParticipants.bookingId, targetBookingIds))
-        .orderBy(asc(bookingParticipants.createdAt)),
+        .from(bookingTravelers)
+        .where(inArray(bookingTravelers.bookingId, targetBookingIds))
+        .orderBy(asc(bookingTravelers.createdAt)),
+      db
+        .select()
+        .from(bookingStaffAssignments)
+        .where(inArray(bookingStaffAssignments.bookingId, targetBookingIds))
+        .orderBy(asc(bookingStaffAssignments.createdAt)),
     ])
 
     const existingKeys = new Set(
@@ -1939,13 +1849,23 @@ export const publicCustomerPortalService = {
 
     let skippedCount = 0
     const created: CustomerPortalCompanion[] = []
+    const distinctStaffAssignmentKeys = new Set<string>()
+
+    for (const assignment of staffAssignmentRows) {
+      distinctStaffAssignmentKeys.add(
+        JSON.stringify([
+          assignment.bookingId,
+          assignment.personId ?? null,
+          assignment.firstName,
+          assignment.lastName,
+          assignment.email ?? null,
+          assignment.phone ?? null,
+        ]),
+      )
+    }
+    skippedCount += distinctStaffAssignmentKeys.size
 
     for (const participant of participantRows) {
-      if (participant.participantType === "staff") {
-        skippedCount += 1
-        continue
-      }
-
       const name = `${participant.firstName} ${participant.lastName}`.trim()
       if (!name) {
         skippedCount += 1
@@ -1975,7 +1895,7 @@ export const publicCustomerPortalService = {
           metadata: {
             source: "booking_participant_import",
             bookingId: participant.bookingId,
-            participantId: participant.id,
+            travelerId: participant.id,
             participantType: participant.participantType,
             travelerCategory: participant.travelerCategory ?? null,
           },
@@ -1998,6 +1918,14 @@ export const publicCustomerPortalService = {
     }
 
     return { created, skippedCount }
+  },
+
+  async importBookingParticipantsAsCompanions(
+    db: PostgresJsDatabase,
+    userId: string,
+    input: ImportCustomerPortalBookingTravelersInput,
+  ): Promise<ImportCustomerPortalBookingTravelersResult | null> {
+    return this.importBookingTravelersAsCompanions(db, userId, input)
   },
 
   async createCompanion(
@@ -2127,9 +2055,9 @@ export const publicCustomerPortalService = {
         .orderBy(desc(bookings.createdAt)),
       db
         .select()
-        .from(bookingParticipants)
-        .where(inArray(bookingParticipants.bookingId, bookingIds))
-        .orderBy(asc(bookingParticipants.createdAt)),
+        .from(bookingTravelers)
+        .where(inArray(bookingTravelers.bookingId, bookingIds))
+        .orderBy(asc(bookingTravelers.createdAt)),
       db
         .select({
           bookingId: bookingItems.bookingId,
@@ -2198,7 +2126,7 @@ export const publicCustomerPortalService = {
         pax: booking.pax ?? null,
         confirmedAt: normalizeDateTime(booking.confirmedAt),
         completedAt: normalizeDateTime(booking.completedAt),
-        participantCount: participants.length,
+        travelerCount: participants.length,
         primaryTravelerName: primaryTraveler
           ? `${primaryTraveler.firstName} ${primaryTraveler.lastName}`.trim()
           : null,

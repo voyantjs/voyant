@@ -175,6 +175,7 @@ export function AvailabilitySlotDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
@@ -195,6 +196,13 @@ export function AvailabilitySlotDialog({
               <div className="grid gap-2">
                 <Label>Rule</Label>
                 <Select
+                  items={[
+                    { label: "No rule", value: NONE_VALUE },
+                    ...filteredRules.map((rule) => ({
+                      label: `${rule.timezone} · ${rule.recurrenceRule}`,
+                      value: rule.id,
+                    })),
+                  ]}
                   value={form.watch("availabilityRuleId") ?? NONE_VALUE}
                   onValueChange={(value) =>
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
@@ -216,6 +224,13 @@ export function AvailabilitySlotDialog({
               <div className="grid gap-2">
                 <Label>Start Time</Label>
                 <Select
+                  items={[
+                    { label: "No start time", value: NONE_VALUE },
+                    ...filteredStartTimes.map((startTime) => ({
+                      label: startTime.label ?? startTime.startTimeLocal,
+                      value: startTime.id,
+                    })),
+                  ]}
                   value={form.watch("startTimeId") ?? NONE_VALUE}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
@@ -257,6 +272,7 @@ export function AvailabilitySlotDialog({
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={slotStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as SlotFormOutput["status"])
@@ -277,6 +293,7 @@ export function AvailabilitySlotDialog({
               <div className="grid gap-2">
                 <Label>Unlimited</Label>
                 <Select
+                  items={booleanOptions}
                   value={String(form.watch("unlimited"))}
                   onValueChange={(value) => form.setValue("unlimited", value === "true")}
                 >

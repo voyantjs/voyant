@@ -1,78 +1,130 @@
 import type { z } from "zod"
 
-import type { offerParticipants, orderParticipants } from "./schema.js"
 import type {
-  insertOfferItemParticipantSchema,
+  offerContactAssignments,
+  offerItemParticipants,
+  offerParticipants,
+  offerStaffAssignments,
+  orderContactAssignments,
+  orderItemParticipants,
+  orderParticipants,
+  orderStaffAssignments,
+} from "./schema.js"
+import type {
+  insertOfferContactAssignmentSchema,
   insertOfferItemSchema,
-  insertOfferParticipantSchema,
+  insertOfferItemTravelerSchema,
   insertOfferSchema,
-  insertOrderItemParticipantSchema,
+  insertOfferStaffAssignmentSchema,
+  insertOfferTravelerSchema,
+  insertOrderContactAssignmentSchema,
   insertOrderItemSchema,
-  insertOrderParticipantSchema,
+  insertOrderItemTravelerSchema,
   insertOrderSchema,
+  insertOrderStaffAssignmentSchema,
   insertOrderTermSchema,
+  insertOrderTravelerSchema,
+  offerContactAssignmentListQuerySchema,
   offerItemListQuerySchema,
-  offerItemParticipantListQuerySchema,
+  offerItemTravelerListQuerySchema,
   offerListQuerySchema,
-  offerParticipantListQuerySchema,
+  offerStaffAssignmentListQuerySchema,
+  offerTravelerListQuerySchema,
+  orderContactAssignmentListQuerySchema,
   orderItemListQuerySchema,
-  orderItemParticipantListQuerySchema,
+  orderItemTravelerListQuerySchema,
   orderListQuerySchema,
-  orderParticipantListQuerySchema,
+  orderStaffAssignmentListQuerySchema,
   orderTermListQuerySchema,
-  updateOfferItemParticipantSchema,
+  orderTravelerListQuerySchema,
+  updateOfferContactAssignmentSchema,
   updateOfferItemSchema,
-  updateOfferParticipantSchema,
+  updateOfferItemTravelerSchema,
   updateOfferSchema,
-  updateOrderItemParticipantSchema,
+  updateOfferStaffAssignmentSchema,
+  updateOfferTravelerSchema,
+  updateOrderContactAssignmentSchema,
   updateOrderItemSchema,
-  updateOrderParticipantSchema,
+  updateOrderItemTravelerSchema,
   updateOrderSchema,
+  updateOrderStaffAssignmentSchema,
   updateOrderTermSchema,
+  updateOrderTravelerSchema,
 } from "./validation.js"
 
 export type OfferListQuery = z.infer<typeof offerListQuerySchema>
-export type OfferParticipantListQuery = z.infer<typeof offerParticipantListQuerySchema>
+export type OfferTravelerListQuery = z.infer<typeof offerTravelerListQuerySchema>
+export type OfferContactAssignmentListQuery = z.infer<typeof offerContactAssignmentListQuerySchema>
+export type OfferStaffAssignmentListQuery = z.infer<typeof offerStaffAssignmentListQuerySchema>
 export type OfferItemListQuery = z.infer<typeof offerItemListQuerySchema>
-export type OfferItemParticipantListQuery = z.infer<typeof offerItemParticipantListQuerySchema>
+export type OfferItemTravelerListQuery = z.infer<typeof offerItemTravelerListQuerySchema>
 export type OrderListQuery = z.infer<typeof orderListQuerySchema>
-export type OrderParticipantListQuery = z.infer<typeof orderParticipantListQuerySchema>
+export type OrderTravelerListQuery = z.infer<typeof orderTravelerListQuerySchema>
+export type OrderContactAssignmentListQuery = z.infer<typeof orderContactAssignmentListQuerySchema>
+export type OrderStaffAssignmentListQuery = z.infer<typeof orderStaffAssignmentListQuerySchema>
 export type OrderItemListQuery = z.infer<typeof orderItemListQuerySchema>
-export type OrderItemParticipantListQuery = z.infer<typeof orderItemParticipantListQuerySchema>
+export type OrderItemTravelerListQuery = z.infer<typeof orderItemTravelerListQuerySchema>
 export type OrderTermListQuery = z.infer<typeof orderTermListQuerySchema>
+export type OfferParticipantListQuery = OfferTravelerListQuery
+export type OfferItemParticipantListQuery = OfferItemTravelerListQuery
+export type OrderParticipantListQuery = OrderTravelerListQuery
+export type OrderItemParticipantListQuery = OrderItemTravelerListQuery
 
 export type CreateOfferInput = z.infer<typeof insertOfferSchema>
 export type UpdateOfferInput = z.infer<typeof updateOfferSchema>
-export type CreateOfferParticipantInput = z.infer<typeof insertOfferParticipantSchema>
-export type UpdateOfferParticipantInput = z.infer<typeof updateOfferParticipantSchema>
+export type CreateOfferTravelerInput = z.infer<typeof insertOfferTravelerSchema>
+export type UpdateOfferTravelerInput = z.infer<typeof updateOfferTravelerSchema>
+export type CreateOfferContactAssignmentInput = z.infer<typeof insertOfferContactAssignmentSchema>
+export type UpdateOfferContactAssignmentInput = z.infer<typeof updateOfferContactAssignmentSchema>
+export type CreateOfferStaffAssignmentInput = z.infer<typeof insertOfferStaffAssignmentSchema>
+export type UpdateOfferStaffAssignmentInput = z.infer<typeof updateOfferStaffAssignmentSchema>
 export type CreateOfferItemInput = z.infer<typeof insertOfferItemSchema>
 export type UpdateOfferItemInput = z.infer<typeof updateOfferItemSchema>
-export type CreateOfferItemParticipantInput = z.infer<typeof insertOfferItemParticipantSchema>
-export type UpdateOfferItemParticipantInput = z.infer<typeof updateOfferItemParticipantSchema>
+export type CreateOfferItemTravelerInput = z.infer<typeof insertOfferItemTravelerSchema>
+export type UpdateOfferItemTravelerInput = z.infer<typeof updateOfferItemTravelerSchema>
 export type CreateOrderInput = z.infer<typeof insertOrderSchema>
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>
-export type CreateOrderParticipantInput = z.infer<typeof insertOrderParticipantSchema>
-export type UpdateOrderParticipantInput = z.infer<typeof updateOrderParticipantSchema>
+export type CreateOrderTravelerInput = z.infer<typeof insertOrderTravelerSchema>
+export type UpdateOrderTravelerInput = z.infer<typeof updateOrderTravelerSchema>
+export type CreateOrderContactAssignmentInput = z.infer<typeof insertOrderContactAssignmentSchema>
+export type UpdateOrderContactAssignmentInput = z.infer<typeof updateOrderContactAssignmentSchema>
+export type CreateOrderStaffAssignmentInput = z.infer<typeof insertOrderStaffAssignmentSchema>
+export type UpdateOrderStaffAssignmentInput = z.infer<typeof updateOrderStaffAssignmentSchema>
 export type CreateOrderItemInput = z.infer<typeof insertOrderItemSchema>
 export type UpdateOrderItemInput = z.infer<typeof updateOrderItemSchema>
-export type CreateOrderItemParticipantInput = z.infer<typeof insertOrderItemParticipantSchema>
-export type UpdateOrderItemParticipantInput = z.infer<typeof updateOrderItemParticipantSchema>
+export type CreateOrderItemTravelerInput = z.infer<typeof insertOrderItemTravelerSchema>
+export type UpdateOrderItemTravelerInput = z.infer<typeof updateOrderItemTravelerSchema>
 export type CreateOrderTermInput = z.infer<typeof insertOrderTermSchema>
 export type UpdateOrderTermInput = z.infer<typeof updateOrderTermSchema>
-export type OfferBundleParticipantInput = Omit<CreateOfferParticipantInput, "offerId">
+export type CreateOfferParticipantInput = CreateOfferTravelerInput
+export type UpdateOfferParticipantInput = UpdateOfferTravelerInput
+export type CreateOfferItemParticipantInput = CreateOfferItemTravelerInput
+export type UpdateOfferItemParticipantInput = UpdateOfferItemTravelerInput
+export type CreateOrderParticipantInput = CreateOrderTravelerInput
+export type UpdateOrderParticipantInput = UpdateOrderTravelerInput
+export type CreateOrderItemParticipantInput = CreateOrderItemTravelerInput
+export type UpdateOrderItemParticipantInput = UpdateOrderItemTravelerInput
+export type OfferBundleTravelerInput = Omit<CreateOfferTravelerInput, "offerId">
+export type OfferBundleContactAssignmentInput = Omit<
+  CreateOfferContactAssignmentInput,
+  "offerId" | "offerItemId"
+> & {
+  itemIndex?: number | null
+}
 export type OfferBundleItemInput = Omit<CreateOfferItemInput, "offerId">
-export type OfferBundleItemParticipantInput = Omit<
-  CreateOfferItemParticipantInput,
-  "offerItemId" | "participantId"
+export type OfferBundleItemTravelerInput = Omit<
+  CreateOfferItemTravelerInput,
+  "offerItemId" | "travelerId"
 > & {
   itemIndex: number
   participantIndex: number
 }
 export type CreateOfferBundleInput = {
   offer: CreateOfferInput
-  participants?: OfferBundleParticipantInput[]
+  travelers?: OfferBundleTravelerInput[]
+  contactAssignments?: OfferBundleContactAssignmentInput[]
   items: OfferBundleItemInput[]
-  itemParticipants?: OfferBundleItemParticipantInput[]
+  itemTravelers?: OfferBundleItemTravelerInput[]
 }
 
 export async function paginate<T extends object>(
@@ -91,7 +143,7 @@ export function normalizeTimestamp(value: string | null | undefined) {
   return new Date(value)
 }
 
-export function toOfferParticipantResponse(row: typeof offerParticipants.$inferSelect) {
+export function toOfferTravelerResponse(row: typeof offerParticipants.$inferSelect) {
   return {
     id: row.id,
     offerId: row.offerId,
@@ -110,8 +162,22 @@ export function toOfferParticipantResponse(row: typeof offerParticipants.$inferS
     updatedAt: row.updatedAt,
   }
 }
+export const toOfferParticipantResponse = toOfferTravelerResponse
 
-export function toOrderParticipantResponse(row: typeof orderParticipants.$inferSelect) {
+export function toOfferContactAssignmentResponse(row: typeof offerContactAssignments.$inferSelect) {
+  return row
+}
+
+export function toOfferStaffAssignmentResponse(row: typeof offerStaffAssignments.$inferSelect) {
+  return row
+}
+
+export function toOfferItemTravelerResponse(row: typeof offerItemParticipants.$inferSelect) {
+  return row
+}
+export const toOfferItemParticipantResponse = toOfferItemTravelerResponse
+
+export function toOrderTravelerResponse(row: typeof orderParticipants.$inferSelect) {
   return {
     id: row.id,
     orderId: row.orderId,
@@ -128,5 +194,31 @@ export function toOrderParticipantResponse(row: typeof orderParticipants.$inferS
     hasTravelIdentity: Boolean(row.identityEncrypted),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  }
+}
+export const toOrderParticipantResponse = toOrderTravelerResponse
+
+export function toOrderContactAssignmentResponse(row: typeof orderContactAssignments.$inferSelect) {
+  return row
+}
+
+export function toOrderStaffAssignmentResponse(row: typeof orderStaffAssignments.$inferSelect) {
+  return row
+}
+
+export function toOrderItemTravelerResponse(row: typeof orderItemParticipants.$inferSelect) {
+  return row
+}
+export const toOrderItemParticipantResponse = toOrderItemTravelerResponse
+
+export function toTravelerIdentityResponse<
+  T extends {
+    travelerId?: string
+    participantId?: string
+  },
+>(row: T) {
+  return {
+    ...row,
+    travelerId: row.travelerId ?? row.participantId!,
   }
 }

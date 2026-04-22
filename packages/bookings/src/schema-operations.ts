@@ -1,7 +1,7 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core"
 
-import { bookingParticipants, bookings } from "./schema-core"
+import { bookings, bookingTravelers } from "./schema-core"
 import {
   bookingActivityTypeEnum,
   bookingDocumentTypeEnum,
@@ -98,7 +98,7 @@ export const bookingDocuments = pgTable(
     bookingId: typeIdRef("booking_id")
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
-    participantId: typeIdRef("participant_id").references(() => bookingParticipants.id, {
+    travelerId: typeIdRef("traveler_id").references(() => bookingTravelers.id, {
       onDelete: "set null",
     }),
     type: bookingDocumentTypeEnum("type").notNull(),
@@ -111,7 +111,7 @@ export const bookingDocuments = pgTable(
   (table) => [
     index("idx_booking_documents_booking").on(table.bookingId),
     index("idx_booking_documents_booking_created").on(table.bookingId, table.createdAt),
-    index("idx_booking_documents_participant").on(table.participantId),
+    index("idx_booking_documents_traveler").on(table.travelerId),
   ],
 )
 

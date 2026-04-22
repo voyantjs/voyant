@@ -3,6 +3,7 @@ import { AdminProvider } from "@voyantjs/voyant-admin"
 import type * as React from "react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { AdminI18nProvider } from "@/lib/admin-i18n"
 
 export function Providers({
   children,
@@ -13,7 +14,9 @@ export function Providers({
 }) {
   return (
     <AdminProvider queryClient={queryClient}>
-      <TooltipProvider>{children}</TooltipProvider>
+      <AdminI18nProvider>
+        <TooltipProvider>{children}</TooltipProvider>
+      </AdminI18nProvider>
     </AdminProvider>
   )
 }

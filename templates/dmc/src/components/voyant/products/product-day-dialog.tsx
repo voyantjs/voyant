@@ -14,6 +14,7 @@ import {
   Label,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -53,6 +54,7 @@ export function DayDialog({
   onSuccess,
 }: DayDialogProps) {
   const isEditing = !!day
+  const messages = useAdminMessages().products
 
   const form = useForm<DayFormValues, unknown, DayFormOutput>({
     resolver: zodResolver(dayFormSchema),
@@ -102,46 +104,46 @@ export function DayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Day" : "Add Day"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? messages.dayDialogEditTitle : messages.dayDialogNewTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Day Number</Label>
+                <Label>{messages.dayNumberLabel}</Label>
                 <Input {...form.register("dayNumber")} type="number" min="1" />
                 {form.formState.errors.dayNumber && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.dayNumber.message}
-                  </p>
+                  <p className="text-xs text-destructive">{messages.dayNumberValidation}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Location</Label>
-                <Input {...form.register("location")} placeholder="Dubrovnik" />
+                <Label>{messages.locationLabel}</Label>
+                <Input {...form.register("location")} placeholder={messages.locationPlaceholder} />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Title</Label>
-              <Input {...form.register("title")} placeholder="Arrival in Dubrovnik" />
+              <Label>{messages.dayTitleLabel}</Label>
+              <Input {...form.register("title")} placeholder={messages.dayTitlePlaceholder} />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
+              <Label>{messages.dayDescriptionLabel}</Label>
               <Textarea
                 {...form.register("description")}
-                placeholder="Day overview and activities..."
+                placeholder={messages.dayDescriptionPlaceholder}
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Day"}
+              {isEditing ? messages.saveChanges : messages.dayCreate}
             </Button>
           </DialogFooter>
         </form>

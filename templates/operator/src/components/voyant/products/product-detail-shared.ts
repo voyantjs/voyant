@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import type { ProductRecord } from "@voyantjs/products-react"
+import type { AdminMessages } from "@/lib/admin-i18n"
 
 import { api } from "@/lib/api-client"
 import type { DepartureSlot } from "./product-departure-dialog"
@@ -9,7 +10,7 @@ export type { AvailabilityRule, DepartureSlot, ProductRecord }
 
 export type ProductDay = {
   id: string
-  productId: string
+  itineraryId: string
   dayNumber: number
   title: string | null
   description: string | null
@@ -153,7 +154,7 @@ export function formatAmount(cents: number | null, currency: string): string {
 
 export function formatMargin(percent: number | null): string {
   if (percent == null) return "-"
-  return `${(percent / 100).toFixed(2)}%`
+  return `${percent.toFixed(0)}%`
 }
 
 export function formatSlotTime(iso: string): string {
@@ -189,9 +190,67 @@ export function formatDuration(slot: DepartureSlot): string {
   return `${nights} night${nights === 1 ? "" : "s"}`
 }
 
-export function formatCapacity(slot: DepartureSlot): string {
-  if (slot.unlimited) return "Unlimited"
-  if (slot.initialPax == null) return "-"
+export function getProductStatusLabel(
+  status: ProductRecord["status"],
+  messages: AdminMessages,
+): string {
+  switch (status) {
+    case "draft":
+      return messages.products.core.statusDraft
+    case "active":
+      return messages.products.core.statusActive
+    case "archived":
+      return messages.products.core.statusArchived
+    default:
+      return status
+  }
+}
+
+export function getProductBookingModeLabel(
+  bookingMode: ProductRecord["bookingMode"],
+  messages: AdminMessages,
+): string {
+  switch (bookingMode) {
+    case "date":
+      return messages.products.core.bookingModeDate
+    case "date_time":
+      return messages.products.core.bookingModeDateTime
+    case "open":
+      return messages.products.core.bookingModeOpen
+    case "stay":
+      return messages.products.core.bookingModeStay
+    case "transfer":
+      return messages.products.core.bookingModeTransfer
+    case "itinerary":
+      return messages.products.core.bookingModeItinerary
+    case "other":
+      return messages.products.core.bookingModeOther
+    default:
+      return bookingMode
+  }
+}
+
+export function getDepartureStatusLabel(
+  status: DepartureSlot["status"],
+  messages: AdminMessages,
+): string {
+  switch (status) {
+    case "open":
+      return messages.products.core.departureStatusOpen
+    case "closed":
+      return messages.products.core.departureStatusClosed
+    case "sold_out":
+      return messages.products.core.departureStatusSoldOut
+    case "cancelled":
+      return messages.products.core.departureStatusCancelled
+    default:
+      return status
+  }
+}
+
+export function formatCapacityLabel(slot: DepartureSlot, messages: AdminMessages): string {
+  if (slot.unlimited) return messages.products.core.unlimitedCapacity
+  if (slot.initialPax == null) return messages.products.core.noValue
   const remaining = slot.remainingPax ?? slot.initialPax
   return `${remaining} / ${slot.initialPax}`
 }

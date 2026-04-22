@@ -2,10 +2,10 @@ import {
   renderStructuredTemplate,
   type StructuredTemplateBodyFormat,
 } from "@voyantjs/utils/template-renderer"
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
-import { productDayServices, productDays, products } from "../schema.js"
+import { productDayServices, productDays, productItineraries, products } from "../schema.js"
 
 type ProductDayRecord = typeof productDays.$inferSelect
 type ProductDayServiceRecord = typeof productDayServices.$inferSelect
@@ -72,10 +72,24 @@ export async function loadProductBrochureTemplateContext(
     throw new Error(`Product not found: ${productId}`)
   }
 
+  const [defaultItinerary] = await db
+    .select({ id: productItineraries.id })
+    .from(productItineraries)
+    .where(and(eq(productItineraries.productId, productId), eq(productItineraries.isDefault, true)))
+    .limit(1)
+
+  if (!defaultItinerary) {
+    return {
+      product,
+      days: [],
+      generatedAt: new Date(),
+    }
+  }
+
   const days = await db
     .select()
     .from(productDays)
-    .where(eq(productDays.productId, productId))
+    .where(eq(productDays.itineraryId, defaultItinerary.id))
     .orderBy(asc(productDays.dayNumber))
 
   const daysWithServices = await Promise.all(

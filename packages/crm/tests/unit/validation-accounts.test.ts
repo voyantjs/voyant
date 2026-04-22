@@ -194,27 +194,11 @@ describe("Person schemas", () => {
       ).toThrow()
     })
 
-    it("accepts address, city, country", () => {
-      const result = insertPersonSchema.parse({
-        firstName: "John",
-        lastName: "Doe",
-        address: "123 Main St",
-        city: "Springfield",
-        country: "US",
-      })
-      expect(result.address).toBe("123 Main St")
-      expect(result.city).toBe("Springfield")
-      expect(result.country).toBe("US")
-    })
-
     it("identity fields are absent or null when omitted", () => {
       const result = insertPersonSchema.parse({ firstName: "John", lastName: "Doe" })
       expect(result.email).toBeUndefined()
       expect(result.phone).toBeUndefined()
       expect(result.website).toBeNull()
-      expect(result.address).toBeUndefined()
-      expect(result.city).toBeUndefined()
-      expect(result.country).toBeUndefined()
     })
   })
 

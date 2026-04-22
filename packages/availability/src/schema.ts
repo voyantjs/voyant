@@ -102,6 +102,7 @@ export const availabilitySlots = pgTable(
   {
     id: typeId("availability_slots"),
     productId: text("product_id").notNull(),
+    itineraryId: text("itinerary_id"),
     optionId: text("option_id"),
     facilityId: text("facility_id"),
     availabilityRuleId: typeIdRef("availability_rule_id").references(() => availabilityRules.id, {
@@ -131,6 +132,7 @@ export const availabilitySlots = pgTable(
   },
   (table) => [
     index("idx_availability_slots_product_starts_at").on(table.productId, table.startsAt),
+    index("idx_availability_slots_itinerary_starts_at").on(table.itineraryId, table.startsAt),
     index("idx_availability_slots_option_starts_at").on(table.optionId, table.startsAt),
     index("idx_availability_slots_facility_starts_at").on(table.facilityId, table.startsAt),
     index("idx_availability_slots_rule_starts_at").on(table.availabilityRuleId, table.startsAt),

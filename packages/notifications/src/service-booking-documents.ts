@@ -11,7 +11,11 @@ import type {
   NotificationService,
   SendBookingDocumentsNotificationInput,
 } from "./service-shared.js"
-import { listBookingNotificationParticipants, resolveReminderRecipient } from "./service-shared.js"
+import {
+  listBookingNotificationItems,
+  listBookingNotificationParticipants,
+  resolveReminderRecipient,
+} from "./service-shared.js"
 import type { NotificationAttachment } from "./types.js"
 
 export type BookingDocumentAttachmentResolver = (
@@ -292,8 +296,11 @@ export const bookingDocumentNotificationsService = {
       return { status: "no_documents" as const }
     }
 
-    const participants = await listBookingNotificationParticipants(db, bookingId)
-    const recipient = resolveReminderRecipient(participants)
+    const [participants, items] = await Promise.all([
+      listBookingNotificationParticipants(db, bookingId),
+      listBookingNotificationItems(db, bookingId),
+    ])
+    const recipient = resolveReminderRecipient(booking, participants)
     const to = input.to ?? recipient?.email ?? null
     if (!to) {
       return { status: "no_recipient" as const }
@@ -334,14 +341,18 @@ export const bookingDocumentNotificationsService = {
           startDate: booking.startDate,
           endDate: booking.endDate,
         },
-        participant: recipient
+        traveler: recipient
           ? {
               firstName: recipient.firstName,
               lastName: recipient.lastName,
               email: recipient.email,
+              participantType: recipient.participantType,
+              isPrimary: recipient.isPrimary,
             }
           : null,
+        travelers: participants,
         documents,
+        items,
         ...(input.data ?? {}),
       },
       targetType: "booking",

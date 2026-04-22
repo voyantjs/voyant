@@ -256,7 +256,7 @@
   and document shapes instead of forcing apps to read and write those values only
   through untyped companion metadata.
 - e84fe0f: Add a first-class customer-portal action to import accessible booking
-  participants into companions with duplicate detection, plus matching React
+  travelers into companions with duplicate detection, plus matching React
   operations and mutation support.
 - e84fe0f: Expand the public customer-portal contract with booking financial history and a
   first-class billing-address object on customer records.

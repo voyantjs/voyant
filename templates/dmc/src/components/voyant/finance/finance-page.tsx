@@ -2,14 +2,15 @@ import { useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useInvoices, useSupplierPayments } from "@voyantjs/finance-react"
 import { Loader2, Plus, Search } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Badge, Button, Input } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
+
 import {
   formatAmount,
-  formatStatus,
   type InvoiceRow,
   invoiceStatusVariant,
   paymentStatusVariant,
@@ -18,107 +19,172 @@ import {
 import { InvoiceDialog } from "./invoice-dialog"
 import { SupplierPaymentDialog } from "./supplier-payment-dialog"
 
-const invoiceColumns: ColumnDef<InvoiceRow>[] = [
-  {
-    accessorKey: "invoiceNumber",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Invoice #" />,
-  },
-  {
-    accessorKey: "status",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-    cell: ({ row }) => (
-      <Badge
-        variant={invoiceStatusVariant[row.original.status] ?? "secondary"}
-        className="capitalize"
-      >
-        {formatStatus(row.original.status)}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "totalCents",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
-    cell: ({ row }) => (
-      <span className="font-mono">
-        {formatAmount(row.original.totalCents, row.original.currency)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "paidCents",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Paid" />,
-    cell: ({ row }) => (
-      <span className="font-mono">
-        {formatAmount(row.original.paidCents, row.original.currency)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "balanceDueCents",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Balance Due" />,
-    cell: ({ row }) => (
-      <span className="font-mono">
-        {formatAmount(row.original.balanceDueCents, row.original.currency)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "dueDate",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Due Date" />,
-  },
-]
+function getInvoiceStatusLabel(messages: AdminMessages, status: string): string {
+  switch (status) {
+    case "draft":
+      return messages.finance.invoiceStatusDraft
+    case "sent":
+      return messages.finance.invoiceStatusSent
+    case "partially_paid":
+      return messages.finance.invoiceStatusPartiallyPaid
+    case "paid":
+      return messages.finance.invoiceStatusPaid
+    case "overdue":
+      return messages.finance.invoiceStatusOverdue
+    case "void":
+      return messages.finance.invoiceStatusVoid
+    default:
+      return status.replace(/_/g, " ")
+  }
+}
 
-const supplierPaymentColumns: ColumnDef<SupplierPaymentRow>[] = [
-  {
-    accessorKey: "bookingId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Booking" />,
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.bookingId}</span>,
-  },
-  {
-    accessorKey: "supplierId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Supplier" />,
-    cell: ({ row }) =>
-      row.original.supplierId ? (
-        <span className="font-mono text-xs">{row.original.supplierId}</span>
-      ) : (
-        "-"
+function getPaymentStatusLabel(messages: AdminMessages, status: string): string {
+  switch (status) {
+    case "pending":
+      return messages.finance.paymentStatusPending
+    case "completed":
+      return messages.finance.paymentStatusCompleted
+    case "failed":
+      return messages.finance.paymentStatusFailed
+    case "refunded":
+      return messages.finance.paymentStatusRefunded
+    default:
+      return status.replace(/_/g, " ")
+  }
+}
+
+function getInvoiceColumns(messages: AdminMessages): ColumnDef<InvoiceRow>[] {
+  return [
+    {
+      accessorKey: "invoiceNumber",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.invoiceNumberColumn} />
       ),
-  },
-  {
-    accessorKey: "amountCents",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
-    cell: ({ row }) => (
-      <span className="font-mono">
-        {formatAmount(row.original.amountCents, row.original.currency)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-    cell: ({ row }) => (
-      <Badge
-        variant={paymentStatusVariant[row.original.status] ?? "secondary"}
-        className="capitalize"
-      >
-        {row.original.status}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "paymentDate",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
-  },
-  {
-    accessorKey: "referenceNumber",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Reference" />,
-    cell: ({ row }) => row.original.referenceNumber ?? "-",
-  },
-]
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.statusColumn} />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant={invoiceStatusVariant[row.original.status] ?? "secondary"}
+          className="capitalize"
+        >
+          {getInvoiceStatusLabel(messages, row.original.status)}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "totalCents",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.totalColumn} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {formatAmount(row.original.totalCents, row.original.currency)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "paidCents",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.paidColumn} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {formatAmount(row.original.paidCents, row.original.currency)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "balanceDueCents",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.balanceDueColumn} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {formatAmount(row.original.balanceDueCents, row.original.currency)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "dueDate",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.dueDateColumn} />
+      ),
+    },
+  ]
+}
+
+function getSupplierPaymentColumns(messages: AdminMessages): ColumnDef<SupplierPaymentRow>[] {
+  const noValue = messages.finance.detailSections.noValue
+
+  return [
+    {
+      accessorKey: "bookingId",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.bookingColumn} />
+      ),
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.bookingId}</span>,
+    },
+    {
+      accessorKey: "supplierId",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.supplierColumn} />
+      ),
+      cell: ({ row }) =>
+        row.original.supplierId ? (
+          <span className="font-mono text-xs">{row.original.supplierId}</span>
+        ) : (
+          noValue
+        ),
+    },
+    {
+      accessorKey: "amountCents",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.amountColumn} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {formatAmount(row.original.amountCents, row.original.currency)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.statusColumn} />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant={paymentStatusVariant[row.original.status] ?? "secondary"}
+          className="capitalize"
+        >
+          {getPaymentStatusLabel(messages, row.original.status)}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "paymentDate",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.dateColumn} />
+      ),
+    },
+    {
+      accessorKey: "referenceNumber",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={messages.finance.referenceColumn} />
+      ),
+      cell: ({ row }) => row.original.referenceNumber ?? noValue,
+    },
+  ]
+}
 
 const PAGE_SIZE = 25
 
 export function FinancePage() {
+  const messages = useAdminMessages()
   const navigate = useNavigate()
   const [tab, setTab] = useState<"invoices" | "supplier-payments">("invoices")
   const [search, setSearch] = useState("")
@@ -140,24 +206,25 @@ export function FinancePage() {
     enabled: tab === "supplier-payments",
   })
 
+  const invoiceColumns = useMemo(() => getInvoiceColumns(messages), [messages])
+  const supplierPaymentColumns = useMemo(() => getSupplierPaymentColumns(messages), [messages])
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Finance</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage invoices, payments, and supplier finances.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{messages.finance.title}</h1>
+          <p className="text-sm text-muted-foreground">{messages.finance.description}</p>
         </div>
         {tab === "invoices" ? (
           <Button onClick={() => setInvoiceDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            New Invoice
+            {messages.finance.newInvoice}
           </Button>
         ) : (
           <Button onClick={() => setSupplierPaymentDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Record Supplier Payment
+            {messages.finance.recordSupplierPayment}
           </Button>
         )}
       </div>
@@ -175,7 +242,7 @@ export function FinancePage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Invoices
+          {messages.finance.invoicesTab}
         </button>
         <button
           type="button"
@@ -189,7 +256,7 @@ export function FinancePage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Supplier Payments
+          {messages.finance.supplierPaymentsTab}
         </button>
       </div>
 
@@ -198,7 +265,7 @@ export function FinancePage() {
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search invoices..."
+              placeholder={messages.finance.searchInvoicesPlaceholder}
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value)

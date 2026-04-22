@@ -68,7 +68,15 @@ export function InlineSelectField({
         <div className="text-xs font-medium text-muted-foreground">{label}</div>
         {editing ? (
           <div className="mt-1 flex items-center gap-2">
-            <Select value={draft} onValueChange={(v) => setDraft(v ?? "")} disabled={saving}>
+            <Select
+              items={[
+                ...(allowClear ? [{ label: "None", value: "__none__" }] : []),
+                ...options.map((o) => ({ label: o.label, value: o.value })),
+              ]}
+              value={draft}
+              onValueChange={(v) => setDraft(v ?? "")}
+              disabled={saving}
+            >
               <SelectTrigger className="h-8 text-sm flex-1">
                 <SelectValue placeholder={placeholder || "Select…"} />
               </SelectTrigger>

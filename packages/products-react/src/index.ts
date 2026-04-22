@@ -18,6 +18,8 @@ export {
   getProductCategoriesQueryOptions,
   getProductDayServicesQueryOptions,
   getProductDaysQueryOptions,
+  getProductItinerariesQueryOptions,
+  getProductItineraryDaysQueryOptions,
   getProductMediaQueryOptions,
   getProductOptionQueryOptions,
   getProductOptionsQueryOptions,

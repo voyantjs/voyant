@@ -44,9 +44,9 @@ const formSchema = z.object({
     "address",
     "other",
   ]),
-  scope: z.enum(["booking", "lead_traveler", "participant", "booker"]),
+  scope: z.enum(["booking", "lead_traveler", "traveler", "booker"]),
   isRequired: z.boolean(),
-  perParticipant: z.boolean(),
+  perTraveler: z.boolean(),
   active: z.boolean(),
   sortOrder: z.coerce.number().int(),
   notes: z.string().optional().nullable(),
@@ -79,9 +79,9 @@ export function ContactRequirementDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fieldKey: "first_name",
-      scope: "participant",
+      scope: "traveler",
       isRequired: true,
-      perParticipant: false,
+      perTraveler: false,
       active: true,
       sortOrder: 0,
       notes: "",
@@ -94,7 +94,7 @@ export function ContactRequirementDialog({
         fieldKey: requirement.fieldKey,
         scope: requirement.scope,
         isRequired: requirement.isRequired,
-        perParticipant: requirement.perParticipant,
+        perTraveler: requirement.perTraveler,
         active: requirement.active,
         sortOrder: requirement.sortOrder,
         notes: requirement.notes ?? "",
@@ -102,9 +102,9 @@ export function ContactRequirementDialog({
     } else if (open) {
       form.reset({
         fieldKey: "first_name",
-        scope: "participant",
+        scope: "traveler",
         isRequired: true,
-        perParticipant: false,
+        perTraveler: false,
         active: true,
         sortOrder: nextSortOrder ?? 0,
         notes: "",
@@ -118,7 +118,7 @@ export function ContactRequirementDialog({
       fieldKey: values.fieldKey,
       scope: values.scope,
       isRequired: values.isRequired,
-      perParticipant: values.perParticipant,
+      perTraveler: values.perTraveler,
       active: values.active,
       sortOrder: values.sortOrder,
       notes: values.notes || null,
@@ -145,6 +145,7 @@ export function ContactRequirementDialog({
               <div className="flex flex-col gap-2">
                 <Label>Field</Label>
                 <Select
+                  items={CONTACT_FIELDS}
                   value={form.watch("fieldKey")}
                   onValueChange={(value) => form.setValue("fieldKey", value as FieldKey)}
                   disabled={isEditing}
@@ -164,6 +165,7 @@ export function ContactRequirementDialog({
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={CONTACT_SCOPES}
                   value={form.watch("scope")}
                   onValueChange={(value) => form.setValue("scope", value as Scope)}
                 >
@@ -191,10 +193,10 @@ export function ContactRequirementDialog({
               </div>
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={form.watch("perParticipant")}
-                  onCheckedChange={(value) => form.setValue("perParticipant", value)}
+                  checked={form.watch("perTraveler")}
+                  onCheckedChange={(value) => form.setValue("perTraveler", value)}
                 />
-                <Label>Per participant</Label>
+                <Label>Per traveler</Label>
               </div>
             </div>
 

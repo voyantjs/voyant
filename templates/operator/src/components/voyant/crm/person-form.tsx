@@ -1,12 +1,28 @@
 "use client"
 
-import { type CreatePersonInput, type PersonRecord, usePersonMutation } from "@voyantjs/crm-react"
+import {
+  type CreatePersonInput,
+  type OrganizationRecord,
+  type PersonRecord,
+  useOrganization,
+  useOrganizations,
+  usePersonMutation,
+} from "@voyantjs/crm-react"
 import { Loader2 } from "lucide-react"
 import * as React from "react"
-
 import { Button } from "@/components/ui/button"
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Mode = { kind: "create" } | { kind: "edit"; person: PersonRecord }
 
@@ -19,11 +35,10 @@ export interface PersonFormProps {
 interface FormState {
   firstName: string
   lastName: string
+  organizationId: string
   email: string
   phone: string
   jobTitle: string
-  city: string
-  country: string
 }
 
 function initialState(mode: Mode): FormState {
@@ -32,21 +47,19 @@ function initialState(mode: Mode): FormState {
     return {
       firstName: p.firstName ?? "",
       lastName: p.lastName ?? "",
+      organizationId: p.organizationId ?? "",
       email: p.email ?? "",
       phone: p.phone ?? "",
       jobTitle: p.jobTitle ?? "",
-      city: p.city ?? "",
-      country: p.country ?? "",
     }
   }
   return {
     firstName: "",
     lastName: "",
+    organizationId: "",
     email: "",
     phone: "",
     jobTitle: "",
-    city: "",
-    country: "",
   }
 }
 
@@ -54,12 +67,100 @@ function toPayload(state: FormState): CreatePersonInput {
   return {
     firstName: state.firstName.trim(),
     lastName: state.lastName.trim(),
+    organizationId: state.organizationId.trim() || null,
     email: state.email.trim() || null,
     phone: state.phone.trim() || null,
     jobTitle: state.jobTitle.trim() || null,
-    city: state.city.trim() || null,
-    country: state.country.trim() || null,
   }
+}
+
+function OrganizationCombobox({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [search, setSearch] = React.useState("")
+  const organizationsQuery = useOrganizations({
+    search: search || undefined,
+    limit: 25,
+  })
+  const selectedOrganizationQuery = useOrganization(value || undefined, {
+    enabled: !!value,
+  })
+
+  const options = React.useMemo(() => {
+    const map = new Map<string, OrganizationRecord>()
+    for (const organization of organizationsQuery.data?.data ?? []) {
+      map.set(organization.id, organization)
+    }
+    if (selectedOrganizationQuery.data) {
+      map.set(selectedOrganizationQuery.data.id, selectedOrganizationQuery.data)
+    }
+    return Array.from(map.values())
+  }, [organizationsQuery.data?.data, selectedOrganizationQuery.data])
+
+  const optionMap = React.useMemo(
+    () => new Map(options.map((organization) => [organization.id, organization])),
+    [options],
+  )
+  const selected = value ? optionMap.get(value) : undefined
+  const selectedLabel = selected?.name ?? ""
+  const [inputValue, setInputValue] = React.useState(selectedLabel)
+
+  React.useEffect(() => {
+    setInputValue(selectedLabel)
+  }, [selectedLabel])
+
+  return (
+    <Combobox
+      items={options.map((organization) => organization.id)}
+      value={value || null}
+      inputValue={inputValue}
+      autoHighlight
+      itemToStringValue={(id) => optionMap.get(id as string)?.name ?? ""}
+      onInputValueChange={(next) => {
+        setInputValue(next)
+        setSearch(next)
+        if (!next) onChange("")
+      }}
+      onValueChange={(next) => {
+        const resolved = (next as string | null) ?? ""
+        onChange(resolved)
+        setInputValue(resolved ? (optionMap.get(resolved)?.name ?? "") : "")
+      }}
+    >
+      <ComboboxInput placeholder="Search organizations..." showClear={!!value} />
+      <ComboboxContent>
+        <ComboboxEmpty>
+          {organizationsQuery.isPending || selectedOrganizationQuery.isPending
+            ? "Loading organizations..."
+            : "No organizations found."}
+        </ComboboxEmpty>
+        <ComboboxList>
+          <ComboboxCollection>
+            {(id) => {
+              const organization = optionMap.get(id as string)
+              if (!organization) return null
+              return (
+                <ComboboxItem key={organization.id} value={organization.id}>
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{organization.name}</span>
+                    {organization.website || organization.legalName ? (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {organization.website || organization.legalName}
+                      </span>
+                    ) : null}
+                  </div>
+                </ComboboxItem>
+              )
+            }}
+          </ComboboxCollection>
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  )
 }
 
 /**
@@ -68,9 +169,15 @@ function toPayload(state: FormState): CreatePersonInput {
  * friendly `VoyantApiError`s inside the mutation.
  */
 export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
+  const messages = useAdminMessages().crm.personForm
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = usePersonMutation()
+
+  React.useEffect(() => {
+    setState(initialState(mode))
+    setError(null)
+  }, [mode])
 
   const isSubmitting = create.isPending || update.isPending
 
@@ -85,7 +192,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
     setError(null)
 
     if (!state.firstName.trim() || !state.lastName.trim()) {
-      setError("First and last name are required.")
+      setError(messages.validationNameRequired)
       return
     }
 
@@ -98,7 +205,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
           : await update.mutateAsync({ id: mode.person.id, input: payload })
       onSuccess?.(person)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save person.")
+      setError(err instanceof Error ? err.message : messages.saveFailed)
     }
   }
 
@@ -106,7 +213,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
     <form data-slot="person-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-first-name">First name</Label>
+          <Label htmlFor="person-first-name">{messages.firstNameLabel}</Label>
           <Input
             id="person-first-name"
             required
@@ -115,7 +222,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-last-name">Last name</Label>
+          <Label htmlFor="person-last-name">{messages.lastNameLabel}</Label>
           <Input
             id="person-last-name"
             required
@@ -124,24 +231,23 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
           />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="person-job-title">Job title</Label>
+          <Label htmlFor="person-job-title">{messages.jobTitleLabel}</Label>
           <Input id="person-job-title" value={state.jobTitle} onChange={field("jobTitle")} />
         </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <Label>Organization</Label>
+          <OrganizationCombobox
+            value={state.organizationId}
+            onChange={(organizationId) => setState((prev) => ({ ...prev, organizationId }))}
+          />
+        </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-email">Email</Label>
+          <Label htmlFor="person-email">{messages.emailLabel}</Label>
           <Input id="person-email" type="email" value={state.email} onChange={field("email")} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-phone">Phone</Label>
+          <Label htmlFor="person-phone">{messages.phoneLabel}</Label>
           <Input id="person-phone" value={state.phone} onChange={field("phone")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-city">City</Label>
-          <Input id="person-city" value={state.city} onChange={field("city")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-country">Country</Label>
-          <Input id="person-country" value={state.country} onChange={field("country")} />
         </div>
       </div>
 
@@ -154,19 +260,19 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {messages.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-              Saving…
+              {messages.saving}
             </>
           ) : mode.kind === "create" ? (
-            "Create person"
+            messages.create
           ) : (
-            "Save changes"
+            messages.saveChanges
           )}
         </Button>
       </div>

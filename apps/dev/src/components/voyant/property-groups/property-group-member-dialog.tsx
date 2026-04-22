@@ -147,6 +147,7 @@ export function PropertyGroupMemberDialog({
               <div className="flex flex-col gap-2">
                 <Label>Role</Label>
                 <Select
+                  items={ROLES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("membershipRole")}
                   onValueChange={(value) => form.setValue("membershipRole", value as Role)}
                 >

@@ -39,6 +39,7 @@ type DayDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   productId: string
+  itineraryId: string
   day?: DayData
   nextDayNumber?: number
   onSuccess: () => void
@@ -48,6 +49,7 @@ export function DayDialog({
   open,
   onOpenChange,
   productId,
+  itineraryId,
   day,
   nextDayNumber,
   onSuccess,
@@ -93,7 +95,7 @@ export function DayDialog({
     if (isEditing) {
       await api.patch(`/v1/products/${productId}/days/${day.id}`, payload)
     } else {
-      await api.post(`/v1/products/${productId}/days`, payload)
+      await api.post(`/v1/products/${productId}/itineraries/${itineraryId}/days`, payload)
     }
     onSuccess()
   }

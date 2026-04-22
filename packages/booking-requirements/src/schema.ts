@@ -31,13 +31,13 @@ export const contactRequirementFieldEnum = pgEnum("contact_requirement_field", [
 export const contactRequirementScopeEnum = pgEnum("contact_requirement_scope", [
   "booking",
   "lead_traveler",
-  "participant",
+  "traveler",
   "booker",
 ])
 
 export const bookingQuestionTargetEnum = pgEnum("booking_question_target", [
   "booking",
-  "participant",
+  "traveler",
   "lead_traveler",
   "booker",
   "extra",
@@ -68,7 +68,7 @@ export const bookingQuestionTriggerModeEnum = pgEnum("booking_question_trigger_m
 
 export const bookingAnswerTargetEnum = pgEnum("booking_answer_target", [
   "booking",
-  "participant",
+  "traveler",
   "extra",
 ])
 
@@ -79,9 +79,9 @@ export const productContactRequirements = pgTable(
     productId: text("product_id").notNull(),
     optionId: text("option_id"),
     fieldKey: contactRequirementFieldEnum("field_key").notNull(),
-    scope: contactRequirementScopeEnum("scope").notNull().default("participant"),
+    scope: contactRequirementScopeEnum("scope").notNull().default("traveler"),
     isRequired: boolean("is_required").notNull().default(false),
-    perParticipant: boolean("per_participant").notNull().default(false),
+    perTraveler: boolean("per_traveler").notNull().default(false),
     active: boolean("active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     notes: text("notes"),
@@ -291,7 +291,7 @@ export const bookingAnswers = pgTable(
     productBookingQuestionId: typeIdRef("product_booking_question_id")
       .notNull()
       .references(() => productBookingQuestions.id, { onDelete: "cascade" }),
-    bookingParticipantId: text("booking_participant_id"),
+    bookingTravelerId: text("booking_traveler_id"),
     bookingExtraId: text("booking_extra_id"),
     target: bookingAnswerTargetEnum("target").notNull().default("booking"),
     valueText: text("value_text"),
@@ -308,10 +308,7 @@ export const bookingAnswers = pgTable(
       table.productBookingQuestionId,
       table.updatedAt,
     ),
-    index("idx_booking_answers_participant_updated").on(
-      table.bookingParticipantId,
-      table.updatedAt,
-    ),
+    index("idx_booking_answers_traveler_updated").on(table.bookingTravelerId, table.updatedAt),
     index("idx_booking_answers_booking_extra_updated").on(table.bookingExtraId, table.updatedAt),
     index("idx_booking_answers_target_updated").on(table.target, table.updatedAt),
   ],

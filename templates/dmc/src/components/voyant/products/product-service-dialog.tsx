@@ -20,6 +20,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -86,6 +87,7 @@ export function ServiceDialog({
   onSuccess,
 }: ServiceDialogProps) {
   const isEditing = !!service
+  const messages = useAdminMessages().products
 
   // Fetch suppliers + their services for the picker
   const { data: suppliersData } = useQuery({
@@ -183,20 +185,26 @@ export function ServiceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Service" : "Add Service"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? messages.serviceDialogEditTitle : messages.serviceDialogNewTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             {/* Supplier service picker */}
             {suppliersData && suppliersData.length > 0 && (
               <div className="flex flex-col gap-2">
-                <Label>Link Supplier Service (optional)</Label>
+                <Label>{messages.linkSupplierServiceLabel}</Label>
                 <Select
+                  items={suppliersData.map((opt) => ({
+                    label: `${opt.supplierName} — ${opt.name} (${opt.serviceType})`,
+                    value: opt.id,
+                  }))}
                   value={form.watch("supplierServiceId") ?? ""}
                   onValueChange={handleSupplierServiceSelect}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a supplier service..." />
+                    <SelectValue placeholder={messages.supplierServicePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliersData.map((opt) => (
@@ -211,8 +219,9 @@ export function ServiceDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Service Type</Label>
+                <Label>{messages.serviceTypeLabel}</Label>
                 <Select
+                  items={SERVICE_TYPES}
                   value={form.watch("serviceType")}
                   onValueChange={(v) =>
                     form.setValue("serviceType", v as ServiceFormValues["serviceType"])
@@ -224,7 +233,17 @@ export function ServiceDialog({
                   <SelectContent>
                     {SERVICE_TYPES.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                        {t.value === "accommodation"
+                          ? messages.serviceTypeAccommodation
+                          : t.value === "transfer"
+                            ? messages.serviceTypeTransfer
+                            : t.value === "experience"
+                              ? messages.serviceTypeExperience
+                              : t.value === "guide"
+                                ? messages.serviceTypeGuide
+                                : t.value === "meal"
+                                  ? messages.serviceTypeMeal
+                                  : messages.serviceTypeOther}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -232,22 +251,27 @@ export function ServiceDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Deluxe Sea View Room" />
+                <Label>{messages.serviceNameLabel}</Label>
+                <Input {...form.register("name")} placeholder={messages.serviceNamePlaceholder} />
                 {form.formState.errors.name && (
-                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                  <p className="text-xs text-destructive">
+                    {messages.validationServiceNameRequired}
+                  </p>
                 )}
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} placeholder="Service details..." />
+              <Label>{messages.serviceDescriptionLabel}</Label>
+              <Textarea
+                {...form.register("description")}
+                placeholder={messages.serviceDescriptionPlaceholder}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Cost Currency</Label>
+                <Label>{messages.costCurrencyDetailLabel}</Label>
                 <Input
                   {...form.register("costCurrency")}
                   placeholder="EUR"
@@ -255,13 +279,11 @@ export function ServiceDialog({
                   className="uppercase"
                 />
                 {form.formState.errors.costCurrency && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.costCurrency.message}
-                  </p>
+                  <p className="text-xs text-destructive">{messages.validationIsoCurrency}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cost Amount</Label>
+                <Label>{messages.costAmountDetailLabel}</Label>
                 <Input
                   {...form.register("costAmount")}
                   type="number"
@@ -270,36 +292,37 @@ export function ServiceDialog({
                   placeholder="150.00"
                 />
                 {form.formState.errors.costAmount && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.costAmount.message}
-                  </p>
+                  <p className="text-xs text-destructive">{messages.validationCostNonNegative}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Quantity</Label>
+                <Label>{messages.quantityLabel}</Label>
                 <Input {...form.register("quantity")} type="number" min="1" placeholder="1" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Sort Order</Label>
+                <Label>{messages.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" placeholder="1" />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional notes..." />
+              <Label>{messages.serviceNotesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={messages.serviceNotesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Service"}
+              {isEditing ? messages.saveChanges : messages.serviceCreate}
             </Button>
           </DialogFooter>
         </form>

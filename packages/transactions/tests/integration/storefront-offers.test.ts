@@ -77,7 +77,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions storefront promotional offers", () 
               applicableDepartureIds: ["dep_456"],
               imageMobileUrl: "https://cdn.example.com/offers/early-mobile.png",
               imageDesktopUrl: "https://cdn.example.com/offers/early-desktop.png",
-              minPassengers: 2,
+              minTravelers: 2,
               stackable: false,
             },
           },
@@ -138,7 +138,7 @@ describe.skipIf(!DB_AVAILABLE)("Transactions storefront promotional offers", () 
       discountValue: "15",
       applicableProductIds: ["prod_123"],
       applicableDepartureIds: ["dep_456"],
-      minPassengers: 2,
+      minTravelers: 2,
       stackable: false,
     })
   })

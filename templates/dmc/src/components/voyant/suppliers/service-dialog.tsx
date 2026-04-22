@@ -25,6 +25,7 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const serviceFormSchema = z.object({
@@ -58,6 +59,7 @@ export function ServiceDialog({
 }: ServiceDialogProps) {
   const isEditing = !!service
   const serviceMutation = useSupplierServiceMutation(supplierId)
+  const messages = useAdminMessages().suppliersModule
 
   const form = useForm<ServiceFormValues, unknown, ServiceFormOutput>({
     resolver: zodResolver(serviceFormSchema),
@@ -108,13 +110,16 @@ export function ServiceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Service" : "Add Service"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? messages.serviceDialogEditTitle : messages.serviceDialogNewTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Service Type</Label>
+              <Label>{messages.serviceTypeLabel}</Label>
               <Select
+                items={SERVICE_TYPES}
                 value={form.watch("serviceType")}
                 onValueChange={(v) =>
                   form.setValue("serviceType", v as ServiceFormValues["serviceType"])
@@ -126,7 +131,17 @@ export function ServiceDialog({
                 <SelectContent>
                   {SERVICE_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
-                      {t.label}
+                      {t.value === "accommodation"
+                        ? messages.serviceTypeAccommodation
+                        : t.value === "transfer"
+                          ? messages.serviceTypeTransfer
+                          : t.value === "experience"
+                            ? messages.serviceTypeExperience
+                            : t.value === "guide"
+                              ? messages.serviceTypeGuide
+                              : t.value === "meal"
+                                ? messages.serviceTypeMeal
+                                : messages.serviceTypeOther}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -134,26 +149,33 @@ export function ServiceDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Name</Label>
-              <Input {...form.register("name")} placeholder="Deluxe Sea View Room" />
+              <Label>{messages.serviceNameLabel}</Label>
+              <Input {...form.register("name")} placeholder={messages.serviceNamePlaceholder} />
               {form.formState.errors.name && (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                <p className="text-xs text-destructive">{messages.validationNameRequired}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} placeholder="Service description..." />
+              <Label>{messages.serviceDescriptionLabel}</Label>
+              <Textarea
+                {...form.register("description")}
+                placeholder={messages.serviceDescriptionPlaceholder}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Duration</Label>
-                <Input {...form.register("duration")} placeholder="3 hours, per night, etc." />
+                <Label>{messages.durationLabel}</Label>
+                <Input {...form.register("duration")} placeholder={messages.durationPlaceholder} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Capacity (max pax)</Label>
-                <Input {...form.register("capacity")} type="number" placeholder="10" />
+                <Label>{messages.capacityLabel}</Label>
+                <Input
+                  {...form.register("capacity")}
+                  type="number"
+                  placeholder={messages.capacityPlaceholder}
+                />
               </div>
             </div>
 
@@ -162,16 +184,16 @@ export function ServiceDialog({
                 checked={form.watch("active")}
                 onCheckedChange={(v) => form.setValue("active", v)}
               />
-              <Label>Active</Label>
+              <Label>{messages.activeToggleLabel}</Label>
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Service"}
+              {isEditing ? messages.saveChanges : messages.createService}
             </Button>
           </DialogFooter>
         </form>

@@ -1,87 +1,105 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { z } from "zod"
 import {
-  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Input,
+  Label,
 } from "@/components/ui"
+import { api } from "@/lib/api-client"
+import { authClient } from "@/lib/auth"
 
-import { useInviteInfo, useRedeemInvite } from "@/hooks/use-invite-tokens"
-import { getCurrentUser } from "@/lib/current-user"
+type InviteStatus =
+  | { valid: true; email: string; expiresAt: string }
+  | { valid: false; reason?: "not_found" | "redeemed" | "expired" }
 
 export const Route = createFileRoute("/(auth)/accept-invite")({
   validateSearch: z.object({
-    token: z.string(),
+    token: z.string().min(1),
   }),
-  loader: async ({ location }) => {
-    const user = await getCurrentUser()
-
-    if (!user) {
-      throw redirect({
-        to: "/sign-in",
-        search: { next: location.href },
-      })
-    }
-
-    return { user }
-  },
   component: AcceptInvitePage,
 })
 
 function AcceptInvitePage() {
-  const navigate = useNavigate()
   const { token } = Route.useSearch()
-  const { data: invite, isLoading: inviteLoading, error: inviteError } = useInviteInfo(token)
-  const redeemMutation = useRedeemInvite(token)
+  const navigate = useNavigate()
 
-  const [redeemed, setRedeemed] = useState(false)
+  const inviteQuery = useQuery<InviteStatus>({
+    queryKey: ["invitation", token],
+    queryFn: async () => {
+      try {
+        return await api.get<InviteStatus>(`/v1/public/invitations/${encodeURIComponent(token)}`)
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          "status" in error &&
+          (error.status === 404 || error.status === 410)
+        ) {
+          return { valid: false } satisfies InviteStatus
+        }
+        throw error
+      }
+    },
+    retry: false,
+  })
 
-  const handleAccept = () => {
-    redeemMutation.mutate(undefined, {
-      onSuccess: () => {
-        setRedeemed(true)
-        setTimeout(() => navigate({ to: "/" }), 1500)
-      },
-    })
-  }
+  const [name, setName] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
-  if (inviteLoading) {
+  const redeem = useMutation({
+    mutationFn: async () => {
+      await api.post(`/v1/public/invitations/${encodeURIComponent(token)}/redeem`, {
+        name,
+        password,
+      })
+      // Account exists now — open a session via Better Auth.
+      const result = await authClient.signIn.email({
+        email: (inviteQuery.data as Extract<InviteStatus, { valid: true }>).email,
+        password,
+      })
+      if (result.error) {
+        throw new Error(result.error.message ?? "Sign-in after redeem failed")
+      }
+    },
+    onSuccess: () => void navigate({ to: "/" }),
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not accept invitation"),
+  })
+
+  useEffect(() => {
+    setError(null)
+  }, [])
+
+  if (inviteQuery.isPending) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <CardContent className="flex items-center justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
   }
 
-  if (inviteError || !invite) {
+  if (!inviteQuery.data?.valid) {
+    const reason = inviteQuery.data && "reason" in inviteQuery.data ? inviteQuery.data.reason : null
+    const message =
+      reason === "redeemed"
+        ? "This invitation has already been used."
+        : reason === "expired"
+          ? "This invitation has expired. Ask an admin for a new one."
+          : "This invitation link isn't valid."
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Invalid invite</CardTitle>
-          <CardDescription>
-            This invite link is invalid, expired, or has already been used.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    )
-  }
-
-  if (redeemed) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite accepted</CardTitle>
-          <CardDescription>
-            You now have access to {invite.operatorName}. Redirecting...
-          </CardDescription>
+          <CardTitle>Invitation unavailable</CardTitle>
+          <CardDescription>{message}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -90,39 +108,52 @@ function AcceptInvitePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accept operator invite</CardTitle>
+        <CardTitle>Accept your invitation</CardTitle>
         <CardDescription>
-          You have been invited to access <strong>{invite.operatorName}</strong>
-          {invite.label ? ` as ${invite.label}` : ""}.
+          You've been invited to join as <strong>{inviteQuery.data.email}</strong>. Set your name
+          and password to finish creating your account.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-md border p-3 text-sm">
-          <p className="text-muted-foreground mb-2">Granted permissions:</p>
-          <div className="flex flex-wrap gap-1">
-            {invite.scopes.map((scope) => (
-              <Badge key={scope} variant="secondary" className="text-xs">
-                {scope}
-              </Badge>
-            ))}
-          </div>
-          {invite.expiresAt && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Expires: {new Date(invite.expiresAt).toLocaleDateString()}
-            </p>
+      <CardContent>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setError(null)
+            redeem.mutate()
+          }}
+        >
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
           )}
-        </div>
-
-        {redeemMutation.error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {redeemMutation.error.message}
+          <div className="space-y-2">
+            <Label htmlFor="name">Full name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoComplete="name"
+              autoFocus
+            />
           </div>
-        )}
-
-        <Button onClick={handleAccept} className="w-full" disabled={redeemMutation.isPending}>
-          {redeemMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Accept invite
-        </Button>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={redeem.isPending}>
+            {redeem.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Accept invitation
+          </Button>
+        </form>
       </CardContent>
     </Card>
   )

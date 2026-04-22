@@ -18,13 +18,14 @@ import {
   bookingAllocations,
   bookingDocuments,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
+  bookingItemTravelers,
   bookingNotes,
-  bookingParticipants,
   bookingRedemptionEvents,
+  bookingStaffAssignments,
   bookingSupplierStatuses,
   bookings,
+  bookingTravelers,
 } from "./schema.js"
 import { cleanupGroupOnBookingCancelled } from "./service-groups.js"
 import {
@@ -32,10 +33,12 @@ import {
   offerItemParticipantsRef,
   offerItemsRef,
   offerParticipantsRef,
+  offerStaffAssignmentsRef,
   offersRef,
   orderItemParticipantsRef,
   orderItemsRef,
   orderParticipantsRef,
+  orderStaffAssignmentsRef,
   ordersRef,
 } from "./transactions-ref.js"
 import type {
@@ -52,8 +55,8 @@ import type {
   insertBookingItemSchema,
   insertBookingNoteSchema,
   insertBookingSchema,
-  insertParticipantSchema,
-  insertPassengerSchema,
+  insertTravelerRecordSchema,
+  insertTravelerSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
@@ -61,8 +64,8 @@ import type {
   updateBookingItemSchema,
   updateBookingSchema,
   updateBookingStatusSchema,
-  updateParticipantSchema,
-  updatePassengerSchema,
+  updateTravelerRecordSchema,
+  updateTravelerSchema,
 } from "./validation.js"
 
 type BookingListQuery = z.infer<typeof bookingListQuerySchema>
@@ -76,10 +79,10 @@ type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>
 type CancelBookingInput = z.infer<typeof cancelBookingSchema>
 type ExpireBookingInput = z.infer<typeof expireBookingSchema>
 type ExpireStaleBookingsInput = z.infer<typeof expireStaleBookingsSchema>
-type CreatePassengerInput = z.infer<typeof insertPassengerSchema>
-type UpdatePassengerInput = z.infer<typeof updatePassengerSchema>
-type CreateParticipantInput = z.infer<typeof insertParticipantSchema>
-type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>
+type CreateTravelerInput = z.infer<typeof insertTravelerSchema>
+type UpdateTravelerInput = z.infer<typeof updateTravelerSchema>
+type CreateTravelerRecordInput = z.infer<typeof insertTravelerRecordSchema>
+type UpdateTravelerRecordInput = z.infer<typeof updateTravelerRecordSchema>
 type CreateBookingItemInput = z.infer<typeof insertBookingItemSchema>
 type UpdateBookingItemInput = z.infer<typeof updateBookingItemSchema>
 type CreateBookingItemParticipantInput = z.infer<typeof insertBookingItemParticipantSchema>
@@ -150,67 +153,44 @@ function toDateValueOrNull(value: Date | string | null) {
   return value instanceof Date ? value : new Date(value)
 }
 
-function toPassengerResponse(participant: typeof bookingParticipants.$inferSelect) {
+function toTravelerResponse(participant: typeof bookingTravelers.$inferSelect) {
   return {
     id: participant.id,
     bookingId: participant.bookingId,
+    participantType: participant.participantType,
+    travelerCategory: participant.travelerCategory,
     firstName: participant.firstName,
     lastName: participant.lastName,
     email: participant.email,
     phone: participant.phone,
+    preferredLanguage: participant.preferredLanguage,
+    accessibilityNeeds: participant.accessibilityNeeds,
     specialRequests: participant.specialRequests,
-    isLeadPassenger: participant.isPrimary,
+    isPrimary: participant.isPrimary,
+    notes: participant.notes,
     createdAt: participant.createdAt,
     updatedAt: participant.updatedAt,
-  }
-}
-
-function toCreateParticipantFromPassenger(data: CreatePassengerInput): CreateParticipantInput {
-  return {
-    participantType: "traveler" as const,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email ?? null,
-    phone: data.phone ?? null,
-    specialRequests: data.specialRequests ?? null,
-    isPrimary: data.isLeadPassenger ?? false,
-  }
-}
-
-function toUpdateParticipantFromPassenger(data: UpdatePassengerInput): UpdateParticipantInput {
-  return {
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email ?? null,
-    phone: data.phone ?? null,
-    specialRequests: data.specialRequests ?? null,
-    isPrimary: data.isLeadPassenger ?? undefined,
   }
 }
 
 async function ensureParticipantFlags(
   db: PostgresJsDatabase,
   bookingId: string,
-  participantId: string,
+  travelerId: string,
   data: { isPrimary?: boolean | null },
 ) {
   if (data.isPrimary) {
     await db
-      .update(bookingParticipants)
+      .update(bookingTravelers)
       .set({ isPrimary: false, updatedAt: new Date() })
-      .where(
-        and(
-          eq(bookingParticipants.bookingId, bookingId),
-          ne(bookingParticipants.id, participantId),
-        ),
-      )
+      .where(and(eq(bookingTravelers.bookingId, bookingId), ne(bookingTravelers.id, travelerId)))
   }
 }
 
 async function ensureBookingScopedLinks(
   db: PostgresJsDatabase,
   bookingId: string,
-  data: { bookingItemId?: string | null; participantId?: string | null },
+  data: { bookingItemId?: string | null; travelerId?: string | null },
 ) {
   if (data.bookingItemId) {
     const [item] = await db
@@ -224,20 +204,17 @@ async function ensureBookingScopedLinks(
     }
   }
 
-  if (data.participantId) {
-    const [participant] = await db
-      .select({ id: bookingParticipants.id })
-      .from(bookingParticipants)
+  if (data.travelerId) {
+    const [traveler] = await db
+      .select({ id: bookingTravelers.id })
+      .from(bookingTravelers)
       .where(
-        and(
-          eq(bookingParticipants.id, data.participantId),
-          eq(bookingParticipants.bookingId, bookingId),
-        ),
+        and(eq(bookingTravelers.id, data.travelerId), eq(bookingTravelers.bookingId, bookingId)),
       )
       .limit(1)
 
-    if (!participant) {
-      return { ok: false as const, reason: "participant_not_found" as const }
+    if (!traveler) {
+      return { ok: false as const, reason: "traveler_not_found" as const }
     }
   }
 
@@ -258,6 +235,14 @@ type TransactionParticipantRecord = {
   notes: string | null
   createdAt: Date
   updatedAt: Date
+}
+
+function isStaffParticipantType(participantType: string) {
+  return participantType === "staff"
+}
+
+function toStaffAssignmentRole(role: string | null | undefined) {
+  return role === "service_assignee" ? "service_assignee" : "other"
 }
 
 type TransactionItemRecord = {
@@ -287,7 +272,7 @@ type TransactionItemRecord = {
 }
 
 type TransactionItemParticipantRecord = {
-  participantId: string
+  travelerId: string
   role: string
   isPrimary: boolean
   offerItemId?: string
@@ -301,6 +286,16 @@ type ReservationSourceBundle = {
   orderId: string | null
   personId: string | null
   organizationId: string | null
+  contactFirstName: string | null
+  contactLastName: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  contactPreferredLanguage: string | null
+  contactCountry: string | null
+  contactRegion: string | null
+  contactCity: string | null
+  contactAddressLine1: string | null
+  contactPostalCode: string | null
   currency: string
   baseCurrency: string | null
   totalAmountCents: number | null
@@ -342,6 +337,37 @@ function deriveBookingPax(
 
 function getTransactionItemParticipantItemId(link: TransactionItemParticipantRecord) {
   return "offerItemId" in link ? link.offerItemId : link.orderItemId
+}
+
+function toStaffReservationParticipant(
+  assignment: {
+    id: string
+    personId: string | null
+    firstName: string
+    lastName: string
+    email: string | null
+    phone: string | null
+    preferredLanguage: string | null
+    isPrimary: boolean
+    notes: string | null
+  },
+  suffix: string,
+): TransactionParticipantRecord {
+  return {
+    id: `staff:${suffix}:${assignment.id}`,
+    personId: assignment.personId,
+    participantType: "staff",
+    travelerCategory: null,
+    firstName: assignment.firstName,
+    lastName: assignment.lastName,
+    email: assignment.email,
+    phone: assignment.phone,
+    preferredLanguage: assignment.preferredLanguage,
+    isPrimary: assignment.isPrimary,
+    notes: assignment.notes,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
 }
 
 function mapDeliveryFormatToFulfillment(format: string) {
@@ -619,6 +645,17 @@ async function reserveBookingFromTransactionSource(
           personId: source.personId,
           organizationId: source.organizationId,
           sourceType: data.sourceType,
+          contactFirstName: data.contactFirstName ?? source.contactFirstName,
+          contactLastName: data.contactLastName ?? source.contactLastName,
+          contactEmail: data.contactEmail ?? source.contactEmail,
+          contactPhone: data.contactPhone ?? source.contactPhone,
+          contactPreferredLanguage:
+            data.contactPreferredLanguage ?? source.contactPreferredLanguage,
+          contactCountry: data.contactCountry ?? source.contactCountry,
+          contactRegion: data.contactRegion ?? source.contactRegion,
+          contactCity: data.contactCity ?? source.contactCity,
+          contactAddressLine1: data.contactAddressLine1 ?? source.contactAddressLine1,
+          contactPostalCode: data.contactPostalCode ?? source.contactPostalCode,
           sellCurrency: source.currency,
           baseCurrency: source.baseCurrency,
           sellAmountCents: source.totalAmountCents,
@@ -636,17 +673,23 @@ async function reserveBookingFromTransactionSource(
       }
 
       const participantMap = new Map<string, string>()
+      const staffParticipantMap = new Map<string, TransactionParticipantRecord>()
       if (data.includeParticipants) {
         for (const participant of source.participants) {
+          if (isStaffParticipantType(participant.participantType)) {
+            staffParticipantMap.set(participant.id, participant)
+            continue
+          }
+
           const [createdParticipant] = await tx
-            .insert(bookingParticipants)
+            .insert(bookingTravelers)
             .values({
               bookingId: booking.id,
               personId: participant.personId ?? null,
               participantType:
-                participant.participantType as CreateParticipantInput["participantType"],
+                participant.participantType as CreateTravelerRecordInput["participantType"],
               travelerCategory:
-                (participant.travelerCategory as CreateParticipantInput["travelerCategory"]) ??
+                (participant.travelerCategory as CreateTravelerRecordInput["travelerCategory"]) ??
                 null,
               firstName: participant.firstName,
               lastName: participant.lastName,
@@ -758,18 +801,87 @@ async function reserveBookingFromTransactionSource(
         }
 
         const bookingItemId = bookingItemMap.get(sourceItemId)
-        const participantId = participantMap.get(link.participantId)
+        const travelerId = participantMap.get(link.travelerId)
 
-        if (!bookingItemId || !participantId) {
+        if (!bookingItemId || !travelerId) {
           continue
         }
 
-        await tx.insert(bookingItemParticipants).values({
+        await tx.insert(bookingItemTravelers).values({
           bookingItemId,
-          participantId,
+          travelerId,
           role: link.role as CreateBookingItemParticipantInput["role"],
           isPrimary: link.isPrimary,
         })
+      }
+
+      if (staffParticipantMap.size > 0) {
+        const linkedStaffAssignments = [] as Array<typeof bookingStaffAssignments.$inferInsert>
+        const linkedStaffParticipantIds = new Set<string>()
+
+        for (const link of source.itemParticipants) {
+          const staffParticipant = staffParticipantMap.get(link.travelerId)
+          if (!staffParticipant) {
+            continue
+          }
+
+          const sourceItemId = getTransactionItemParticipantItemId(link)
+          if (!sourceItemId) {
+            continue
+          }
+
+          const bookingItemId = bookingItemMap.get(sourceItemId)
+          if (!bookingItemId) {
+            continue
+          }
+
+          linkedStaffParticipantIds.add(staffParticipant.id)
+          linkedStaffAssignments.push({
+            bookingId: booking.id,
+            bookingItemId,
+            personId: staffParticipant.personId ?? null,
+            role: toStaffAssignmentRole(link.role),
+            firstName: staffParticipant.firstName,
+            lastName: staffParticipant.lastName,
+            email: staffParticipant.email ?? null,
+            phone: staffParticipant.phone ?? null,
+            preferredLanguage: staffParticipant.preferredLanguage ?? null,
+            isPrimary: link.isPrimary || staffParticipant.isPrimary,
+            notes: staffParticipant.notes ?? null,
+            metadata: {
+              sourceParticipantId: staffParticipant.id,
+              sourceItemId,
+              sourceRole: link.role,
+            },
+          })
+        }
+
+        for (const staffParticipant of staffParticipantMap.values()) {
+          if (linkedStaffParticipantIds.has(staffParticipant.id)) {
+            continue
+          }
+
+          linkedStaffAssignments.push({
+            bookingId: booking.id,
+            bookingItemId: null,
+            personId: staffParticipant.personId ?? null,
+            role: "service_assignee",
+            firstName: staffParticipant.firstName,
+            lastName: staffParticipant.lastName,
+            email: staffParticipant.email ?? null,
+            phone: staffParticipant.phone ?? null,
+            preferredLanguage: staffParticipant.preferredLanguage ?? null,
+            isPrimary: staffParticipant.isPrimary,
+            notes: staffParticipant.notes ?? null,
+            metadata: {
+              sourceParticipantId: staffParticipant.id,
+            },
+          })
+        }
+
+        if (linkedStaffAssignments.length > 0) {
+          await tx.insert(bookingStaffAssignments).values(linkedStaffAssignments)
+        }
       }
 
       await tx
@@ -969,23 +1081,23 @@ async function autoIssueFulfillmentsForBooking(
   const settingsByProductId = new Map(settings.map((setting) => [setting.productId, setting]))
   const travelerParticipants = await db
     .select()
-    .from(bookingParticipants)
+    .from(bookingTravelers)
     .where(
       and(
-        eq(bookingParticipants.bookingId, bookingId),
+        eq(bookingTravelers.bookingId, bookingId),
         or(
-          eq(bookingParticipants.participantType, "traveler"),
-          eq(bookingParticipants.participantType, "occupant"),
+          eq(bookingTravelers.participantType, "traveler"),
+          eq(bookingTravelers.participantType, "occupant"),
         ),
       ),
     )
-    .orderBy(desc(bookingParticipants.isPrimary), asc(bookingParticipants.createdAt))
+    .orderBy(desc(bookingTravelers.isPrimary), asc(bookingTravelers.createdAt))
 
   const participantLinks = await db
     .select()
-    .from(bookingItemParticipants)
+    .from(bookingItemTravelers)
     .where(
-      sql`${bookingItemParticipants.bookingItemId} IN (
+      sql`${bookingItemTravelers.bookingItemId} IN (
         SELECT ${bookingItems.id}
         FROM ${bookingItems}
         WHERE ${bookingItems.bookingId} = ${bookingId}
@@ -1037,7 +1149,7 @@ async function autoIssueFulfillmentsForBooking(
       fulfillmentsToInsert.push({
         bookingId,
         bookingItemId: item.id,
-        participantId: null,
+        travelerId: null,
         fulfillmentType: delivery.fulfillmentType,
         deliveryChannel: delivery.deliveryChannel,
         status: "issued",
@@ -1051,7 +1163,7 @@ async function autoIssueFulfillmentsForBooking(
       fulfillmentsToInsert.push({
         bookingId,
         bookingItemId: item.id,
-        participantId: null,
+        travelerId: null,
         fulfillmentType: delivery.fulfillmentType,
         deliveryChannel: delivery.deliveryChannel,
         status: "issued",
@@ -1065,9 +1177,9 @@ async function autoIssueFulfillmentsForBooking(
       participantLinksByItemId
         .get(item.id)
         ?.map((link) =>
-          travelerParticipants.find((participant) => participant.id === link.participantId),
+          travelerParticipants.find((participant) => participant.id === link.travelerId),
         )
-        .filter((participant): participant is typeof bookingParticipants.$inferSelect =>
+        .filter((participant): participant is typeof bookingTravelers.$inferSelect =>
           Boolean(participant),
         ) ?? []
 
@@ -1078,13 +1190,13 @@ async function autoIssueFulfillmentsForBooking(
       fulfillmentsToInsert.push({
         bookingId,
         bookingItemId: item.id,
-        participantId: participant.id,
+        travelerId: participant.id,
         fulfillmentType: delivery.fulfillmentType,
         deliveryChannel: delivery.deliveryChannel,
         status: "issued",
         payload: {
           ...payloadBase,
-          participantId: participant.id,
+          travelerId: participant.id,
           scope: "participant",
         },
         issuedAt: now,
@@ -1330,7 +1442,7 @@ export const bookingsService = {
       return { status: "not_found" as const }
     }
 
-    const [participants, items, itemParticipants] = await Promise.all([
+    const [participants, items, itemParticipants, staffAssignments] = await Promise.all([
       db
         .select()
         .from(offerParticipantsRef)
@@ -1352,7 +1464,35 @@ export const bookingsService = {
           )`,
         )
         .orderBy(asc(offerItemParticipantsRef.createdAt)),
+      db
+        .select()
+        .from(offerStaffAssignmentsRef)
+        .where(eq(offerStaffAssignmentsRef.offerId, offerId))
+        .orderBy(asc(offerStaffAssignmentsRef.createdAt)),
     ])
+
+    const reservationParticipants = [...participants] as TransactionParticipantRecord[]
+    const reservationItemParticipants = itemParticipants.map(
+      (link): TransactionItemParticipantRecord => ({
+        travelerId: link.travelerId,
+        role: link.role,
+        isPrimary: link.isPrimary,
+        offerItemId: link.offerItemId,
+      }),
+    )
+    for (const assignment of staffAssignments) {
+      const participant = toStaffReservationParticipant(assignment, "offer")
+      reservationParticipants.push(participant)
+
+      if (assignment.offerItemId) {
+        reservationItemParticipants.push({
+          travelerId: participant.id,
+          role: assignment.role,
+          isPrimary: assignment.isPrimary,
+          offerItemId: assignment.offerItemId,
+        })
+      }
+    }
 
     return reserveBookingFromTransactionSource(
       db,
@@ -1363,14 +1503,24 @@ export const bookingsService = {
         orderId: null,
         personId: offer.personId ?? null,
         organizationId: offer.organizationId ?? null,
+        contactFirstName: offer.contactFirstName ?? null,
+        contactLastName: offer.contactLastName ?? null,
+        contactEmail: offer.contactEmail ?? null,
+        contactPhone: offer.contactPhone ?? null,
+        contactPreferredLanguage: offer.contactPreferredLanguage ?? null,
+        contactCountry: offer.contactCountry ?? null,
+        contactRegion: offer.contactRegion ?? null,
+        contactCity: offer.contactCity ?? null,
+        contactAddressLine1: offer.contactAddressLine1 ?? null,
+        contactPostalCode: offer.contactPostalCode ?? null,
         currency: offer.currency,
         baseCurrency: offer.baseCurrency ?? null,
         totalAmountCents: offer.totalAmountCents ?? null,
         costAmountCents: offer.costAmountCents ?? null,
         notes: offer.notes ?? null,
-        participants,
+        participants: reservationParticipants,
         items,
-        itemParticipants,
+        itemParticipants: reservationItemParticipants,
       },
       data,
       userId,
@@ -1389,7 +1539,7 @@ export const bookingsService = {
       return { status: "not_found" as const }
     }
 
-    const [participants, items, itemParticipants] = await Promise.all([
+    const [participants, items, itemParticipants, staffAssignments] = await Promise.all([
       db
         .select()
         .from(orderParticipantsRef)
@@ -1411,7 +1561,35 @@ export const bookingsService = {
           )`,
         )
         .orderBy(asc(orderItemParticipantsRef.createdAt)),
+      db
+        .select()
+        .from(orderStaffAssignmentsRef)
+        .where(eq(orderStaffAssignmentsRef.orderId, orderId))
+        .orderBy(asc(orderStaffAssignmentsRef.createdAt)),
     ])
+
+    const reservationParticipants = [...participants] as TransactionParticipantRecord[]
+    const reservationItemParticipants = itemParticipants.map(
+      (link): TransactionItemParticipantRecord => ({
+        travelerId: link.travelerId,
+        role: link.role,
+        isPrimary: link.isPrimary,
+        orderItemId: link.orderItemId,
+      }),
+    )
+    for (const assignment of staffAssignments) {
+      const participant = toStaffReservationParticipant(assignment, "order")
+      reservationParticipants.push(participant)
+
+      if (assignment.orderItemId) {
+        reservationItemParticipants.push({
+          travelerId: participant.id,
+          role: assignment.role,
+          isPrimary: assignment.isPrimary,
+          orderItemId: assignment.orderItemId,
+        })
+      }
+    }
 
     return reserveBookingFromTransactionSource(
       db,
@@ -1422,14 +1600,24 @@ export const bookingsService = {
         orderId: order.id,
         personId: order.personId ?? null,
         organizationId: order.organizationId ?? null,
+        contactFirstName: order.contactFirstName ?? null,
+        contactLastName: order.contactLastName ?? null,
+        contactEmail: order.contactEmail ?? null,
+        contactPhone: order.contactPhone ?? null,
+        contactPreferredLanguage: order.contactPreferredLanguage ?? null,
+        contactCountry: order.contactCountry ?? null,
+        contactRegion: order.contactRegion ?? null,
+        contactCity: order.contactCity ?? null,
+        contactAddressLine1: order.contactAddressLine1 ?? null,
+        contactPostalCode: order.contactPostalCode ?? null,
         currency: order.currency,
         baseCurrency: order.baseCurrency ?? null,
         totalAmountCents: order.totalAmountCents ?? null,
         costAmountCents: order.costAmountCents ?? null,
         notes: order.notes ?? null,
-        participants,
+        participants: reservationParticipants,
         items,
-        itemParticipants,
+        itemParticipants: reservationItemParticipants,
       },
       data,
       userId,
@@ -1450,6 +1638,16 @@ export const bookingsService = {
             sourceType: data.sourceType,
             externalBookingRef: data.externalBookingRef ?? null,
             communicationLanguage: data.communicationLanguage ?? null,
+            contactFirstName: data.contactFirstName ?? null,
+            contactLastName: data.contactLastName ?? null,
+            contactEmail: data.contactEmail ?? null,
+            contactPhone: data.contactPhone ?? null,
+            contactPreferredLanguage: data.contactPreferredLanguage ?? null,
+            contactCountry: data.contactCountry ?? null,
+            contactRegion: data.contactRegion ?? null,
+            contactCity: data.contactCity ?? null,
+            contactAddressLine1: data.contactAddressLine1 ?? null,
+            contactPostalCode: data.contactPostalCode ?? null,
             sellCurrency: data.sellCurrency,
             baseCurrency: data.baseCurrency ?? null,
             sellAmountCents: data.sellAmountCents ?? null,
@@ -1574,6 +1772,16 @@ export const bookingsService = {
         .insert(bookings)
         .values({
           ...data,
+          contactFirstName: data.contactFirstName ?? null,
+          contactLastName: data.contactLastName ?? null,
+          contactEmail: data.contactEmail ?? null,
+          contactPhone: data.contactPhone ?? null,
+          contactPreferredLanguage: data.contactPreferredLanguage ?? null,
+          contactCountry: data.contactCountry ?? null,
+          contactRegion: data.contactRegion ?? null,
+          contactCity: data.contactCity ?? null,
+          contactAddressLine1: data.contactAddressLine1 ?? null,
+          contactPostalCode: data.contactPostalCode ?? null,
           holdExpiresAt: toTimestamp(data.holdExpiresAt),
           confirmedAt: toTimestamp(data.confirmedAt),
           expiredAt: toTimestamp(data.expiredAt),
@@ -1603,6 +1811,24 @@ export const bookingsService = {
       .update(bookings)
       .set({
         ...data,
+        contactFirstName:
+          data.contactFirstName === undefined ? undefined : (data.contactFirstName ?? null),
+        contactLastName:
+          data.contactLastName === undefined ? undefined : (data.contactLastName ?? null),
+        contactEmail: data.contactEmail === undefined ? undefined : (data.contactEmail ?? null),
+        contactPhone: data.contactPhone === undefined ? undefined : (data.contactPhone ?? null),
+        contactPreferredLanguage:
+          data.contactPreferredLanguage === undefined
+            ? undefined
+            : (data.contactPreferredLanguage ?? null),
+        contactCountry:
+          data.contactCountry === undefined ? undefined : (data.contactCountry ?? null),
+        contactRegion: data.contactRegion === undefined ? undefined : (data.contactRegion ?? null),
+        contactCity: data.contactCity === undefined ? undefined : (data.contactCity ?? null),
+        contactAddressLine1:
+          data.contactAddressLine1 === undefined ? undefined : (data.contactAddressLine1 ?? null),
+        contactPostalCode:
+          data.contactPostalCode === undefined ? undefined : (data.contactPostalCode ?? null),
         holdExpiresAt:
           data.holdExpiresAt === undefined ? undefined : toTimestamp(data.holdExpiresAt),
         confirmedAt: data.confirmedAt === undefined ? undefined : toTimestamp(data.confirmedAt),
@@ -2086,33 +2312,28 @@ export const bookingsService = {
     }
   },
 
-  listParticipants(db: PostgresJsDatabase, bookingId: string) {
+  listTravelerRecords(db: PostgresJsDatabase, bookingId: string) {
     return db
       .select()
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.bookingId, bookingId))
-      .orderBy(desc(bookingParticipants.isPrimary), asc(bookingParticipants.createdAt))
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, bookingId))
+      .orderBy(desc(bookingTravelers.isPrimary), asc(bookingTravelers.createdAt))
   },
 
-  async getParticipantById(db: PostgresJsDatabase, bookingId: string, participantId: string) {
+  async getTravelerRecordById(db: PostgresJsDatabase, bookingId: string, travelerId: string) {
     const [row] = await db
       .select()
-      .from(bookingParticipants)
-      .where(
-        and(
-          eq(bookingParticipants.id, participantId),
-          eq(bookingParticipants.bookingId, bookingId),
-        ),
-      )
+      .from(bookingTravelers)
+      .where(and(eq(bookingTravelers.id, travelerId), eq(bookingTravelers.bookingId, bookingId)))
       .limit(1)
 
     return row ?? null
   },
 
-  async createParticipant(
+  async createTravelerRecord(
     db: PostgresJsDatabase,
     bookingId: string,
-    data: CreateParticipantInput,
+    data: CreateTravelerRecordInput,
     userId?: string,
   ) {
     const [booking] = await db
@@ -2126,7 +2347,7 @@ export const bookingsService = {
     }
 
     const [row] = await db
-      .insert(bookingParticipants)
+      .insert(bookingTravelers)
       .values({
         bookingId,
         personId: data.personId ?? null,
@@ -2155,21 +2376,21 @@ export const bookingsService = {
       actorId: userId ?? "system",
       activityType: "passenger_update",
       description: `Participant ${data.firstName} ${data.lastName} added`,
-      metadata: { participantId: row.id, participantType: data.participantType },
+      metadata: { travelerId: row.id, participantType: data.participantType },
     })
 
     return row
   },
 
-  async updateParticipant(
+  async updateTravelerRecord(
     db: PostgresJsDatabase,
-    participantId: string,
-    data: UpdateParticipantInput,
+    travelerId: string,
+    data: UpdateTravelerRecordInput,
   ) {
     const [row] = await db
-      .update(bookingParticipants)
+      .update(bookingTravelers)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(bookingParticipants.id, participantId))
+      .where(eq(bookingTravelers.id, travelerId))
       .returning()
 
     if (!row) {
@@ -2181,59 +2402,74 @@ export const bookingsService = {
     return row
   },
 
-  async deleteParticipant(db: PostgresJsDatabase, participantId: string) {
+  async deleteTravelerRecord(db: PostgresJsDatabase, travelerId: string) {
     const [row] = await db
-      .delete(bookingParticipants)
-      .where(eq(bookingParticipants.id, participantId))
-      .returning({ id: bookingParticipants.id })
+      .delete(bookingTravelers)
+      .where(eq(bookingTravelers.id, travelerId))
+      .returning({ id: bookingTravelers.id })
 
     return row ?? null
   },
 
-  listPassengers(db: PostgresJsDatabase, bookingId: string) {
+  listTravelers(db: PostgresJsDatabase, bookingId: string) {
     return db
       .select()
-      .from(bookingParticipants)
+      .from(bookingTravelers)
       .where(
         and(
-          eq(bookingParticipants.bookingId, bookingId),
-          or(
-            ...travelerParticipantTypes.map((type) =>
-              eq(bookingParticipants.participantType, type),
-            ),
-          ),
+          eq(bookingTravelers.bookingId, bookingId),
+          or(...travelerParticipantTypes.map((type) => eq(bookingTravelers.participantType, type))),
         ),
       )
-      .orderBy(asc(bookingParticipants.createdAt))
-      .then((rows) => rows.map(toPassengerResponse))
+      .orderBy(asc(bookingTravelers.createdAt))
+      .then((rows) => rows.map(toTravelerResponse))
   },
 
-  async createPassenger(
+  async createTraveler(
     db: PostgresJsDatabase,
     bookingId: string,
-    data: CreatePassengerInput,
+    data: CreateTravelerInput,
     userId?: string,
   ) {
-    const row = await this.createParticipant(
+    const row = await this.createTravelerRecord(
       db,
       bookingId,
-      toCreateParticipantFromPassenger(data),
+      {
+        participantType: "traveler",
+        travelerCategory: data.travelerCategory ?? null,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        preferredLanguage: data.preferredLanguage ?? null,
+        accessibilityNeeds: data.accessibilityNeeds ?? null,
+        specialRequests: data.specialRequests ?? null,
+        isPrimary: data.isPrimary ?? false,
+        notes: data.notes ?? null,
+      },
       userId,
     )
-    return row ? toPassengerResponse(row) : null
+    return row ? toTravelerResponse(row) : null
   },
 
-  async updatePassenger(db: PostgresJsDatabase, passengerId: string, data: UpdatePassengerInput) {
-    const row = await this.updateParticipant(
-      db,
-      passengerId,
-      toUpdateParticipantFromPassenger(data),
-    )
-    return row ? toPassengerResponse(row) : null
+  async updateTraveler(db: PostgresJsDatabase, travelerId: string, data: UpdateTravelerInput) {
+    const row = await this.updateTravelerRecord(db, travelerId, {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email ?? null,
+      phone: data.phone ?? null,
+      preferredLanguage: data.preferredLanguage ?? null,
+      accessibilityNeeds: data.accessibilityNeeds ?? null,
+      specialRequests: data.specialRequests ?? null,
+      travelerCategory: data.travelerCategory ?? null,
+      isPrimary: data.isPrimary ?? undefined,
+      notes: data.notes ?? null,
+    })
+    return row ? toTravelerResponse(row) : null
   },
 
-  async deletePassenger(db: PostgresJsDatabase, passengerId: string) {
-    return this.deleteParticipant(db, passengerId)
+  async deleteTraveler(db: PostgresJsDatabase, travelerId: string) {
+    return this.deleteTravelerRecord(db, travelerId)
   },
 
   listItems(db: PostgresJsDatabase, bookingId: string) {
@@ -2331,9 +2567,9 @@ export const bookingsService = {
   listItemParticipants(db: PostgresJsDatabase, itemId: string) {
     return db
       .select()
-      .from(bookingItemParticipants)
-      .where(eq(bookingItemParticipants.bookingItemId, itemId))
-      .orderBy(desc(bookingItemParticipants.isPrimary), asc(bookingItemParticipants.createdAt))
+      .from(bookingItemTravelers)
+      .where(eq(bookingItemTravelers.bookingItemId, itemId))
+      .orderBy(desc(bookingItemTravelers.isPrimary), asc(bookingItemTravelers.createdAt))
   },
 
   async addItemParticipant(
@@ -2351,28 +2587,28 @@ export const bookingsService = {
       return null
     }
 
-    const [participant] = await db
-      .select({ id: bookingParticipants.id })
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.id, data.participantId))
+    const [traveler] = await db
+      .select({ id: bookingTravelers.id })
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.id, data.travelerId))
       .limit(1)
 
-    if (!participant) {
+    if (!traveler) {
       return null
     }
 
     if (data.isPrimary) {
       await db
-        .update(bookingItemParticipants)
+        .update(bookingItemTravelers)
         .set({ isPrimary: false })
-        .where(eq(bookingItemParticipants.bookingItemId, itemId))
+        .where(eq(bookingItemTravelers.bookingItemId, itemId))
     }
 
     const [row] = await db
-      .insert(bookingItemParticipants)
+      .insert(bookingItemTravelers)
       .values({
         bookingItemId: itemId,
-        participantId: data.participantId,
+        travelerId: data.travelerId,
         role: data.role,
         isPrimary: data.isPrimary ?? false,
       })
@@ -2383,9 +2619,9 @@ export const bookingsService = {
 
   async removeItemParticipant(db: PostgresJsDatabase, linkId: string) {
     const [row] = await db
-      .delete(bookingItemParticipants)
-      .where(eq(bookingItemParticipants.id, linkId))
-      .returning({ id: bookingItemParticipants.id })
+      .delete(bookingItemTravelers)
+      .where(eq(bookingItemTravelers.id, linkId))
+      .returning({ id: bookingItemTravelers.id })
 
     return row ?? null
   },
@@ -2547,7 +2783,7 @@ export const bookingsService = {
       .values({
         bookingId,
         bookingItemId: data.bookingItemId ?? null,
-        participantId: data.participantId ?? null,
+        travelerId: data.travelerId ?? null,
         fulfillmentType: data.fulfillmentType,
         deliveryChannel: data.deliveryChannel,
         status,
@@ -2566,7 +2802,7 @@ export const bookingsService = {
       metadata: {
         fulfillmentId: row?.id ?? null,
         bookingItemId: data.bookingItemId ?? null,
-        participantId: data.participantId ?? null,
+        travelerId: data.travelerId ?? null,
         status,
       },
     })
@@ -2606,7 +2842,7 @@ export const bookingsService = {
       .update(bookingFulfillments)
       .set({
         bookingItemId: data.bookingItemId === undefined ? undefined : (data.bookingItemId ?? null),
-        participantId: data.participantId === undefined ? undefined : (data.participantId ?? null),
+        travelerId: data.travelerId === undefined ? undefined : (data.travelerId ?? null),
         fulfillmentType: data.fulfillmentType,
         deliveryChannel: data.deliveryChannel,
         status: nextStatus,
@@ -2638,7 +2874,7 @@ export const bookingsService = {
         metadata: {
           fulfillmentId,
           bookingItemId: row.bookingItemId,
-          participantId: row.participantId,
+          travelerId: row.travelerId,
           status: row.status,
         },
       })
@@ -2687,7 +2923,7 @@ export const bookingsService = {
         .values({
           bookingId,
           bookingItemId: data.bookingItemId ?? null,
-          participantId: data.participantId ?? null,
+          travelerId: data.travelerId ?? null,
           redeemedAt,
           redeemedBy: data.redeemedBy ?? userId ?? null,
           location: data.location ?? null,
@@ -2748,7 +2984,7 @@ export const bookingsService = {
         metadata: {
           redemptionEventId: event?.id ?? null,
           bookingItemId: data.bookingItemId ?? null,
-          participantId: data.participantId ?? null,
+          travelerId: data.travelerId ?? null,
           redeemedAt: redeemedAt.toISOString(),
           method: data.method,
         },
@@ -2811,6 +3047,15 @@ export const bookingsService = {
     return row
   },
 
+  async deleteNote(db: PostgresJsDatabase, noteId: string) {
+    const [row] = await db
+      .delete(bookingNotes)
+      .where(eq(bookingNotes.id, noteId))
+      .returning({ id: bookingNotes.id })
+
+    return row ?? null
+  },
+
   listDocuments(db: PostgresJsDatabase, bookingId: string) {
     return db
       .select()
@@ -2838,7 +3083,7 @@ export const bookingsService = {
       .insert(bookingDocuments)
       .values({
         bookingId,
-        participantId: data.participantId ?? data.passengerId ?? null,
+        travelerId: data.travelerId ?? null,
         type: data.type,
         fileName: data.fileName,
         fileUrl: data.fileUrl,

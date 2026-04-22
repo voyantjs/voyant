@@ -1,8 +1,8 @@
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 
-import { productDayServices, productDays, products } from "../schema.js"
+import { productDayServices, productDays, productItineraries, products } from "../schema.js"
 
 export type GenerateProductPdfResult = {
   pdfBytes: Uint8Array
@@ -21,12 +21,20 @@ export async function generateProductPdf(
     throw new Error(`Product not found: ${productId}`)
   }
 
+  const [defaultItinerary] = await db
+    .select({ id: productItineraries.id })
+    .from(productItineraries)
+    .where(and(eq(productItineraries.productId, productId), eq(productItineraries.isDefault, true)))
+    .limit(1)
+
   // 2. Fetch days with services
-  const days = await db
-    .select()
-    .from(productDays)
-    .where(eq(productDays.productId, productId))
-    .orderBy(asc(productDays.dayNumber))
+  const days = defaultItinerary
+    ? await db
+        .select()
+        .from(productDays)
+        .where(eq(productDays.itineraryId, defaultItinerary.id))
+        .orderBy(asc(productDays.dayNumber))
+    : []
 
   const daysWithServices = await Promise.all(
     days.map(async (day) => {

@@ -2,7 +2,7 @@ export const SELECT_TYPES = new Set(["single_select", "multi_select"])
 
 export const QUESTION_TARGETS = [
   { value: "booking", label: "Booking" },
-  { value: "participant", label: "Participant" },
+  { value: "traveler", label: "Traveler" },
   { value: "lead_traveler", label: "Lead traveler" },
   { value: "booker", label: "Booker" },
   { value: "extra", label: "Extra" },
@@ -44,6 +44,6 @@ export const CONTACT_FIELDS = [
 export const CONTACT_SCOPES = [
   { value: "booking", label: "Booking" },
   { value: "lead_traveler", label: "Lead traveler" },
-  { value: "participant", label: "Participant" },
+  { value: "traveler", label: "Traveler" },
   { value: "booker", label: "Booker" },
 ] as const

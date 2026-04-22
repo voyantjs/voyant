@@ -174,6 +174,7 @@ export function OptionStartTimeRuleDialog({ open, onOpenChange, rule, onSuccess 
               <div className="flex flex-col gap-2">
                 <Label>Rule mode</Label>
                 <Select
+                  items={RULE_MODES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("ruleMode")}
                   onValueChange={(value) => form.setValue("ruleMode", value as RuleMode)}
                 >
@@ -193,6 +194,7 @@ export function OptionStartTimeRuleDialog({ open, onOpenChange, rule, onSuccess 
                 <div className="flex flex-col gap-2">
                   <Label>Adjustment type</Label>
                   <Select
+                    items={ADJUSTMENT_TYPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                     value={form.watch("adjustmentType") ?? ""}
                     onValueChange={(value) =>
                       form.setValue("adjustmentType", (value || null) as AdjustmentType | null)

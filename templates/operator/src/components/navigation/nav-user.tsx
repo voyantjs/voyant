@@ -1,5 +1,6 @@
+import { Link } from "@tanstack/react-router"
 import { useLocale, useTheme } from "@voyantjs/voyant-admin"
-import { BadgeCheck, Bell, Check, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react"
+import { BadgeCheck, Check, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react"
 import {
   Avatar,
   AvatarFallback,
@@ -8,7 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   SidebarMenu,
@@ -85,7 +85,7 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <div className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar || undefined} alt={displayName} />
@@ -96,12 +96,14 @@ export function NavUser({
                   {showEmailSeparately && <span className="truncate text-xs">{user.email}</span>}
                 </div>
               </div>
-            </DropdownMenuLabel>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem disabled>
-                <BadgeCheck />
-                {messages.account}
+              <DropdownMenuItem asChild>
+                <Link to="/account">
+                  <BadgeCheck />
+                  {messages.account}
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("light")}>
                 <Sun className="h-4 w-4" />
@@ -126,10 +128,6 @@ export function NavUser({
               <DropdownMenuItem onClick={() => setLocale("ro")}>
                 {messages.romanian}
                 {resolvedLocale === "ro" && <Check className="ml-auto h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                {messages.notifications}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

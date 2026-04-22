@@ -5,30 +5,30 @@ import { queryOptions } from "@tanstack/react-query"
 import { type FetchWithValidationOptions, fetchWithValidation } from "./client.js"
 import type { UseBookingOptions } from "./hooks/use-booking.js"
 import type { UseBookingActivityOptions } from "./hooks/use-booking-activity.js"
-import type { UseBookingDocumentsOptions } from "./hooks/use-booking-documents.js"
+import type { UseBookingTravelerDocumentsOptions } from "./hooks/use-booking-documents.js"
 import type { UseBookingGroupOptions } from "./hooks/use-booking-group.js"
 import type { UseBookingGroupForBookingOptions } from "./hooks/use-booking-group-for-booking.js"
 import type { UseBookingGroupsOptions } from "./hooks/use-booking-groups.js"
-import type { UseBookingItemParticipantsOptions } from "./hooks/use-booking-item-participants.js"
+import type { UseBookingItemTravelersOptions } from "./hooks/use-booking-item-travelers.js"
 import type { UseBookingItemsOptions } from "./hooks/use-booking-items.js"
 import type { UseBookingNotesOptions } from "./hooks/use-booking-notes.js"
 import type { UseBookingsOptions } from "./hooks/use-bookings.js"
-import type { UsePassengersOptions } from "./hooks/use-passengers.js"
 import type { UseSupplierStatusesOptions } from "./hooks/use-supplier-statuses.js"
+import type { UseTravelersOptions } from "./hooks/use-travelers.js"
 import { bookingsQueryKeys } from "./query-keys.js"
 import {
   bookingActivityResponse,
-  bookingDocumentsResponse,
   bookingGroupDetailResponse,
   bookingGroupForBookingResponse,
   bookingGroupListResponse,
-  bookingItemParticipantsResponse,
   bookingItemsResponse,
+  bookingItemTravelersResponse,
   bookingListResponse,
   bookingNotesResponse,
-  bookingPassengersResponse,
   bookingSingleResponse,
   bookingSupplierStatusesResponse,
+  bookingTravelerDocumentsResponse,
+  bookingTravelersResponse,
   publicBookingSessionResponse,
   publicBookingSessionStateResponse,
 } from "./schemas.js"
@@ -81,56 +81,60 @@ export function getBookingItemsQueryOptions(
   })
 }
 
-export function getBookingItemParticipantsQueryOptions(
+export function getBookingItemTravelersQueryOptions(
   client: FetchWithValidationOptions,
   bookingId: string | null | undefined,
   itemId: string | null | undefined,
-  options: UseBookingItemParticipantsOptions = {},
+  options: UseBookingItemTravelersOptions = {},
 ) {
   const { enabled: _enabled = true } = options
 
   return queryOptions({
-    queryKey: bookingsQueryKeys.itemParticipants(bookingId ?? "", itemId ?? ""),
+    queryKey: bookingsQueryKeys.itemTravelers(bookingId ?? "", itemId ?? ""),
     queryFn: () =>
       fetchWithValidation(
-        `/v1/bookings/${bookingId}/items/${itemId}/participants`,
-        bookingItemParticipantsResponse,
+        `/v1/bookings/${bookingId}/items/${itemId}/travelers`,
+        bookingItemTravelersResponse,
         client,
       ),
   })
 }
 
-export function getBookingDocumentsQueryOptions(
+export function getBookingTravelerDocumentsQueryOptions(
   client: FetchWithValidationOptions,
   bookingId: string | null | undefined,
-  options: UseBookingDocumentsOptions = {},
+  options: UseBookingTravelerDocumentsOptions = {},
 ) {
   const { enabled: _enabled = true } = options
 
   return queryOptions({
     queryKey: bookingsQueryKeys.documents(bookingId ?? ""),
     queryFn: () =>
-      fetchWithValidation(`/v1/bookings/${bookingId}/documents`, bookingDocumentsResponse, client),
-  })
-}
-
-export function getPassengersQueryOptions(
-  client: FetchWithValidationOptions,
-  bookingId: string | null | undefined,
-  options: UsePassengersOptions = {},
-) {
-  const { enabled: _enabled = true } = options
-
-  return queryOptions({
-    queryKey: bookingsQueryKeys.passengers(bookingId ?? ""),
-    queryFn: () =>
       fetchWithValidation(
-        `/v1/bookings/${bookingId}/passengers`,
-        bookingPassengersResponse,
+        `/v1/bookings/${bookingId}/documents`,
+        bookingTravelerDocumentsResponse,
         client,
       ),
   })
 }
+
+export function getTravelersQueryOptions(
+  client: FetchWithValidationOptions,
+  bookingId: string | null | undefined,
+  options: UseTravelersOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: bookingsQueryKeys.travelers(bookingId ?? ""),
+    queryFn: () =>
+      fetchWithValidation(`/v1/bookings/${bookingId}/travelers`, bookingTravelersResponse, client),
+  })
+}
+
+export const getPassengersQueryOptions = getTravelersQueryOptions
+
+export const getBookingItemParticipantsQueryOptions = getBookingItemTravelersQueryOptions
 
 export function getSupplierStatusesQueryOptions(
   client: FetchWithValidationOptions,

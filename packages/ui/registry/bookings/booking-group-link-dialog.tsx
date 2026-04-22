@@ -142,6 +142,11 @@ export function BookingGroupLinkDialog({
             <div className="flex flex-col gap-2">
               <Label>Existing groups</Label>
               <Select
+                items={
+                  groups.length === 0
+                    ? [{ label: "No existing groups", value: JOIN_PLACEHOLDER }]
+                    : groups.map((g) => ({ label: g.label, value: g.id }))
+                }
                 value={selectedGroupId || JOIN_PLACEHOLDER}
                 onValueChange={(v) => setSelectedGroupId(v === JOIN_PLACEHOLDER ? "" : (v ?? ""))}
               >

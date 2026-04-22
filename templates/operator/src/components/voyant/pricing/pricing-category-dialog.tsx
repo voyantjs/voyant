@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PricingCategoryForm } from "./pricing-category-form"
 
@@ -25,17 +26,22 @@ export function PricingCategoryDialog({
   category,
   onSuccess,
 }: PricingCategoryDialogProps) {
+  const messages = useAdminMessages()
   const isEdit = Boolean(category)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="pricing-category-dialog" className="sm:max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit pricing category" : "New pricing category"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? messages.pricing.categories.dialogEditTitle
+              : messages.pricing.categories.dialogNewTitle}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update reusable pricing category rules and eligibility."
-              : "Create a reusable pricing category for products and options."}
+              ? messages.pricing.categories.dialogEditDescription
+              : messages.pricing.categories.dialogNewDescription}
           </DialogDescription>
         </DialogHeader>
         <PricingCategoryForm

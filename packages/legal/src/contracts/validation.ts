@@ -35,7 +35,6 @@ const contractTemplateCoreSchema = z.object({
   scope: contractScopeSchema,
   language: z.string().min(2).max(10).default("en"),
   description: z.string().max(2000).optional().nullable(),
-  bodyFormat: contractBodyFormatSchema.default("markdown"),
   body: z.string().min(1),
   variableSchema: z.record(z.string(), z.unknown()).optional().nullable(),
   active: z.boolean().default(true),
@@ -70,7 +69,6 @@ export const contractTemplateDefaultQuerySchema = z.object({
 // ---------- contract template versions ----------
 
 export const insertContractTemplateVersionSchema = z.object({
-  bodyFormat: contractBodyFormatSchema.default("markdown"),
   body: z.string().min(1),
   variableSchema: z.record(z.string(), z.unknown()).optional().nullable(),
   changelog: z.string().max(2000).optional().nullable(),
@@ -80,9 +78,8 @@ export const insertContractTemplateVersionSchema = z.object({
 // ---------- contract number series ----------
 
 const contractNumberSeriesCoreSchema = z.object({
-  code: z.string().min(1).max(50),
   name: z.string().min(1).max(255),
-  prefix: z.string().max(20).default(""),
+  prefix: z.string().min(1).max(20),
   separator: z.string().max(5).default(""),
   padLength: z.number().int().min(0).max(12).default(4),
   resetStrategy: contractNumberResetStrategySchema.default("never"),
@@ -129,7 +126,6 @@ export const contractListQuerySchema = paginationSchema.extend({
 
 export const renderTemplateInputSchema = z.object({
   variables: z.record(z.string(), z.unknown()),
-  bodyFormat: contractBodyFormatSchema.optional(),
   body: z.string().optional(),
 })
 

@@ -1,4 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
@@ -13,7 +14,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { authClient } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/current-user"
 import { getApiUrl } from "@/lib/env"
@@ -37,6 +38,7 @@ export const Route = createFileRoute("/(auth)/verify-email")({
 function VerifyEmailPage() {
   const navigate = useNavigate()
   const { email } = Route.useSearch()
+  const messages = useAdminMessages().auth.verifyEmail
 
   const [otp, setOtp] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +55,7 @@ function VerifyEmailPage() {
       const result = await authClient.emailOtp.verifyEmail({ email, otp })
 
       if (result.error) {
-        setError(result.error.message || "Invalid verification code")
+        setError(result.error.message || messages.invalidVerificationCode)
         setLoading(false)
         return
       }
@@ -63,7 +65,7 @@ function VerifyEmailPage() {
 
       void navigate({ to: "/" })
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError(messages.somethingWentWrong)
       setLoading(false)
     }
   }
@@ -77,7 +79,7 @@ function VerifyEmailPage() {
       await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" })
       setResent(true)
     } catch {
-      setError("Failed to resend code. Please try again.")
+      setError(messages.resendFailed)
     } finally {
       setResending(false)
     }
@@ -86,10 +88,8 @@ function VerifyEmailPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Verify your email</CardTitle>
-        <CardDescription>
-          We sent a 6-digit code to <strong>{email}</strong>
-        </CardDescription>
+        <CardTitle>{messages.title}</CardTitle>
+        <CardDescription>{formatMessage(messages.description, { email })}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -98,7 +98,7 @@ function VerifyEmailPage() {
           )}
           {resent && (
             <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-              A new code has been sent to your email.
+              {messages.resent}
             </div>
           )}
           <div>
@@ -117,7 +117,7 @@ function VerifyEmailPage() {
           </div>
           <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Verify email
+            {messages.submit}
           </Button>
         </form>
 
@@ -128,7 +128,7 @@ function VerifyEmailPage() {
             disabled={resending}
             className="text-sm text-muted-foreground hover:text-primary hover:underline disabled:opacity-50"
           >
-            {resending ? "Sending..." : "Resend code"}
+            {resending ? messages.sending : messages.resendCode}
           </button>
         </div>
       </CardContent>

@@ -34,7 +34,7 @@ describe("createStorefrontPublicRoutes", () => {
                 },
               ],
             },
-            passengers: {
+            travelers: {
               fields: [
                 {
                   key: "passportNumber",
@@ -92,7 +92,7 @@ describe("createStorefrontPublicRoutes", () => {
               },
             ],
           },
-          passengers: {
+          travelers: {
             fields: [
               {
                 key: "passportNumber",
@@ -151,7 +151,7 @@ describe("createStorefrontPublicRoutes", () => {
         },
         forms: {
           billing: { fields: [] },
-          passengers: { fields: [] },
+          travelers: { fields: [] },
         },
         payment: {
           defaultMethod: null,
@@ -184,7 +184,7 @@ describe("createStorefrontPublicRoutes", () => {
                 applicableDepartureIds: ["dep_456"],
                 validFrom: "2026-04-01T00:00:00.000Z",
                 validTo: "2026-04-30T23:59:59.000Z",
-                minPassengers: 2,
+                minTravelers: 2,
                 imageMobileUrl: null,
                 imageDesktopUrl: null,
                 stackable: false,
@@ -214,7 +214,7 @@ describe("createStorefrontPublicRoutes", () => {
           applicableDepartureIds: ["dep_456"],
           validFrom: "2026-04-01T00:00:00.000Z",
           validTo: "2026-04-30T23:59:59.000Z",
-          minPassengers: 2,
+          minTravelers: 2,
           imageMobileUrl: null,
           imageDesktopUrl: null,
           stackable: false,
@@ -246,7 +246,7 @@ describe("createStorefrontPublicRoutes", () => {
               applicableDepartureIds: [],
               validFrom: "2026-04-01T00:00:00.000Z",
               validTo: "2026-04-30T23:59:59.000Z",
-              minPassengers: null,
+              minTravelers: null,
               imageMobileUrl: null,
               imageDesktopUrl: null,
               stackable: false,

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkspaceRouteRouteImport } from './routes/_workspace/route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as WorkspaceIndexRouteImport } from './routes/_workspace/index'
+import { Route as WorkspaceTeamRouteImport } from './routes/_workspace/team'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
@@ -23,6 +24,7 @@ import { Route as authAcceptInvitationRouteImport } from './routes/(auth)/accept
 import { Route as WorkspaceSuppliersIndexRouteImport } from './routes/_workspace/suppliers/index'
 import { Route as WorkspaceResourcesIndexRouteImport } from './routes/_workspace/resources/index'
 import { Route as WorkspaceProductsIndexRouteImport } from './routes/_workspace/products/index'
+import { Route as WorkspaceNotificationsIndexRouteImport } from './routes/_workspace/notifications/index'
 import { Route as WorkspaceFinanceIndexRouteImport } from './routes/_workspace/finance/index'
 import { Route as WorkspaceDistributionIndexRouteImport } from './routes/_workspace/distribution/index'
 import { Route as WorkspaceContactsIndexRouteImport } from './routes/_workspace/contacts/index'
@@ -31,13 +33,18 @@ import { Route as WorkspaceAvailabilityIndexRouteImport } from './routes/_worksp
 import { Route as WorkspaceSuppliersIdRouteImport } from './routes/_workspace/suppliers/$id'
 import { Route as WorkspaceResourcesIdRouteImport } from './routes/_workspace/resources/$id'
 import { Route as WorkspaceProductsIdRouteImport } from './routes/_workspace/products/$id'
+import { Route as WorkspaceNotificationsReminderRunsRouteImport } from './routes/_workspace/notifications/reminder-runs'
+import { Route as WorkspaceNotificationsReminderRulesRouteImport } from './routes/_workspace/notifications/reminder-rules'
+import { Route as WorkspaceNotificationsDeliveriesRouteImport } from './routes/_workspace/notifications/deliveries'
 import { Route as WorkspaceDistributionIdRouteImport } from './routes/_workspace/distribution/$id'
 import { Route as WorkspaceContactsIdRouteImport } from './routes/_workspace/contacts/$id'
 import { Route as WorkspaceBookingsIdRouteImport } from './routes/_workspace/bookings/$id'
 import { Route as WorkspaceAvailabilityIdRouteImport } from './routes/_workspace/availability/$id'
+import { Route as WorkspaceNotificationsTemplatesIndexRouteImport } from './routes/_workspace/notifications/templates/index'
 import { Route as WorkspaceResourcesPoolsIdRouteImport } from './routes/_workspace/resources/pools/$id'
 import { Route as WorkspaceResourcesAssignmentsIdRouteImport } from './routes/_workspace/resources/assignments/$id'
 import { Route as WorkspaceResourcesAllocationsIdRouteImport } from './routes/_workspace/resources/allocations/$id'
+import { Route as WorkspaceNotificationsTemplatesIdRouteImport } from './routes/_workspace/notifications/templates/$id'
 import { Route as WorkspaceFinanceInvoicesIdRouteImport } from './routes/_workspace/finance/invoices/$id'
 import { Route as WorkspaceDistributionWebhookEventsIdRouteImport } from './routes/_workspace/distribution/webhook-events/$id'
 import { Route as WorkspaceDistributionMappingsIdRouteImport } from './routes/_workspace/distribution/mappings/$id'
@@ -58,6 +65,11 @@ const authRouteRoute = authRouteRouteImport.update({
 const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WorkspaceRouteRoute,
+} as any)
+const WorkspaceTeamRoute = WorkspaceTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => WorkspaceRouteRoute,
 } as any)
 const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
@@ -115,6 +127,12 @@ const WorkspaceProductsIndexRoute = WorkspaceProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => WorkspaceRouteRoute,
 } as any)
+const WorkspaceNotificationsIndexRoute =
+  WorkspaceNotificationsIndexRouteImport.update({
+    id: '/notifications/',
+    path: '/notifications/',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
 const WorkspaceFinanceIndexRoute = WorkspaceFinanceIndexRouteImport.update({
   id: '/finance/',
   path: '/finance/',
@@ -157,6 +175,24 @@ const WorkspaceProductsIdRoute = WorkspaceProductsIdRouteImport.update({
   path: '/products/$id',
   getParentRoute: () => WorkspaceRouteRoute,
 } as any)
+const WorkspaceNotificationsReminderRunsRoute =
+  WorkspaceNotificationsReminderRunsRouteImport.update({
+    id: '/notifications/reminder-runs',
+    path: '/notifications/reminder-runs',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const WorkspaceNotificationsReminderRulesRoute =
+  WorkspaceNotificationsReminderRulesRouteImport.update({
+    id: '/notifications/reminder-rules',
+    path: '/notifications/reminder-rules',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const WorkspaceNotificationsDeliveriesRoute =
+  WorkspaceNotificationsDeliveriesRouteImport.update({
+    id: '/notifications/deliveries',
+    path: '/notifications/deliveries',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
 const WorkspaceDistributionIdRoute = WorkspaceDistributionIdRouteImport.update({
   id: '/distribution/$id',
   path: '/distribution/$id',
@@ -177,6 +213,12 @@ const WorkspaceAvailabilityIdRoute = WorkspaceAvailabilityIdRouteImport.update({
   path: '/availability/$id',
   getParentRoute: () => WorkspaceRouteRoute,
 } as any)
+const WorkspaceNotificationsTemplatesIndexRoute =
+  WorkspaceNotificationsTemplatesIndexRouteImport.update({
+    id: '/notifications/templates/',
+    path: '/notifications/templates/',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
 const WorkspaceResourcesPoolsIdRoute =
   WorkspaceResourcesPoolsIdRouteImport.update({
     id: '/resources/pools/$id',
@@ -193,6 +235,12 @@ const WorkspaceResourcesAllocationsIdRoute =
   WorkspaceResourcesAllocationsIdRouteImport.update({
     id: '/resources/allocations/$id',
     path: '/resources/allocations/$id',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const WorkspaceNotificationsTemplatesIdRoute =
+  WorkspaceNotificationsTemplatesIdRouteImport.update({
+    id: '/notifications/templates/$id',
+    path: '/notifications/templates/$id',
     getParentRoute: () => WorkspaceRouteRoute,
   } as any)
 const WorkspaceFinanceInvoicesIdRoute =
@@ -254,10 +302,14 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/verify-email': typeof authVerifyEmailRoute
+  '/team': typeof WorkspaceTeamRoute
   '/availability/$id': typeof WorkspaceAvailabilityIdRoute
   '/bookings/$id': typeof WorkspaceBookingsIdRoute
   '/contacts/$id': typeof WorkspaceContactsIdRoute
   '/distribution/$id': typeof WorkspaceDistributionIdRoute
+  '/notifications/deliveries': typeof WorkspaceNotificationsDeliveriesRoute
+  '/notifications/reminder-rules': typeof WorkspaceNotificationsReminderRulesRoute
+  '/notifications/reminder-runs': typeof WorkspaceNotificationsReminderRunsRoute
   '/products/$id': typeof WorkspaceProductsIdRoute
   '/resources/$id': typeof WorkspaceResourcesIdRoute
   '/suppliers/$id': typeof WorkspaceSuppliersIdRoute
@@ -266,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/contacts/': typeof WorkspaceContactsIndexRoute
   '/distribution/': typeof WorkspaceDistributionIndexRoute
   '/finance/': typeof WorkspaceFinanceIndexRoute
+  '/notifications/': typeof WorkspaceNotificationsIndexRoute
   '/products/': typeof WorkspaceProductsIndexRoute
   '/resources/': typeof WorkspaceResourcesIndexRoute
   '/suppliers/': typeof WorkspaceSuppliersIndexRoute
@@ -277,9 +330,11 @@ export interface FileRoutesByFullPath {
   '/distribution/mappings/$id': typeof WorkspaceDistributionMappingsIdRoute
   '/distribution/webhook-events/$id': typeof WorkspaceDistributionWebhookEventsIdRoute
   '/finance/invoices/$id': typeof WorkspaceFinanceInvoicesIdRoute
+  '/notifications/templates/$id': typeof WorkspaceNotificationsTemplatesIdRoute
   '/resources/allocations/$id': typeof WorkspaceResourcesAllocationsIdRoute
   '/resources/assignments/$id': typeof WorkspaceResourcesAssignmentsIdRoute
   '/resources/pools/$id': typeof WorkspaceResourcesPoolsIdRoute
+  '/notifications/templates/': typeof WorkspaceNotificationsTemplatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/accept-invitation': typeof authAcceptInvitationRoute
@@ -290,11 +345,15 @@ export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/verify-email': typeof authVerifyEmailRoute
+  '/team': typeof WorkspaceTeamRoute
   '/': typeof WorkspaceIndexRoute
   '/availability/$id': typeof WorkspaceAvailabilityIdRoute
   '/bookings/$id': typeof WorkspaceBookingsIdRoute
   '/contacts/$id': typeof WorkspaceContactsIdRoute
   '/distribution/$id': typeof WorkspaceDistributionIdRoute
+  '/notifications/deliveries': typeof WorkspaceNotificationsDeliveriesRoute
+  '/notifications/reminder-rules': typeof WorkspaceNotificationsReminderRulesRoute
+  '/notifications/reminder-runs': typeof WorkspaceNotificationsReminderRunsRoute
   '/products/$id': typeof WorkspaceProductsIdRoute
   '/resources/$id': typeof WorkspaceResourcesIdRoute
   '/suppliers/$id': typeof WorkspaceSuppliersIdRoute
@@ -303,6 +362,7 @@ export interface FileRoutesByTo {
   '/contacts': typeof WorkspaceContactsIndexRoute
   '/distribution': typeof WorkspaceDistributionIndexRoute
   '/finance': typeof WorkspaceFinanceIndexRoute
+  '/notifications': typeof WorkspaceNotificationsIndexRoute
   '/products': typeof WorkspaceProductsIndexRoute
   '/resources': typeof WorkspaceResourcesIndexRoute
   '/suppliers': typeof WorkspaceSuppliersIndexRoute
@@ -314,9 +374,11 @@ export interface FileRoutesByTo {
   '/distribution/mappings/$id': typeof WorkspaceDistributionMappingsIdRoute
   '/distribution/webhook-events/$id': typeof WorkspaceDistributionWebhookEventsIdRoute
   '/finance/invoices/$id': typeof WorkspaceFinanceInvoicesIdRoute
+  '/notifications/templates/$id': typeof WorkspaceNotificationsTemplatesIdRoute
   '/resources/allocations/$id': typeof WorkspaceResourcesAllocationsIdRoute
   '/resources/assignments/$id': typeof WorkspaceResourcesAssignmentsIdRoute
   '/resources/pools/$id': typeof WorkspaceResourcesPoolsIdRoute
+  '/notifications/templates': typeof WorkspaceNotificationsTemplatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -330,11 +392,15 @@ export interface FileRoutesById {
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
+  '/_workspace/team': typeof WorkspaceTeamRoute
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/availability/$id': typeof WorkspaceAvailabilityIdRoute
   '/_workspace/bookings/$id': typeof WorkspaceBookingsIdRoute
   '/_workspace/contacts/$id': typeof WorkspaceContactsIdRoute
   '/_workspace/distribution/$id': typeof WorkspaceDistributionIdRoute
+  '/_workspace/notifications/deliveries': typeof WorkspaceNotificationsDeliveriesRoute
+  '/_workspace/notifications/reminder-rules': typeof WorkspaceNotificationsReminderRulesRoute
+  '/_workspace/notifications/reminder-runs': typeof WorkspaceNotificationsReminderRunsRoute
   '/_workspace/products/$id': typeof WorkspaceProductsIdRoute
   '/_workspace/resources/$id': typeof WorkspaceResourcesIdRoute
   '/_workspace/suppliers/$id': typeof WorkspaceSuppliersIdRoute
@@ -343,6 +409,7 @@ export interface FileRoutesById {
   '/_workspace/contacts/': typeof WorkspaceContactsIndexRoute
   '/_workspace/distribution/': typeof WorkspaceDistributionIndexRoute
   '/_workspace/finance/': typeof WorkspaceFinanceIndexRoute
+  '/_workspace/notifications/': typeof WorkspaceNotificationsIndexRoute
   '/_workspace/products/': typeof WorkspaceProductsIndexRoute
   '/_workspace/resources/': typeof WorkspaceResourcesIndexRoute
   '/_workspace/suppliers/': typeof WorkspaceSuppliersIndexRoute
@@ -354,9 +421,11 @@ export interface FileRoutesById {
   '/_workspace/distribution/mappings/$id': typeof WorkspaceDistributionMappingsIdRoute
   '/_workspace/distribution/webhook-events/$id': typeof WorkspaceDistributionWebhookEventsIdRoute
   '/_workspace/finance/invoices/$id': typeof WorkspaceFinanceInvoicesIdRoute
+  '/_workspace/notifications/templates/$id': typeof WorkspaceNotificationsTemplatesIdRoute
   '/_workspace/resources/allocations/$id': typeof WorkspaceResourcesAllocationsIdRoute
   '/_workspace/resources/assignments/$id': typeof WorkspaceResourcesAssignmentsIdRoute
   '/_workspace/resources/pools/$id': typeof WorkspaceResourcesPoolsIdRoute
+  '/_workspace/notifications/templates/': typeof WorkspaceNotificationsTemplatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -370,10 +439,14 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-email'
+    | '/team'
     | '/availability/$id'
     | '/bookings/$id'
     | '/contacts/$id'
     | '/distribution/$id'
+    | '/notifications/deliveries'
+    | '/notifications/reminder-rules'
+    | '/notifications/reminder-runs'
     | '/products/$id'
     | '/resources/$id'
     | '/suppliers/$id'
@@ -382,6 +455,7 @@ export interface FileRouteTypes {
     | '/contacts/'
     | '/distribution/'
     | '/finance/'
+    | '/notifications/'
     | '/products/'
     | '/resources/'
     | '/suppliers/'
@@ -393,9 +467,11 @@ export interface FileRouteTypes {
     | '/distribution/mappings/$id'
     | '/distribution/webhook-events/$id'
     | '/finance/invoices/$id'
+    | '/notifications/templates/$id'
     | '/resources/allocations/$id'
     | '/resources/assignments/$id'
     | '/resources/pools/$id'
+    | '/notifications/templates/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/accept-invitation'
@@ -406,11 +482,15 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-email'
+    | '/team'
     | '/'
     | '/availability/$id'
     | '/bookings/$id'
     | '/contacts/$id'
     | '/distribution/$id'
+    | '/notifications/deliveries'
+    | '/notifications/reminder-rules'
+    | '/notifications/reminder-runs'
     | '/products/$id'
     | '/resources/$id'
     | '/suppliers/$id'
@@ -419,6 +499,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/distribution'
     | '/finance'
+    | '/notifications'
     | '/products'
     | '/resources'
     | '/suppliers'
@@ -430,9 +511,11 @@ export interface FileRouteTypes {
     | '/distribution/mappings/$id'
     | '/distribution/webhook-events/$id'
     | '/finance/invoices/$id'
+    | '/notifications/templates/$id'
     | '/resources/allocations/$id'
     | '/resources/assignments/$id'
     | '/resources/pools/$id'
+    | '/notifications/templates'
   id:
     | '__root__'
     | '/(auth)'
@@ -445,11 +528,15 @@ export interface FileRouteTypes {
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(auth)/verify-email'
+    | '/_workspace/team'
     | '/_workspace/'
     | '/_workspace/availability/$id'
     | '/_workspace/bookings/$id'
     | '/_workspace/contacts/$id'
     | '/_workspace/distribution/$id'
+    | '/_workspace/notifications/deliveries'
+    | '/_workspace/notifications/reminder-rules'
+    | '/_workspace/notifications/reminder-runs'
     | '/_workspace/products/$id'
     | '/_workspace/resources/$id'
     | '/_workspace/suppliers/$id'
@@ -458,6 +545,7 @@ export interface FileRouteTypes {
     | '/_workspace/contacts/'
     | '/_workspace/distribution/'
     | '/_workspace/finance/'
+    | '/_workspace/notifications/'
     | '/_workspace/products/'
     | '/_workspace/resources/'
     | '/_workspace/suppliers/'
@@ -469,9 +557,11 @@ export interface FileRouteTypes {
     | '/_workspace/distribution/mappings/$id'
     | '/_workspace/distribution/webhook-events/$id'
     | '/_workspace/finance/invoices/$id'
+    | '/_workspace/notifications/templates/$id'
     | '/_workspace/resources/allocations/$id'
     | '/_workspace/resources/assignments/$id'
     | '/_workspace/resources/pools/$id'
+    | '/_workspace/notifications/templates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -500,6 +590,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof WorkspaceIndexRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/team': {
+      id: '/_workspace/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof WorkspaceTeamRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
     '/(auth)/verify-email': {
@@ -579,6 +676,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceProductsIndexRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
+    '/_workspace/notifications/': {
+      id: '/_workspace/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof WorkspaceNotificationsIndexRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
     '/_workspace/finance/': {
       id: '/_workspace/finance/'
       path: '/finance'
@@ -635,6 +739,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceProductsIdRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
+    '/_workspace/notifications/reminder-runs': {
+      id: '/_workspace/notifications/reminder-runs'
+      path: '/notifications/reminder-runs'
+      fullPath: '/notifications/reminder-runs'
+      preLoaderRoute: typeof WorkspaceNotificationsReminderRunsRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/notifications/reminder-rules': {
+      id: '/_workspace/notifications/reminder-rules'
+      path: '/notifications/reminder-rules'
+      fullPath: '/notifications/reminder-rules'
+      preLoaderRoute: typeof WorkspaceNotificationsReminderRulesRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/notifications/deliveries': {
+      id: '/_workspace/notifications/deliveries'
+      path: '/notifications/deliveries'
+      fullPath: '/notifications/deliveries'
+      preLoaderRoute: typeof WorkspaceNotificationsDeliveriesRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
     '/_workspace/distribution/$id': {
       id: '/_workspace/distribution/$id'
       path: '/distribution/$id'
@@ -663,6 +788,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceAvailabilityIdRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
+    '/_workspace/notifications/templates/': {
+      id: '/_workspace/notifications/templates/'
+      path: '/notifications/templates'
+      fullPath: '/notifications/templates/'
+      preLoaderRoute: typeof WorkspaceNotificationsTemplatesIndexRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
     '/_workspace/resources/pools/$id': {
       id: '/_workspace/resources/pools/$id'
       path: '/resources/pools/$id'
@@ -682,6 +814,13 @@ declare module '@tanstack/react-router' {
       path: '/resources/allocations/$id'
       fullPath: '/resources/allocations/$id'
       preLoaderRoute: typeof WorkspaceResourcesAllocationsIdRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/notifications/templates/$id': {
+      id: '/_workspace/notifications/templates/$id'
+      path: '/notifications/templates/$id'
+      fullPath: '/notifications/templates/$id'
+      preLoaderRoute: typeof WorkspaceNotificationsTemplatesIdRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
     '/_workspace/finance/invoices/$id': {
@@ -770,11 +909,15 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface WorkspaceRouteRouteChildren {
+  WorkspaceTeamRoute: typeof WorkspaceTeamRoute
   WorkspaceIndexRoute: typeof WorkspaceIndexRoute
   WorkspaceAvailabilityIdRoute: typeof WorkspaceAvailabilityIdRoute
   WorkspaceBookingsIdRoute: typeof WorkspaceBookingsIdRoute
   WorkspaceContactsIdRoute: typeof WorkspaceContactsIdRoute
   WorkspaceDistributionIdRoute: typeof WorkspaceDistributionIdRoute
+  WorkspaceNotificationsDeliveriesRoute: typeof WorkspaceNotificationsDeliveriesRoute
+  WorkspaceNotificationsReminderRulesRoute: typeof WorkspaceNotificationsReminderRulesRoute
+  WorkspaceNotificationsReminderRunsRoute: typeof WorkspaceNotificationsReminderRunsRoute
   WorkspaceProductsIdRoute: typeof WorkspaceProductsIdRoute
   WorkspaceResourcesIdRoute: typeof WorkspaceResourcesIdRoute
   WorkspaceSuppliersIdRoute: typeof WorkspaceSuppliersIdRoute
@@ -783,6 +926,7 @@ interface WorkspaceRouteRouteChildren {
   WorkspaceContactsIndexRoute: typeof WorkspaceContactsIndexRoute
   WorkspaceDistributionIndexRoute: typeof WorkspaceDistributionIndexRoute
   WorkspaceFinanceIndexRoute: typeof WorkspaceFinanceIndexRoute
+  WorkspaceNotificationsIndexRoute: typeof WorkspaceNotificationsIndexRoute
   WorkspaceProductsIndexRoute: typeof WorkspaceProductsIndexRoute
   WorkspaceResourcesIndexRoute: typeof WorkspaceResourcesIndexRoute
   WorkspaceSuppliersIndexRoute: typeof WorkspaceSuppliersIndexRoute
@@ -794,17 +938,25 @@ interface WorkspaceRouteRouteChildren {
   WorkspaceDistributionMappingsIdRoute: typeof WorkspaceDistributionMappingsIdRoute
   WorkspaceDistributionWebhookEventsIdRoute: typeof WorkspaceDistributionWebhookEventsIdRoute
   WorkspaceFinanceInvoicesIdRoute: typeof WorkspaceFinanceInvoicesIdRoute
+  WorkspaceNotificationsTemplatesIdRoute: typeof WorkspaceNotificationsTemplatesIdRoute
   WorkspaceResourcesAllocationsIdRoute: typeof WorkspaceResourcesAllocationsIdRoute
   WorkspaceResourcesAssignmentsIdRoute: typeof WorkspaceResourcesAssignmentsIdRoute
   WorkspaceResourcesPoolsIdRoute: typeof WorkspaceResourcesPoolsIdRoute
+  WorkspaceNotificationsTemplatesIndexRoute: typeof WorkspaceNotificationsTemplatesIndexRoute
 }
 
 const WorkspaceRouteRouteChildren: WorkspaceRouteRouteChildren = {
+  WorkspaceTeamRoute: WorkspaceTeamRoute,
   WorkspaceIndexRoute: WorkspaceIndexRoute,
   WorkspaceAvailabilityIdRoute: WorkspaceAvailabilityIdRoute,
   WorkspaceBookingsIdRoute: WorkspaceBookingsIdRoute,
   WorkspaceContactsIdRoute: WorkspaceContactsIdRoute,
   WorkspaceDistributionIdRoute: WorkspaceDistributionIdRoute,
+  WorkspaceNotificationsDeliveriesRoute: WorkspaceNotificationsDeliveriesRoute,
+  WorkspaceNotificationsReminderRulesRoute:
+    WorkspaceNotificationsReminderRulesRoute,
+  WorkspaceNotificationsReminderRunsRoute:
+    WorkspaceNotificationsReminderRunsRoute,
   WorkspaceProductsIdRoute: WorkspaceProductsIdRoute,
   WorkspaceResourcesIdRoute: WorkspaceResourcesIdRoute,
   WorkspaceSuppliersIdRoute: WorkspaceSuppliersIdRoute,
@@ -813,6 +965,7 @@ const WorkspaceRouteRouteChildren: WorkspaceRouteRouteChildren = {
   WorkspaceContactsIndexRoute: WorkspaceContactsIndexRoute,
   WorkspaceDistributionIndexRoute: WorkspaceDistributionIndexRoute,
   WorkspaceFinanceIndexRoute: WorkspaceFinanceIndexRoute,
+  WorkspaceNotificationsIndexRoute: WorkspaceNotificationsIndexRoute,
   WorkspaceProductsIndexRoute: WorkspaceProductsIndexRoute,
   WorkspaceResourcesIndexRoute: WorkspaceResourcesIndexRoute,
   WorkspaceSuppliersIndexRoute: WorkspaceSuppliersIndexRoute,
@@ -828,9 +981,13 @@ const WorkspaceRouteRouteChildren: WorkspaceRouteRouteChildren = {
   WorkspaceDistributionWebhookEventsIdRoute:
     WorkspaceDistributionWebhookEventsIdRoute,
   WorkspaceFinanceInvoicesIdRoute: WorkspaceFinanceInvoicesIdRoute,
+  WorkspaceNotificationsTemplatesIdRoute:
+    WorkspaceNotificationsTemplatesIdRoute,
   WorkspaceResourcesAllocationsIdRoute: WorkspaceResourcesAllocationsIdRoute,
   WorkspaceResourcesAssignmentsIdRoute: WorkspaceResourcesAssignmentsIdRoute,
   WorkspaceResourcesPoolsIdRoute: WorkspaceResourcesPoolsIdRoute,
+  WorkspaceNotificationsTemplatesIndexRoute:
+    WorkspaceNotificationsTemplatesIndexRoute,
 }
 
 const WorkspaceRouteRouteWithChildren = WorkspaceRouteRoute._addFileChildren(

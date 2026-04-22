@@ -1,17 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
-import {
-  ChevronDown,
-  ChevronRight,
-  ImagePlus,
-  Loader2,
-  Pencil,
-  Plus,
-  Star,
-  Trash2,
-} from "lucide-react"
-import { useRef } from "react"
+import { formatMessage } from "@voyantjs/voyant-admin"
+import { ChevronDown, ChevronRight, Image as ImageIcon, Pencil, Plus, Trash2 } from "lucide-react"
 
-import { Badge, Button, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui"
+import { Badge, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { ActionMenu } from "./product-detail-sections"
 import {
   type DayService,
@@ -30,8 +22,28 @@ export interface ProductDetailDayRowProps {
   onAddService: () => void
   onEditService: (service: DayService) => void
   onDeleteService: (serviceId: string) => void
-  onUploadMedia: (file: File) => void
-  isUploadingMedia: boolean
+}
+
+function getServiceTypeLabel(
+  serviceType: DayService["serviceType"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["services"],
+) {
+  switch (serviceType) {
+    case "accommodation":
+      return messages.serviceTypeAccommodation
+    case "transfer":
+      return messages.serviceTypeTransfer
+    case "experience":
+      return messages.serviceTypeExperience
+    case "guide":
+      return messages.serviceTypeGuide
+    case "meal":
+      return messages.serviceTypeMeal
+    case "other":
+      return messages.serviceTypeOther
+    default:
+      return serviceType
+  }
 }
 
 export function ProductDetailDayRow({
@@ -44,20 +56,18 @@ export function ProductDetailDayRow({
   onAddService,
   onEditService,
   onDeleteService,
-  onUploadMedia,
-  isUploadingMedia,
 }: ProductDetailDayRowProps) {
-  const dayMediaInputRef = useRef<HTMLInputElement>(null)
-
+  const messages = useAdminMessages()
+  const dayRowMessages = messages.products.operations.dayRows
+  const serviceMessages = messages.products.operations.services
   const { data: servicesData } = useQuery({
     ...getProductDayServicesQueryOptions(productId, day.id),
     enabled: expanded,
   })
 
-  const { data: dayMediaData } = useQuery({
-    ...getProductDayMediaQueryOptions(productId, day.id),
-    enabled: expanded,
-  })
+  const { data: dayMediaData } = useQuery(getProductDayMediaQueryOptions(productId, day.id))
+  const mediaCount = dayMediaData?.data.length ?? 0
+  const cover = dayMediaData?.data.find((m) => m.isCover) ?? dayMediaData?.data[0]
 
   return (
     <div className="rounded-lg border">
@@ -69,28 +79,47 @@ export function ProductDetailDayRow({
         >
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
+        {cover?.mediaType === "image" ? (
+          <img
+            src={cover.url}
+            alt={cover.altText ?? cover.name}
+            className="h-10 w-14 flex-shrink-0 rounded object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-14 flex-shrink-0 items-center justify-center rounded border bg-muted/50 text-muted-foreground">
+            <ImageIcon className="h-4 w-4" />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">
-            Day {day.dayNumber}
+            {formatMessage(dayRowMessages.title, { dayNumber: day.dayNumber })}
             {day.title ? `: ${day.title}` : ""}
           </span>
           {day.location ? (
             <span className="ml-2 text-xs text-muted-foreground">{day.location}</span>
           ) : null}
         </div>
+        {mediaCount > 0 ? (
+          <Badge variant="outline" className="text-[10px]">
+            {formatMessage(dayRowMessages.photoCount, {
+              count: mediaCount,
+              suffix: mediaCount === 1 ? "" : "s",
+            })}
+          </Badge>
+        ) : null}
         <ActionMenu>
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="h-4 w-4" />
-            Edit
+            {dayRowMessages.editAction}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onAddService}>
             <Plus className="h-4 w-4" />
-            Add Service
+            {dayRowMessages.addServiceAction}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
-            Delete
+            {dayRowMessages.deleteAction}
           </DropdownMenuItem>
         </ActionMenu>
       </div>
@@ -98,15 +127,21 @@ export function ProductDetailDayRow({
       {expanded ? (
         <div className="border-t">
           {!servicesData?.data || servicesData.data.length === 0 ? (
-            <p className="py-4 text-center text-xs text-muted-foreground">No services yet.</p>
+            <p className="py-4 text-center text-xs text-muted-foreground">
+              {dayRowMessages.emptyServices}
+            </p>
           ) : (
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b bg-muted/30 text-muted-foreground">
-                  <th className="py-2 pl-4 pr-3 text-left font-medium">Name</th>
-                  <th className="px-3 py-2 text-left font-medium">Type</th>
-                  <th className="px-3 py-2 text-left font-medium">Cost</th>
-                  <th className="px-3 py-2 text-left font-medium">Qty</th>
+                  <th className="py-2 pl-4 pr-3 text-left font-medium">
+                    {dayRowMessages.tableName}
+                  </th>
+                  <th className="px-3 py-2 text-left font-medium">{dayRowMessages.tableType}</th>
+                  <th className="px-3 py-2 text-left font-medium">{dayRowMessages.tableCost}</th>
+                  <th className="px-3 py-2 text-left font-medium">
+                    {dayRowMessages.tableQuantity}
+                  </th>
                   <th className="w-10 px-3 py-2" />
                 </tr>
               </thead>
@@ -116,7 +151,7 @@ export function ProductDetailDayRow({
                     <td className="py-2 pl-4 pr-3">{service.name}</td>
                     <td className="px-3 py-2">
                       <Badge variant="outline" className="text-xs capitalize">
-                        {service.serviceType}
+                        {getServiceTypeLabel(service.serviceType, serviceMessages)}
                       </Badge>
                     </td>
                     <td className="px-3 py-2 font-mono">
@@ -127,7 +162,7 @@ export function ProductDetailDayRow({
                       <ActionMenu>
                         <DropdownMenuItem onClick={() => onEditService(service)}>
                           <Pencil className="h-4 w-4" />
-                          Edit
+                          {dayRowMessages.editAction}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -135,7 +170,7 @@ export function ProductDetailDayRow({
                           onClick={() => onDeleteService(service.id)}
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete
+                          {dayRowMessages.deleteAction}
                         </DropdownMenuItem>
                       </ActionMenu>
                     </td>
@@ -144,68 +179,6 @@ export function ProductDetailDayRow({
               </tbody>
             </table>
           )}
-
-          <div className="border-t px-4 py-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Photos</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                disabled={isUploadingMedia}
-                onClick={() => dayMediaInputRef.current?.click()}
-              >
-                {isUploadingMedia ? (
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                ) : (
-                  <ImagePlus className="mr-1 h-3 w-3" />
-                )}
-                Add
-              </Button>
-              <input
-                ref={dayMediaInputRef}
-                type="file"
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) {
-                    onUploadMedia(file)
-                    event.target.value = ""
-                  }
-                }}
-              />
-            </div>
-            {dayMediaData?.data && dayMediaData.data.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {dayMediaData.data.map((media) => (
-                  <div
-                    key={media.id}
-                    className="group relative h-16 w-16 flex-shrink-0 overflow-hidden rounded border"
-                  >
-                    {media.mediaType === "image" ? (
-                      <img
-                        src={media.url}
-                        alt={media.altText ?? media.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">
-                        {media.mediaType}
-                      </div>
-                    )}
-                    {media.isCover ? (
-                      <div className="absolute left-0.5 top-0.5">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">No photos for this day.</p>
-            )}
-          </div>
         </div>
       ) : null}
     </div>

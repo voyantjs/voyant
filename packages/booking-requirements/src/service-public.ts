@@ -92,14 +92,14 @@ export async function getPublicTransportRequirements(
     fieldsByScope: {
       booking: summarizeFields(relevantRows, "booking"),
       lead_traveler: summarizeFields(relevantRows, "lead_traveler"),
-      participant: summarizeFields(relevantRows, "participant"),
+      traveler: summarizeFields(relevantRows, "traveler"),
       booker: summarizeFields(relevantRows, "booker"),
     },
     requirements: relevantRows.map((row) => ({
       fieldKey: row.fieldKey as TransportFieldKey,
       scope: row.scope,
       isRequired: row.isRequired,
-      perParticipant: row.perParticipant,
+      perTraveler: row.perTraveler,
       notes: row.notes ?? null,
     })),
   }

@@ -1,0 +1,362 @@
+"use client"
+
+import type { Editor } from "@tiptap/core"
+import {
+  type NotificationTemplateRecord,
+  useNotificationTemplateAuthoring,
+  useNotificationTemplateMutation,
+} from "@voyantjs/notifications-react"
+import {
+  insertPlainText,
+  insertVariableToken,
+} from "@voyantjs/voyant-ui/components/rich-text-variable-extension"
+import { Loader2 } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod/v4"
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  NotificationTemplateAuthoringHelp,
+  RichTextEditor,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  Textarea,
+} from "@/components/ui"
+import { zodResolver } from "@/lib/zod-resolver"
+
+const CHANNEL_ITEMS = [
+  { label: "Email", value: "email" },
+  { label: "SMS", value: "sms" },
+] as const
+
+const PROVIDER_ITEMS = [
+  { label: "Automatic", value: "automatic" },
+  { label: "Resend", value: "resend" },
+  { label: "Twilio", value: "twilio" },
+] as const
+
+const STATUS_ITEMS = [
+  { label: "Draft", value: "draft" },
+  { label: "Active", value: "active" },
+  { label: "Archived", value: "archived" },
+] as const
+
+const templateFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be kebab-case"),
+  channel: z.enum(["email", "sms"]),
+  provider: z.enum(["automatic", "resend", "twilio"]).default("automatic"),
+  status: z.enum(["draft", "active", "archived"]).default("draft"),
+  subjectTemplate: z.string().optional(),
+  htmlTemplate: z.string().optional(),
+  textTemplate: z.string().optional(),
+  fromAddress: z.string().optional(),
+  active: z.boolean(),
+})
+
+type FormValues = z.input<typeof templateFormSchema>
+type FormOutput = z.output<typeof templateFormSchema>
+
+type NotificationTemplateDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  template?: NotificationTemplateRecord
+  onSuccess: () => void
+}
+
+export function NotificationTemplateDialog({
+  open,
+  onOpenChange,
+  template,
+  onSuccess,
+}: NotificationTemplateDialogProps) {
+  const isEditing = Boolean(template)
+  const { create, update } = useNotificationTemplateMutation()
+  const { variableCatalog, liquidSnippets } = useNotificationTemplateAuthoring()
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const variableGroups = useMemo(
+    () =>
+      variableCatalog.map((group) => ({
+        ...group,
+        variables: group.variables.map((variable) => ({
+          ...variable,
+          example: String(variable.example),
+        })),
+      })),
+    [variableCatalog],
+  )
+
+  const form = useForm<FormValues, unknown, FormOutput>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: {
+      name: "",
+      slug: "",
+      channel: "email",
+      provider: "automatic",
+      status: "draft",
+      subjectTemplate: "",
+      htmlTemplate: "",
+      textTemplate: "",
+      fromAddress: "",
+      active: true,
+    },
+  })
+
+  const channel = form.watch("channel")
+
+  useEffect(() => {
+    if (open && template) {
+      form.reset({
+        name: template.name,
+        slug: template.slug,
+        channel: template.channel,
+        provider:
+          template.provider === "resend" || template.provider === "twilio"
+            ? template.provider
+            : "automatic",
+        status: template.status,
+        subjectTemplate: template.subjectTemplate ?? "",
+        htmlTemplate: template.htmlTemplate ?? "",
+        textTemplate: template.textTemplate ?? "",
+        fromAddress: template.fromAddress ?? "",
+        active: template.status === "active",
+      })
+      return
+    }
+
+    if (open) {
+      form.reset()
+    }
+  }, [open, template, form])
+
+  const onSubmit = async (values: FormOutput) => {
+    const payload = {
+      name: values.name,
+      slug: values.slug,
+      channel: values.channel,
+      provider: values.provider === "automatic" ? null : values.provider,
+      status: values.active ? (values.status === "archived" ? "active" : values.status) : "draft",
+      subjectTemplate: values.channel === "email" ? values.subjectTemplate || null : null,
+      htmlTemplate: values.channel === "email" ? values.htmlTemplate || null : null,
+      textTemplate: values.textTemplate || null,
+      fromAddress: values.channel === "email" ? values.fromAddress || null : null,
+      isSystem: template?.isSystem ?? false,
+      metadata: template?.metadata ?? null,
+    }
+
+    if (isEditing && template) {
+      await update.mutateAsync({ id: template.id, input: payload })
+    } else {
+      await create.mutateAsync(payload)
+    }
+
+    onSuccess()
+  }
+
+  const isPending = create.isPending || update.isPending
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="xl">
+        <DialogHeader>
+          <DialogTitle>
+            {isEditing ? "Edit Notification Template" : "New Notification Template"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogBody className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Name</Label>
+                <Input {...form.register("name")} placeholder="Booking confirmation" />
+                {form.formState.errors.name ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Slug</Label>
+                <Input {...form.register("slug")} placeholder="booking-confirmation" />
+                {form.formState.errors.slug ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.slug.message}</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Channel</Label>
+                <Select
+                  items={CHANNEL_ITEMS}
+                  value={form.watch("channel")}
+                  onValueChange={(value) =>
+                    form.setValue("channel", value as FormValues["channel"])
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHANNEL_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Provider</Label>
+                <Select
+                  items={PROVIDER_ITEMS}
+                  value={form.watch("provider")}
+                  onValueChange={(value) =>
+                    form.setValue("provider", value as FormValues["provider"])
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVIDER_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Status</Label>
+                <Select
+                  items={STATUS_ITEMS}
+                  value={form.watch("status")}
+                  onValueChange={(value) => form.setValue("status", value as FormValues["status"])}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {channel === "email" ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label>From address</Label>
+                    <Input
+                      {...form.register("fromAddress")}
+                      placeholder="reservations@example.com"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Subject</Label>
+                    <Input
+                      {...form.register("subjectTemplate")}
+                      placeholder="Your booking {{ booking.reference }}"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label>HTML body</Label>
+                  <RichTextEditor
+                    value={form.watch("htmlTemplate") ?? ""}
+                    onChange={(value) =>
+                      form.setValue("htmlTemplate", value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    placeholder="Compose the email body using Liquid variables..."
+                    enableVariables
+                    onEditorReady={setEditorInstance}
+                  />
+                </div>
+              </>
+            ) : null}
+
+            <div className="flex flex-col gap-2">
+              <Label>{channel === "sms" ? "SMS body" : "Plain-text fallback"}</Label>
+              <Textarea
+                {...form.register("textTemplate")}
+                placeholder={
+                  channel === "sms"
+                    ? 'Hi {{ traveler.firstName | default: "traveler" }}, your booking is confirmed.'
+                    : "Optional plain-text version for email clients."
+                }
+                rows={6}
+              />
+            </div>
+
+            <NotificationTemplateAuthoringHelp
+              variableGroups={variableGroups}
+              snippets={liquidSnippets}
+              onInsertVariable={(variable) => {
+                if (!editorInstance || channel !== "email") return
+                insertVariableToken(editorInstance, variable.key)
+              }}
+              onInsertSnippet={(snippet) => {
+                if (channel === "email") {
+                  if (!editorInstance) return
+                  insertPlainText(editorInstance, snippet.code)
+                  return
+                }
+                const current = form.getValues("textTemplate") ?? ""
+                form.setValue(
+                  "textTemplate",
+                  current ? `${current}\n${snippet.code}` : snippet.code,
+                  {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  },
+                )
+              }}
+            />
+
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={form.watch("active")}
+                onCheckedChange={(checked) => form.setValue("active", checked)}
+              />
+              <Label className="cursor-pointer">Mark template active after saving</Label>
+            </div>
+          </DialogBody>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isEditing ? "Save Changes" : "Create Template"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

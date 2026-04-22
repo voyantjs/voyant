@@ -123,6 +123,7 @@ export function SignatureDialog({
             <div className="flex flex-col gap-2">
               <Label>Method</Label>
               <Select
+                items={METHODS}
                 value={form.watch("method")}
                 onValueChange={(v) => form.setValue("method", v as FormValues["method"])}
               >

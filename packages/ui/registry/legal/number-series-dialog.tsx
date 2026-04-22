@@ -166,6 +166,7 @@ export function NumberSeriesDialog({
               <div className="flex flex-col gap-2">
                 <Label>Reset Strategy</Label>
                 <Select
+                  items={RESET_STRATEGIES}
                   value={form.watch("resetStrategy")}
                   onValueChange={(v) =>
                     form.setValue("resetStrategy", v as FormValues["resetStrategy"])
@@ -186,6 +187,7 @@ export function NumberSeriesDialog({
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={SCOPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >

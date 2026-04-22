@@ -296,6 +296,7 @@ export function ScheduleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Repeats</Label>
                 <Select
+                  items={FREQUENCY_OPTIONS}
                   value={frequency}
                   onValueChange={(v) =>
                     form.setValue("frequency", v as Frequency, {

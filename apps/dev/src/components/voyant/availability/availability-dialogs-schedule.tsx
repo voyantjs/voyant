@@ -126,6 +126,7 @@ export function AvailabilityRuleDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
@@ -297,6 +298,7 @@ export function AvailabilityStartTimeDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >

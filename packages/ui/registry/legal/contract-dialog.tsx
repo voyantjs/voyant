@@ -135,6 +135,7 @@ export function ContractDialog({ open, onOpenChange, contract, onSuccess }: Cont
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={SCOPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >

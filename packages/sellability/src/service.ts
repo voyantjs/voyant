@@ -299,9 +299,6 @@ function defaultItemParticipantRole(
 ) {
   if (participant.itemParticipantRole) return participant.itemParticipantRole
   if (participant.participantType === "occupant") return "occupant"
-  if (participant.participantType === "booker" || participant.participantType === "contact") {
-    return "primary_contact"
-  }
   if (participant.participantType === "staff") return "service_assignee"
   return "traveler"
 }
@@ -537,6 +534,18 @@ export const sellabilityService = {
       role: ReturnType<typeof defaultItemParticipantRole>
       isPrimary: boolean
     }>
+    const contactAssignments = [] as Array<{
+      itemIndex?: number
+      role: "primary_contact" | "other"
+      personId: string | null
+      firstName: string
+      lastName: string
+      email: string | null
+      phone: string | null
+      preferredLanguage: string | null
+      isPrimary: boolean
+      notes: string | null
+    }>
 
     input.participants.forEach((participant, participantIndex) => {
       const explicitRefs = new Set(participant.requestedUnitRefs)
@@ -552,12 +561,6 @@ export const sellabilityService = {
           isAssignableParticipantType(participant.participantType)
         ) {
           targetIndexes = linkableItemIndexes
-        } else if (
-          participant.isPrimary &&
-          (participant.participantType === "booker" || participant.participantType === "contact") &&
-          fallbackLinkableItemIndex !== null
-        ) {
-          targetIndexes = [fallbackLinkableItemIndex]
         }
       }
 
@@ -568,6 +571,54 @@ export const sellabilityService = {
           participantIndex,
           role: defaultItemParticipantRole(participant),
           isPrimary: Boolean(participant.isPrimary) && linkIndex === 0,
+        })
+      })
+    })
+
+    input.contactAssignments.forEach((contactAssignment) => {
+      const explicitRefs = new Set(contactAssignment.requestedUnitRefs)
+      let targetIndexes = itemDrafts
+        .map((item, itemIndex) =>
+          item.requestRef && explicitRefs.has(item.requestRef) ? itemIndex : -1,
+        )
+        .filter((itemIndex) => itemIndex >= 0)
+
+      if (targetIndexes.length === 0) {
+        if (contactAssignment.assignToAllItems) {
+          targetIndexes = linkableItemIndexes
+        } else if (contactAssignment.isPrimary && fallbackLinkableItemIndex !== null) {
+          targetIndexes = [fallbackLinkableItemIndex]
+        }
+      }
+
+      const dedupedIndexes = [...new Set(targetIndexes)]
+      if (dedupedIndexes.length === 0) {
+        contactAssignments.push({
+          role: contactAssignment.role,
+          personId: contactAssignment.personId ?? null,
+          firstName: contactAssignment.firstName,
+          lastName: contactAssignment.lastName,
+          email: contactAssignment.email ?? null,
+          phone: contactAssignment.phone ?? null,
+          preferredLanguage: contactAssignment.preferredLanguage ?? null,
+          isPrimary: Boolean(contactAssignment.isPrimary),
+          notes: contactAssignment.notes ?? null,
+        })
+        return
+      }
+
+      dedupedIndexes.forEach((itemIndex, linkIndex) => {
+        contactAssignments.push({
+          itemIndex,
+          role: contactAssignment.role,
+          personId: contactAssignment.personId ?? null,
+          firstName: contactAssignment.firstName,
+          lastName: contactAssignment.lastName,
+          email: contactAssignment.email ?? null,
+          phone: contactAssignment.phone ?? null,
+          preferredLanguage: contactAssignment.preferredLanguage ?? null,
+          isPrimary: Boolean(contactAssignment.isPrimary) && linkIndex === 0,
+          notes: contactAssignment.notes ?? null,
         })
       })
     })
@@ -584,6 +635,16 @@ export const sellabilityService = {
         organizationId: input.offer.organizationId ?? null,
         opportunityId: input.offer.opportunityId ?? null,
         quoteId: input.offer.quoteId ?? null,
+        contactFirstName: input.offer.contactFirstName ?? null,
+        contactLastName: input.offer.contactLastName ?? null,
+        contactEmail: input.offer.contactEmail ?? null,
+        contactPhone: input.offer.contactPhone ?? null,
+        contactPreferredLanguage: input.offer.contactPreferredLanguage ?? null,
+        contactCountry: input.offer.contactCountry ?? null,
+        contactRegion: input.offer.contactRegion ?? null,
+        contactCity: input.offer.contactCity ?? null,
+        contactAddressLine1: input.offer.contactAddressLine1 ?? null,
+        contactPostalCode: input.offer.contactPostalCode ?? null,
         marketId: candidate.market?.id ?? input.query.marketId ?? null,
         sourceChannelId: candidate.channel?.id ?? input.query.channelId ?? null,
         currency: candidate.pricing.currencyCode,
@@ -608,11 +669,12 @@ export const sellabilityService = {
           },
         },
       },
-      participants: bundleParticipants,
+      travelers: bundleParticipants,
+      contactAssignments,
       items: itemDrafts.map(
         ({ requestRef: _requestRef, participantLinkable: _participantLinkable, ...item }) => item,
       ),
-      itemParticipants,
+      itemTravelers: itemParticipants,
     })
 
     if (!created) {

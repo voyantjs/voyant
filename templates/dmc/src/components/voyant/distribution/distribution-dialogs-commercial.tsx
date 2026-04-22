@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
@@ -20,6 +20,7 @@ import {
   Textarea,
 } from "@/components/ui"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { ChannelContractRow, ChannelRow, SupplierOption } from "./distribution-shared"
@@ -34,15 +35,17 @@ import {
   paymentOwnerOptions,
 } from "./distribution-shared"
 
-const channelFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
-  status: z.enum(["active", "inactive", "pending", "archived"]),
-  website: z.string().optional(),
-  contactName: z.string().optional(),
-  contactEmail: z.string().optional(),
-  metadataJson: z.string().optional(),
-})
+function createChannelFormSchema(nameRequired: string) {
+  return z.object({
+    name: z.string().min(1, nameRequired),
+    kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
+    status: z.enum(["active", "inactive", "pending", "archived"]),
+    website: z.string().optional(),
+    contactName: z.string().optional(),
+    contactEmail: z.string().optional(),
+    metadataJson: z.string().optional(),
+  })
+}
 
 export function ChannelDialog({
   open,
@@ -55,6 +58,12 @@ export function ChannelDialog({
   channel?: ChannelRow
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.distribution.dialogs.channel
+  const channelFormSchema = useMemo(
+    () => createChannelFormSchema(dialogMessages.validation.nameRequired),
+    [dialogMessages.validation.nameRequired],
+  )
   const form = useForm({
     resolver: zodResolver(channelFormSchema),
     defaultValues: {
@@ -109,18 +118,21 @@ export function ChannelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Channel" : "New Channel"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.createTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="GetYourGuide" />
+                <Label>{dialogMessages.labels.name}</Label>
+                <Input {...form.register("name")} placeholder={dialogMessages.placeholders.name} />
               </div>
               <div className="grid gap-2">
-                <Label>Kind</Label>
+                <Label>{dialogMessages.labels.kind}</Label>
                 <Select
+                  items={channelKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ChannelRow["kind"])}
                 >
@@ -130,15 +142,16 @@ export function ChannelDialog({
                   <SelectContent>
                     {channelKindOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.channelKind[option.value] ?? option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label>{dialogMessages.labels.status}</Label>
                 <Select
+                  items={channelStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as ChannelRow["status"])}
                 >
@@ -148,45 +161,51 @@ export function ChannelDialog({
                   <SelectContent>
                     {channelStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.channelStatus[option.value] ?? option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Website</Label>
-                <Input {...form.register("website")} placeholder="https://partner.example.com" />
+                <Label>{dialogMessages.labels.website}</Label>
+                <Input
+                  {...form.register("website")}
+                  placeholder={dialogMessages.placeholders.website}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Contact Name</Label>
-                <Input {...form.register("contactName")} placeholder="Partnerships Team" />
+                <Label>{dialogMessages.labels.contactName}</Label>
+                <Input
+                  {...form.register("contactName")}
+                  placeholder={dialogMessages.placeholders.contactName}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Contact Email</Label>
+                <Label>{dialogMessages.labels.contactEmail}</Label>
                 <Input
                   {...form.register("contactEmail")}
                   type="email"
-                  placeholder="partners@example.com"
+                  placeholder={dialogMessages.placeholders.contactEmail}
                 />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Metadata JSON</Label>
+              <Label>{dialogMessages.labels.metadataJson}</Label>
               <Textarea
                 {...form.register("metadataJson")}
-                placeholder='{"region":"EU","accountTier":"gold"}'
+                placeholder={dialogMessages.placeholders.metadataJson}
                 className="min-h-32 font-mono text-xs"
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.actions.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Channel" : "Create Channel"}
+              {isEditing ? dialogMessages.actions.save : dialogMessages.actions.create}
             </Button>
           </DialogFooter>
         </form>
@@ -195,17 +214,19 @@ export function ChannelDialog({
   )
 }
 
-const contractFormSchema = z.object({
-  channelId: z.string().min(1, "Channel is required"),
-  supplierId: z.string().optional(),
-  status: z.enum(["draft", "active", "expired", "terminated"]),
-  startsAt: z.string().min(1, "Start date is required"),
-  endsAt: z.string().optional(),
-  paymentOwner: z.enum(["operator", "channel", "split"]),
-  cancellationOwner: z.enum(["operator", "channel", "mixed"]),
-  settlementTerms: z.string().optional(),
-  notes: z.string().optional(),
-})
+function createContractFormSchema(channelRequired: string, startDateRequired: string) {
+  return z.object({
+    channelId: z.string().min(1, channelRequired),
+    supplierId: z.string().optional(),
+    status: z.enum(["draft", "active", "expired", "terminated"]),
+    startsAt: z.string().min(1, startDateRequired),
+    endsAt: z.string().optional(),
+    paymentOwner: z.enum(["operator", "channel", "split"]),
+    cancellationOwner: z.enum(["operator", "channel", "mixed"]),
+    settlementTerms: z.string().optional(),
+    notes: z.string().optional(),
+  })
+}
 
 export function ChannelContractDialog({
   open,
@@ -222,6 +243,16 @@ export function ChannelContractDialog({
   suppliers: SupplierOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.distribution.dialogs.contract
+  const contractFormSchema = useMemo(
+    () =>
+      createContractFormSchema(
+        dialogMessages.validation.channelRequired,
+        dialogMessages.validation.startDateRequired,
+      ),
+    [dialogMessages.validation.channelRequired, dialogMessages.validation.startDateRequired],
+  )
   const form = useForm({
     resolver: zodResolver(contractFormSchema),
     defaultValues: {
@@ -282,19 +313,22 @@ export function ChannelContractDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Contract" : "New Contract"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.createTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Channel</Label>
+                <Label>{dialogMessages.labels.channel}</Label>
                 <Select
+                  items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                   value={form.watch("channelId")}
                   onValueChange={(value) => form.setValue("channelId", value ?? "")}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select channel" />
+                    <SelectValue placeholder={dialogMessages.placeholders.selectChannel} />
                   </SelectTrigger>
                   <SelectContent>
                     {channels.map((channel) => (
@@ -306,7 +340,7 @@ export function ChannelContractDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Supplier</Label>
+                <Label>{dialogMessages.labels.supplier}</Label>
                 <Select
                   value={form.watch("supplierId")}
                   onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
@@ -315,7 +349,9 @@ export function ChannelContractDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No supplier</SelectItem>
+                    <SelectItem value={NONE_VALUE}>
+                      {dialogMessages.placeholders.noSupplier}
+                    </SelectItem>
                     {suppliers.map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.id}>
                         {supplier.name}
@@ -325,8 +361,9 @@ export function ChannelContractDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label>{dialogMessages.labels.status}</Label>
                 <Select
+                  items={contractStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ChannelContractRow["status"])
@@ -338,14 +375,14 @@ export function ChannelContractDialog({
                   <SelectContent>
                     {contractStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.contractStatus[option.value] ?? option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Starts At</Label>
+                <Label>{dialogMessages.labels.startsAt}</Label>
                 <DatePicker
                   value={form.watch("startsAt") || null}
                   onChange={(next) =>
@@ -354,12 +391,12 @@ export function ChannelContractDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select start date"
+                  placeholder={dialogMessages.placeholders.startDate}
                   className="w-full"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Ends At</Label>
+                <Label>{dialogMessages.labels.endsAt}</Label>
                 <DatePicker
                   value={form.watch("endsAt") || null}
                   onChange={(next) =>
@@ -368,13 +405,14 @@ export function ChannelContractDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select end date"
+                  placeholder={dialogMessages.placeholders.endDate}
                   className="w-full"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Payment Owner</Label>
+                <Label>{dialogMessages.labels.paymentOwner}</Label>
                 <Select
+                  items={paymentOwnerOptions}
                   value={form.watch("paymentOwner")}
                   onValueChange={(value) =>
                     form.setValue("paymentOwner", value as ChannelContractRow["paymentOwner"])
@@ -386,15 +424,16 @@ export function ChannelContractDialog({
                   <SelectContent>
                     {paymentOwnerOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.paymentOwner[option.value] ?? option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Cancellation Owner</Label>
+                <Label>{dialogMessages.labels.cancellationOwner}</Label>
                 <Select
+                  items={cancellationOwnerOptions}
                   value={form.watch("cancellationOwner")}
                   onValueChange={(value) =>
                     form.setValue(
@@ -409,7 +448,8 @@ export function ChannelContractDialog({
                   <SelectContent>
                     {cancellationOwnerOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.cancellationOwner[option.value] ??
+                          option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -417,27 +457,27 @@ export function ChannelContractDialog({
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Settlement Terms</Label>
+              <Label>{dialogMessages.labels.settlementTerms}</Label>
               <Textarea
                 {...form.register("settlementTerms")}
-                placeholder="Monthly payout, 45-day remittance, chargeback treatment..."
+                placeholder={dialogMessages.placeholders.settlementTerms}
               />
             </div>
             <div className="grid gap-2">
-              <Label>Notes</Label>
+              <Label>{dialogMessages.labels.notes}</Label>
               <Textarea
                 {...form.register("notes")}
-                placeholder="Special commercial constraints or operational clauses..."
+                placeholder={dialogMessages.placeholders.notes}
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.actions.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Contract" : "Create Contract"}
+              {isEditing ? dialogMessages.actions.save : dialogMessages.actions.create}
             </Button>
           </DialogFooter>
         </form>

@@ -39,6 +39,7 @@ import {
 import { ExternalLink } from "lucide-react"
 import { Badge, Button } from "@/components/ui"
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
+import type { AdminMessages } from "@/lib/admin-i18n"
 
 export type BatchMutationResponse<T = unknown> = {
   data?: T[]
@@ -78,45 +79,79 @@ export {
   toLocalDateTimeInput,
 }
 
+export function formatLocalizedSelectionLabel(count: number, singular: string, plural: string) {
+  return count === 1 ? `1 ${singular}` : `${count} ${plural}`
+}
+
+export function getResourceKindLabel(kind: ResourceRow["kind"], messages: AdminMessages) {
+  return messages.resources.kindLabels[kind]
+}
+
+export function getAssignmentStatusLabel(
+  status: ResourceSlotAssignmentRow["status"],
+  messages: AdminMessages,
+) {
+  return messages.resources.assignmentStatusLabels[status]
+}
+
+export function getAllocationModeLabel(
+  mode: ResourceAllocationRow["allocationMode"],
+  messages: AdminMessages,
+) {
+  return messages.resources.allocationModeLabels[mode]
+}
+
 export const resourceColumns = (
   suppliers: SupplierOption[],
   onView: (resourceId: string) => void,
+  messages: AdminMessages,
 ): ColumnDef<ResourceRow>[] => [
   {
     accessorKey: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Resource" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.resourceLabel} />
+    ),
   },
   {
     accessorKey: "kind",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Kind" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.resource.kindLabel}
+      />
+    ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.kind}
-      </Badge>
+      <Badge variant="outline">{getResourceKindLabel(row.original.kind, messages)}</Badge>
     ),
   },
   {
     accessorKey: "supplierId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Supplier" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.supplierLabel} />
+    ),
     cell: ({ row }) => labelById(suppliers, row.original.supplierId),
   },
   {
     accessorKey: "capacity",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Capacity" />,
-    cell: ({ row }) => row.original.capacity ?? "-",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.capacityLabel} />
+    ),
+    cell: ({ row }) => row.original.capacity ?? messages.resources.details.noValue,
   },
   {
     accessorKey: "active",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.statusLabel} />
+    ),
     cell: ({ row }) => (
       <Badge variant={row.original.active ? "default" : "secondary"}>
-        {row.original.active ? "Active" : "Inactive"}
+        {row.original.active ? messages.resources.activeLabel : messages.resources.inactiveLabel}
       </Badge>
     ),
   },
   {
     id: "view",
-    header: "View",
+    header: messages.resources.viewLabel,
     cell: ({ row }) => (
       <Button
         variant="ghost"
@@ -127,7 +162,7 @@ export const resourceColumns = (
         }}
       >
         <ExternalLink className="mr-2 h-4 w-4" />
-        Open
+        {messages.resources.openLabel}
       </Button>
     ),
   },
@@ -136,33 +171,43 @@ export const resourceColumns = (
 export const poolColumns = (
   products: ProductOption[],
   onView: (poolId: string) => void,
+  messages: AdminMessages,
 ): ColumnDef<ResourcePoolRow>[] => [
   {
     accessorKey: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Pool" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.poolLabel} />
+    ),
   },
   {
     accessorKey: "kind",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Kind" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.dialogs.pool.kindLabel} />
+    ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.kind}
-      </Badge>
+      <Badge variant="outline">{getResourceKindLabel(row.original.kind, messages)}</Badge>
     ),
   },
   {
     accessorKey: "productId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.productLabel} />
+    ),
     cell: ({ row }) => labelById(products, row.original.productId),
   },
   {
     accessorKey: "sharedCapacity",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Shared Capacity" />,
-    cell: ({ row }) => row.original.sharedCapacity ?? "-",
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.pool.sharedCapacityLabel}
+      />
+    ),
+    cell: ({ row }) => row.original.sharedCapacity ?? messages.resources.details.noValue,
   },
   {
     id: "view",
-    header: "View",
+    header: messages.resources.viewLabel,
     cell: ({ row }) => (
       <Button
         variant="ghost"
@@ -173,7 +218,7 @@ export const poolColumns = (
         }}
       >
         <ExternalLink className="mr-2 h-4 w-4" />
-        Open
+        {messages.resources.openLabel}
       </Button>
     ),
   },
@@ -183,37 +228,57 @@ export const allocationColumns = (
   pools: ResourcePoolRow[],
   products: ProductOption[],
   onView: (allocationId: string) => void,
+  messages: AdminMessages,
 ): ColumnDef<ResourceAllocationRow>[] => [
   {
     accessorKey: "poolId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Pool" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.poolLabel} />
+    ),
     cell: ({ row }) => labelById(pools, row.original.poolId),
   },
   {
     accessorKey: "productId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.productLabel} />
+    ),
     cell: ({ row }) => labelById(products, row.original.productId),
   },
   {
     accessorKey: "allocationMode",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Mode" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.allocation.allocationModeLabel}
+      />
+    ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.allocationMode}
+      <Badge variant="outline">
+        {getAllocationModeLabel(row.original.allocationMode, messages)}
       </Badge>
     ),
   },
   {
     accessorKey: "quantityRequired",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Qty Required" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.allocation.quantityRequiredLabel}
+      />
+    ),
   },
   {
     accessorKey: "priority",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.allocation.priorityLabel}
+      />
+    ),
   },
   {
     id: "view",
-    header: "View",
+    header: messages.resources.viewLabel,
     cell: ({ row }) => (
       <Button
         variant="ghost"
@@ -224,7 +289,7 @@ export const allocationColumns = (
         }}
       >
         <ExternalLink className="mr-2 h-4 w-4" />
-        Open
+        {messages.resources.openLabel}
       </Button>
     ),
   },
@@ -235,10 +300,13 @@ export const assignmentColumns = (
   resources: ResourceRow[],
   bookings: BookingOption[],
   onView: (assignmentId: string) => void,
+  messages: AdminMessages,
 ): ColumnDef<ResourceSlotAssignmentRow>[] => [
   {
     accessorKey: "slotId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Slot" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.slotLabel} />
+    ),
     cell: ({ row }) =>
       slotLabel(
         slots.find((slot) => slot.id === row.original.slotId) ?? {
@@ -251,31 +319,40 @@ export const assignmentColumns = (
   },
   {
     accessorKey: "resourceId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Resource" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.resourceLabel} />
+    ),
     cell: ({ row }) => labelById(resources, row.original.resourceId),
   },
   {
     accessorKey: "bookingId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Booking" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.bookingLabel} />
+    ),
     cell: ({ row }) => labelById(bookings, row.original.bookingId),
   },
   {
     accessorKey: "status",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.statusLabel} />
+    ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.status}
-      </Badge>
+      <Badge variant="outline">{getAssignmentStatusLabel(row.original.status, messages)}</Badge>
     ),
   },
   {
     accessorKey: "releasedAt",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Released" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.details.assignment.releasedLabel}
+      />
+    ),
     cell: ({ row }) => formatDateTime(row.original.releasedAt),
   },
   {
     id: "view",
-    header: "View",
+    header: messages.resources.viewLabel,
     cell: ({ row }) => (
       <Button
         variant="ghost"
@@ -286,36 +363,61 @@ export const assignmentColumns = (
         }}
       >
         <ExternalLink className="mr-2 h-4 w-4" />
-        Open
+        {messages.resources.openLabel}
       </Button>
     ),
   },
 ]
 
-export const closeoutColumns = (resources: ResourceRow[]): ColumnDef<ResourceCloseoutRow>[] => [
+export const closeoutColumns = (
+  resources: ResourceRow[],
+  messages: AdminMessages,
+): ColumnDef<ResourceCloseoutRow>[] => [
   {
     accessorKey: "resourceId",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Resource" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.resources.resourceLabel} />
+    ),
     cell: ({ row }) => labelById(resources, row.original.resourceId),
   },
   {
     accessorKey: "dateLocal",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.closeout.dateLabel}
+      />
+    ),
   },
   {
     accessorKey: "startsAt",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Starts" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.closeout.startsAtLabel}
+      />
+    ),
     cell: ({ row }) => formatDateTime(row.original.startsAt),
   },
   {
     accessorKey: "endsAt",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Ends" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.closeout.endsAtLabel}
+      />
+    ),
     cell: ({ row }) => formatDateTime(row.original.endsAt),
   },
   {
     accessorKey: "reason",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Reason" />,
-    cell: ({ row }) => row.original.reason ?? "-",
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={messages.resources.dialogs.closeout.reasonLabel}
+      />
+    ),
+    cell: ({ row }) => row.original.reason ?? messages.resources.details.noValue,
   },
 ]
 

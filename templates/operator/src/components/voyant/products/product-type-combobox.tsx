@@ -10,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Props = {
   value: string | null | undefined
@@ -20,12 +21,9 @@ type Props = {
 
 const PAGE_SIZE = 25
 
-export function ProductTypeCombobox({
-  value,
-  onChange,
-  placeholder = "Search product types…",
-  disabled,
-}: Props) {
+export function ProductTypeCombobox({ value, onChange, placeholder, disabled }: Props) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const [search, setSearch] = React.useState("")
   const listQuery = useProductTypes({ active: true, search: search || undefined, limit: PAGE_SIZE })
   const selectedQuery = useProductType(value, { enabled: !!value })
@@ -69,10 +67,15 @@ export function ProductTypeCombobox({
         setInputValue(item ? `${item.name} · ${item.code}` : "")
       }}
     >
-      <ComboboxInput placeholder={placeholder} showClear={!!value} />
+      <ComboboxInput
+        placeholder={placeholder ?? productMessages.productTypeSearchPlaceholder}
+        showClear={!!value}
+      />
       <ComboboxContent>
         <ComboboxEmpty>
-          {listQuery.isPending || selectedQuery.isPending ? "Loading…" : "No product types found."}
+          {listQuery.isPending || selectedQuery.isPending
+            ? productMessages.productTypeLoading
+            : productMessages.productTypeEmpty}
         </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>

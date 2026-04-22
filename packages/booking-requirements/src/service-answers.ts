@@ -14,8 +14,8 @@ export async function listBookingAnswers(db: PostgresJsDatabase, query: BookingA
   if (query.bookingId) conditions.push(eq(bookingAnswers.bookingId, query.bookingId))
   if (query.productBookingQuestionId)
     conditions.push(eq(bookingAnswers.productBookingQuestionId, query.productBookingQuestionId))
-  if (query.bookingParticipantId)
-    conditions.push(eq(bookingAnswers.bookingParticipantId, query.bookingParticipantId))
+  if (query.bookingTravelerId)
+    conditions.push(eq(bookingAnswers.bookingTravelerId, query.bookingTravelerId))
   if (query.bookingExtraId) conditions.push(eq(bookingAnswers.bookingExtraId, query.bookingExtraId))
   if (query.target) conditions.push(eq(bookingAnswers.target, query.target))
   const where = conditions.length ? and(...conditions) : undefined

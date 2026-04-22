@@ -185,6 +185,7 @@ export function StayOperationDialog({
               <div className="flex flex-col gap-2">
                 <Label>Operation status</Label>
                 <Select
+                  items={STATUSES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("operationStatus")}
                   onValueChange={(v) => form.setValue("operationStatus", v as Status)}
                 >

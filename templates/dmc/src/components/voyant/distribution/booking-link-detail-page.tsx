@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { formatDateTime } from "@voyantjs/distribution-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Link2, Loader2, ReceiptText, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import {
   getDistributionBookingLinkBookingQueryOptions,
   getDistributionBookingLinkChannelQueryOptions,
   getDistributionBookingLinkQueryOptions,
 } from "./distribution-detail-query-options"
+import { formatDistributionDateTime } from "./distribution-shared"
 
 type DistributionBookingLinkDetailPageProps = {
   id: string
@@ -17,6 +19,11 @@ type DistributionBookingLinkDetailPageProps = {
 export function DistributionBookingLinkDetailPage({ id }: DistributionBookingLinkDetailPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages()
+  const { resolvedLocale } = useLocale()
+  const commonMessages = messages.distribution.details.common
+  const detailMessages = messages.distribution.details.bookingLink
+  const noValue = messages.distribution.table.noValue
 
   const { data: linkData, isPending } = useQuery(getDistributionBookingLinkQueryOptions(id))
   const link = linkData?.data
@@ -49,9 +56,9 @@ export function DistributionBookingLinkDetailPage({ id }: DistributionBookingLin
   if (!link) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Booking link not found</p>
+        <p className="text-muted-foreground">{detailMessages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/distribution" })}>
-          Back to Distribution
+          {commonMessages.back}
         </Button>
       </div>
     )
@@ -64,10 +71,12 @@ export function DistributionBookingLinkDetailPage({ id }: DistributionBookingLin
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Booking Link</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{detailMessages.title}</h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge variant="outline">{link.externalStatus ?? "unmapped status"}</Badge>
-            <Badge variant="secondary">{link.externalReference ?? "no reference"}</Badge>
+            <Badge variant="outline">{link.externalStatus ?? detailMessages.unmappedStatus}</Badge>
+            <Badge variant="secondary">
+              {link.externalReference ?? detailMessages.noReference}
+            </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -78,66 +87,68 @@ export function DistributionBookingLinkDetailPage({ id }: DistributionBookingLin
             }
           >
             <Link2 className="mr-2 h-4 w-4" />
-            Open Channel
+            {commonMessages.openChannel}
           </Button>
           <Button
             variant="outline"
             onClick={() => void navigate({ to: "/bookings/$id", params: { id: link.bookingId } })}
           >
             <ReceiptText className="mr-2 h-4 w-4" />
-            Open Booking
+            {commonMessages.openBooking}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this booking link?")) {
+              if (confirm(detailMessages.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {commonMessages.delete}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Booking Link Details</CardTitle>
+          <CardTitle>{detailMessages.detailsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm md:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Channel:</span>{" "}
+            <span className="text-muted-foreground">{detailMessages.fields.channel}:</span>{" "}
             <span>{channelQuery.data?.data.name ?? link.channelId}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Booking:</span>{" "}
+            <span className="text-muted-foreground">{detailMessages.fields.booking}:</span>{" "}
             <span>{bookingQuery.data?.data.bookingNumber ?? link.bookingId}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">External Booking:</span>{" "}
-            <span>{link.externalBookingId ?? "-"}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.externalBooking}:</span>{" "}
+            <span>{link.externalBookingId ?? noValue}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Reference:</span>{" "}
-            <span>{link.externalReference ?? "-"}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.reference}:</span>{" "}
+            <span>{link.externalReference ?? noValue}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Booked Externally:</span>{" "}
-            <span>{formatDateTime(link.bookedAtExternal)}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.bookedAtExternal}:</span>{" "}
+            <span>
+              {formatDistributionDateTime(link.bookedAtExternal, resolvedLocale, noValue)}
+            </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Last Synced:</span>{" "}
-            <span>{formatDateTime(link.lastSyncedAt)}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.lastSynced}:</span>{" "}
+            <span>{formatDistributionDateTime(link.lastSyncedAt, resolvedLocale, noValue)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Created:</span>{" "}
-            <span>{new Date(link.createdAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.created}:</span>{" "}
+            <span>{formatDistributionDateTime(link.createdAt, resolvedLocale, noValue)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Updated:</span>{" "}
-            <span>{new Date(link.updatedAt).toLocaleString()}</span>
+            <span className="text-muted-foreground">{detailMessages.fields.updated}:</span>{" "}
+            <span>{formatDistributionDateTime(link.updatedAt, resolvedLocale, noValue)}</span>
           </div>
         </CardContent>
       </Card>

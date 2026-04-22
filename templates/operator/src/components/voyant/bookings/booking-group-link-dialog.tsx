@@ -5,9 +5,9 @@ import {
   useBookingGroupMutation,
   useBookingGroups,
 } from "@voyantjs/bookings-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import * as React from "react"
-
 import {
   Button,
   Dialog,
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 export interface BookingGroupLinkDialogProps {
   open: boolean
@@ -46,6 +47,8 @@ export function BookingGroupLinkDialog({
   optionUnitId,
   onLinked,
 }: BookingGroupLinkDialogProps) {
+  const groupMessages = useAdminMessages().bookings.detail.groupLinkDialog
+  const { resolvedLocale } = useLocale()
   const [mode, setMode] = React.useState<Mode>("join")
   const [selectedGroupId, setSelectedGroupId] = React.useState("")
   const [newGroupLabel, setNewGroupLabel] = React.useState("")
@@ -79,7 +82,9 @@ export function BookingGroupLinkDialog({
       let role: "primary" | "shared" = "shared"
 
       if (mode === "create") {
-        const label = newGroupLabel.trim() || `Shared room — ${new Date().toLocaleDateString()}`
+        const label =
+          newGroupLabel.trim() ||
+          `${groupMessages.createDefaultLabelPrefix} — ${new Date().toLocaleDateString(resolvedLocale)}`
         const group = await createGroup.mutateAsync({
           kind: "shared_room",
           label,
@@ -92,7 +97,7 @@ export function BookingGroupLinkDialog({
       }
 
       if (!targetGroupId || targetGroupId === JOIN_PLACEHOLDER) {
-        setError("Select a group to join")
+        setError(groupMessages.validationSelectGroup)
         return
       }
 
@@ -105,7 +110,7 @@ export function BookingGroupLinkDialog({
       onOpenChange(false)
       onLinked?.(targetGroupId)
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to link booking"
+      const message = err instanceof Error ? err.message : groupMessages.linkFailed
       setError(message)
     }
   }
@@ -116,7 +121,7 @@ export function BookingGroupLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Link Booking to Shared Room</DialogTitle>
+          <DialogTitle>{groupMessages.title}</DialogTitle>
         </DialogHeader>
         <DialogBody className="grid gap-4">
           <div className="flex items-center gap-2">
@@ -126,7 +131,7 @@ export function BookingGroupLinkDialog({
               variant={mode === "join" ? "default" : "ghost"}
               onClick={() => setMode("join")}
             >
-              Join existing
+              {groupMessages.joinExisting}
             </Button>
             <Button
               type="button"
@@ -134,24 +139,24 @@ export function BookingGroupLinkDialog({
               variant={mode === "create" ? "default" : "ghost"}
               onClick={() => setMode("create")}
             >
-              Create new
+              {groupMessages.createNew}
             </Button>
           </div>
 
           {mode === "join" ? (
             <div className="flex flex-col gap-2">
-              <Label>Existing groups</Label>
+              <Label>{groupMessages.existingGroupsLabel}</Label>
               <Select
                 value={selectedGroupId || JOIN_PLACEHOLDER}
                 onValueChange={(v) => setSelectedGroupId(v === JOIN_PLACEHOLDER ? "" : (v ?? ""))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a group..." />
+                  <SelectValue placeholder={groupMessages.selectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {groups.length === 0 ? (
                     <SelectItem value={JOIN_PLACEHOLDER} disabled>
-                      No existing groups
+                      {groupMessages.noExistingGroups}
                     </SelectItem>
                   ) : (
                     groups.map((g) => (
@@ -163,22 +168,18 @@ export function BookingGroupLinkDialog({
                 </SelectContent>
               </Select>
               {productId && (
-                <p className="text-xs text-muted-foreground">
-                  Filtered to groups for the booking's product.
-                </p>
+                <p className="text-xs text-muted-foreground">{groupMessages.filteredHint}</p>
               )}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <Label>Group label</Label>
+              <Label>{groupMessages.groupLabelLabel}</Label>
               <Input
                 value={newGroupLabel}
                 onChange={(e) => setNewGroupLabel(e.target.value)}
-                placeholder="e.g. Smith + Jones, Room 204"
+                placeholder={groupMessages.groupLabelPlaceholder}
               />
-              <p className="text-xs text-muted-foreground">
-                This booking will be marked as the primary member.
-              </p>
+              <p className="text-xs text-muted-foreground">{groupMessages.primaryHint}</p>
             </div>
           )}
 
@@ -192,7 +193,7 @@ export function BookingGroupLinkDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Cancel
+            {groupMessages.cancel}
           </Button>
           <Button
             type="button"
@@ -201,7 +202,7 @@ export function BookingGroupLinkDialog({
             disabled={isSubmitting || (mode === "join" && !selectedGroupId)}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "create" ? "Create & Link" : "Link to Group"}
+            {mode === "create" ? groupMessages.createAndLink : groupMessages.linkToGroup}
           </Button>
         </DialogFooter>
       </DialogContent>

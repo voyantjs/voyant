@@ -1,28 +1,43 @@
 import { type KmsEnvelope, kmsEnvelopeSchema } from "@voyantjs/db/schema/iam"
 import { z } from "zod"
 
-export const transactionParticipantIdentitySchema = z.object({
+export const transactionTravelerIdentitySchema = z.object({
   dateOfBirth: z.string().optional().nullable(),
   nationality: z.string().max(2).optional().nullable(),
 })
 
-export const decryptedTransactionParticipantIdentitySchema = z.object({
-  participantId: z.string(),
-  participantKind: z.enum(["offer", "order"]),
+export const decryptedTransactionTravelerIdentitySchema = z.object({
+  travelerId: z.string(),
+  travelerKind: z.enum(["offer", "order"]),
   dateOfBirth: z.string().nullable(),
   nationality: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
 
-export const transactionParticipantIdentityEnvelopeSchema = z.object({
+export const transactionTravelerIdentityEnvelopeSchema = z.object({
   identityEncrypted: kmsEnvelopeSchema.optional().nullable(),
 })
 
-export type TransactionParticipantIdentity = z.infer<typeof transactionParticipantIdentitySchema>
-export type TransactionParticipantIdentityEnvelope = {
+export const transactionParticipantIdentitySchema = transactionTravelerIdentitySchema
+export const decryptedTransactionParticipantIdentitySchema =
+  decryptedTransactionTravelerIdentitySchema.transform(({ travelerId, travelerKind, ...rest }) => ({
+    ...rest,
+    participantId: travelerId,
+    participantKind: travelerKind,
+  }))
+export const transactionParticipantIdentityEnvelopeSchema =
+  transactionTravelerIdentityEnvelopeSchema
+
+export type TransactionTravelerIdentity = z.infer<typeof transactionTravelerIdentitySchema>
+export type TransactionTravelerIdentityEnvelope = {
   identityEncrypted?: KmsEnvelope | null
 }
+export type DecryptedTransactionTravelerIdentity = z.infer<
+  typeof decryptedTransactionTravelerIdentitySchema
+>
+export type TransactionParticipantIdentity = TransactionTravelerIdentity
+export type TransactionParticipantIdentityEnvelope = TransactionTravelerIdentityEnvelope
 export type DecryptedTransactionParticipantIdentity = z.infer<
   typeof decryptedTransactionParticipantIdentitySchema
 >

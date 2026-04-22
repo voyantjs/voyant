@@ -9,6 +9,8 @@ import type { UseProductOptions } from "./hooks/use-product.js"
 import type { UseProductCategoriesOptions } from "./hooks/use-product-categories.js"
 import type { UseProductDayServicesOptions } from "./hooks/use-product-day-services.js"
 import type { UseProductDaysOptions } from "./hooks/use-product-days.js"
+import type { UseProductItinerariesOptions } from "./hooks/use-product-itineraries.js"
+import type { UseProductItineraryDaysOptions } from "./hooks/use-product-itinerary-days.js"
 import type { UseProductMediaOptions } from "./hooks/use-product-media.js"
 import type { UseProductOptionOptions } from "./hooks/use-product-option.js"
 import type { UseProductOptionsListOptions } from "./hooks/use-product-options.js"
@@ -23,6 +25,7 @@ import {
   productCategoryListResponse,
   productDayServicesResponse,
   productDaysResponse,
+  productItinerariesResponse,
   productListResponse,
   productMediaListResponse,
   productOptionListResponse,
@@ -282,6 +285,53 @@ export function getProductDaysQueryOptions(
       if (!productId) throw new Error("getProductDaysQueryOptions requires a productId")
 
       return fetchWithValidation(`/v1/products/${productId}/days`, productDaysResponse, client)
+    },
+  })
+}
+
+export function getProductItinerariesQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  options: UseProductItinerariesOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productItineraries(productId ?? ""),
+    queryFn: async () => {
+      if (!productId) {
+        throw new Error("getProductItinerariesQueryOptions requires a productId")
+      }
+
+      return fetchWithValidation(
+        `/v1/products/${productId}/itineraries`,
+        productItinerariesResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getProductItineraryDaysQueryOptions(
+  client: FetchWithValidationOptions,
+  productId: string | null | undefined,
+  itineraryId: string | null | undefined,
+  options: UseProductItineraryDaysOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: productsQueryKeys.productItineraryDays(productId ?? "", itineraryId ?? ""),
+    queryFn: async () => {
+      if (!productId || !itineraryId) {
+        throw new Error("getProductItineraryDaysQueryOptions requires productId and itineraryId")
+      }
+
+      return fetchWithValidation(
+        `/v1/products/${productId}/itineraries/${itineraryId}/days`,
+        productDaysResponse,
+        client,
+      )
     },
   })
 }

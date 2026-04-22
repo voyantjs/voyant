@@ -46,7 +46,7 @@ describe("Enum schemas", () => {
   })
 
   it("accepts valid contact requirement scopes", () => {
-    for (const s of ["booking", "lead_traveler", "participant", "booker"]) {
+    for (const s of ["booking", "lead_traveler", "traveler", "booker"]) {
       expect(contactRequirementScopeSchema.parse(s)).toBe(s)
     }
   })
@@ -56,7 +56,7 @@ describe("Enum schemas", () => {
   })
 
   it("accepts valid booking question targets", () => {
-    for (const t of ["booking", "participant", "lead_traveler", "booker", "extra", "service"]) {
+    for (const t of ["booking", "traveler", "lead_traveler", "booker", "extra", "service"]) {
       expect(bookingQuestionTargetSchema.parse(t)).toBe(t)
     }
   })
@@ -92,7 +92,7 @@ describe("Enum schemas", () => {
   })
 
   it("accepts valid booking answer targets", () => {
-    for (const t of ["booking", "participant", "extra"]) {
+    for (const t of ["booking", "traveler", "extra"]) {
       expect(bookingAnswerTargetSchema.parse(t)).toBe(t)
     }
   })
@@ -109,9 +109,9 @@ describe("Product contact requirement schema", () => {
     const result = insertProductContactRequirementSchema.parse(valid)
     expect(result.productId).toBe("prod_abc")
     expect(result.fieldKey).toBe("email")
-    expect(result.scope).toBe("participant")
+    expect(result.scope).toBe("traveler")
     expect(result.isRequired).toBe(false)
-    expect(result.perParticipant).toBe(false)
+    expect(result.perTraveler).toBe(false)
     expect(result.active).toBe(true)
     expect(result.sortOrder).toBe(0)
   })
@@ -187,10 +187,10 @@ describe("Product booking question schema", () => {
   it("accepts valid target and fieldType overrides", () => {
     const result = insertProductBookingQuestionSchema.parse({
       ...valid,
-      target: "participant",
+      target: "traveler",
       fieldType: "single_select",
     })
-    expect(result.target).toBe("participant")
+    expect(result.target).toBe("traveler")
     expect(result.fieldType).toBe("single_select")
   })
 
@@ -401,10 +401,10 @@ describe("Booking answer schema", () => {
   it("accepts nullable optional FK fields", () => {
     const result = insertBookingAnswerSchema.parse({
       ...valid,
-      bookingParticipantId: null,
+      bookingTravelerId: null,
       bookingExtraId: null,
     })
-    expect(result.bookingParticipantId).toBeNull()
+    expect(result.bookingTravelerId).toBeNull()
     expect(result.bookingExtraId).toBeNull()
   })
 })

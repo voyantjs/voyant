@@ -6,6 +6,7 @@ import type * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 export interface OrganizationCardProps extends React.ComponentPropsWithoutRef<typeof Card> {
@@ -13,6 +14,13 @@ export interface OrganizationCardProps extends React.ComponentPropsWithoutRef<ty
 }
 
 export function OrganizationCard({ organization, className, ...props }: OrganizationCardProps) {
+  const messages = useAdminMessages().organizationsModule
+  const relationLabels: Record<NonNullable<OrganizationRecord["relation"]>, string> = {
+    client: messages.relationClient,
+    partner: messages.relationPartner,
+    supplier: messages.relationSupplier,
+    other: messages.relationOther,
+  }
   return (
     <Card data-slot="organization-card" className={cn("overflow-hidden", className)} {...props}>
       <CardHeader className="flex flex-row items-center gap-3">
@@ -30,7 +38,7 @@ export function OrganizationCard({ organization, className, ...props }: Organiza
         </div>
         {organization.relation ? (
           <Badge variant="secondary" className="capitalize">
-            {organization.relation}
+            {relationLabels[organization.relation] ?? organization.relation}
           </Badge>
         ) : null}
       </CardHeader>

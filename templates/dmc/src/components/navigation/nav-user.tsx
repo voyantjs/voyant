@@ -1,5 +1,5 @@
+import { useLocale, useTheme } from "@voyantjs/voyant-admin"
 import { BadgeCheck, Bell, Check, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react"
-import { useTheme } from "@/components/providers/theme-provider"
 import {
   Avatar,
   AvatarFallback,
@@ -8,7 +8,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   SidebarMenu,
@@ -16,6 +15,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { useSignOut } from "@/lib/auth"
 import { getInitials } from "@/lib/utils/initials"
 
@@ -32,7 +32,9 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { setTheme, theme, resolvedTheme } = useTheme()
+  const { setLocale, resolvedLocale } = useLocale()
   const signOut = useSignOut()
+  const messages = useAdminMessages()
 
   const firstName = user.firstName ?? (user.name ? user.name.split(" ")[0] : "") ?? ""
   const lastName = user.lastName ?? (user.name ? user.name.split(" ").slice(1).join(" ") : "") ?? ""
@@ -82,7 +84,7 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
+            <div className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar || undefined} alt={displayName} />
@@ -93,36 +95,46 @@ export function NavUser({
                   {showEmailSeparately && <span className="truncate text-xs">{user.email}</span>}
                 </div>
               </div>
-            </DropdownMenuLabel>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem disabled>
                 <BadgeCheck />
-                Account
+                {messages.account}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("light")}>
                 <Sun className="h-4 w-4" />
-                Light
+                {messages.light}
                 {(theme === "light" || (theme === "system" && resolvedTheme === "light")) && (
                   <Check className="ml-auto h-4 w-4" />
                 )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme("dark")}>
                 <Moon className="h-4 w-4" />
-                Dark
+                {messages.dark}
                 {(theme === "dark" || (theme === "system" && resolvedTheme === "dark")) && (
                   <Check className="ml-auto h-4 w-4" />
                 )}
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>{messages.language}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocale("en")}>
+                {messages.english}
+                {resolvedLocale === "en" && <Check className="ml-auto h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocale("ro")}>
+                {messages.romanian}
+                {resolvedLocale === "ro" && <Check className="ml-auto h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
-                Notifications
+                {messages.notifications}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut({ redirectTo: "/sign-in" })}>
               <LogOut />
-              Log out
+              {messages.logOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

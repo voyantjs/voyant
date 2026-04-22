@@ -27,14 +27,7 @@ export const bookingSourceTypeSchema = z.enum([
   "internal",
 ])
 
-export const bookingParticipantTypeSchema = z.enum([
-  "traveler",
-  "booker",
-  "contact",
-  "occupant",
-  "staff",
-  "other",
-])
+export const bookingParticipantTypeSchema = z.enum(["traveler", "occupant", "other"])
 
 export const bookingTravelerCategorySchema = z.enum(["adult", "child", "infant", "senior", "other"])
 
@@ -63,11 +56,11 @@ export const bookingItemStatusSchema = z.enum([
 export const bookingItemParticipantRoleSchema = z.enum([
   "traveler",
   "occupant",
-  "primary_contact",
-  "service_assignee",
   "beneficiary",
   "other",
 ])
+
+export const bookingStaffAssignmentRoleSchema = z.enum(["service_assignee", "other"])
 
 export const bookingAllocationTypeSchema = z.enum(["unit", "pickup", "resource"])
 

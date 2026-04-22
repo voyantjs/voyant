@@ -38,6 +38,16 @@ export const orders = pgTable(
     quoteId: text("quote_id"),
     marketId: text("market_id"),
     sourceChannelId: text("source_channel_id"),
+    contactFirstName: text("contact_first_name"),
+    contactLastName: text("contact_last_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    contactPreferredLanguage: text("contact_preferred_language"),
+    contactCountry: text("contact_country"),
+    contactRegion: text("contact_region"),
+    contactCity: text("contact_city"),
+    contactAddressLine1: text("contact_address_line1"),
+    contactPostalCode: text("contact_postal_code"),
     currency: text("currency").notNull(),
     baseCurrency: text("base_currency"),
     fxRateSetId: text("fx_rate_set_id"),
@@ -152,7 +162,7 @@ export const orderItemParticipants = pgTable(
     orderItemId: typeIdRef("order_item_id")
       .notNull()
       .references(() => orderItems.id, { onDelete: "cascade" }),
-    participantId: typeIdRef("participant_id")
+    travelerId: typeIdRef("traveler_id")
       .notNull()
       .references(() => orderParticipants.id, { onDelete: "cascade" }),
     role: transactionItemParticipantRoleEnum("role").notNull().default("traveler"),
@@ -161,11 +171,8 @@ export const orderItemParticipants = pgTable(
   },
   (table) => [
     index("idx_order_item_participants_item_created").on(table.orderItemId, table.createdAt),
-    index("idx_order_item_participants_participant_created").on(
-      table.participantId,
-      table.createdAt,
-    ),
-    uniqueIndex("uidx_order_item_participants").on(table.orderItemId, table.participantId),
+    index("idx_order_item_participants_participant_created").on(table.travelerId, table.createdAt),
+    uniqueIndex("uidx_order_item_participants").on(table.orderItemId, table.travelerId),
   ],
 )
 
@@ -206,9 +213,13 @@ export type Order = typeof orders.$inferSelect
 export type NewOrder = typeof orders.$inferInsert
 export type OrderParticipant = typeof orderParticipants.$inferSelect
 export type NewOrderParticipant = typeof orderParticipants.$inferInsert
+export type OrderTraveler = OrderParticipant
+export type NewOrderTraveler = NewOrderParticipant
 export type OrderItem = typeof orderItems.$inferSelect
 export type NewOrderItem = typeof orderItems.$inferInsert
 export type OrderItemParticipant = typeof orderItemParticipants.$inferSelect
 export type NewOrderItemParticipant = typeof orderItemParticipants.$inferInsert
+export type OrderItemTraveler = OrderItemParticipant
+export type NewOrderItemTraveler = NewOrderItemParticipant
 export type OrderTerm = typeof orderTerms.$inferSelect
 export type NewOrderTerm = typeof orderTerms.$inferInsert

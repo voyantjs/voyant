@@ -28,7 +28,14 @@ export function BookingRequirementsPage() {
 
       <div className="flex max-w-md flex-col gap-2">
         <Label>Product</Label>
-        <Select value={productId} onValueChange={(value) => setProductId(value ?? "")}>
+        <Select
+          items={products.map((product) => ({
+            label: `${product.name}${product.code ? ` · ${product.code}` : ""}`,
+            value: product.id,
+          }))}
+          value={productId}
+          onValueChange={(value) => setProductId(value ?? "")}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a product…" />
           </SelectTrigger>

@@ -3,9 +3,6 @@ import { getDb } from "@voyantjs/db"
 import {
   apikeyTable,
   authAccount,
-  authInvitation,
-  authMember,
-  authOrganization,
   authSession,
   authUser,
   authVerification,
@@ -13,10 +10,9 @@ import {
 } from "@voyantjs/db/schema/iam"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { emailOTP, organization } from "better-auth/plugins"
+import { emailOTP } from "better-auth/plugins"
 import type { BetterAuthPlugin } from "better-auth/types"
-
-import { ac, roles } from "./permissions"
+import { sql } from "drizzle-orm"
 
 export function getAuthSecret(): string {
   const secret = process.env.BETTER_AUTH_SECRET || process.env.SESSION_CLAIMS_SECRET || ""
@@ -48,6 +44,36 @@ function getTrustedOrigins(): string[] {
   return Array.from(new Set(values.map((value) => value.trim().replace(/\/$/, ""))))
 }
 
+const LOCAL_WILDCARDS = [
+  "http://localhost:*",
+  "http://127.0.0.1:*",
+  "https://localhost:*",
+  "https://127.0.0.1:*",
+]
+
+function hasLocalOrigin(origins: string[], baseURL: string): boolean {
+  const all = [...origins, baseURL]
+  return all.some((value) => {
+    try {
+      const { hostname } = new URL(value)
+      return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]"
+    } catch {
+      return false
+    }
+  })
+}
+
+/**
+ * If the app is running against a localhost baseURL (dev), allow any localhost
+ * origin/port so second dev servers (e.g. Vite on :3301 hitting API on :3200)
+ * aren't rejected by Better Auth's origin check. Production origins are
+ * unaffected — the wildcards are only added when we already see localhost.
+ */
+function expandTrustedOrigins(origins: string[], baseURL: string): string[] {
+  if (!hasLocalOrigin(origins, baseURL)) return origins
+  return Array.from(new Set([...origins, ...LOCAL_WILDCARDS]))
+}
+
 export interface CreateBetterAuthOptions {
   db?: ReturnType<typeof getDb>
   secret?: string
@@ -63,41 +89,6 @@ export interface CreateBetterAuthOptions {
   }) => Promise<void>
   /** Called to send a verification OTP. If not provided, logs to console. */
   sendVerificationOTP?: (data: { email: string; otp: string; type: string }) => Promise<void>
-  /** Called to send an organization invitation email. If not provided, logs to console. */
-  sendInvitationEmail?: (
-    data: {
-      id: string
-      role: string
-      email: string
-      organization: {
-        id: string
-        name: string
-        slug: string
-        createdAt: Date
-        logo?: string | null
-        metadata?: Record<string, unknown> | string
-      }
-      invitation: {
-        id: string
-        organizationId: string
-        email: string
-        role: string
-        status: "pending" | "accepted" | "rejected" | "canceled"
-        expiresAt: Date
-        inviterId: string
-        createdAt: Date
-        teamId?: string | null
-      }
-      inviter: {
-        id: string
-        organizationId: string
-        userId: string
-        role: string
-        createdAt: Date
-      } & { user: { id: string; name: string; email: string; image?: string | null } }
-    },
-    request?: Request,
-  ) => Promise<void>
 }
 
 /**
@@ -115,7 +106,10 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
     process.env.APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "http://localhost:3000"
-  const trustedOrigins = options.trustedOrigins ?? getTrustedOrigins()
+  const trustedOrigins = expandTrustedOrigins(
+    options.trustedOrigins ?? getTrustedOrigins(),
+    baseURL,
+  )
   const extraPlugins = options.plugins ?? []
 
   return betterAuth({
@@ -131,9 +125,6 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
         account: authAccount,
         verification: authVerification,
         apikey: apikeyTable,
-        organization: authOrganization,
-        member: authMember,
-        invitation: authInvitation,
       },
     }),
     emailAndPassword: {
@@ -155,6 +146,11 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
       sendOnSignUp: false, // OTP plugin handles this
       autoSignInAfterVerification: true,
     },
+    user: {
+      changeEmail: {
+        enabled: true,
+      },
+    },
     socialProviders: {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -167,17 +163,6 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
       apiKey({
         defaultPrefix: "voy_",
         apiKeyHeaders: ["authorization"],
-        references: "organization",
-      }),
-      organization({
-        ac,
-        roles,
-        // eslint-disable-next-line @typescript-eslint/require-await
-        sendInvitationEmail:
-          options.sendInvitationEmail ??
-          (async (data) => {
-            console.warn(`[Auth] Invitation for ${data.email} to org ${data.organization.name}`)
-          }),
       }),
       emailOTP({
         // eslint-disable-next-line @typescript-eslint/require-await
@@ -189,16 +174,37 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
         otpLength: 6,
         expiresIn: 600,
         sendVerificationOnSignUp: true,
+        changeEmail: {
+          enabled: true,
+        },
       }),
       ...extraPlugins,
     ],
     databaseHooks: {
       user: {
         create: {
+          // Single-tenant: once a user exists, reject any new-user creation.
+          // Covers email sign-up AND social-provider sign-up (Google would
+          // otherwise auto-create a user on first OAuth callback). Existing
+          // social sign-ins still work because this hook only fires on CREATE.
+          // Seed scripts do raw drizzle inserts, so they bypass this hook —
+          // which is intentional.
+          before: async () => {
+            const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(authUser)
+            if ((row?.count ?? 0) > 0) {
+              throw new Error("Sign-up is disabled. Ask an admin to invite you.")
+            }
+          },
           after: async (user) => {
             const nameParts = user.name?.split(" ") ?? []
             const firstName = nameParts[0] ?? null
             const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null
+
+            // Single-tenant bootstrap: the very first user to register becomes
+            // the super-admin. Runs atomically after the `user` row is
+            // inserted, so a simple COUNT(*) = 1 check identifies them.
+            const [countRow] = await db.select({ count: sql<number>`count(*)::int` }).from(authUser)
+            const isFirstUser = (countRow?.count ?? 0) === 1
 
             await db
               .insert(userProfilesTable)
@@ -207,6 +213,7 @@ export function createBetterAuth(options: CreateBetterAuthOptions = {}) {
                 firstName,
                 lastName,
                 avatarUrl: user.image ?? null,
+                isSuperAdmin: isFirstUser,
               })
               .onConflictDoNothing()
           },

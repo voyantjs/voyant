@@ -1,30 +1,37 @@
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
+import { normalizeValidationError, parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 import {
   authorizeTransactionPiiAccess,
   createPiiService,
   type Env,
-  hasParticipantIdentityInput,
+  hasTravelerIdentityInput,
   logTransactionPiiAccess,
   notFound,
 } from "./routes-shared.js"
 import { transactionsService } from "./service.js"
+import { toTravelerIdentityResponse } from "./service-shared.js"
 import {
-  insertOrderItemParticipantSchema,
+  insertOrderContactAssignmentSchema,
   insertOrderItemSchema,
-  insertOrderParticipantSchema,
+  insertOrderItemTravelerSchema,
   insertOrderSchema,
+  insertOrderStaffAssignmentSchema,
   insertOrderTermSchema,
+  insertOrderTravelerSchema,
+  orderContactAssignmentListQuerySchema,
   orderItemListQuerySchema,
-  orderItemParticipantListQuerySchema,
+  orderItemTravelerListQuerySchema,
   orderListQuerySchema,
-  orderParticipantListQuerySchema,
+  orderStaffAssignmentListQuerySchema,
   orderTermListQuerySchema,
-  updateOrderItemParticipantSchema,
+  orderTravelerListQuerySchema,
+  updateOrderContactAssignmentSchema,
   updateOrderItemSchema,
-  updateOrderParticipantSchema,
+  updateOrderItemTravelerSchema,
   updateOrderSchema,
+  updateOrderStaffAssignmentSchema,
   updateOrderTermSchema,
+  updateOrderTravelerSchema,
 } from "./validation.js"
 
 export const transactionOrderRoutes = new Hono<Env>()
@@ -59,128 +66,264 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.deleteOrder(c.get("db"), c.req.param("id"))
     return row ? c.json({ success: true }) : notFound(c, "Order not found")
   })
-  .get("/order-participants", async (c) => {
-    const query = await parseQuery(c, orderParticipantListQuerySchema)
-    return c.json(await transactionsService.listOrderParticipants(c.get("db"), query))
+  .get("/order-travelers", async (c) => {
+    const query = await parseQuery(c, orderTravelerListQuerySchema)
+    return c.json(await transactionsService.listOrderTravelers(c.get("db"), query))
   })
-  .post("/order-participants", async (c) => {
-    const payload = await parseJsonBody(c, insertOrderParticipantSchema)
-    const row = await transactionsService.createOrderParticipant(c.get("db"), payload)
-    if (!row) return c.json({ data: row }, 201)
-    if (hasParticipantIdentityInput(payload)) {
-      const pii = createPiiService(c, "order", row.orderId)
-      await pii.upsertParticipantIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
-      return c.json(
-        { data: await transactionsService.getOrderParticipantById(c.get("db"), row.id) },
-        201,
+  .post("/order-travelers", async (c) => {
+    try {
+      const payload = await parseJsonBody(c, insertOrderTravelerSchema)
+      const row = await transactionsService.createOrderTraveler(c.get("db"), payload)
+      if (!row) return c.json({ data: row }, 201)
+      if (hasTravelerIdentityInput(payload)) {
+        const pii = createPiiService(c, "order", row.orderId)
+        await pii.upsertTravelerIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
+        return c.json(
+          { data: await transactionsService.getOrderTravelerById(c.get("db"), row.id) },
+          201,
+        )
+      }
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
+  })
+  .get("/order-travelers/:id", async (c) => {
+    const row = await transactionsService.getOrderTravelerById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Order traveler not found")
+  })
+  .patch("/order-travelers/:id", async (c) => {
+    try {
+      const payload = await parseJsonBody(c, updateOrderTravelerSchema)
+      const row = await transactionsService.updateOrderTraveler(
+        c.get("db"),
+        c.req.param("id"),
+        payload,
       )
+      if (!row) return notFound(c, "Order traveler not found")
+      if (hasTravelerIdentityInput(payload)) {
+        const pii = createPiiService(c, "order", row.orderId)
+        await pii.upsertTravelerIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
+        return c.json({
+          data: await transactionsService.getOrderTravelerById(c.get("db"), row.id),
+        })
+      }
+      return c.json({ data: row })
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
     }
-    return c.json({ data: row }, 201)
   })
-  .get("/order-participants/:id", async (c) => {
-    const row = await transactionsService.getOrderParticipantById(c.get("db"), c.req.param("id"))
-    return row ? c.json({ data: row }) : notFound(c, "Order participant not found")
-  })
-  .patch("/order-participants/:id", async (c) => {
-    const payload = await parseJsonBody(c, updateOrderParticipantSchema)
-    const row = await transactionsService.updateOrderParticipant(
-      c.get("db"),
-      c.req.param("id"),
-      payload,
-    )
-    if (!row) return notFound(c, "Order participant not found")
-    if (hasParticipantIdentityInput(payload)) {
-      const pii = createPiiService(c, "order", row.orderId)
-      await pii.upsertParticipantIdentity(c.get("db"), "order", row.id, payload, c.get("userId"))
-      return c.json({
-        data: await transactionsService.getOrderParticipantById(c.get("db"), row.id),
-      })
-    }
-    return c.json({ data: row })
-  })
-  .get("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(
-      c.get("db"),
-      c.req.param("id"),
-    )
-    if (!participant) return notFound(c, "Order participant not found")
+  .get("/order-travelers/:id/travel-details", async (c) => {
+    const traveler = await transactionsService.getOrderTravelerById(c.get("db"), c.req.param("id"))
+    if (!traveler) return notFound(c, "Order traveler not found")
     const auth = await authorizeTransactionPiiAccess(c, {
-      participantKind: "order",
-      participantId: participant.id,
-      parentId: participant.orderId,
+      travelerKind: "order",
+      travelerId: traveler.id,
+      parentId: traveler.orderId,
       action: "read",
     })
     if (!auth.allowed) return auth.response
-    const pii = createPiiService(c, "order", participant.orderId)
-    const row = await pii.getParticipantIdentity(
-      c.get("db"),
-      "order",
-      participant.id,
-      c.get("userId"),
-    )
+    const pii = createPiiService(c, "order", traveler.orderId)
+    const row = await pii.getTravelerIdentity(c.get("db"), "order", traveler.id, c.get("userId"))
     if (!row) {
       await logTransactionPiiAccess(c, {
-        participantKind: "order",
-        parentId: participant.orderId,
-        participantId: participant.id,
+        travelerKind: "order",
+        parentId: traveler.orderId,
+        travelerId: traveler.id,
         action: "read",
         outcome: "denied",
         reason: "travel_details_not_found",
       })
-      return c.json({ error: "Order participant travel details not found" }, 404)
+      return c.json({ error: "Order traveler travel details not found" }, 404)
     }
-    return c.json({ data: row })
+    return c.json({ data: toTravelerIdentityResponse(row) })
   })
-  .patch("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(
-      c.get("db"),
-      c.req.param("id"),
-    )
-    if (!participant) return notFound(c, "Order participant not found")
+  .patch("/order-travelers/:id/travel-details", async (c) => {
+    const traveler = await transactionsService.getOrderTravelerById(c.get("db"), c.req.param("id"))
+    if (!traveler) return notFound(c, "Order traveler not found")
     const auth = await authorizeTransactionPiiAccess(c, {
-      participantKind: "order",
-      participantId: participant.id,
-      parentId: participant.orderId,
+      travelerKind: "order",
+      travelerId: traveler.id,
+      parentId: traveler.orderId,
       action: "update",
     })
     if (!auth.allowed) return auth.response
-    const pii = createPiiService(c, "order", participant.orderId)
-    const row = await pii.upsertParticipantIdentity(
+    const pii = createPiiService(c, "order", traveler.orderId)
+    const row = await pii.upsertTravelerIdentity(
       c.get("db"),
       "order",
-      participant.id,
-      await parseJsonBody(c, updateOrderParticipantSchema),
-      c.get("userId"),
-    )
-    return row ? c.json({ data: row }) : notFound(c, "Order participant not found")
-  })
-  .delete("/order-participants/:id/travel-details", async (c) => {
-    const participant = await transactionsService.getOrderParticipantById(
-      c.get("db"),
-      c.req.param("id"),
-    )
-    if (!participant) return notFound(c, "Order participant not found")
-    const auth = await authorizeTransactionPiiAccess(c, {
-      participantKind: "order",
-      participantId: participant.id,
-      parentId: participant.orderId,
-      action: "delete",
-    })
-    if (!auth.allowed) return auth.response
-    const pii = createPiiService(c, "order", participant.orderId)
-    const row = await pii.deleteParticipantIdentity(
-      c.get("db"),
-      "order",
-      participant.id,
+      traveler.id,
+      await parseJsonBody(c, updateOrderTravelerSchema),
       c.get("userId"),
     )
     return row
-      ? c.json({ success: true })
-      : c.json({ error: "Order participant travel details not found" }, 404)
+      ? c.json({ data: toTravelerIdentityResponse(row) })
+      : notFound(c, "Order traveler not found")
   })
-  .delete("/order-participants/:id", async (c) => {
-    const row = await transactionsService.deleteOrderParticipant(c.get("db"), c.req.param("id"))
-    return row ? c.json({ success: true }) : notFound(c, "Order participant not found")
+  .delete("/order-travelers/:id/travel-details", async (c) => {
+    const traveler = await transactionsService.getOrderTravelerById(c.get("db"), c.req.param("id"))
+    if (!traveler) return notFound(c, "Order traveler not found")
+    const auth = await authorizeTransactionPiiAccess(c, {
+      travelerKind: "order",
+      travelerId: traveler.id,
+      parentId: traveler.orderId,
+      action: "delete",
+    })
+    if (!auth.allowed) return auth.response
+    const pii = createPiiService(c, "order", traveler.orderId)
+    const row = await pii.deleteTravelerIdentity(c.get("db"), "order", traveler.id, c.get("userId"))
+    return row
+      ? c.json({ success: true })
+      : c.json({ error: "Order traveler travel details not found" }, 404)
+  })
+  .delete("/order-travelers/:id", async (c) => {
+    const row = await transactionsService.deleteOrderTraveler(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Order traveler not found")
+  })
+  .get("/order-contact-assignments", async (c) => {
+    const query = await parseQuery(c, orderContactAssignmentListQuerySchema)
+    return c.json(await transactionsService.listOrderContactAssignments(c.get("db"), query))
+  })
+  .post("/order-contact-assignments", async (c) => {
+    try {
+      const row = await transactionsService.createOrderContactAssignment(
+        c.get("db"),
+        await parseJsonBody(c, insertOrderContactAssignmentSchema),
+      )
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
+  })
+  .get("/order-contact-assignments/:id", async (c) => {
+    const row = await transactionsService.getOrderContactAssignmentById(
+      c.get("db"),
+      c.req.param("id"),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Order contact assignment not found")
+  })
+  .patch("/order-contact-assignments/:id", async (c) => {
+    try {
+      const row = await transactionsService.updateOrderContactAssignment(
+        c.get("db"),
+        c.req.param("id"),
+        await parseJsonBody(c, updateOrderContactAssignmentSchema),
+      )
+      return row ? c.json({ data: row }) : notFound(c, "Order contact assignment not found")
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
+  })
+  .delete("/order-contact-assignments/:id", async (c) => {
+    const row = await transactionsService.deleteOrderContactAssignment(
+      c.get("db"),
+      c.req.param("id"),
+    )
+    return row ? c.json({ success: true }) : notFound(c, "Order contact assignment not found")
+  })
+  .get("/order-staff-assignments", async (c) => {
+    const query = await parseQuery(c, orderStaffAssignmentListQuerySchema)
+    return c.json(await transactionsService.listOrderStaffAssignments(c.get("db"), query))
+  })
+  .post("/order-staff-assignments", async (c) => {
+    try {
+      const row = await transactionsService.createOrderStaffAssignment(
+        c.get("db"),
+        await parseJsonBody(c, insertOrderStaffAssignmentSchema),
+      )
+      return c.json({ data: row }, 201)
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
+  })
+  .get("/order-staff-assignments/:id", async (c) => {
+    const row = await transactionsService.getOrderStaffAssignmentById(
+      c.get("db"),
+      c.req.param("id"),
+    )
+    return row ? c.json({ data: row }) : notFound(c, "Order staff assignment not found")
+  })
+  .patch("/order-staff-assignments/:id", async (c) => {
+    try {
+      const row = await transactionsService.updateOrderStaffAssignment(
+        c.get("db"),
+        c.req.param("id"),
+        await parseJsonBody(c, updateOrderStaffAssignmentSchema),
+      )
+      return row ? c.json({ data: row }) : notFound(c, "Order staff assignment not found")
+    } catch (error) {
+      const validationError = normalizeValidationError(error)
+      if (validationError?.status === 400) {
+        return c.json(
+          {
+            error: validationError.message,
+            details: validationError.details?.fields ?? validationError.details,
+          },
+          400,
+        )
+      }
+
+      throw error
+    }
+  })
+  .delete("/order-staff-assignments/:id", async (c) => {
+    const row = await transactionsService.deleteOrderStaffAssignment(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Order staff assignment not found")
   })
   .get("/order-items", async (c) => {
     const query = await parseQuery(c, orderItemListQuerySchema)
@@ -213,39 +356,36 @@ export const transactionOrderRoutes = new Hono<Env>()
     const row = await transactionsService.deleteOrderItem(c.get("db"), c.req.param("id"))
     return row ? c.json({ success: true }) : notFound(c, "Order item not found")
   })
-  .get("/order-item-participants", async (c) => {
-    const query = await parseQuery(c, orderItemParticipantListQuerySchema)
-    return c.json(await transactionsService.listOrderItemParticipants(c.get("db"), query))
+  .get("/order-item-travelers", async (c) => {
+    const query = await parseQuery(c, orderItemTravelerListQuerySchema)
+    return c.json(await transactionsService.listOrderItemTravelers(c.get("db"), query))
   })
-  .post("/order-item-participants", async (c) =>
+  .post("/order-item-travelers", async (c) =>
     c.json(
       {
-        data: await transactionsService.createOrderItemParticipant(
+        data: await transactionsService.createOrderItemTraveler(
           c.get("db"),
-          await parseJsonBody(c, insertOrderItemParticipantSchema),
+          await parseJsonBody(c, insertOrderItemTravelerSchema),
         ),
       },
       201,
     ),
   )
-  .get("/order-item-participants/:id", async (c) => {
-    const row = await transactionsService.getOrderItemParticipantById(
+  .get("/order-item-travelers/:id", async (c) => {
+    const row = await transactionsService.getOrderItemTravelerById(c.get("db"), c.req.param("id"))
+    return row ? c.json({ data: row }) : notFound(c, "Order item traveler not found")
+  })
+  .patch("/order-item-travelers/:id", async (c) => {
+    const row = await transactionsService.updateOrderItemTraveler(
       c.get("db"),
       c.req.param("id"),
+      await parseJsonBody(c, updateOrderItemTravelerSchema),
     )
-    return row ? c.json({ data: row }) : notFound(c, "Order item participant not found")
+    return row ? c.json({ data: row }) : notFound(c, "Order item traveler not found")
   })
-  .patch("/order-item-participants/:id", async (c) => {
-    const row = await transactionsService.updateOrderItemParticipant(
-      c.get("db"),
-      c.req.param("id"),
-      await parseJsonBody(c, updateOrderItemParticipantSchema),
-    )
-    return row ? c.json({ data: row }) : notFound(c, "Order item participant not found")
-  })
-  .delete("/order-item-participants/:id", async (c) => {
-    const row = await transactionsService.deleteOrderItemParticipant(c.get("db"), c.req.param("id"))
-    return row ? c.json({ success: true }) : notFound(c, "Order item participant not found")
+  .delete("/order-item-travelers/:id", async (c) => {
+    const row = await transactionsService.deleteOrderItemTraveler(c.get("db"), c.req.param("id"))
+    return row ? c.json({ success: true }) : notFound(c, "Order item traveler not found")
   })
   .get("/order-terms", async (c) => {
     const query = await parseQuery(c, orderTermListQuerySchema)

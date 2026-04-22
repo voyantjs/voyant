@@ -26,7 +26,7 @@ describe.skipIf(!DB_AVAILABLE)("Notification payment context routes", () => {
       VALUES ('book_collect', 'BK-COLLECT-1', 'person_2', 'EUR', 60000)
     `)
     await ctx.db.execute(sql`
-      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      INSERT INTO booking_travelers (id, booking_id, first_name, last_name, email, participant_type, is_primary)
       VALUES ('bkpt_collect', 'book_collect', 'Mara', 'Client', 'mara@example.com', 'traveler', true)
     `)
     await ctx.db.execute(sql`
@@ -89,12 +89,30 @@ describe.skipIf(!DB_AVAILABLE)("Notification payment context routes", () => {
     const { data: template } = await createTemplateRes.json()
 
     await ctx.db.execute(sql`
-      INSERT INTO bookings (id, booking_number, person_id, sell_currency, sell_amount_cents)
-      VALUES ('book_invoice', 'BK-INV-1', 'person_3', 'EUR', 80000)
+      INSERT INTO bookings (
+        id,
+        booking_number,
+        person_id,
+        contact_first_name,
+        contact_last_name,
+        contact_email,
+        sell_currency,
+        sell_amount_cents
+      )
+      VALUES (
+        'book_invoice',
+        'BK-INV-1',
+        'person_3',
+        'Ioana',
+        'Client',
+        'ioana@example.com',
+        'EUR',
+        80000
+      )
     `)
     await ctx.db.execute(sql`
-      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
-      VALUES ('bkpt_invoice', 'book_invoice', 'Ioana', 'Client', 'ioana@example.com', 'booker', true)
+      INSERT INTO booking_travelers (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      VALUES ('bkpt_invoice', 'book_invoice', 'Ioana', 'Client', 'ioana@example.com', 'traveler', true)
     `)
     await ctx.db.execute(sql`
       INSERT INTO invoices (

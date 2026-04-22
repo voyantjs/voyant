@@ -85,6 +85,10 @@ export const productsQueryKeys = {
     [...productsQueryKeys.optionUnits(), "list", filters] as const,
   optionUnit: (id: string) => [...productsQueryKeys.optionUnits(), "detail", id] as const,
 
+  productItineraries: (productId: string) =>
+    [...productsQueryKeys.product(productId), "itineraries"] as const,
+  productItineraryDays: (productId: string, itineraryId: string) =>
+    [...productsQueryKeys.productItineraries(productId), itineraryId, "days"] as const,
   productDays: (productId: string) => [...productsQueryKeys.product(productId), "days"] as const,
   productDayServices: (productId: string, dayId: string) =>
     [...productsQueryKeys.productDays(productId), dayId, "services"] as const,

@@ -30,7 +30,8 @@
       "@voyantjs/legal-react": ["../../packages/legal-react/src/index.ts"],
       "@voyantjs/markets-react": ["../../packages/markets-react/src/index.ts"],
       "@voyantjs/sellability-react": ["../../packages/sellability-react/src/index.ts"],
-      "@voyantjs/transactions-react": ["../../packages/transactions-react/src/index.ts"]
+      "@voyantjs/transactions-react": ["../../packages/transactions-react/src/index.ts"],
+      "@voyantjs/voyant-ui/*": ["../../packages/ui/src/*"]
     }
   }
 }

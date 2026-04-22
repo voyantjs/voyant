@@ -113,6 +113,7 @@ export function ChannelProductMappingDialog({
             <div className="grid gap-2">
               <Label>Channel</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
@@ -131,6 +132,7 @@ export function ChannelProductMappingDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
@@ -274,6 +276,7 @@ export function ChannelBookingLinkDialog({
             <div className="grid gap-2">
               <Label>Channel</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
@@ -292,6 +295,10 @@ export function ChannelBookingLinkDialog({
             <div className="grid gap-2">
               <Label>Booking</Label>
               <Select
+                items={bookings.map((booking) => ({
+                  label: booking.bookingNumber,
+                  value: booking.id,
+                }))}
                 value={form.watch("bookingId")}
                 onValueChange={(value) => form.setValue("bookingId", value ?? "")}
               >

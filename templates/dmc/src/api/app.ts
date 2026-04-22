@@ -29,6 +29,7 @@ import { suppliersHonoModule } from "@voyantjs/suppliers"
 import { transactionsBookingExtension, transactionsHonoModule } from "@voyantjs/transactions"
 import { resolveNotificationProviders } from "../lib/notifications"
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
+import { createInvitationsRoutes } from "./invitations"
 import { getDbFromHyperdrive } from "./lib/db"
 import { createMediaStorage, guessMimeType, resolveDocumentDownloadUrl } from "./lib/storage"
 
@@ -82,6 +83,7 @@ export const app = createApp<CloudflareBindings>({
     "/v1/public/customer-portal/contact-exists",
     "/v1/public/storefront-verification",
     "/v1/public/checkout",
+    "/v1/public/invitations",
   ],
   modules: [
     crmHonoModule,
@@ -123,10 +125,13 @@ export const app = createApp<CloudflareBindings>({
         authHandler.fetch(request, env, ctx as ExecutionContext | undefined),
     }),
     resolve: async ({ request, env }) => resolveAuthRequest(request, env),
-    hasPermission: async ({ request, env, permission }) =>
-      hasAuthPermission(request, env, permission),
+    hasPermission: async ({ request, env }) => hasAuthPermission(request, env),
   },
   additionalRoutes: (hono) => {
+    // Admin-issued invitation flow (single-tenant sign-up is otherwise gated
+    // at the Better Auth layer).
+    hono.route("/", createInvitationsRoutes())
+
     // POST /v1/uploads — upload public/editorial media via the configured
     // media storage provider. Sensitive documents should use private
     // document-aware flows instead of this route.

@@ -213,6 +213,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={ORDER_STATUSES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as OrderStatus)}
                 >

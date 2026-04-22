@@ -14,6 +14,8 @@ import {
   notificationReminderRuleListQuerySchema,
   notificationReminderRunListQuerySchema,
   notificationTemplateListQuerySchema,
+  previewNotificationTemplateResultSchema,
+  previewNotificationTemplateSchema,
   runDueRemindersSchema,
   sendBookingDocumentsNotificationResultSchema,
   sendBookingDocumentsNotificationSchema,
@@ -102,6 +104,12 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
       )
       if (!row) return c.json({ error: "Notification template not found" }, 404)
       return c.json({ data: row })
+    })
+    .post("/preview", async (c) => {
+      const rendered = notificationsService.previewNotificationTemplate(
+        await parseJsonBody(c, previewNotificationTemplateSchema),
+      )
+      return c.json({ data: previewNotificationTemplateResultSchema.parse(rendered) })
     })
     .get("/deliveries", async (c) => {
       const query = parseQuery(c, notificationDeliveryListQuerySchema)

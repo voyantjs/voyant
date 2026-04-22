@@ -165,6 +165,7 @@ export function CancellationPolicyRuleDialog({
             <div className="flex flex-col gap-2">
               <Label>Charge type</Label>
               <Select
+                items={CHARGE_TYPES}
                 value={form.watch("chargeType")}
                 onValueChange={(value) =>
                   form.setValue("chargeType", value as RuleFormValues["chargeType"])

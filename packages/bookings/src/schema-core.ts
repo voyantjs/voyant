@@ -21,6 +21,16 @@ export const bookings = pgTable(
     sourceType: bookingSourceTypeEnum("source_type").notNull().default("manual"),
     externalBookingRef: text("external_booking_ref"),
     communicationLanguage: text("communication_language"),
+    contactFirstName: text("contact_first_name"),
+    contactLastName: text("contact_last_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    contactPreferredLanguage: text("contact_preferred_language"),
+    contactCountry: text("contact_country"),
+    contactRegion: text("contact_region"),
+    contactCity: text("contact_city"),
+    contactAddressLine1: text("contact_address_line1"),
+    contactPostalCode: text("contact_postal_code"),
     sellCurrency: text("sell_currency").notNull(),
     baseCurrency: text("base_currency"),
     sellAmountCents: integer("sell_amount_cents"),
@@ -51,10 +61,10 @@ export const bookings = pgTable(
   ],
 )
 
-export const bookingParticipants = pgTable(
-  "booking_participants",
+export const bookingTravelers = pgTable(
+  "booking_travelers",
   {
-    id: typeId("booking_participants"),
+    id: typeId("booking_travelers"),
     bookingId: typeIdRef("booking_id")
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
@@ -74,19 +84,19 @@ export const bookingParticipants = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_booking_participants_booking").on(table.bookingId),
-    index("idx_booking_participants_booking_primary_created").on(
+    index("idx_booking_travelers_booking").on(table.bookingId),
+    index("idx_booking_travelers_booking_primary_created").on(
       table.bookingId,
       table.isPrimary,
       table.createdAt,
     ),
-    index("idx_booking_participants_booking_type_created").on(
+    index("idx_booking_travelers_booking_type_created").on(
       table.bookingId,
       table.participantType,
       table.createdAt,
     ),
-    index("idx_booking_participants_type").on(table.participantType),
-    index("idx_booking_participants_person").on(table.personId),
+    index("idx_booking_travelers_type").on(table.participantType),
+    index("idx_booking_travelers_person").on(table.personId),
   ],
 )
 
@@ -95,7 +105,7 @@ export const bookingPiiAccessLog = pgTable(
   {
     id: typeId("booking_pii_access_log"),
     bookingId: text("booking_id"),
-    participantId: text("participant_id"),
+    travelerId: text("traveler_id"),
     actorId: text("actor_id"),
     actorType: text("actor_type"),
     callerType: text("caller_type"),
@@ -107,7 +117,7 @@ export const bookingPiiAccessLog = pgTable(
   },
   (table) => [
     index("idx_booking_pii_access_log_booking").on(table.bookingId),
-    index("idx_booking_pii_access_log_participant").on(table.participantId),
+    index("idx_booking_pii_access_log_traveler").on(table.travelerId),
     index("idx_booking_pii_access_log_actor").on(table.actorId),
     index("idx_booking_pii_access_log_created_at").on(table.createdAt),
   ],
@@ -115,10 +125,7 @@ export const bookingPiiAccessLog = pgTable(
 
 export type Booking = typeof bookings.$inferSelect
 export type NewBooking = typeof bookings.$inferInsert
-export type BookingParticipant = typeof bookingParticipants.$inferSelect
-export type NewBookingParticipant = typeof bookingParticipants.$inferInsert
-export const bookingPassengers = bookingParticipants
-export type BookingPassenger = BookingParticipant
-export type NewBookingPassenger = NewBookingParticipant
+export type BookingTraveler = typeof bookingTravelers.$inferSelect
+export type NewBookingTraveler = typeof bookingTravelers.$inferInsert
 export type BookingPiiAccessLog = typeof bookingPiiAccessLog.$inferSelect
 export type NewBookingPiiAccessLog = typeof bookingPiiAccessLog.$inferInsert

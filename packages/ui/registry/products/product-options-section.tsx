@@ -1,14 +1,16 @@
 "use client"
 
+import { useDuplicateOptionPricingMutation } from "@voyantjs/pricing-react"
 import {
   type OptionUnitRecord,
   type ProductOptionRecord,
+  useDuplicateProductOptionMutation,
   useOptionUnitMutation,
   useOptionUnits,
   useProductOptionMutation,
   useProductOptions,
 } from "@voyantjs/products-react"
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Copy, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -66,6 +68,8 @@ export function ProductOptionsSection({
     limit: pageSize,
   })
   const { remove } = useProductOptionMutation()
+  const duplicateOption = useDuplicateProductOptionMutation()
+  const duplicatePricing = useDuplicateOptionPricingMutation()
 
   const options = React.useMemo(
     () => (data?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
@@ -113,6 +117,21 @@ export function ProductOptionsSection({
                 setEditingOption(option)
                 setDialogOpen(true)
               }}
+              onDuplicate={() => {
+                duplicateOption.mutate(
+                  { sourceOptionId: option.id, productId },
+                  {
+                    onSuccess: async ({ option: duplicatedOption, unitIdMap }) => {
+                      await duplicatePricing.mutateAsync({
+                        sourceOptionId: option.id,
+                        targetOptionId: duplicatedOption.id,
+                        productId,
+                        unitIdMap,
+                      })
+                    },
+                  },
+                )
+              }}
               onDelete={() => {
                 if (confirm(`Delete option "${option.name}" and all its units?`)) {
                   remove.mutate(option.id)
@@ -145,6 +164,7 @@ function OptionRow({
   expanded,
   onToggle,
   onEdit,
+  onDuplicate,
   onDelete,
   children,
 }: React.PropsWithChildren<{
@@ -152,6 +172,7 @@ function OptionRow({
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
+  onDuplicate: () => void
   onDelete: () => void
 }>) {
   return (
@@ -175,6 +196,9 @@ function OptionRow({
           {option.isDefault ? <Badge variant="secondary">Default</Badge> : null}
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon-sm" onClick={onDuplicate}>
+            <Copy className="size-4" aria-hidden="true" />
+          </Button>
           <Button variant="ghost" size="icon-sm" onClick={onEdit}>
             <Pencil className="size-4" aria-hidden="true" />
           </Button>

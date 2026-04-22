@@ -7,7 +7,7 @@ import {
 
 export const Route = createFileRoute("/_workspace/legal/contracts/$id")({
   loader: ({ context, params }) =>
-    loadContractDetailPage(params.id, context.queryClient.ensureQueryData),
+    loadContractDetailPage(params.id, (options) => context.queryClient.ensureQueryData(options)),
   component: RouteComponent,
 })
 

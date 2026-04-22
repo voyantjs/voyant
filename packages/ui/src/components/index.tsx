@@ -11,6 +11,7 @@ import {
   CollapsibleTrigger as LocalCollapsibleTrigger,
 } from "./collapsible"
 import { ConfirmActionButton } from "./confirm-action-button"
+import { ContractTemplateAuthoringHelp } from "./contract-template-authoring-help"
 import {
   DialogClose,
   DialogDescription,
@@ -35,7 +36,16 @@ import {
 import { Input } from "./input"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "./input-otp"
 import { Label } from "./label"
+import { NotificationDeliveriesPage } from "./notification-deliveries-page"
+import { NotificationDeliveryDetailDialog } from "./notification-delivery-detail-dialog"
+import { NotificationReminderRulesPage } from "./notification-reminder-rules-page"
+import { NotificationReminderRunsPage } from "./notification-reminder-runs-page"
+import { NotificationTemplateAuthoringHelp } from "./notification-template-authoring-help"
+import { NotificationTemplateDetailPage } from "./notification-template-detail-page"
+import { NotificationTemplatesPage } from "./notification-templates-page"
 import { OverviewMetric } from "./overview-metric"
+import { RichTextEditor } from "./rich-text-editor"
+import { ScrollArea, ScrollBar } from "./scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
 import { SelectionActionBar } from "./selection-action-bar"
 import {
@@ -119,7 +129,13 @@ function DialogContent({
 }
 
 function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-body" className={cn("flex-1 py-4", className)} {...props} />
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("min-h-0 flex-1 overflow-y-auto py-4 pr-1", className)}
+      {...props}
+    />
+  )
 }
 
 const sheetSizeClasses = {
@@ -192,6 +208,7 @@ export {
   CollapsibleContent,
   CollapsibleTrigger,
   ConfirmActionButton,
+  ContractTemplateAuthoringHelp,
   cn,
   Dialog,
   DialogBody,
@@ -216,7 +233,17 @@ export {
   InputOTPGroup,
   InputOTPSlot,
   Label,
+  NotificationDeliveriesPage,
+  NotificationDeliveryDetailDialog,
+  NotificationReminderRulesPage,
+  NotificationReminderRunsPage,
+  NotificationTemplateAuthoringHelp,
+  NotificationTemplateDetailPage,
+  NotificationTemplatesPage,
   OverviewMetric,
+  RichTextEditor,
+  ScrollArea,
+  ScrollBar,
   Select,
   SelectContent,
   SelectItem,

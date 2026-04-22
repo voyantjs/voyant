@@ -32,7 +32,7 @@ const formSchema = z.object({
   label: z.string().min(1, "Label is required").max(255),
   code: z.string().max(100).optional().nullable(),
   description: z.string().optional().nullable(),
-  target: z.enum(["booking", "participant", "lead_traveler", "booker", "extra", "service"]),
+  target: z.enum(["booking", "traveler", "lead_traveler", "booker", "extra", "service"]),
   fieldType: z.enum([
     "text",
     "textarea",
@@ -185,6 +185,7 @@ export function BookingQuestionDialog({
               <div className="flex flex-col gap-2">
                 <Label>Target</Label>
                 <Select
+                  items={QUESTION_TARGETS}
                   value={form.watch("target")}
                   onValueChange={(value) => form.setValue("target", value as Target)}
                 >
@@ -203,6 +204,7 @@ export function BookingQuestionDialog({
               <div className="flex flex-col gap-2">
                 <Label>Field type</Label>
                 <Select
+                  items={QUESTION_FIELD_TYPES}
                   value={form.watch("fieldType")}
                   onValueChange={(value) => form.setValue("fieldType", value as FieldType)}
                 >

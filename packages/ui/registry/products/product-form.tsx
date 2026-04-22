@@ -217,7 +217,11 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label>Status</Label>
-            <Select value={state.status} onValueChange={(value) => value && field("status")(value)}>
+            <Select
+              value={state.status}
+              onValueChange={(value) => value && field("status")(value)}
+              items={PRODUCT_STATUSES}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -234,6 +238,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           <div className="flex flex-col gap-1.5">
             <Label>Booking Mode</Label>
             <Select
+              items={BOOKING_MODES}
               value={state.bookingMode}
               onValueChange={(value) => value && field("bookingMode")(value)}
             >
@@ -262,6 +267,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           <div className="flex flex-col gap-1.5">
             <Label>Sell Currency</Label>
             <Select
+              items={CURRENCY_OPTIONS}
               value={state.sellCurrency}
               onValueChange={(value) => value && field("sellCurrency")(value)}
             >

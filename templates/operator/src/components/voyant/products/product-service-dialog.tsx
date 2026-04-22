@@ -20,23 +20,28 @@ import {
   SheetTitle,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const serviceFormSchema = z.object({
-  serviceType: z.enum(["accommodation", "transfer", "experience", "guide", "meal", "other"]),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional().nullable(),
-  supplierServiceId: z.string().optional().nullable(),
-  costCurrency: z.string().min(3).max(3, "Use 3-letter ISO code"),
-  costAmount: z.coerce.number().min(0, "Cost must be non-negative"),
-  quantity: z.coerce.number().int().positive().default(1),
-  sortOrder: z.coerce.number().int().optional().or(z.literal("")).nullable(),
-  notes: z.string().optional().nullable(),
-})
+type ServiceMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["services"]
 
-type ServiceFormValues = z.input<typeof serviceFormSchema>
-type ServiceFormOutput = z.output<typeof serviceFormSchema>
+const buildServiceFormSchema = (messages: ServiceMessages) =>
+  z.object({
+    serviceType: z.enum(["accommodation", "transfer", "experience", "guide", "meal", "other"]),
+    name: z.string().min(1, messages.validationNameRequired),
+    description: z.string().optional().nullable(),
+    supplierServiceId: z.string().optional().nullable(),
+    costCurrency: z.string().min(3).max(3, messages.validationIsoCurrency),
+    costAmount: z.coerce.number().min(0, messages.validationCostNonNegative),
+    quantity: z.coerce.number().int().positive().default(1),
+    sortOrder: z.coerce.number().int().optional().or(z.literal("")).nullable(),
+    notes: z.string().optional().nullable(),
+  })
+
+type ServiceFormSchema = ReturnType<typeof buildServiceFormSchema>
+type ServiceFormValues = z.input<ServiceFormSchema>
+type ServiceFormOutput = z.output<ServiceFormSchema>
 
 type DayServiceData = {
   id: string
@@ -68,14 +73,24 @@ type ServiceDialogProps = {
   onSuccess: () => void
 }
 
-const SERVICE_TYPES = [
-  { value: "accommodation", label: "Accommodation" },
-  { value: "transfer", label: "Transfer" },
-  { value: "experience", label: "Experience" },
-  { value: "guide", label: "Guide" },
-  { value: "meal", label: "Meal" },
-  { value: "other", label: "Other" },
-] as const
+function getServiceTypeLabel(type: string, messages: ServiceMessages): string {
+  switch (type) {
+    case "accommodation":
+      return messages.serviceTypeAccommodation
+    case "transfer":
+      return messages.serviceTypeTransfer
+    case "experience":
+      return messages.serviceTypeExperience
+    case "guide":
+      return messages.serviceTypeGuide
+    case "meal":
+      return messages.serviceTypeMeal
+    case "other":
+      return messages.serviceTypeOther
+    default:
+      return type
+  }
+}
 
 export function ServiceDialog({
   open,
@@ -85,7 +100,19 @@ export function ServiceDialog({
   service,
   onSuccess,
 }: ServiceDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const serviceMessages = messages.products.operations.services
   const isEditing = !!service
+  const serviceFormSchema = buildServiceFormSchema(serviceMessages)
+  const serviceTypes = [
+    { value: "accommodation", label: serviceMessages.serviceTypeAccommodation },
+    { value: "transfer", label: serviceMessages.serviceTypeTransfer },
+    { value: "experience", label: serviceMessages.serviceTypeExperience },
+    { value: "guide", label: serviceMessages.serviceTypeGuide },
+    { value: "meal", label: serviceMessages.serviceTypeMeal },
+    { value: "other", label: serviceMessages.serviceTypeOther },
+  ] as const
 
   // Fetch suppliers + their services for the picker
   const { data: suppliersData } = useQuery({
@@ -183,7 +210,9 @@ export function ServiceDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Service" : "Add Service"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? serviceMessages.editTitle : serviceMessages.newTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -193,24 +222,28 @@ export function ServiceDialog({
             {/* Supplier service picker */}
             {suppliersData && suppliersData.length > 0 && (
               <div className="flex flex-col gap-2">
-                <Label>Link Supplier Service (optional)</Label>
+                <Label>{serviceMessages.supplierServiceLabel}</Label>
                 <Select
                   value={form.watch("supplierServiceId") ?? ""}
                   onValueChange={handleSupplierServiceSelect}
                   items={
                     suppliersData?.map((opt) => ({
                       value: opt.id,
-                      label: `${opt.supplierName} — ${opt.name} (${opt.serviceType})`,
+                      label: `${opt.supplierName} — ${opt.name} (${getServiceTypeLabel(
+                        opt.serviceType,
+                        serviceMessages,
+                      )})`,
                     })) ?? []
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a supplier service..." />
+                    <SelectValue placeholder={serviceMessages.supplierServicePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliersData.map((opt) => (
                       <SelectItem key={opt.id} value={opt.id}>
-                        {opt.supplierName} — {opt.name} ({opt.serviceType})
+                        {opt.supplierName} — {opt.name} (
+                        {getServiceTypeLabel(opt.serviceType, serviceMessages)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -220,19 +253,19 @@ export function ServiceDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Service Type</Label>
+                <Label>{serviceMessages.serviceTypeLabel}</Label>
                 <Select
                   value={form.watch("serviceType")}
                   onValueChange={(v) =>
                     form.setValue("serviceType", v as ServiceFormValues["serviceType"])
                   }
-                  items={SERVICE_TYPES}
+                  items={serviceTypes}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SERVICE_TYPES.map((t) => (
+                    {serviceTypes.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
                       </SelectItem>
@@ -242,8 +275,8 @@ export function ServiceDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Deluxe Sea View Room" />
+                <Label>{serviceMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={serviceMessages.namePlaceholder} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                 )}
@@ -251,16 +284,19 @@ export function ServiceDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} placeholder="Service details..." />
+              <Label>{serviceMessages.descriptionLabel}</Label>
+              <Textarea
+                {...form.register("description")}
+                placeholder={serviceMessages.descriptionPlaceholder}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Cost Currency</Label>
+                <Label>{serviceMessages.costCurrencyLabel}</Label>
                 <Input
                   {...form.register("costCurrency")}
-                  placeholder="EUR"
+                  placeholder={serviceMessages.costCurrencyPlaceholder}
                   maxLength={3}
                   className="uppercase"
                 />
@@ -271,13 +307,13 @@ export function ServiceDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cost Amount</Label>
+                <Label>{serviceMessages.costAmountLabel}</Label>
                 <Input
                   {...form.register("costAmount")}
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="150.00"
+                  placeholder={serviceMessages.costAmountPlaceholder}
                 />
                 {form.formState.errors.costAmount && (
                   <p className="text-xs text-destructive">
@@ -286,30 +322,42 @@ export function ServiceDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Quantity</Label>
-                <Input {...form.register("quantity")} type="number" min="1" placeholder="1" />
+                <Label>{serviceMessages.quantityLabel}</Label>
+                <Input
+                  {...form.register("quantity")}
+                  type="number"
+                  min="1"
+                  placeholder={serviceMessages.quantityPlaceholder}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Sort Order</Label>
-                <Input {...form.register("sortOrder")} type="number" placeholder="1" />
+                <Label>{serviceMessages.sortOrderLabel}</Label>
+                <Input
+                  {...form.register("sortOrder")}
+                  type="number"
+                  placeholder={serviceMessages.sortOrderPlaceholder}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional notes..." />
+              <Label>{serviceMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={serviceMessages.notesPlaceholder}
+              />
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Service"}
+              {isEditing ? productMessages.saveChanges : serviceMessages.create}
             </Button>
           </SheetFooter>
         </form>

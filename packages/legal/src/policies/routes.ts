@@ -55,35 +55,6 @@ export const policiesAdminRoutes = new Hono<Env>()
     return c.json({ data: result })
   })
 
-  .get("/:id", async (c) => {
-    const row = await policiesService.getPolicyById(c.get("db"), c.req.param("id"))
-    if (!row) return c.json({ error: "Policy not found" }, 404)
-    return c.json({ data: row })
-  })
-
-  .patch("/:id", async (c) => {
-    const row = await policiesService.updatePolicy(
-      c.get("db"),
-      c.req.param("id"),
-      await parseJsonBody(c, updatePolicySchema),
-    )
-    if (!row) return c.json({ error: "Policy not found" }, 404)
-    return c.json({ data: row })
-  })
-
-  .delete("/:id", async (c) => {
-    const row = await policiesService.deletePolicy(c.get("db"), c.req.param("id"))
-    if (!row) return c.json({ error: "Policy not found" }, 404)
-    return c.json({ success: true })
-  })
-
-  .post("/:id/evaluate", async (c) => {
-    const input = await parseJsonBody(c, evaluateCancellationInputSchema)
-    const result = await policiesService.evaluateCancellation(c.get("db"), c.req.param("id"), input)
-    if (!result) return c.json({ error: "Policy or current version not found" }, 404)
-    return c.json({ data: result })
-  })
-
   // ---------- versions ----------
 
   .get("/:id/versions", async (c) => {
@@ -209,6 +180,35 @@ export const policiesAdminRoutes = new Hono<Env>()
       await parseJsonBody(c, insertPolicyAcceptanceSchema),
     )
     return c.json({ data: row }, 201)
+  })
+
+  .get("/:id", async (c) => {
+    const row = await policiesService.getPolicyById(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Policy not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .patch("/:id", async (c) => {
+    const row = await policiesService.updatePolicy(
+      c.get("db"),
+      c.req.param("id"),
+      await parseJsonBody(c, updatePolicySchema),
+    )
+    if (!row) return c.json({ error: "Policy not found" }, 404)
+    return c.json({ data: row })
+  })
+
+  .delete("/:id", async (c) => {
+    const row = await policiesService.deletePolicy(c.get("db"), c.req.param("id"))
+    if (!row) return c.json({ error: "Policy not found" }, 404)
+    return c.json({ success: true })
+  })
+
+  .post("/:id/evaluate", async (c) => {
+    const input = await parseJsonBody(c, evaluateCancellationInputSchema)
+    const result = await policiesService.evaluateCancellation(c.get("db"), c.req.param("id"), input)
+    if (!result) return c.json({ error: "Policy or current version not found" }, 404)
+    return c.json({ data: result })
   })
 
 export type PoliciesAdminRoutes = typeof policiesAdminRoutes

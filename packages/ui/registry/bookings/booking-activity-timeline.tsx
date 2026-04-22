@@ -1,6 +1,6 @@
 "use client"
 
-import { useBookingActivity, useBookingDocuments } from "@voyantjs/bookings-react"
+import { useBookingActivity, useBookingTravelerDocuments } from "@voyantjs/bookings-react"
 import { usePublicBookingPayments } from "@voyantjs/finance-react"
 import {
   Activity,
@@ -70,7 +70,7 @@ type Filter = TimelineSource | "all"
 export function BookingActivityTimeline({ bookingId }: BookingActivityTimelineProps) {
   const [filter, setFilter] = React.useState<Filter>("all")
   const { data: activityData } = useBookingActivity(bookingId)
-  const { data: documentsData } = useBookingDocuments(bookingId)
+  const { data: documentsData } = useBookingTravelerDocuments(bookingId)
   const { data: paymentsData } = usePublicBookingPayments(bookingId)
 
   const events = React.useMemo<TimelineEvent[]>(() => {

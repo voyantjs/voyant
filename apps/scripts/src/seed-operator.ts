@@ -21,15 +21,15 @@ import {
   productMeetingConfigs,
 } from "../../../packages/availability/src/schema.ts"
 import {
-  bookingParticipants,
   bookingPiiAccessLog,
   bookings,
+  bookingTravelers,
 } from "../../../packages/bookings/src/schema-core.ts"
 import {
   bookingAllocations,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
+  bookingItemTravelers,
   bookingRedemptionEvents,
 } from "../../../packages/bookings/src/schema-items.ts"
 import {
@@ -1905,7 +1905,7 @@ async function seedTransactionsAndBookings(
       })
       .returning()
 
-    const [offerParticipant] = await ctx.db
+    const [offerTraveler] = await ctx.db
       .insert(offerParticipants)
       .values({
         id: newId("offer_participants"),
@@ -1956,7 +1956,7 @@ async function seedTransactionsAndBookings(
     await ctx.db.insert(offerItemParticipants).values({
       id: newId("offer_item_participants"),
       offerItemId: offerItem.id,
-      participantId: offerParticipant.id,
+      travelerId: offerTraveler.id,
       role: "traveler",
       isPrimary: true,
     })
@@ -1984,7 +1984,7 @@ async function seedTransactionsAndBookings(
       })
       .returning()
 
-    const [orderParticipant] = await ctx.db
+    const [orderTraveler] = await ctx.db
       .insert(orderParticipants)
       .values({
         id: newId("order_participants"),
@@ -2036,7 +2036,7 @@ async function seedTransactionsAndBookings(
     await ctx.db.insert(orderItemParticipants).values({
       id: newId("order_item_participants"),
       orderItemId: orderItem.id,
-      participantId: orderParticipant.id,
+      travelerId: orderTraveler.id,
       role: "traveler",
       isPrimary: true,
     })
@@ -2100,29 +2100,29 @@ async function seedTransactionsAndBookings(
       })
       .returning()
 
-    const bookingParticipantIds: string[] = []
-    for (let participantIndex = 0; participantIndex < participantCount; participantIndex += 1) {
-      const isLead = participantIndex === 0
-      const [bookingParticipant] = await ctx.db
-        .insert(bookingParticipants)
+    const bookingTravelerIds: string[] = []
+    for (let travelerIndex = 0; travelerIndex < participantCount; travelerIndex += 1) {
+      const isLead = travelerIndex === 0
+      const [bookingTraveler] = await ctx.db
+        .insert(bookingTravelers)
         .values({
-          id: newId("booking_participants"),
+          id: newId("booking_travelers"),
           bookingId: booking.id,
           personId: isLead ? leadPersonId : null,
           participantType: "traveler",
           travelerCategory: "adult",
-          firstName: isLead ? bookingPlan.leadTraveler.firstName : `Guest${participantIndex + 1}`,
+          firstName: isLead ? bookingPlan.leadTraveler.firstName : `Guest${travelerIndex + 1}`,
           lastName: isLead ? bookingPlan.leadTraveler.lastName : bookingPlan.leadTraveler.lastName,
           email: isLead ? bookingPlan.leadTraveler.email : null,
           preferredLanguage: plan.workspace.locale,
-          accessibilityNeeds: participantIndex === 1 ? "Low-step access preferred" : null,
-          specialRequests: participantIndex === 0 ? bookingPlan.notes : null,
+          accessibilityNeeds: travelerIndex === 1 ? "Low-step access preferred" : null,
+          specialRequests: travelerIndex === 0 ? bookingPlan.notes : null,
           isPrimary: isLead,
-          notes: `Seeded traveler ${participantIndex + 1}`,
+          notes: `Seeded traveler ${travelerIndex + 1}`,
         })
         .returning()
 
-      bookingParticipantIds.push(bookingParticipant.id)
+      bookingTravelerIds.push(bookingTraveler.id)
     }
 
     const [bookingItem] = await ctx.db
@@ -2153,13 +2153,13 @@ async function seedTransactionsAndBookings(
       })
       .returning()
 
-    for (const [participantIndex, participantId] of bookingParticipantIds.entries()) {
-      await ctx.db.insert(bookingItemParticipants).values({
-        id: newId("booking_item_participants"),
+    for (const [travelerIndex, travelerId] of bookingTravelerIds.entries()) {
+      await ctx.db.insert(bookingItemTravelers).values({
+        id: newId("booking_item_travelers"),
         bookingItemId: bookingItem.id,
-        participantId,
-        role: participantIndex === 0 ? "primary_contact" : "traveler",
-        isPrimary: participantIndex === 0,
+        travelerId,
+        role: "traveler",
+        isPrimary: travelerIndex === 0,
       })
     }
 
@@ -2183,7 +2183,7 @@ async function seedTransactionsAndBookings(
       id: newId("booking_fulfillments"),
       bookingId: booking.id,
       bookingItemId: bookingItem.id,
-      participantId: bookingParticipantIds[0] ?? null,
+      travelerId: bookingTravelerIds[0] ?? null,
       fulfillmentType: "voucher",
       deliveryChannel: "email",
       status: bookingPlan.status === "draft" ? "pending" : "issued",
@@ -2197,7 +2197,7 @@ async function seedTransactionsAndBookings(
         id: newId("booking_redemption_events"),
         bookingId: booking.id,
         bookingItemId: bookingItem.id,
-        participantId: bookingParticipantIds[0] ?? null,
+        travelerId: bookingTravelerIds[0] ?? null,
         redeemedAt: new Date(),
         redeemedBy: ctx.ownerUserId,
         location: "On-site check-in desk",
@@ -2209,7 +2209,7 @@ async function seedTransactionsAndBookings(
     await ctx.db.insert(bookingPiiAccessLog).values({
       id: newId("booking_pii_access_log"),
       bookingId: booking.id,
-      participantId: bookingParticipantIds[0] ?? null,
+      travelerId: bookingTravelerIds[0] ?? null,
       actorId: ctx.ownerUserId,
       actorType: "user",
       callerType: "seed_script",

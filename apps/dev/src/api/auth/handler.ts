@@ -8,17 +8,12 @@
  */
 
 import { createBetterAuth } from "@voyantjs/auth/server"
-import {
-  ensureCurrentUserProfile,
-  getCurrentUser,
-  getCurrentWorkspace,
-  setActiveWorkspaceOrganization,
-} from "@voyantjs/auth/workspace"
-import type { VoyantPermission, VoyantRequestAuthContext } from "@voyantjs/hono"
-import { parseOptionalJsonBody } from "@voyantjs/hono"
+import { ensureCurrentUserProfile, getCurrentUser } from "@voyantjs/auth/workspace"
+import { authUser } from "@voyantjs/db/schema/iam"
+import type { VoyantRequestAuthContext } from "@voyantjs/hono"
+import { sql } from "drizzle-orm"
 import { type Context, Hono } from "hono"
 import { Resend } from "resend"
-import { z } from "zod"
 
 import { getDbFromHyperdrive } from "../lib/db"
 
@@ -79,7 +74,6 @@ function getBetterAuth(env: CloudflareBindings) {
   const db = getDbFromHyperdrive(env)
   const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
   const emailFrom = env.EMAIL_FROM || "Voyant <noreply@voyantcloud.app>"
-  const appUrl = getAppUrl(env)
 
   return createBetterAuth({
     db,
@@ -104,17 +98,6 @@ function getBetterAuth(env: CloudflareBindings) {
             to: email,
             subject: type === "email-verification" ? "Verify your email" : "Your verification code",
             html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code expires in 10 minutes.</p>`,
-          })
-        }
-      : undefined,
-    sendInvitationEmail: resend
-      ? async (data) => {
-          const acceptUrl = `${appUrl}/accept-invitation?id=${data.id}`
-          await resend.emails.send({
-            from: emailFrom,
-            to: data.email,
-            subject: `Join ${data.organization.name} on Voyant`,
-            html: `<p>${data.inviter.user.name} invited you to join <strong>${data.organization.name}</strong>.</p><p><a href="${acceptUrl}">Accept invitation</a></p>`,
           })
         }
       : undefined,
@@ -146,24 +129,21 @@ export async function resolveAuthRequest(
   return {
     userId: session.user.id,
     sessionId: session.session.id,
-    organizationId: session.session.activeOrganizationId ?? null,
+    organizationId: null,
     callerType: "session",
     email: session.user.email ?? null,
   }
 }
 
+/**
+ * Single-tenant: every authenticated session is a staff user with full access.
+ */
 export async function hasAuthPermission(
   request: Request,
   env: CloudflareBindings,
-  permission: VoyantPermission,
 ): Promise<boolean> {
-  const betterAuth = getBetterAuth(env)
-  const result = await betterAuth.api.hasPermission({
-    headers: request.headers,
-    body: { permissions: { [permission.resource]: [permission.action] } },
-  })
-
-  return Boolean(result?.success)
+  const auth = await resolveAuthRequest(request, env)
+  return auth !== null
 }
 
 /**
@@ -178,62 +158,13 @@ auth.get("/auth/me", async (c) => {
   }
 
   const db = getDbFromHyperdrive(c.env)
-  const user = await getCurrentUser(db, {
-    userId: session.user.id,
-    activeOrganizationId: session.session.activeOrganizationId ?? null,
-  })
+  const user = await getCurrentUser(db, { userId: session.user.id })
 
   if (!user) {
     return c.json({ error: "User not found" }, 404)
   }
 
   return c.json(user)
-})
-
-auth.get("/auth/workspace", async (c) => {
-  const { session, response } = await getSessionOrUnauthorized(c)
-  if (!session) {
-    return response
-  }
-
-  const db = getDbFromHyperdrive(c.env)
-  return c.json(
-    await getCurrentWorkspace(db, {
-      sessionId: session.session.id,
-      userId: session.user.id,
-      activeOrganizationId: session.session.activeOrganizationId ?? null,
-    }),
-  )
-})
-
-auth.post("/auth/workspace/active-organization", async (c) => {
-  const { session, response } = await getSessionOrUnauthorized(c)
-  if (!session) {
-    return response
-  }
-
-  const body = await parseOptionalJsonBody(c, z.object({ organizationId: z.unknown().optional() }))
-  const organizationId =
-    typeof body?.organizationId === "string" && body.organizationId.trim().length > 0
-      ? body.organizationId.trim()
-      : null
-
-  if (!organizationId) {
-    return c.json({ error: "organizationId is required" }, 400)
-  }
-
-  const db = getDbFromHyperdrive(c.env)
-  const workspace = await setActiveWorkspaceOrganization(db, {
-    sessionId: session.session.id,
-    userId: session.user.id,
-    organizationId,
-  })
-
-  if (!workspace) {
-    return c.json({ error: "Organization not found in current workspace" }, 404)
-  }
-
-  return c.json(workspace)
 })
 
 /**
@@ -265,14 +196,21 @@ auth.get("/auth/status", async (c) => {
 })
 
 /**
+ * GET /auth/bootstrap-status
+ * Public endpoint — reveals whether any user exists.
+ */
+auth.get("/auth/bootstrap-status", async (c) => {
+  const db = getDbFromHyperdrive(c.env)
+  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(authUser)
+  return c.json({ hasUsers: (row?.count ?? 0) > 0 })
+})
+
+/**
  * Catch-all: delegate to Better Auth handler.
- * Handles sign-in, sign-up, sign-out, password reset, OAuth callbacks, etc.
+ * Sign-up is gated server-side by a `user.create.before` hook in @voyantjs/auth.
  */
 auth.all("/auth/*", async (c) => {
   const betterAuth = getBetterAuth(c.env)
-
-  // Better Auth expects the path relative to its basePath.
-  // Our mount point is /auth, so the request URL already matches.
   const response = await betterAuth.handler(c.req.raw)
   return response
 })

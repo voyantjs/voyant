@@ -6,10 +6,12 @@ import {
   useBookingGroupMemberMutation,
   useBookingPrimaryProduct,
 } from "@voyantjs/bookings-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Link2, Unlink, Users } from "lucide-react"
 import * as React from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { BookingGroupLinkDialog } from "./booking-group-link-dialog"
 
@@ -34,6 +36,7 @@ export function BookingGroupSection({
   productId,
   optionUnitId,
 }: BookingGroupSectionProps) {
+  const groupMessages = useAdminMessages().bookings.detail.groupSection
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false)
 
   // Auto-resolve product/option-unit from items when the caller hasn't
@@ -55,7 +58,7 @@ export function BookingGroupSection({
 
   const handleRemove = async () => {
     if (!groupId) return
-    if (!confirm("Remove this booking from the shared-room group?")) return
+    if (!confirm(groupMessages.removeConfirm)) return
     await removeMember.mutateAsync({ groupId, bookingId })
   }
 
@@ -66,7 +69,7 @@ export function BookingGroupSection({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Users className="h-4 w-4" />
-          Shared Room
+          {groupMessages.title}
         </CardTitle>
         {group ? (
           <Button
@@ -76,41 +79,38 @@ export function BookingGroupSection({
             disabled={removeMember.isPending}
           >
             <Unlink className="mr-2 h-4 w-4" />
-            Remove from group
+            {groupMessages.removeAction}
           </Button>
         ) : (
           <Button size="sm" onClick={() => setLinkDialogOpen(true)}>
             <Link2 className="mr-2 h-4 w-4" />
-            Link to shared room
+            {groupMessages.linkAction}
           </Button>
         )}
       </CardHeader>
       <CardContent>
         {!group ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            This booking is not linked to a shared-room group.
-          </p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{groupMessages.empty}</p>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3 text-sm">
               <div>
-                <div className="text-xs text-muted-foreground">Group</div>
+                <div className="text-xs text-muted-foreground">{groupMessages.groupLabel}</div>
                 <div className="font-medium">{group.label}</div>
               </div>
-              <Badge variant="outline" className="capitalize">
-                {group.kind.replace(/_/g, " ")}
+              <Badge variant="outline">
+                {group.kind === "shared_room"
+                  ? groupMessages.kindSharedRoom
+                  : group.kind.replace(/_/g, " ")}
               </Badge>
             </div>
 
             <div>
               <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Sibling bookings ({siblings.length})
+                {formatMessage(groupMessages.siblingsLabel, { count: siblings.length })}
               </div>
               {siblings.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No other bookings linked yet. Share the group id with another booking to link
-                  them.
-                </p>
+                <p className="text-xs text-muted-foreground">{groupMessages.siblingsEmpty}</p>
               ) : (
                 <ul className="space-y-1">
                   {siblings.map((m) => (
@@ -124,7 +124,7 @@ export function BookingGroupSection({
                       <div className="flex items-center gap-2">
                         {m.role === "primary" && (
                           <Badge variant="default" className="text-xs">
-                            Primary
+                            {groupMessages.primaryBadge}
                           </Badge>
                         )}
                         {m.booking?.status && (

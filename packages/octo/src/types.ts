@@ -96,7 +96,7 @@ export interface OctoProjectedAvailability {
 }
 
 export interface OctoProjectedBookingContact {
-  participantId: string
+  travelerId: string | null
   firstName: string
   lastName: string
   email: string | null
@@ -115,13 +115,13 @@ export interface OctoProjectedBookingUnitItem {
   unitId: string | null
   pricingCategoryId: string | null
   availabilityId: string | null
-  participantIds: string[]
+  travelerIds: string[]
 }
 
 export interface OctoProjectedBookingFulfillment {
   id: string
   bookingItemId: string | null
-  participantId: string | null
+  travelerId: string | null
   type: string
   deliveryChannel: string
   status: string
@@ -134,7 +134,7 @@ export interface OctoProjectedBookingFulfillment {
 export interface OctoProjectedBookingArtifact {
   fulfillmentId: string
   bookingItemId: string | null
-  participantId: string | null
+  travelerId: string | null
   type: string
   deliveryChannel: string
   status: string
@@ -160,7 +160,7 @@ export interface OctoProjectedBookingSupplierReference {
 export interface OctoProjectedBookingRedemptionEvent {
   id: string
   bookingItemId: string | null
-  participantId: string | null
+  travelerId: string | null
   redeemedAt: string
   redeemedBy: string | null
   location: string | null

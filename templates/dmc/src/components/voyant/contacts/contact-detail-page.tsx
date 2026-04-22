@@ -1,13 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { ContactAddressesSection } from "./contact-addresses"
 import { ContactDialog } from "./contact-dialog"
-import { getContactNotesQueryOptions, getContactQueryOptions } from "./contact-shared"
+import {
+  type ContactAddressUpsertInput,
+  getContactAddressesQueryOptions,
+  getContactNotesQueryOptions,
+  getContactQueryOptions,
+} from "./contact-shared"
 
 export function ContactDetailPage({ id }: { id: string }) {
+  const messages = useAdminMessages().contacts.detail
+  const { resolvedLocale } = useLocale()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
@@ -15,6 +25,7 @@ export function ContactDetailPage({ id }: { id: string }) {
 
   const { data: contactData, isPending } = useQuery(getContactQueryOptions(id))
   const { data: notesData, refetch: refetchNotes } = useQuery(getContactNotesQueryOptions(id))
+  const addressesQuery = useQuery(getContactAddressesQueryOptions(id))
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/contacts/${id}`),
@@ -32,6 +43,33 @@ export function ContactDetailPage({ id }: { id: string }) {
     },
   })
 
+  const createAddressMutation = useMutation({
+    mutationFn: (input: ContactAddressUpsertInput) =>
+      api.post(`/v1/crm/people/${id}/addresses`, {
+        entityType: "person",
+        entityId: id,
+        ...input,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["contact-addresses", id] })
+    },
+  })
+
+  const updateAddressMutation = useMutation({
+    mutationFn: (input: { addressId: string; patch: ContactAddressUpsertInput }) =>
+      api.patch(`/v1/crm/addresses/${input.addressId}`, input.patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["contact-addresses", id] })
+    },
+  })
+
+  const deleteAddressMutation = useMutation({
+    mutationFn: (addressId: string) => api.delete(`/v1/crm/addresses/${addressId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["contact-addresses", id] })
+    },
+  })
+
   if (isPending) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -44,9 +82,9 @@ export function ContactDetailPage({ id }: { id: string }) {
   if (!contact) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Contact not found</p>
+        <p className="text-muted-foreground">{messages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/contacts" })}>
-          Back to Contacts
+          {messages.backToContacts}
         </Button>
       </div>
     )
@@ -54,8 +92,18 @@ export function ContactDetailPage({ id }: { id: string }) {
 
   const displayName =
     contact.type === "company"
-      ? (contact.companyName ?? "Unnamed Company")
-      : [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Unnamed Contact"
+      ? (contact.companyName ?? messages.unnamedCompany)
+      : [contact.firstName, contact.lastName].filter(Boolean).join(" ") || messages.unnamedContact
+  const typeLabel = contact.type === "company" ? messages.typeCompany : messages.typeIndividual
+  const relationLabel =
+    contact.relation === "client"
+      ? messages.relationClient
+      : contact.relation === "partner"
+        ? messages.relationPartner
+        : contact.relation === "supplier"
+          ? messages.relationSupplier
+          : messages.relationOther
+  const addresses = addressesQuery.data?.data ?? []
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -67,29 +115,29 @@ export function ContactDetailPage({ id }: { id: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {contact.type}
+              {typeLabel}
             </Badge>
             <Badge variant="secondary" className="capitalize">
-              {contact.relation}
+              {relationLabel}
             </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {messages.edit}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this contact?")) {
+              if (confirm(messages.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {messages.delete}
           </Button>
         </div>
       </div>
@@ -97,40 +145,25 @@ export function ContactDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Contact Details</CardTitle>
+            <CardTitle>{messages.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             {contact.email && (
               <div>
-                <span className="text-muted-foreground">Email:</span> <span>{contact.email}</span>
+                <span className="text-muted-foreground">{messages.emailLabel}:</span>{" "}
+                <span>{contact.email}</span>
               </div>
             )}
             {contact.phone && (
               <div>
-                <span className="text-muted-foreground">Phone:</span> <span>{contact.phone}</span>
+                <span className="text-muted-foreground">{messages.phoneLabel}:</span>{" "}
+                <span>{contact.phone}</span>
               </div>
             )}
             {contact.website && (
               <div>
-                <span className="text-muted-foreground">Website:</span>{" "}
+                <span className="text-muted-foreground">{messages.websiteLabel}:</span>{" "}
                 <span>{contact.website}</span>
-              </div>
-            )}
-            {contact.address && (
-              <div>
-                <span className="text-muted-foreground">Address:</span>{" "}
-                <span>{contact.address}</span>
-              </div>
-            )}
-            {contact.city && (
-              <div>
-                <span className="text-muted-foreground">City:</span> <span>{contact.city}</span>
-              </div>
-            )}
-            {contact.country && (
-              <div>
-                <span className="text-muted-foreground">Country:</span>{" "}
-                <span>{contact.country}</span>
               </div>
             )}
           </CardContent>
@@ -138,24 +171,24 @@ export function ContactDetailPage({ id }: { id: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Preferences</CardTitle>
+            <CardTitle>{messages.preferencesTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             {contact.preferredLanguage && (
               <div>
-                <span className="text-muted-foreground">Language:</span>{" "}
+                <span className="text-muted-foreground">{messages.languageLabel}:</span>{" "}
                 <span>{contact.preferredLanguage}</span>
               </div>
             )}
             {contact.preferredCurrency && (
               <div>
-                <span className="text-muted-foreground">Currency:</span>{" "}
+                <span className="text-muted-foreground">{messages.currencyLabel}:</span>{" "}
                 <span>{contact.preferredCurrency}</span>
               </div>
             )}
             {contact.tags.length > 0 && (
               <div>
-                <span className="text-muted-foreground">Tags:</span>{" "}
+                <span className="text-muted-foreground">{messages.tagsLabel}:</span>{" "}
                 <span className="mt-1 flex flex-wrap gap-1">
                   {contact.tags.map((tag) => (
                     <Badge key={tag} variant="outline">
@@ -166,25 +199,42 @@ export function ContactDetailPage({ id }: { id: string }) {
               </div>
             )}
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(contact.createdAt).toLocaleDateString()}</span>
+              <span className="text-muted-foreground">{messages.createdLabel}:</span>{" "}
+              <span>{new Date(contact.createdAt).toLocaleDateString(resolvedLocale)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(contact.updatedAt).toLocaleDateString()}</span>
+              <span className="text-muted-foreground">{messages.updatedLabel}:</span>{" "}
+              <span>{new Date(contact.updatedAt).toLocaleDateString(resolvedLocale)}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      <ContactAddressesSection
+        addresses={addresses}
+        pending={addressesQuery.isPending}
+        creating={createAddressMutation.isPending}
+        updatingAddressId={updateAddressMutation.variables?.addressId}
+        deletingAddressId={
+          deleteAddressMutation.isPending
+            ? (deleteAddressMutation.variables ?? undefined)
+            : undefined
+        }
+        onCreate={(input) => createAddressMutation.mutateAsync(input).then(() => undefined)}
+        onUpdate={(addressId, input) =>
+          updateAddressMutation.mutateAsync({ addressId, patch: input }).then(() => undefined)
+        }
+        onDelete={(addressId) => deleteAddressMutation.mutateAsync(addressId).then(() => undefined)}
+      />
+
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>{messages.notesTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex gap-2">
             <Textarea
-              placeholder="Add a note..."
+              placeholder={messages.addNotePlaceholder}
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               className="min-h-[80px]"
@@ -194,19 +244,23 @@ export function ContactDetailPage({ id }: { id: string }) {
               disabled={!noteContent.trim() || addNoteMutation.isPending}
               onClick={() => addNoteMutation.mutate(noteContent.trim())}
             >
-              {addNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+              {addNoteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                messages.addNoteButton
+              )}
             </Button>
           </div>
 
           {notesData?.data.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No notes yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{messages.noNotes}</p>
           )}
 
           {notesData?.data.map((note) => (
             <div key={note.id} className="rounded-md border p-3">
               <p className="whitespace-pre-wrap text-sm">{note.content}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {new Date(note.createdAt).toLocaleString()}
+                {new Date(note.createdAt).toLocaleString(resolvedLocale)}
               </p>
             </div>
           ))}

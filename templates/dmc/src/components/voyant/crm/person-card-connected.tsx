@@ -4,6 +4,7 @@ import { usePerson } from "@voyantjs/crm-react"
 import { Loader2 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PersonCard, type PersonCardProps } from "./person-card"
 
@@ -16,6 +17,7 @@ export interface PersonCardConnectedProps extends Omit<PersonCardProps, "person"
  * already have the id but not the full record.
  */
 export function PersonCardConnected({ personId, ...props }: PersonCardConnectedProps) {
+  const messages = useAdminMessages().contacts.detail
   const { data, isPending, isError, error } = usePerson(personId)
 
   if (isPending) {
@@ -32,7 +34,8 @@ export function PersonCardConnected({ personId, ...props }: PersonCardConnectedP
     return (
       <Card data-slot="person-card-connected-error">
         <CardContent className="p-6 text-sm text-destructive">
-          Failed to load person: {error instanceof Error ? error.message : "Unknown error"}
+          {messages.cardLoadFailedPrefix}{" "}
+          {error instanceof Error ? error.message : messages.unknownError}
         </CardContent>
       </Card>
     )

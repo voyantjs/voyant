@@ -1,6 +1,6 @@
 import { useInvoiceCreditNoteMutation } from "@voyantjs/finance-react"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
@@ -16,18 +16,24 @@ import {
   Label,
   Textarea,
 } from "@/components/ui"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const creditNoteFormSchema = z.object({
-  creditNoteNumber: z.string().min(1, "Credit note number is required"),
-  amountCents: z.coerce.number().int().min(1, "Amount must be at least 1"),
-  currency: z.string().min(3).max(3),
-  reason: z.string().min(1, "Reason is required"),
-  notes: z.string().optional().nullable(),
-})
+function getCreditNoteFormSchema(messages: AdminMessages) {
+  return z.object({
+    creditNoteNumber: z.string().min(1, messages.finance.creditNoteDialog.validationNumberRequired),
+    amountCents: z.coerce
+      .number()
+      .int()
+      .min(1, messages.finance.creditNoteDialog.validationAmountMin),
+    currency: z.string().min(3).max(3),
+    reason: z.string().min(1, messages.finance.creditNoteDialog.validationReasonRequired),
+    notes: z.string().optional().nullable(),
+  })
+}
 
-type CreditNoteFormValues = z.input<typeof creditNoteFormSchema>
-type CreditNoteFormOutput = z.output<typeof creditNoteFormSchema>
+type CreditNoteFormValues = z.input<ReturnType<typeof getCreditNoteFormSchema>>
+type CreditNoteFormOutput = z.output<ReturnType<typeof getCreditNoteFormSchema>>
 
 export interface CreditNoteDialogProps {
   open: boolean
@@ -51,7 +57,9 @@ export function CreditNoteDialog({
   invoiceCurrency,
   onSuccess,
 }: CreditNoteDialogProps) {
+  const messages = useAdminMessages()
   const { create } = useInvoiceCreditNoteMutation(invoiceId)
+  const creditNoteFormSchema = useMemo(() => getCreditNoteFormSchema(messages), [messages])
 
   const form = useForm<CreditNoteFormValues, unknown, CreditNoteFormOutput>({
     resolver: zodResolver(creditNoteFormSchema),
@@ -93,14 +101,17 @@ export function CreditNoteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Credit Note</DialogTitle>
+          <DialogTitle>{messages.finance.creditNoteDialog.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Credit Note Number</Label>
-                <Input {...form.register("creditNoteNumber")} placeholder="CN-2025-1234" />
+                <Label>{messages.finance.creditNoteDialog.numberLabel}</Label>
+                <Input
+                  {...form.register("creditNoteNumber")}
+                  placeholder={messages.finance.creditNoteDialog.numberPlaceholder}
+                />
                 {form.formState.errors.creditNoteNumber ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.creditNoteNumber.message}
@@ -108,7 +119,7 @@ export function CreditNoteDialog({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{messages.finance.creditNoteDialog.currencyLabel}</Label>
                 <Input
                   {...form.register("currency")}
                   placeholder="EUR"
@@ -119,7 +130,7 @@ export function CreditNoteDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Amount (cents)</Label>
+              <Label>{messages.finance.creditNoteDialog.amountLabel}</Label>
               <Input {...form.register("amountCents")} type="number" min="1" />
               {form.formState.errors.amountCents ? (
                 <p className="text-xs text-destructive">
@@ -129,25 +140,31 @@ export function CreditNoteDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Reason</Label>
-              <Textarea {...form.register("reason")} placeholder="Reason for credit note..." />
+              <Label>{messages.finance.creditNoteDialog.reasonLabel}</Label>
+              <Textarea
+                {...form.register("reason")}
+                placeholder={messages.finance.creditNoteDialog.reasonPlaceholder}
+              />
               {form.formState.errors.reason ? (
                 <p className="text-xs text-destructive">{form.formState.errors.reason.message}</p>
               ) : null}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional notes..." />
+              <Label>{messages.finance.creditNoteDialog.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={messages.finance.creditNoteDialog.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.finance.creditNoteDialog.cancel}
             </Button>
             <Button type="submit" disabled={create.isPending}>
               {create.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Credit Note
+              {messages.finance.creditNoteDialog.submit}
             </Button>
           </DialogFooter>
         </form>

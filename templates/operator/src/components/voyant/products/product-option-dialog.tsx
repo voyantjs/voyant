@@ -22,21 +22,26 @@ import {
   Textarea,
 } from "@/components/ui"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const optionFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
-  code: z.string().max(100).optional().nullable(),
-  description: z.string().optional().nullable(),
-  status: z.enum(["draft", "active", "archived"]),
-  isDefault: z.boolean(),
-  sortOrder: z.coerce.number().int(),
-  availableFrom: z.string().optional().nullable(),
-  availableTo: z.string().optional().nullable(),
-})
+type OptionMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["options"]
 
-type OptionFormValues = z.input<typeof optionFormSchema>
-type OptionFormOutput = z.output<typeof optionFormSchema>
+const buildOptionFormSchema = (messages: OptionMessages) =>
+  z.object({
+    name: z.string().min(1, messages.validationNameRequired).max(255),
+    code: z.string().max(100).optional().nullable(),
+    description: z.string().optional().nullable(),
+    status: z.enum(["draft", "active", "archived"]),
+    isDefault: z.boolean(),
+    sortOrder: z.coerce.number().int(),
+    availableFrom: z.string().optional().nullable(),
+    availableTo: z.string().optional().nullable(),
+  })
+
+type OptionFormSchema = ReturnType<typeof buildOptionFormSchema>
+type OptionFormValues = z.input<OptionFormSchema>
+type OptionFormOutput = z.output<OptionFormSchema>
 
 export type ProductOptionData = {
   id: string
@@ -60,12 +65,6 @@ type OptionDialogProps = {
   onSuccess: () => void
 }
 
-const STATUSES = [
-  { value: "draft", label: "Draft" },
-  { value: "active", label: "Active" },
-  { value: "archived", label: "Archived" },
-] as const
-
 export function OptionDialog({
   open,
   onOpenChange,
@@ -74,8 +73,17 @@ export function OptionDialog({
   nextSortOrder,
   onSuccess,
 }: OptionDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const optionMessages = messages.products.operations.options
   const isEditing = !!option
   const { create, update } = useProductOptionMutation()
+  const optionFormSchema = buildOptionFormSchema(optionMessages)
+  const statuses = [
+    { value: "draft", label: optionMessages.statusDraft },
+    { value: "active", label: optionMessages.statusActive },
+    { value: "archived", label: optionMessages.statusArchived },
+  ] as const
 
   const form = useForm<OptionFormValues, unknown, OptionFormOutput>({
     resolver: zodResolver(optionFormSchema),
@@ -144,7 +152,7 @@ export function OptionDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Option" : "New Option"}</SheetTitle>
+          <SheetTitle>{isEditing ? optionMessages.editTitle : optionMessages.newTitle}</SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -153,36 +161,36 @@ export function OptionDialog({
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Single Room" />
+                <Label>{optionMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={optionMessages.namePlaceholder} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Code</Label>
-                <Input {...form.register("code")} placeholder="single" />
+                <Label>{optionMessages.codeLabel}</Label>
+                <Input {...form.register("code")} placeholder={optionMessages.codePlaceholder} />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
+              <Label>{optionMessages.descriptionLabel}</Label>
               <Textarea {...form.register("description")} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{optionMessages.statusLabel}</Label>
                 <Select
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as OptionFormValues["status"])}
-                  items={STATUSES}
+                  items={statuses}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
+                    {statuses.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         {s.label}
                       </SelectItem>
@@ -191,14 +199,14 @@ export function OptionDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Sort order</Label>
+                <Label>{optionMessages.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Available from</Label>
+                <Label>{optionMessages.availableFromLabel}</Label>
                 <DatePicker
                   value={
                     typeof availableFrom === "string" && availableFrom.length > 0
@@ -206,17 +214,17 @@ export function OptionDialog({
                       : null
                   }
                   onChange={(v) => form.setValue("availableFrom", v ?? "", { shouldDirty: true })}
-                  placeholder="Optional"
+                  placeholder={optionMessages.optionalDatePlaceholder}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Available to</Label>
+                <Label>{optionMessages.availableToLabel}</Label>
                 <DatePicker
                   value={
                     typeof availableTo === "string" && availableTo.length > 0 ? availableTo : null
                   }
                   onChange={(v) => form.setValue("availableTo", v ?? "", { shouldDirty: true })}
-                  placeholder="Optional"
+                  placeholder={optionMessages.optionalDatePlaceholder}
                 />
               </div>
             </div>
@@ -226,12 +234,12 @@ export function OptionDialog({
                 checked={form.watch("isDefault")}
                 onCheckedChange={(v) => form.setValue("isDefault", v)}
               />
-              <Label>Default option</Label>
+              <Label>{optionMessages.defaultLabel}</Label>
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button
               type="submit"
@@ -241,7 +249,7 @@ export function OptionDialog({
               {(form.formState.isSubmitting || create.isPending || update.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isEditing ? "Save Changes" : "Create Option"}
+              {isEditing ? productMessages.saveChanges : optionMessages.create}
             </Button>
           </SheetFooter>
         </form>

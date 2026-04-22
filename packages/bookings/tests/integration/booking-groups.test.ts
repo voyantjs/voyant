@@ -224,26 +224,26 @@ describe.skipIf(!DB_AVAILABLE)("Booking groups routes", () => {
     expect(body.data).toHaveLength(2)
   })
 
-  it("returns passengers across all group members", async () => {
+  it("returns travelers across all group members", async () => {
     const [b1, b2] = await Promise.all([seedBooking(), seedBooking()])
     const group = await createGroup()
     await addMember(group.id, b1.id, "primary")
     await addMember(group.id, b2.id)
 
-    // Add a passenger to each booking.
-    await app.request(`/${b1.id}/passengers`, {
+    // Add a traveler to each booking.
+    await app.request(`/${b1.id}/travelers`, {
       method: "POST",
       ...json({ firstName: "Alice", lastName: "Smith" }),
     })
-    await app.request(`/${b2.id}/passengers`, {
+    await app.request(`/${b2.id}/travelers`, {
       method: "POST",
       ...json({ firstName: "Bob", lastName: "Jones" }),
     })
 
-    const res = await app.request(`/groups/${group.id}/passengers`)
-    expect(res.status).toBe(200)
-    const { data } = await res.json()
-    const names = data.map((p: { firstName: string }) => p.firstName).sort()
-    expect(names).toEqual(["Alice", "Bob"])
+    const travelersRes = await app.request(`/groups/${group.id}/travelers`)
+    expect(travelersRes.status).toBe(200)
+    const travelersBody = await travelersRes.json()
+    const travelerNames = travelersBody.data.map((p: { firstName: string }) => p.firstName).sort()
+    expect(travelerNames).toEqual(["Alice", "Bob"])
   })
 })

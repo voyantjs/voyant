@@ -4,6 +4,7 @@ import {
   FolderKanban,
   Layers,
   Settings as SettingsIcon,
+  Users,
   XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,6 +12,8 @@ import { cn } from "@/lib/utils"
 export const Route = createFileRoute("/_workspace/settings")({
   component: SettingsLayout,
 })
+
+const GENERAL_NAV = [{ title: "Team", url: "/settings/team", icon: Users }] as const
 
 const PRICING_NAV = [
   { title: "Price Catalogs", url: "/settings/pricing/catalogs", icon: FolderKanban },
@@ -37,6 +40,27 @@ function SettingsLayout() {
         <aside className="w-56 shrink-0">
           <div className="flex flex-col gap-1">
             <p className="px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              General
+            </p>
+            {GENERAL_NAV.map((item) => {
+              const isActive = currentPath.startsWith(item.url)
+              return (
+                <Link
+                  key={item.url}
+                  to={item.url}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-accent font-medium text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </Link>
+              )
+            })}
+            <p className="mt-4 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Pricing
             </p>
             {PRICING_NAV.map((item) => {

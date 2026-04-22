@@ -42,7 +42,7 @@ export function BookingRequirementsContactTab({
                 <th className="p-3 text-left font-medium">Field</th>
                 <th className="p-3 text-left font-medium">Scope</th>
                 <th className="p-3 text-left font-medium">Required</th>
-                <th className="p-3 text-left font-medium">Per Participant</th>
+                <th className="p-3 text-left font-medium">Per Traveler</th>
                 <th className="p-3 text-left font-medium">Sort</th>
                 <th className="p-3 text-left font-medium">Status</th>
                 <th className="w-20 p-3" />
@@ -63,7 +63,7 @@ export function BookingRequirementsContactTab({
                     )}
                   </td>
                   <td className="p-3">
-                    {row.perParticipant ? (
+                    {row.perTraveler ? (
                       <Badge variant="secondary">Yes</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">No</span>

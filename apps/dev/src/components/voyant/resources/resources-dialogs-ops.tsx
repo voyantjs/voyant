@@ -132,6 +132,7 @@ export function ResourceSlotAssignmentDialog({
             <div className="grid gap-2">
               <Label>Slot</Label>
               <Select
+                items={slots.map((slot) => ({ label: slotLabel(slot), value: slot.id }))}
                 value={form.watch("slotId")}
                 onValueChange={(value) => form.setValue("slotId", value ?? "")}
               >
@@ -151,6 +152,10 @@ export function ResourceSlotAssignmentDialog({
               <div className="grid gap-2">
                 <Label>Pool</Label>
                 <Select
+                  items={[
+                    { label: "No pool", value: NONE_VALUE },
+                    ...pools.map((pool) => ({ label: pool.name, value: pool.id })),
+                  ]}
                   value={form.watch("poolId")}
                   onValueChange={(value) => form.setValue("poolId", value ?? NONE_VALUE)}
                 >
@@ -170,6 +175,10 @@ export function ResourceSlotAssignmentDialog({
               <div className="grid gap-2">
                 <Label>Resource</Label>
                 <Select
+                  items={[
+                    { label: "No resource", value: NONE_VALUE },
+                    ...resources.map((resource) => ({ label: resource.name, value: resource.id })),
+                  ]}
                   value={form.watch("resourceId")}
                   onValueChange={(value) => form.setValue("resourceId", value ?? NONE_VALUE)}
                 >
@@ -189,6 +198,13 @@ export function ResourceSlotAssignmentDialog({
               <div className="grid gap-2">
                 <Label>Booking</Label>
                 <Select
+                  items={[
+                    { label: "No booking", value: NONE_VALUE },
+                    ...bookings.map((booking) => ({
+                      label: booking.bookingNumber,
+                      value: booking.id,
+                    })),
+                  ]}
                   value={form.watch("bookingId")}
                   onValueChange={(value) => form.setValue("bookingId", value ?? NONE_VALUE)}
                 >
@@ -208,6 +224,7 @@ export function ResourceSlotAssignmentDialog({
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={assignmentStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ResourceSlotAssignmentRow["status"])
@@ -337,6 +354,7 @@ export function ResourceCloseoutDialog({
             <div className="grid gap-2">
               <Label>Resource</Label>
               <Select
+                items={resources.map((resource) => ({ label: resource.name, value: resource.id }))}
                 value={form.watch("resourceId")}
                 onValueChange={(value) => form.setValue("resourceId", value ?? "")}
               >

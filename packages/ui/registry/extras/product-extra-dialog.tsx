@@ -198,6 +198,7 @@ export function ProductExtraDialog({
               <div className="flex flex-col gap-2">
                 <Label>Selection type</Label>
                 <Select
+                  items={SELECTION_TYPES}
                   value={form.watch("selectionType")}
                   onValueChange={(value) => form.setValue("selectionType", value as SelectionType)}
                 >
@@ -216,6 +217,7 @@ export function ProductExtraDialog({
               <div className="flex flex-col gap-2">
                 <Label>Pricing mode</Label>
                 <Select
+                  items={PRICING_MODES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("pricingMode")}
                   onValueChange={(value) => form.setValue("pricingMode", value as PricingMode)}
                 >

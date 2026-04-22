@@ -144,6 +144,7 @@ export function CancellationPolicyDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={POLICY_TYPES}
                   value={form.watch("policyType")}
                   onValueChange={(value) =>
                     form.setValue("policyType", value as PolicyFormValues["policyType"])

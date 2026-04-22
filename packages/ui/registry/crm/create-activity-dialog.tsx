@@ -115,7 +115,11 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <span className="text-xs font-medium text-muted-foreground">Type</span>
-              <Select value={type} onValueChange={(value) => setType(value ?? "note")}>
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value ?? "note")}
+                items={ACTIVITY_TYPE_OPTIONS}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -130,7 +134,11 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
             </div>
             <div>
               <span className="text-xs font-medium text-muted-foreground">Status</span>
-              <Select value={status} onValueChange={(value) => setStatus(value ?? "planned")}>
+              <Select
+                value={status}
+                onValueChange={(value) => setStatus(value ?? "planned")}
+                items={ACTIVITY_STATUS_OPTIONS}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -158,7 +166,17 @@ export function CreateActivityDialog({ open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <span className="text-xs font-medium text-muted-foreground">Link to</span>
-              <Select value={entityType} onValueChange={(value) => setEntityType(value ?? "none")}>
+              <Select
+                value={entityType}
+                onValueChange={(value) => setEntityType(value ?? "none")}
+                items={[
+                  { label: "None", value: "none" },
+                  { label: "Person", value: "person" },
+                  { label: "Organization", value: "organization" },
+                  { label: "Opportunity", value: "opportunity" },
+                  { label: "Quote", value: "quote" },
+                ]}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>

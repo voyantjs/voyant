@@ -14,9 +14,12 @@ import {
   getSlotResourcesQueryOptions as getSlotResourcesQueryOptionsBase,
   slotStatusVariant,
 } from "@voyantjs/availability-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, CalendarDays, Loader2, Package, Trash2, Truck, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { getSlotStatusLabel } from "./availability-shared"
 
 const client = { baseUrl: "", fetcher: defaultFetcher }
 
@@ -73,6 +76,10 @@ export function getAvailabilitySlotBookingsQueryOptions() {
 export function AvailabilitySlotDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.availability.details
+  const noValue = detailMessages.noValue
 
   const { data: slotData, isPending } = useQuery(getAvailabilitySlotQueryOptions(id))
 
@@ -117,9 +124,9 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
   if (!slot) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Slot not found</p>
+        <p className="text-muted-foreground">{detailMessages.slot.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/availability" })}>
-          Back to Availability
+          {detailMessages.backToAvailability}
         </Button>
       </div>
     )
@@ -142,8 +149,8 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
             {slot.dateLocal} · {formatDateTime(slot.startsAt)}
           </h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge variant={slotStatusVariant[slot.status]} className="capitalize">
-              {slot.status.replace("_", " ")}
+            <Badge variant={slotStatusVariant[slot.status]}>
+              {getSlotStatusLabel(slot.status, messages)}
             </Badge>
             <Badge variant="outline">{slot.timezone}</Badge>
           </div>
@@ -155,20 +162,20 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
               onClick={() => void navigate({ to: "/products/$id", params: { id: slot.productId } })}
             >
               <Package className="mr-2 h-4 w-4" />
-              Open Product
+              {detailMessages.openProduct}
             </Button>
           ) : null}
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this slot?")) {
+              if (confirm(detailMessages.slot.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
@@ -176,19 +183,19 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Slot Details</CardTitle>
+            <CardTitle>{detailMessages.slot.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Product:</span>{" "}
+              <span className="text-muted-foreground">{messages.availability.productLabel}:</span>{" "}
               <span>{productQuery.data?.data.name ?? slot.productId}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Rule:</span>{" "}
-              <span>{slot.availabilityRuleId ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.slot.ruleLabel}:</span>{" "}
+              <span>{slot.availabilityRuleId ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Start Time ID:</span>{" "}
+              <span className="text-muted-foreground">{detailMessages.slot.startTimeIdLabel}:</span>{" "}
               {slot.startTimeId ? (
                 <Button
                   variant="link"
@@ -203,60 +210,68 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
                   {slot.startTimeId}
                 </Button>
               ) : (
-                <span>-</span>
+                <span>{noValue}</span>
               )}
             </div>
             <div>
-              <span className="text-muted-foreground">Ends At:</span>{" "}
+              <span className="text-muted-foreground">{detailMessages.slot.endsAtLabel}:</span>{" "}
               <span>{formatDateTime(slot.endsAt)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Unlimited:</span>{" "}
-              <span>{slot.unlimited ? "Yes" : "No"}</span>
+              <span className="text-muted-foreground">{detailMessages.slot.unlimitedLabel}:</span>{" "}
+              <span>{slot.unlimited ? detailMessages.yes : detailMessages.no}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Past Cutoff:</span>{" "}
-              <span>{slot.pastCutoff ? "Yes" : "No"}</span>
+              <span className="text-muted-foreground">{detailMessages.slot.pastCutoffLabel}:</span>{" "}
+              <span>{slot.pastCutoff ? detailMessages.yes : detailMessages.no}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Too Early:</span>{" "}
-              <span>{slot.tooEarly ? "Yes" : "No"}</span>
+              <span className="text-muted-foreground">{detailMessages.slot.tooEarlyLabel}:</span>{" "}
+              <span>{slot.tooEarly ? detailMessages.yes : detailMessages.no}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Capacity State</CardTitle>
+            <CardTitle>{detailMessages.slot.capacityStateTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Initial Pax:</span>{" "}
-              <span>{slot.initialPax ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.slot.initialPaxLabel}:</span>{" "}
+              <span>{slot.initialPax ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Remaining Pax:</span>{" "}
-              <span>{slot.remainingPax ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {messages.availability.remainingPaxLabel}:
+              </span>{" "}
+              <span>{slot.remainingPax ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Initial Pickups:</span>{" "}
-              <span>{slot.initialPickups ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.slot.initialPickupsLabel}:
+              </span>{" "}
+              <span>{slot.initialPickups ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Remaining Pickups:</span>{" "}
-              <span>{slot.remainingPickups ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.slot.remainingPickupsLabel}:
+              </span>{" "}
+              <span>{slot.remainingPickups ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Remaining Resources:</span>{" "}
-              <span>{slot.remainingResources ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.slot.remainingResourcesLabel}:
+              </span>{" "}
+              <span>{slot.remainingResources ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(slot.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.createdLabel}:</span>{" "}
+              <span>{new Date(slot.createdAt).toLocaleString(resolvedLocale)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(slot.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.updatedLabel}:</span>{" "}
+              <span>{new Date(slot.updatedAt).toLocaleString(resolvedLocale)}</span>
             </div>
           </CardContent>
         </Card>
@@ -265,7 +280,7 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
       {slot.notes ? (
         <Card>
           <CardHeader>
-            <CardTitle>Notes</CardTitle>
+            <CardTitle>{detailMessages.notesTitle}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm whitespace-pre-wrap">{slot.notes}</CardContent>
         </Card>
@@ -274,11 +289,11 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Truck className="h-4 w-4" />
-          <CardTitle>Pickup Capacity</CardTitle>
+          <CardTitle>{detailMessages.slot.pickupCapacityTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(slotPickupsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No pickup capacity records for this slot.</p>
+            <p className="text-muted-foreground">{detailMessages.slot.pickupCapacityEmpty}</p>
           ) : (
             slotPickupsQuery.data?.data.map((pickup) => {
               const point = pickupPointById.get(pickup.pickupPointId)
@@ -286,11 +301,11 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
                 <div key={pickup.id} className="rounded-md border p-3">
                   <div className="font-medium">{point?.name ?? pickup.pickupPointId}</div>
                   <div className="text-muted-foreground">
-                    {point?.locationText ?? "No location text"}
+                    {point?.locationText ?? detailMessages.slot.noLocationText}
                   </div>
                   <div className="mt-2">
-                    Initial: {pickup.initialCapacity ?? "-"} · Remaining:{" "}
-                    {pickup.remainingCapacity ?? "-"}
+                    {detailMessages.slot.initialLabel}: {pickup.initialCapacity ?? noValue} ·{" "}
+                    {detailMessages.slot.remainingLabel}: {pickup.remainingCapacity ?? noValue}
                   </div>
                 </div>
               )
@@ -302,11 +317,11 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Wrench className="h-4 w-4" />
-          <CardTitle>Resource Assignments</CardTitle>
+          <CardTitle>{detailMessages.slot.resourceAssignmentsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(assignmentsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No resource assignments linked to this slot.</p>
+            <p className="text-muted-foreground">{detailMessages.slot.resourceAssignmentsEmpty}</p>
           ) : (
             assignmentsQuery.data?.data.map((assignment) => (
               <div key={assignment.id} className="rounded-md border p-3">
@@ -317,18 +332,18 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
                   <span>
                     {resourceById.get(assignment.resourceId ?? "")?.name ??
                       assignment.resourceId ??
-                      "Unassigned resource"}
+                      detailMessages.slot.unassignedResource}
                   </span>
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  Booking:{" "}
+                  {detailMessages.slot.bookingLabel}:{" "}
                   {bookingById.get(assignment.bookingId ?? "")?.bookingNumber ??
                     assignment.bookingId ??
-                    "-"}
+                    noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Pool: {assignment.poolId ?? "-"} · Released:{" "}
-                  {formatDateTime(assignment.releasedAt)}
+                  {detailMessages.slot.poolLabel}: {assignment.poolId ?? noValue} ·{" "}
+                  {detailMessages.slot.releasedLabel}: {formatDateTime(assignment.releasedAt)}
                 </div>
                 {assignment.notes ? (
                   <div className="mt-2 whitespace-pre-wrap">{assignment.notes}</div>
@@ -342,16 +357,18 @@ export function AvailabilitySlotDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <CalendarDays className="h-4 w-4" />
-          <CardTitle>Related Closeouts</CardTitle>
+          <CardTitle>{detailMessages.slot.relatedCloseoutsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(closeoutsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No closeouts attached directly to this slot.</p>
+            <p className="text-muted-foreground">{detailMessages.slot.relatedCloseoutsEmpty}</p>
           ) : (
             closeoutsQuery.data?.data.map((closeout) => (
               <div key={closeout.id} className="rounded-md border p-3">
                 <div className="font-medium">{closeout.dateLocal}</div>
-                <div className="text-muted-foreground">Created by: {closeout.createdBy ?? "-"}</div>
+                <div className="text-muted-foreground">
+                  {detailMessages.slot.createdByLabel}: {closeout.createdBy ?? noValue}
+                </div>
                 {closeout.reason ? (
                   <div className="mt-2 whitespace-pre-wrap">{closeout.reason}</div>
                 ) : null}

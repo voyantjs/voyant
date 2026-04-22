@@ -114,9 +114,6 @@ export const personCoreSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => v || null),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  country: z.string().nullable().optional(),
 })
 
 export const insertPersonSchema = personCoreSchema

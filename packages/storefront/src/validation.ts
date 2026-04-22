@@ -95,7 +95,7 @@ export const storefrontSettingsInputSchema = z.object({
           fields: z.array(storefrontFormFieldInputSchema).default([]),
         })
         .optional(),
-      passengers: z
+      travelers: z
         .object({
           fields: z.array(storefrontFormFieldInputSchema).default([]),
         })
@@ -128,7 +128,7 @@ export const storefrontSettingsSchema = z.object({
     billing: z.object({
       fields: z.array(storefrontFormFieldSchema),
     }),
-    passengers: z.object({
+    travelers: z.object({
       fields: z.array(storefrontFormFieldSchema),
     }),
   }),
@@ -338,7 +338,7 @@ export const storefrontPromotionalOfferSchema = z.object({
   applicableDepartureIds: z.array(z.string()),
   validFrom: z.string().nullable(),
   validTo: z.string().nullable(),
-  minPassengers: z.number().int().nullable(),
+  minTravelers: z.number().int().nullable(),
   imageMobileUrl: z.string().nullable(),
   imageDesktopUrl: z.string().nullable(),
   stackable: z.boolean(),

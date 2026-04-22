@@ -26,9 +26,8 @@ import { Switch } from "@/components/ui/switch"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const seriesFormSchema = z.object({
-  code: z.string().min(1, "Code is required").max(50),
   name: z.string().min(1, "Name is required").max(255),
-  prefix: z.string().max(20).optional(),
+  prefix: z.string().min(1, "Prefix is required").max(20),
   separator: z.string().max(5).optional(),
   padLength: z.coerce.number().int().min(0).max(12).optional(),
   resetStrategy: z.enum(["never", "annual", "monthly"]),
@@ -74,9 +73,8 @@ export function NumberSeriesDialog({
   const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(seriesFormSchema),
     defaultValues: {
-      code: "",
       name: "",
-      prefix: "",
+      prefix: "CTR",
       separator: "",
       padLength: 4,
       resetStrategy: "never",
@@ -88,7 +86,6 @@ export function NumberSeriesDialog({
   useEffect(() => {
     if (open && series) {
       form.reset({
-        code: series.code,
         name: series.name,
         prefix: series.prefix,
         separator: series.separator,
@@ -104,9 +101,8 @@ export function NumberSeriesDialog({
 
   const onSubmit = async (values: FormOutput) => {
     const payload = {
-      code: values.code,
       name: values.name,
-      prefix: values.prefix || "",
+      prefix: values.prefix,
       separator: values.separator || "",
       padLength: values.padLength ?? 4,
       resetStrategy: values.resetStrategy,
@@ -131,13 +127,6 @@ export function NumberSeriesDialog({
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Code</Label>
-                <Input {...form.register("code")} placeholder="INV" maxLength={50} />
-                {form.formState.errors.code && (
-                  <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>
-                )}
-              </div>
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input {...form.register("name")} placeholder="Invoice Series" />
@@ -166,6 +155,7 @@ export function NumberSeriesDialog({
               <div className="flex flex-col gap-2">
                 <Label>Reset Strategy</Label>
                 <Select
+                  items={RESET_STRATEGIES}
                   value={form.watch("resetStrategy")}
                   onValueChange={(v) =>
                     form.setValue("resetStrategy", v as FormValues["resetStrategy"])
@@ -186,6 +176,7 @@ export function NumberSeriesDialog({
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={SCOPES}
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >

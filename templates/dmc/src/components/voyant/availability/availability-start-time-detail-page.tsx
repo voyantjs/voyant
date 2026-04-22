@@ -1,9 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Clock3, Loader2, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { getSlotStatusLabel } from "./availability-shared"
 
 type StartTimeDetail = {
   id: string
@@ -71,13 +74,17 @@ export function getAvailabilityStartTimeSlotsQueryOptions(id: string) {
   })
 }
 
-function formatDateTime(value: string | null) {
-  return value ? value.replace("T", " ").slice(0, 16) : "-"
+function formatDateTime(value: string | null, noValue: string) {
+  return value ? value.replace("T", " ").slice(0, 16) : noValue
 }
 
 export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.availability.details
+  const noValue = detailMessages.noValue
 
   const { data: startTimeData, isPending } = useQuery(getAvailabilityStartTimeQueryOptions(id))
 
@@ -109,9 +116,9 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
   if (!startTime) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Start time not found</p>
+        <p className="text-muted-foreground">{detailMessages.startTime.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/availability" })}>
-          Back to Availability
+          {detailMessages.backToAvailability}
         </Button>
       </div>
     )
@@ -124,11 +131,15 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{startTime.label ?? "Start Time"}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {startTime.label ?? detailMessages.startTime.fallbackTitle}
+          </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline">{startTime.startTimeLocal}</Badge>
             <Badge variant={startTime.active ? "default" : "secondary"}>
-              {startTime.active ? "Active" : "Inactive"}
+              {startTime.active
+                ? messages.availability.statusActive
+                : messages.availability.statusInactive}
             </Badge>
           </div>
         </div>
@@ -140,19 +151,19 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
             }
           >
             <Package className="mr-2 h-4 w-4" />
-            Open Product
+            {detailMessages.openProduct}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this start time?")) {
+              if (confirm(detailMessages.startTime.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
@@ -160,34 +171,36 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Start Time Details</CardTitle>
+            <CardTitle>{detailMessages.startTime.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Product:</span>{" "}
+              <span className="text-muted-foreground">{messages.availability.productLabel}:</span>{" "}
               <span>{productQuery.data?.data.name ?? startTime.productId}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Label:</span>{" "}
-              <span>{startTime.label ?? "-"}</span>
+              <span className="text-muted-foreground">{messages.availability.labelLabel}:</span>{" "}
+              <span>{startTime.label ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Duration:</span>{" "}
+              <span className="text-muted-foreground">{messages.availability.durationLabel}:</span>{" "}
               <span>
-                {startTime.durationMinutes == null ? "-" : `${startTime.durationMinutes} min`}
+                {startTime.durationMinutes == null ? noValue : `${startTime.durationMinutes} min`}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Sort Order:</span>{" "}
+              <span className="text-muted-foreground">
+                {detailMessages.startTime.sortOrderLabel}:
+              </span>{" "}
               <span>{startTime.sortOrder}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(startTime.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.createdLabel}:</span>{" "}
+              <span>{new Date(startTime.createdAt).toLocaleString(resolvedLocale)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(startTime.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.updatedLabel}:</span>{" "}
+              <span>{new Date(startTime.updatedAt).toLocaleString(resolvedLocale)}</span>
             </div>
           </CardContent>
         </Card>
@@ -195,11 +208,13 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
             <Clock3 className="h-4 w-4" />
-            <CardTitle>Generated Slots</CardTitle>
+            <CardTitle>{detailMessages.startTime.generatedSlotsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {(slotsQuery.data?.data.length ?? 0) === 0 ? (
-              <p className="text-muted-foreground">No slots currently use this start time.</p>
+              <p className="text-muted-foreground">
+                {detailMessages.startTime.generatedSlotsEmpty}
+              </p>
             ) : (
               slotsQuery.data?.data.map((slot) => (
                 <button
@@ -211,10 +226,11 @@ export function AvailabilityStartTimeDetailPage({ id }: { id: string }) {
                   }
                 >
                   <div className="font-medium">
-                    {slot.dateLocal} · {formatDateTime(slot.startsAt)}
+                    {slot.dateLocal} · {formatDateTime(slot.startsAt, noValue)}
                   </div>
                   <div className="text-muted-foreground">
-                    Status: {slot.status} · Remaining Pax: {slot.remainingPax ?? "-"}
+                    {messages.availability.statusLabel}: {getSlotStatusLabel(slot.status, messages)}{" "}
+                    · {messages.availability.remainingPaxLabel}: {slot.remainingPax ?? noValue}
                   </div>
                 </button>
               ))

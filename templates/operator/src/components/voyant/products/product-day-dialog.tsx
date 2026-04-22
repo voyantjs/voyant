@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -14,18 +15,25 @@ import {
   SheetTitle,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
+import { getProductDayMediaQueryOptions } from "./product-detail-shared"
+import { ProductMediaGallery } from "./product-media-gallery"
 
-const dayFormSchema = z.object({
-  dayNumber: z.coerce.number().int().positive("Day number must be at least 1"),
-  title: z.string().max(255).optional().nullable(),
-  description: z.string().optional().nullable(),
-  location: z.string().max(255).optional().nullable(),
-})
+type DayMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["days"]
 
-type DayFormValues = z.input<typeof dayFormSchema>
-type DayFormOutput = z.output<typeof dayFormSchema>
+const buildDayFormSchema = (messages: DayMessages) =>
+  z.object({
+    dayNumber: z.coerce.number().int().positive(messages.validationDayNumber),
+    title: z.string().max(255).optional().nullable(),
+    description: z.string().optional().nullable(),
+    location: z.string().max(255).optional().nullable(),
+  })
+
+type DayFormSchema = ReturnType<typeof buildDayFormSchema>
+type DayFormValues = z.input<DayFormSchema>
+type DayFormOutput = z.output<DayFormSchema>
 
 type DayData = {
   id: string
@@ -39,6 +47,7 @@ type DayDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   productId: string
+  itineraryId: string
   day?: DayData
   nextDayNumber?: number
   onSuccess: () => void
@@ -48,11 +57,16 @@ export function DayDialog({
   open,
   onOpenChange,
   productId,
+  itineraryId,
   day,
   nextDayNumber,
   onSuccess,
 }: DayDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const dayMessages = messages.products.operations.days
   const isEditing = !!day
+  const dayFormSchema = buildDayFormSchema(dayMessages)
 
   const form = useForm<DayFormValues, unknown, DayFormOutput>({
     resolver: zodResolver(dayFormSchema),
@@ -93,62 +107,149 @@ export function DayDialog({
     if (isEditing) {
       await api.patch(`/v1/products/${productId}/days/${day.id}`, payload)
     } else {
-      await api.post(`/v1/products/${productId}/days`, payload)
+      await api.post(`/v1/products/${productId}/itineraries/${itineraryId}/days`, payload)
     }
     onSuccess()
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
+      <SheetContent side="right" className="w-full sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Day" : "Add Day"}</SheetTitle>
+          <SheetTitle>{isEditing ? dayMessages.editTitle : dayMessages.newTitle}</SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <SheetBody className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Day Number</Label>
-                <Input {...form.register("dayNumber")} type="number" min="1" />
-                {form.formState.errors.dayNumber && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.dayNumber.message}
-                  </p>
-                )}
+          <SheetBody className="grid gap-6">
+            <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label>{dayMessages.dayNumberLabel}</Label>
+                  <Input {...form.register("dayNumber")} type="number" min="1" />
+                  {form.formState.errors.dayNumber && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.dayNumber.message}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>{dayMessages.locationLabel}</Label>
+                  <Input
+                    {...form.register("location")}
+                    placeholder={dayMessages.locationPlaceholder}
+                  />
+                </div>
               </div>
+
               <div className="flex flex-col gap-2">
-                <Label>Location</Label>
-                <Input {...form.register("location")} placeholder="Dubrovnik" />
+                <Label>{dayMessages.titleLabel}</Label>
+                <Input {...form.register("title")} placeholder={dayMessages.titlePlaceholder} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label>{dayMessages.descriptionLabel}</Label>
+                <Textarea
+                  {...form.register("description")}
+                  placeholder={dayMessages.descriptionPlaceholder}
+                  rows={4}
+                />
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Title</Label>
-              <Input {...form.register("title")} placeholder="Arrival in Dubrovnik" />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Description</Label>
-              <Textarea
-                {...form.register("description")}
-                placeholder="Day overview and activities..."
-              />
-            </div>
+            {isEditing && day ? (
+              <DayMediaSection productId={productId} dayId={day.id} />
+            ) : (
+              <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+                {dayMessages.saveToUpload}
+              </div>
+            )}
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Day"}
+              {isEditing ? productMessages.saveChanges : dayMessages.create}
             </Button>
           </SheetFooter>
         </form>
       </SheetContent>
     </Sheet>
+  )
+}
+
+// ---------- Day media manager ----------
+
+function DayMediaSection({ productId, dayId }: { productId: string; dayId: string }) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const queryClient = useQueryClient()
+
+  const { data } = useQuery(getProductDayMediaQueryOptions(productId, dayId))
+  const media = data?.data ?? []
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["day-media", productId, dayId] })
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append("file", file)
+      const uploadRes = await fetch("/api/v1/uploads", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      })
+      if (!uploadRes.ok) throw new Error(productMessages.uploadFailed)
+      const upload = (await uploadRes.json()) as {
+        key: string
+        url: string
+        mimeType: string
+        size: number
+      }
+
+      const mediaType = upload.mimeType.startsWith("video/")
+        ? "video"
+        : upload.mimeType.startsWith("image/")
+          ? "image"
+          : "document"
+
+      return api.post(`/v1/products/${productId}/days/${dayId}/media`, {
+        mediaType,
+        name: file.name,
+        url: upload.url,
+        storageKey: upload.key,
+        mimeType: upload.mimeType,
+        fileSize: upload.size,
+      })
+    },
+    onSuccess: () => void invalidate(),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (mediaId: string) => api.delete(`/v1/products/media/${mediaId}`),
+    onSuccess: () => void invalidate(),
+  })
+
+  const setCoverMutation = useMutation({
+    mutationFn: (mediaId: string) => api.patch(`/v1/products/media/${mediaId}/set-cover`, {}),
+    onSuccess: () => void invalidate(),
+  })
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Label className="text-sm">{messages.products.operations.days.photosLabel}</Label>
+      <ProductMediaGallery
+        productId={productId}
+        media={media}
+        isUploading={uploadMutation.isPending}
+        onUpload={(file) => uploadMutation.mutate(file)}
+        onSetCover={(id) => setCoverMutation.mutate(id)}
+        onDelete={(id) => deleteMutation.mutate(id)}
+      />
+    </div>
   )
 }

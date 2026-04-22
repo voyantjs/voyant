@@ -232,7 +232,11 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>Timezone</Label>
-          <Select value={state.timezone} onValueChange={(value) => field("timezone")(value)}>
+          <Select
+            items={timezoneOptions.map((timezone) => ({ label: timezone, value: timezone }))}
+            value={state.timezone}
+            onValueChange={(value) => field("timezone")(value)}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -248,6 +252,7 @@ export function ProductDepartureForm({ mode, onSuccess, onCancel }: ProductDepar
         <div className="flex flex-col gap-1.5">
           <Label>Status</Label>
           <Select
+            items={SLOT_STATUSES}
             value={state.status}
             onValueChange={(value) => field("status")(value as AvailabilitySlotRecord["status"])}
           >

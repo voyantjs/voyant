@@ -55,10 +55,7 @@ export const bookingSourceTypeEnum = pgEnum("booking_source_type", [
 
 export const bookingParticipantTypeEnum = pgEnum("booking_participant_type", [
   "traveler",
-  "booker",
-  "contact",
   "occupant",
-  "staff",
   "other",
 ])
 
@@ -140,9 +137,12 @@ export const bookingRedemptionMethodEnum = pgEnum("booking_redemption_method", [
 export const bookingItemParticipantRoleEnum = pgEnum("booking_item_participant_role", [
   "traveler",
   "occupant",
-  "primary_contact",
-  "service_assignee",
   "beneficiary",
+  "other",
+])
+
+export const bookingStaffAssignmentRoleEnum = pgEnum("booking_staff_assignment_role", [
+  "service_assignee",
   "other",
 ])
 

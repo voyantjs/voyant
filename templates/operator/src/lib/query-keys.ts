@@ -28,13 +28,12 @@ export const queryKeys = {
     all: ["bookings"] as const,
     list: (search?: string) => [...queryKeys.bookings.all, "list", { search }] as const,
     detail: (id: string) => [...queryKeys.bookings.all, "detail", id] as const,
-    passengers: (id: string) => [...queryKeys.bookings.all, id, "passengers"] as const,
+    travelers: (id: string) => [...queryKeys.bookings.all, id, "travelers"] as const,
     supplierStatuses: (id: string) => [...queryKeys.bookings.all, id, "supplierStatuses"] as const,
     activityLog: (id: string) => [...queryKeys.bookings.all, id, "activityLog"] as const,
     notes: (id: string) => [...queryKeys.bookings.all, id, "notes"] as const,
     documents: (id: string) => [...queryKeys.bookings.all, id, "documents"] as const,
   },
-  // Legacy keys — used by accept-invite flow
   inviteTokens: {
     all: ["inviteTokens"] as const,
     list: (operatorId: string) => ["inviteTokens", operatorId, "list"] as const,

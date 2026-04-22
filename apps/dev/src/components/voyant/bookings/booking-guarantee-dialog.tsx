@@ -149,6 +149,7 @@ export function BookingGuaranteeDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={guaranteeTypes.map((t) => ({ label: t.replace(/_/g, " "), value: t }))}
                   value={form.watch("guaranteeType")}
                   onValueChange={(v) =>
                     form.setValue(
@@ -172,6 +173,7 @@ export function BookingGuaranteeDialog({
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={guaranteeStatuses.map((s) => ({ label: s.replace(/_/g, " "), value: s }))}
                   value={form.watch("status")}
                   onValueChange={(v) =>
                     form.setValue("status", (v ?? "pending") as (typeof guaranteeStatuses)[number])

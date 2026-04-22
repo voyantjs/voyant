@@ -10,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Props = {
   value: string | null | undefined
@@ -20,12 +21,8 @@ type Props = {
 
 const PAGE_SIZE = 25
 
-export function PriceCatalogCombobox({
-  value,
-  onChange,
-  placeholder = "Search price catalogs…",
-  disabled,
-}: Props) {
+export function PriceCatalogCombobox({ value, onChange, placeholder, disabled }: Props) {
+  const messages = useAdminMessages()
   const [search, setSearch] = React.useState("")
   const listQuery = usePriceCatalogs({ search: search || undefined, limit: PAGE_SIZE })
   const selectedQuery = usePriceCatalog(value, { enabled: !!value })
@@ -69,10 +66,15 @@ export function PriceCatalogCombobox({
         setInputValue(item ? `${item.name} · ${item.code}` : "")
       }}
     >
-      <ComboboxInput placeholder={placeholder} showClear={!!value} />
+      <ComboboxInput
+        placeholder={placeholder ?? messages.pricing.priceCatalogCombobox.placeholder}
+        showClear={!!value}
+      />
       <ComboboxContent>
         <ComboboxEmpty>
-          {listQuery.isPending || selectedQuery.isPending ? "Loading…" : "No price catalogs found."}
+          {listQuery.isPending || selectedQuery.isPending
+            ? messages.pricing.priceCatalogCombobox.loading
+            : messages.pricing.priceCatalogCombobox.empty}
         </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>

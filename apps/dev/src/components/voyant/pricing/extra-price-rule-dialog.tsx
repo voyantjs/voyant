@@ -172,6 +172,7 @@ export function ExtraPriceRuleDialog({ open, onOpenChange, rule, onSuccess }: Pr
             <div className="flex flex-col gap-2">
               <Label>Pricing mode</Label>
               <Select
+                items={ADDON_PRICING_MODES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                 value={form.watch("pricingMode")}
                 onValueChange={(value) => form.setValue("pricingMode", value as AddonPricingMode)}
               >

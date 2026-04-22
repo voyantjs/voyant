@@ -34,6 +34,16 @@ export const offers = pgTable(
     quoteId: text("quote_id"),
     marketId: text("market_id"),
     sourceChannelId: text("source_channel_id"),
+    contactFirstName: text("contact_first_name"),
+    contactLastName: text("contact_last_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    contactPreferredLanguage: text("contact_preferred_language"),
+    contactCountry: text("contact_country"),
+    contactRegion: text("contact_region"),
+    contactCity: text("contact_city"),
+    contactAddressLine1: text("contact_address_line1"),
+    contactPostalCode: text("contact_postal_code"),
     currency: text("currency").notNull(),
     baseCurrency: text("base_currency"),
     fxRateSetId: text("fx_rate_set_id"),
@@ -145,7 +155,7 @@ export const offerItemParticipants = pgTable(
     offerItemId: typeIdRef("offer_item_id")
       .notNull()
       .references(() => offerItems.id, { onDelete: "cascade" }),
-    participantId: typeIdRef("participant_id")
+    travelerId: typeIdRef("traveler_id")
       .notNull()
       .references(() => offerParticipants.id, { onDelete: "cascade" }),
     role: transactionItemParticipantRoleEnum("role").notNull().default("traveler"),
@@ -154,11 +164,8 @@ export const offerItemParticipants = pgTable(
   },
   (table) => [
     index("idx_offer_item_participants_item_created").on(table.offerItemId, table.createdAt),
-    index("idx_offer_item_participants_participant_created").on(
-      table.participantId,
-      table.createdAt,
-    ),
-    uniqueIndex("uidx_offer_item_participants").on(table.offerItemId, table.participantId),
+    index("idx_offer_item_participants_participant_created").on(table.travelerId, table.createdAt),
+    uniqueIndex("uidx_offer_item_participants").on(table.offerItemId, table.travelerId),
   ],
 )
 
@@ -166,7 +173,11 @@ export type Offer = typeof offers.$inferSelect
 export type NewOffer = typeof offers.$inferInsert
 export type OfferParticipant = typeof offerParticipants.$inferSelect
 export type NewOfferParticipant = typeof offerParticipants.$inferInsert
+export type OfferTraveler = OfferParticipant
+export type NewOfferTraveler = NewOfferParticipant
 export type OfferItem = typeof offerItems.$inferSelect
 export type NewOfferItem = typeof offerItems.$inferInsert
 export type OfferItemParticipant = typeof offerItemParticipants.$inferSelect
 export type NewOfferItemParticipant = typeof offerItemParticipants.$inferInsert
+export type OfferItemTraveler = OfferItemParticipant
+export type NewOfferItemTraveler = NewOfferItemParticipant

@@ -23,9 +23,10 @@ describe("sellability routes", () => {
   it("constructs an offer bundle", async () => {
     vi.spyOn(sellabilityService, "constructOffer").mockResolvedValue({
       offer: { id: "offer_1" } as never,
-      participants: [] as never[],
+      travelers: [] as never[],
+      contactAssignments: [] as never[],
       items: [] as never[],
-      itemParticipants: [] as never[],
+      itemTravelers: [] as never[],
       resolution: { product: { id: "prod_1", name: "City Escape" } } as never,
     })
 

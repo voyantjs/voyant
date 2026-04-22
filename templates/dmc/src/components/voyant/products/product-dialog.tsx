@@ -20,6 +20,7 @@ import {
   Textarea,
 } from "@/components/ui"
 import { DateRangePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -62,6 +63,7 @@ const PRODUCT_STATUSES = [
 
 export function ProductDialog({ open, onOpenChange, product, onSuccess }: ProductDialogProps) {
   const isEditing = !!product
+  const messages = useAdminMessages().products
 
   const form = useForm<ProductFormValues, unknown, ProductFormOutput>({
     resolver: zodResolver(productFormSchema),
@@ -115,22 +117,25 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Product" : "New Product"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? messages.dialogEditTitle : messages.dialogNewTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Croatia Explorer 2025" />
+                <Label>{messages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={messages.namePlaceholder} />
                 {form.formState.errors.name && (
-                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                  <p className="text-xs text-destructive">{messages.validationNameRequired}</p>
                 )}
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{messages.statusLabel}</Label>
                 <Select
+                  items={PRODUCT_STATUSES}
                   value={form.watch("status")}
                   onValueChange={(v) => form.setValue("status", v as ProductFormValues["status"])}
                 >
@@ -140,7 +145,11 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                   <SelectContent>
                     {PRODUCT_STATUSES.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
-                        {s.label}
+                        {s.value === "draft"
+                          ? messages.statusDraft
+                          : s.value === "active"
+                            ? messages.statusActive
+                            : messages.statusArchived}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -149,16 +158,16 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
+              <Label>{messages.descriptionLabel}</Label>
               <Textarea
                 {...form.register("description")}
-                placeholder="Brief overview of the product..."
+                placeholder={messages.descriptionPlaceholder}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Sell Currency</Label>
+                <Label>{messages.sellCurrencyLabel}</Label>
                 <Input
                   {...form.register("sellCurrency")}
                   placeholder="EUR"
@@ -166,13 +175,11 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                   className="uppercase"
                 />
                 {form.formState.errors.sellCurrency && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.sellCurrency.message}
-                  </p>
+                  <p className="text-xs text-destructive">{messages.validationIsoCurrency}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Travel Dates</Label>
+                <Label>{messages.travelDatesLabel}</Label>
                 <DateRangePicker
                   value={{
                     from: form.watch("startDate") || null,
@@ -182,24 +189,29 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                     form.setValue("startDate", nextValue?.from ?? "", { shouldDirty: true })
                     form.setValue("endDate", nextValue?.to ?? "", { shouldDirty: true })
                   }}
-                  placeholder="Pick travel dates"
+                  placeholder={messages.travelDatesPlaceholder}
                   className="w-full"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-2 max-w-[200px]">
-              <Label>Travelers (Pax)</Label>
-              <Input {...form.register("pax")} type="number" min="1" placeholder="2" />
+              <Label>{messages.paxLabel}</Label>
+              <Input
+                {...form.register("pax")}
+                type="number"
+                min="1"
+                placeholder={messages.paxPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Product"}
+              {isEditing ? messages.saveChanges : messages.create}
             </Button>
           </DialogFooter>
         </form>

@@ -147,6 +147,10 @@ export function FacilitiesPage() {
         <div className="flex flex-col gap-2">
           <Label>Kind</Label>
           <Select
+            items={[
+              { label: "All kinds", value: "all" },
+              ...FACILITY_KINDS.map((item) => ({ label: item.replace(/_/g, " "), value: item })),
+            ]}
             value={kind || "all"}
             onValueChange={(value) => {
               setKind(value && value !== "all" ? value : "")
@@ -169,6 +173,10 @@ export function FacilitiesPage() {
         <div className="flex flex-col gap-2">
           <Label>Status</Label>
           <Select
+            items={[
+              { label: "All statuses", value: "all" },
+              ...FACILITY_STATUSES.map((item) => ({ label: item, value: item })),
+            ]}
             value={status || "all"}
             onValueChange={(value) => {
               setStatus(value && value !== "all" ? value : "")

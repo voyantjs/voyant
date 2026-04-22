@@ -149,11 +149,12 @@ export function OrganizationMemberManagement({
             <div>
               <Label htmlFor="organization-member-management-role">Role</Label>
               <Select
+                items={availableRoles.map((role) => ({ label: role, value: role }))}
                 value={inviteRole}
                 onValueChange={setInviteRole}
                 disabled={!resolvedOrganizationId || invite.isPending}
               >
-                <SelectTrigger id="organization-member-management-role">
+                <SelectTrigger className="w-full" id="organization-member-management-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

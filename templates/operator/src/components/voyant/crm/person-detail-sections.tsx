@@ -1,5 +1,7 @@
+import { type OrganizationRecord, useOrganizations } from "@voyantjs/crm-react"
 import { currencies } from "@voyantjs/utils/currencies"
 import { languages } from "@voyantjs/utils/languages"
+import { formatMessage, useLocale } from "@voyantjs/voyant-admin"
 import {
   ArrowLeft,
   Building2,
@@ -21,7 +23,7 @@ import {
   User as UserIcon,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Avatar,
   AvatarFallback,
@@ -63,8 +65,16 @@ import {
 import { DatePicker } from "@/components/ui/date-picker"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
+import {
+  type AddressRecord,
+  type AddressUpsertInput,
+  formatAddressText,
+  PersonAddressesSection,
+} from "./person-addresses"
 
 export const ACTIVITY_TYPES = [
   { value: "note", label: "Note" },
@@ -151,6 +161,142 @@ export function formatMoney(cents: number | null, currency: string | null): stri
   }
 }
 
+function formatPersonDate(value: string | null | undefined, locale: string): string {
+  if (!value) return "—"
+  return new Date(value).toLocaleDateString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function formatPersonRelative(
+  value: string,
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+): string {
+  const date = new Date(value)
+  const diff = Date.now() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days < 1) return messages.relativeToday
+  if (days < 7) return formatMessage(messages.relativeDaysAgo, { count: String(days) })
+  if (days < 30) {
+    return formatMessage(messages.relativeWeeksAgo, {
+      count: String(Math.floor(days / 7)),
+    })
+  }
+  if (days < 365) {
+    return formatMessage(messages.relativeMonthsAgo, {
+      count: String(Math.floor(days / 30)),
+    })
+  }
+  return formatMessage(messages.relativeYearsAgo, {
+    count: String(Math.floor(days / 365)),
+  })
+}
+
+function personRelationLabel(
+  relation: string,
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+): string {
+  switch (relation) {
+    case "client":
+      return messages.relationClient
+    case "partner":
+      return messages.relationPartner
+    case "supplier":
+      return messages.relationSupplier
+    case "other":
+      return messages.relationOther
+    default:
+      return relation
+  }
+}
+
+function personStatusLabel(
+  status: string,
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+): string {
+  switch (status) {
+    case "active":
+      return messages.statusActive
+    case "inactive":
+      return messages.statusInactive
+    case "archived":
+      return messages.statusArchived
+    default:
+      return status
+  }
+}
+
+function personActivityTypeLabel(
+  type: ActivityRecord["type"],
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+): string {
+  switch (type) {
+    case "note":
+      return messages.activityTypeNote
+    case "call":
+      return messages.activityTypeCall
+    case "email":
+      return messages.activityTypeEmail
+    case "meeting":
+      return messages.activityTypeMeeting
+    case "task":
+      return messages.activityTypeTask
+    case "follow_up":
+      return messages.activityTypeFollowUp
+    default:
+      return type
+  }
+}
+
+function personActivityStatusLabel(
+  status: ActivityRecord["status"],
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+): string {
+  switch (status) {
+    case "planned":
+      return messages.activityStatusPlanned
+    case "done":
+      return messages.activityStatusDone
+    case "cancelled":
+      return messages.activityStatusCancelled
+    default:
+      return status
+  }
+}
+
+function opportunityStatusLabel(
+  status: OpportunityRecord["status"],
+  messages: ReturnType<typeof useAdminMessages>["crm"]["organizationDetail"],
+): string {
+  switch (status) {
+    case "open":
+      return messages.opportunityOpen
+    case "won":
+      return messages.opportunityWon
+    case "lost":
+      return messages.opportunityLost
+    case "archived":
+      return messages.opportunityArchived
+    default:
+      return status
+  }
+}
+
+function getActivityTypeOptions(
+  messages: ReturnType<typeof useAdminMessages>["crm"]["personDetail"],
+) {
+  return [
+    { value: "note", label: messages.activityTypeNote },
+    { value: "call", label: messages.activityTypeCall },
+    { value: "email", label: messages.activityTypeEmail },
+    { value: "meeting", label: messages.activityTypeMeeting },
+    { value: "task", label: messages.activityTypeTask },
+    { value: "follow_up", label: messages.activityTypeFollowUp },
+  ] as const
+}
+
 function FieldRow({
   icon: Icon,
   label,
@@ -208,6 +354,9 @@ function InlineField({
   disabled?: boolean
   onSave: (next: string | null) => Promise<void>
 }) {
+  const adminMessages = useAdminMessages()
+  const messages = adminMessages.crm.personDetail
+  const shared = adminMessages.crm.shared
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? "")
   const [saving, setSaving] = useState(false)
@@ -239,7 +388,7 @@ function InlineField({
       await onSave(next)
       setEditing(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save")
+      setError(e instanceof Error ? e.message : shared.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -265,7 +414,7 @@ function InlineField({
       try {
         await onSave(next)
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save")
+        setError(e instanceof Error ? e.message : shared.failedToSave)
       } finally {
         setSaving(false)
       }
@@ -278,7 +427,7 @@ function InlineField({
           <DatePicker
             value={value}
             onChange={(next) => void handleDateChange(next)}
-            placeholder={`Add ${label.toLowerCase()}`}
+            placeholder={formatMessage(shared.addTemplate, { label: label.toLowerCase() })}
             displayFormat="PP"
             className="-mx-1 mt-0.5 h-7 border-0 bg-transparent px-1 text-sm font-normal shadow-none hover:bg-muted/60 data-[empty=true]:italic"
           />
@@ -320,7 +469,7 @@ function InlineField({
             {kind === "phone" && (
               <div className="flex gap-2">
                 <Button size="sm" className="h-7" onClick={() => void commit()} disabled={saving}>
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : messages.save}
                 </Button>
                 <Button
                   size="sm"
@@ -329,7 +478,7 @@ function InlineField({
                   onClick={cancel}
                   disabled={saving}
                 >
-                  Cancel
+                  {messages.cancel}
                 </Button>
               </div>
             )}
@@ -349,7 +498,7 @@ function InlineField({
             {href && displayValue ? (
               <span className="text-primary">{displayValue}</span>
             ) : (
-              displayValue || `Add ${label.toLowerCase()}`
+              displayValue || formatMessage(shared.addTemplate, { label: label.toLowerCase() })
             )}
           </button>
         )}
@@ -373,6 +522,8 @@ function InlineCurrencyField({
   disabled?: boolean
   onSave: (next: string | null) => Promise<void>
 }) {
+  const adminMessages = useAdminMessages()
+  const shared = adminMessages.crm.shared
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -394,7 +545,7 @@ function InlineCurrencyField({
       await onSave(next)
       setEditing(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save")
+      setError(e instanceof Error ? e.message : shared.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -430,12 +581,12 @@ function InlineCurrencyField({
           >
             <ComboboxInput
               autoFocus
-              placeholder="Search currency..."
+              placeholder={shared.searchCurrencyPlaceholder}
               className="mt-0.5 h-8 text-sm"
               disabled={saving}
             />
             <ComboboxContent>
-              <ComboboxEmpty>No currencies found</ComboboxEmpty>
+              <ComboboxEmpty>{shared.noCurrenciesFound}</ComboboxEmpty>
               <ComboboxList>
                 <ComboboxCollection>
                   {(code: string) => {
@@ -472,7 +623,7 @@ function InlineCurrencyField({
                 )}
               </span>
             ) : (
-              `Add ${label.toLowerCase()}`
+              formatMessage(shared.addTemplate, { label: label.toLowerCase() })
             )}
           </button>
         )}
@@ -497,6 +648,8 @@ function InlineLanguageField({
   disabled?: boolean
   onSave: (next: string | null) => Promise<void>
 }) {
+  const adminMessages = useAdminMessages()
+  const shared = adminMessages.crm.shared
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -518,7 +671,7 @@ function InlineLanguageField({
       await onSave(next)
       setEditing(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save")
+      setError(e instanceof Error ? e.message : shared.failedToSave)
     } finally {
       setSaving(false)
     }
@@ -553,12 +706,12 @@ function InlineLanguageField({
           >
             <ComboboxInput
               autoFocus
-              placeholder="Search language..."
+              placeholder={shared.searchLanguagePlaceholder}
               className="mt-0.5 h-8 text-sm"
               disabled={saving}
             />
             <ComboboxContent>
-              <ComboboxEmpty>No languages found</ComboboxEmpty>
+              <ComboboxEmpty>{shared.noLanguagesFound}</ComboboxEmpty>
               <ComboboxList>
                 <ComboboxCollection>
                   {(code: string) => {
@@ -593,8 +746,176 @@ function InlineLanguageField({
                 {languageName && <span className="ml-2 text-muted-foreground">{languageName}</span>}
               </span>
             ) : (
-              `Add ${label.toLowerCase()}`
+              formatMessage(shared.addTemplate, { label: label.toLowerCase() })
             )}
+          </button>
+        )}
+        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+      </div>
+    </div>
+  )
+}
+
+function InlineOrganizationField({
+  icon: Icon,
+  label,
+  organizationId,
+  organization,
+  disabled,
+  onSave,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  organizationId: string | null
+  organization:
+    | {
+        id: string
+        name: string
+        website: string | null
+        legalName: string | null
+        industry?: string | null
+        relation?: string | null
+        status?: string
+      }
+    | null
+    | undefined
+  disabled?: boolean
+  onSave: (next: string | null) => Promise<void>
+}) {
+  const adminMessages = useAdminMessages()
+  const shared = adminMessages.crm.shared
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const organizationsQuery = useOrganizations({
+    search: search || undefined,
+    limit: 25,
+    enabled: editing,
+  })
+
+  const options = useMemo(() => {
+    const map = new Map<string, Pick<OrganizationRecord, "id" | "name" | "website" | "legalName">>()
+    for (const item of organizationsQuery.data?.data ?? []) {
+      map.set(item.id, item)
+    }
+    if (organization) {
+      map.set(organization.id, {
+        id: organization.id,
+        name: organization.name,
+        website: organization.website,
+        legalName: organization.legalName,
+      })
+    }
+    return Array.from(map.values())
+  }, [organization, organizationsQuery.data?.data])
+
+  const optionMap = useMemo(() => new Map(options.map((item) => [item.id, item])), [options])
+
+  const startEdit = () => {
+    if (disabled || saving) return
+    setError(null)
+    setSearch("")
+    setEditing(true)
+  }
+
+  const commitSelection = async (next: string | null) => {
+    if (next === organizationId) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      await onSave(next)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : shared.failedToSave)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const displayValue = organization?.name ?? null
+
+  return (
+    <div className="group flex items-start gap-3 py-1.5">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-medium text-muted-foreground">{label}</div>
+        {editing ? (
+          <Combobox
+            items={["__none__", ...options.map((item) => item.id)]}
+            defaultOpen
+            autoHighlight
+            itemToStringValue={(item) => {
+              if (item === "__none__") return "No organization"
+              return optionMap.get(item as string)?.name ?? ""
+            }}
+            onInputValueChange={(next) => {
+              setSearch(next)
+            }}
+            onValueChange={(value) =>
+              void commitSelection(value === "__none__" ? null : ((value as string | null) ?? null))
+            }
+            onOpenChange={(open) => {
+              if (!open) setEditing(false)
+            }}
+          >
+            <ComboboxInput
+              autoFocus
+              placeholder="Search organizations..."
+              showClear={!!organizationId}
+              className="mt-0.5 h-8 text-sm"
+              disabled={saving}
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>
+                {organizationsQuery.isPending
+                  ? "Loading organizations..."
+                  : "No organizations found."}
+              </ComboboxEmpty>
+              <ComboboxList>
+                <ComboboxCollection>
+                  {(item: string) => {
+                    if (item === "__none__") {
+                      return (
+                        <ComboboxItem key={item} value={item}>
+                          <span className="text-muted-foreground">No organization</span>
+                        </ComboboxItem>
+                      )
+                    }
+                    const option = optionMap.get(item)
+                    if (!option) return null
+                    return (
+                      <ComboboxItem key={option.id} value={option.id}>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium">{option.name}</span>
+                          {(option.website || option.legalName) && (
+                            <span className="truncate text-xs text-muted-foreground">
+                              {option.website || option.legalName}
+                            </span>
+                          )}
+                        </div>
+                      </ComboboxItem>
+                    )
+                  }}
+                </ComboboxCollection>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        ) : (
+          <button
+            type="button"
+            onClick={startEdit}
+            disabled={disabled}
+            className={cn(
+              "-mx-1 w-full truncate rounded px-1 py-0.5 text-left text-sm transition-colors",
+              !disabled && "hover:bg-muted/60 cursor-text",
+              !displayValue && "text-muted-foreground italic",
+            )}
+          >
+            {displayValue || formatMessage(shared.addTemplate, { label: label.toLowerCase() })}
           </button>
         )}
         {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
@@ -616,6 +937,7 @@ function IconDeleteButton({
   description: string
   ariaLabel?: string
 }) {
+  const messages = useAdminMessages().crm.personDetail
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
 
@@ -643,14 +965,14 @@ function IconDeleteButton({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{messages.cancel}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={pending}
             onClick={() => void handleConfirm()}
           >
             {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Delete
+            {messages.deleteButton}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -667,6 +989,9 @@ export function TagsEditor({
   onChange: (next: string[]) => Promise<void>
   saving: boolean
 }) {
+  const adminMessages = useAdminMessages()
+  const messages = adminMessages.crm.personDetail
+  const shared = adminMessages.crm.shared
   const [draft, setDraft] = useState("")
   const [error, setError] = useState<string | null>(null)
 
@@ -674,7 +999,7 @@ export function TagsEditor({
     const trimmed = draft.trim()
     if (!trimmed) return
     if (tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
-      setError("Tag already added")
+      setError(shared.tagAlreadyAdded)
       return
     }
     setError(null)
@@ -682,7 +1007,7 @@ export function TagsEditor({
       await onChange([...tags, trimmed])
       setDraft("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add tag")
+      setError(e instanceof Error ? e.message : shared.addTagFailed)
     }
   }
 
@@ -691,7 +1016,7 @@ export function TagsEditor({
     try {
       await onChange(tags.filter((t) => t !== tag))
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove tag")
+      setError(e instanceof Error ? e.message : shared.removeTagFailed)
     }
   }
 
@@ -717,7 +1042,7 @@ export function TagsEditor({
                 type="button"
                 onClick={() => void removeTag(tag)}
                 disabled={saving}
-                aria-label={`Remove ${tag}`}
+                aria-label={formatMessage(messages.removeTagAria, { tag })}
                 className="flex h-3.5 w-3.5 items-center justify-center rounded-sm hover:bg-muted"
               >
                 <X className="h-3 w-3" />
@@ -733,7 +1058,7 @@ export function TagsEditor({
           setError(null)
         }}
         onKeyDown={handleKey}
-        placeholder="Add tag…"
+        placeholder={shared.addTagPlaceholder}
         disabled={saving}
         className="h-8 text-sm"
       />
@@ -757,6 +1082,8 @@ export function NoteCard({
   savingEdit: boolean
   deleting: boolean
 }) {
+  const messages = useAdminMessages().crm.personDetail
+  const { resolvedLocale } = useLocale()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.content)
   const [error, setError] = useState<string | null>(null)
@@ -776,7 +1103,7 @@ export function NoteCard({
   const commit = async () => {
     const trimmed = draft.trim()
     if (!trimmed) {
-      setError("Note cannot be empty")
+      setError(messages.noteCannotBeEmpty)
       return
     }
     if (trimmed === note.content) {
@@ -788,7 +1115,7 @@ export function NoteCard({
       await onSave(trimmed)
       setEditing(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save note")
+      setError(e instanceof Error ? e.message : messages.failedToSaveNote)
     }
   }
 
@@ -806,16 +1133,16 @@ export function NoteCard({
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={cancel} disabled={savingEdit}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button size="sm" onClick={() => void commit()} disabled={savingEdit}>
               {savingEdit ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Saving…
+                  {messages.saving}
                 </>
               ) : (
-                "Save"
+                messages.save
               )}
             </Button>
           </div>
@@ -824,7 +1151,9 @@ export function NoteCard({
         <>
           <p className="whitespace-pre-wrap pr-16 text-sm">{note.content}</p>
           <p className="mt-2 text-xs text-muted-foreground">
-            {compact ? formatRelative(note.createdAt) : new Date(note.createdAt).toLocaleString()}
+            {compact
+              ? formatPersonRelative(note.createdAt, messages)
+              : new Date(note.createdAt).toLocaleString(resolvedLocale)}
           </p>
           <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
@@ -832,16 +1161,16 @@ export function NoteCard({
               size="icon"
               className="h-7 w-7"
               onClick={startEdit}
-              aria-label="Edit note"
+              aria-label={messages.editNoteAria}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
             <IconDeleteButton
-              title="Delete this note?"
-              description="This action cannot be undone."
+              title={messages.deleteNoteTitle}
+              description={messages.deleteNoteDescription}
               disabled={deleting}
               onConfirm={onDelete}
-              ariaLabel="Delete note"
+              ariaLabel={messages.deleteNoteAria}
             />
           </div>
         </>
@@ -871,6 +1200,8 @@ export function ActivityTimelineItem({
   deleting: boolean
   togglingStatus: boolean
 }) {
+  const messages = useAdminMessages().crm.personDetail
+  const { resolvedLocale } = useLocale()
   const [editing, setEditing] = useState(false)
   const [draftSubject, setDraftSubject] = useState(activity.subject)
   const [draftType, setDraftType] = useState<ActivityRecord["type"]>(activity.type)
@@ -893,7 +1224,7 @@ export function ActivityTimelineItem({
   const commit = async () => {
     const subject = draftSubject.trim()
     if (!subject) {
-      setError("Subject is required")
+      setError(messages.subjectRequired)
       return
     }
     setError(null)
@@ -905,11 +1236,12 @@ export function ActivityTimelineItem({
       })
       setEditing(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save activity")
+      setError(e instanceof Error ? e.message : messages.failedToSaveActivity)
     }
   }
 
   const isDone = activity.status === "done"
+  const activityTypeOptions = getActivityTypeOptions(messages)
 
   return (
     <li className="mb-4 ml-6">
@@ -932,7 +1264,7 @@ export function ActivityTimelineItem({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ACTIVITY_TYPES.map((t) => (
+                {activityTypeOptions.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     {t.label}
                   </SelectItem>
@@ -940,7 +1272,7 @@ export function ActivityTimelineItem({
               </SelectContent>
             </Select>
             <Input
-              placeholder="Subject"
+              placeholder={messages.subjectPlaceholder}
               value={draftSubject}
               onChange={(e) => setDraftSubject(e.target.value)}
               className="flex-1"
@@ -948,7 +1280,7 @@ export function ActivityTimelineItem({
             />
           </div>
           <Textarea
-            placeholder="Description (optional)"
+            placeholder={messages.descriptionOptionalPlaceholder}
             value={draftDescription}
             onChange={(e) => setDraftDescription(e.target.value)}
             className="min-h-[60px]"
@@ -957,16 +1289,16 @@ export function ActivityTimelineItem({
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={cancel} disabled={savingEdit}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button size="sm" onClick={() => void commit()} disabled={savingEdit}>
               {savingEdit ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Saving…
+                  {messages.saving}
                 </>
               ) : (
-                "Save"
+                messages.save
               )}
             </Button>
           </div>
@@ -980,19 +1312,26 @@ export function ActivityTimelineItem({
               {activity.subject}
             </p>
             <Badge variant="outline" className="capitalize text-[10px]">
-              {activity.status}
+              {personActivityStatusLabel(activity.status, messages)}
             </Badge>
             <Badge variant="secondary" className="capitalize text-[10px]">
-              {activity.type.replace("_", " ")}
+              {personActivityTypeLabel(activity.type, messages)}
             </Badge>
           </div>
           {activity.description && (
             <p className="mt-1 text-xs text-muted-foreground">{activity.description}</p>
           )}
           <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{new Date(activity.createdAt).toLocaleString()}</span>
+            <span>{new Date(activity.createdAt).toLocaleString(resolvedLocale)}</span>
             {activity.location && <span>• {activity.location}</span>}
-            {activity.dueAt && <span>• Due {formatDate(activity.dueAt)}</span>}
+            {activity.dueAt && (
+              <span>
+                •{" "}
+                {formatMessage(messages.dueDatePrefix, {
+                  date: formatPersonDate(activity.dueAt, resolvedLocale),
+                })}
+              </span>
+            )}
           </div>
           <div className="absolute right-0 top-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             {activity.status !== "cancelled" && (
@@ -1002,8 +1341,8 @@ export function ActivityTimelineItem({
                 className="h-7 w-7"
                 onClick={() => void onToggleStatus()}
                 disabled={togglingStatus}
-                aria-label={isDone ? "Mark as planned" : "Mark as done"}
-                title={isDone ? "Mark as planned" : "Mark as done"}
+                aria-label={isDone ? messages.markAsPlannedAria : messages.markAsDoneAria}
+                title={isDone ? messages.markAsPlannedTitle : messages.markAsDoneTitle}
               >
                 {togglingStatus ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1019,16 +1358,16 @@ export function ActivityTimelineItem({
               size="icon"
               className="h-7 w-7"
               onClick={startEdit}
-              aria-label="Edit activity"
+              aria-label={messages.editActivityAria}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
             <IconDeleteButton
-              title="Delete this activity?"
-              description="This will permanently remove the activity. This action cannot be undone."
+              title={messages.deleteActivityTitle}
+              description={messages.deleteActivityDescription}
               disabled={deleting}
               onConfirm={onDelete}
-              ariaLabel="Delete activity"
+              ariaLabel={messages.deleteActivityAria}
             />
           </div>
         </div>
@@ -1051,6 +1390,7 @@ function ActivityIcon({ type }: { type: ActivityRecord["type"] }) {
 }
 
 function StatusBadge({ status }: { status: OpportunityRecord["status"] }) {
+  const messages = useAdminMessages().crm.organizationDetail
   const variants: Record<
     OpportunityRecord["status"],
     "default" | "secondary" | "outline" | "destructive"
@@ -1062,7 +1402,7 @@ function StatusBadge({ status }: { status: OpportunityRecord["status"] }) {
   }
   return (
     <Badge variant={variants[status]} className="capitalize">
-      {status}
+      {opportunityStatusLabel(status, messages)}
     </Badge>
   )
 }
@@ -1080,6 +1420,7 @@ export function PersonTopBar({
   onDelete: () => Promise<void>
   deletePending: boolean
 }) {
+  const messages = useAdminMessages().crm.personDetail
   return (
     <div className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background px-6 py-3">
       <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
@@ -1087,7 +1428,7 @@ export function PersonTopBar({
       </Button>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <button type="button" onClick={onBack} className="hover:text-foreground">
-          People
+          {messages.breadcrumbRoot}
         </button>
         <span>/</span>
         <span className="text-foreground">{displayName}</span>
@@ -1095,13 +1436,13 @@ export function PersonTopBar({
       <div className="ml-auto flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Pencil className="mr-2 h-4 w-4" />
-          Edit
+          {messages.editButton}
         </Button>
         <ConfirmActionButton
-          buttonLabel="Delete"
-          confirmLabel="Delete"
-          title="Delete this person?"
-          description="This will permanently remove the person from your CRM. This action cannot be undone."
+          buttonLabel={messages.deleteButton}
+          confirmLabel={messages.deleteButton}
+          title={messages.deleteConfirmTitle}
+          description={messages.deleteConfirmDescription}
           variant="destructive"
           confirmVariant="destructive"
           disabled={deletePending}
@@ -1117,6 +1458,7 @@ export function PersonSidebar({
   displayName,
   organization,
   websiteHref,
+  primaryAddress,
   updateField,
 }: {
   person: {
@@ -1125,9 +1467,6 @@ export function PersonSidebar({
     email: string | null
     phone: string | null
     website: string | null
-    address: string | null
-    city: string | null
-    country: string | null
     jobTitle: string | null
     birthday: string | null
     source: string | null
@@ -1137,10 +1476,24 @@ export function PersonSidebar({
     status: string
   }
   displayName: string
-  organization: { name: string } | null | undefined
+  organization:
+    | {
+        id: string
+        name: string
+        legalName: string | null
+        industry: string | null
+        website: string | null
+        relation: string | null
+        status: string
+      }
+    | null
+    | undefined
   websiteHref?: string
+  primaryAddress: AddressRecord | null
   updateField: (patch: Record<string, unknown>) => Promise<void>
 }) {
+  const messages = useAdminMessages().crm.personDetail
+  const primaryAddressText = primaryAddress ? formatAddressText(primaryAddress) : null
   return (
     <aside className="col-span-12 flex flex-col gap-4 lg:col-span-3">
       <Card>
@@ -1158,11 +1511,11 @@ export function PersonSidebar({
           <div className="flex flex-wrap justify-center gap-1">
             {person.relation && (
               <Badge variant="secondary" className="capitalize">
-                {person.relation}
+                {personRelationLabel(person.relation, messages)}
               </Badge>
             )}
             <Badge variant="outline" className="capitalize">
-              {person.status}
+              {personStatusLabel(person.status, messages)}
             </Badge>
           </div>
           <Separator className="my-2" />
@@ -1176,7 +1529,7 @@ export function PersonSidebar({
               }}
             >
               <Mail className="h-4 w-4" />
-              <span className="text-[10px]">Email</span>
+              <span className="text-[10px]">{messages.actionEmail}</span>
             </Button>
             <Button
               variant="ghost"
@@ -1187,15 +1540,15 @@ export function PersonSidebar({
               }}
             >
               <Phone className="h-4 w-4" />
-              <span className="text-[10px]">Call</span>
+              <span className="text-[10px]">{messages.actionCall}</span>
             </Button>
             <Button variant="ghost" className="h-12 flex-col gap-0.5 px-1 text-xs">
               <Calendar className="h-4 w-4" />
-              <span className="text-[10px]">Meet</span>
+              <span className="text-[10px]">{messages.actionMeet}</span>
             </Button>
             <Button variant="ghost" className="h-12 flex-col gap-0.5 px-1 text-xs">
               <CheckCircle2 className="h-4 w-4" />
-              <span className="text-[10px]">Task</span>
+              <span className="text-[10px]">{messages.actionTask}</span>
             </Button>
           </div>
         </CardContent>
@@ -1203,12 +1556,12 @@ export function PersonSidebar({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">About this contact</CardTitle>
+          <CardTitle className="text-sm font-semibold">{messages.aboutTitle}</CardTitle>
         </CardHeader>
         <CardContent className="divide-y text-sm">
           <InlineField
             icon={Mail}
-            label="Email"
+            label={messages.emailLabel}
             kind="email"
             value={person.email}
             href={person.email ? `mailto:${person.email}` : undefined}
@@ -1216,7 +1569,7 @@ export function PersonSidebar({
           />
           <InlineField
             icon={Phone}
-            label="Phone"
+            label={messages.phoneLabel}
             kind="phone"
             value={person.phone}
             href={person.phone ? `tel:${person.phone}` : undefined}
@@ -1224,60 +1577,53 @@ export function PersonSidebar({
           />
           <InlineField
             icon={Globe}
-            label="Website"
+            label={messages.websiteLabel}
             kind="url"
             value={person.website}
             href={websiteHref}
             placeholder="https://example.com"
             onSave={(next) => updateField({ website: next })}
           />
-          <InlineField
+          <FieldRow
             icon={MapPin}
-            label="Address"
-            value={person.address}
-            onSave={(next) => updateField({ address: next })}
+            label={messages.primaryAddressLabel}
+            value={primaryAddressText ?? messages.noAddressValue}
           />
-          <InlineField
-            icon={MapPin}
-            label="City"
-            value={person.city}
-            onSave={(next) => updateField({ city: next })}
+          <InlineOrganizationField
+            icon={Building2}
+            label={messages.organizationLabel}
+            organizationId={organization?.id ?? null}
+            organization={organization}
+            onSave={(next) => updateField({ organizationId: next })}
           />
-          <InlineField
-            icon={MapPin}
-            label="Country"
-            value={person.country}
-            onSave={(next) => updateField({ country: next })}
-          />
-          <FieldRow icon={Building2} label="Organization" value={organization?.name ?? null} />
           <InlineField
             icon={UserIcon}
-            label="Job title"
+            label={messages.jobTitleLabel}
             value={person.jobTitle}
             onSave={(next) => updateField({ jobTitle: next })}
           />
           <InlineField
             icon={Calendar}
-            label="Birthday"
+            label={messages.birthdayLabel}
             kind="date"
             value={person.birthday}
             onSave={(next) => updateField({ birthday: next })}
           />
           <InlineField
             icon={Tag}
-            label="Source"
+            label={messages.sourceLabel}
             value={person.source}
             onSave={(next) => updateField({ source: next })}
           />
           <InlineLanguageField
             icon={Globe}
-            label="Preferred language"
+            label={messages.preferredLanguageLabel}
             value={person.preferredLanguage}
             onSave={(next) => updateField({ preferredLanguage: next })}
           />
           <InlineCurrencyField
             icon={TrendingUp}
-            label="Preferred currency"
+            label={messages.preferredCurrencyLabel}
             value={person.preferredCurrency}
             onSave={(next) => updateField({ preferredCurrency: next })}
           />
@@ -1318,13 +1664,21 @@ export function PersonMain({
   onSaveActivity,
   onDeleteActivity,
   onToggleActivityStatus,
+  addresses,
+  addressesPending,
+  addressCreating,
+  addressUpdatingFor,
+  addressDeletingFor,
+  onCreateAddress,
+  onUpdateAddress,
+  onDeleteAddress,
   openOpportunitiesCount,
   wonOpportunitiesCount,
   totalOpenValue,
   primaryCurrency,
 }: {
-  activeTab: "overview" | "notes" | "activities"
-  setActiveTab: (tab: "overview" | "notes" | "activities") => void
+  activeTab: "overview" | "notes" | "activities" | "addresses"
+  setActiveTab: (tab: "overview" | "notes" | "activities" | "addresses") => void
   notes: PersonNote[]
   notesPending: boolean
   activities: ActivityRecord[]
@@ -1360,21 +1714,38 @@ export function PersonMain({
   ) => Promise<void>
   onDeleteActivity: (activityId: string) => Promise<void>
   onToggleActivityStatus: (activity: ActivityRecord) => Promise<void>
+  addresses: AddressRecord[]
+  addressesPending: boolean
+  addressCreating: boolean
+  addressUpdatingFor: string | undefined
+  addressDeletingFor: string | undefined
+  onCreateAddress: (input: AddressUpsertInput) => Promise<void>
+  onUpdateAddress: (addressId: string, input: AddressUpsertInput) => Promise<void>
+  onDeleteAddress: (addressId: string) => Promise<void>
   openOpportunitiesCount: number
   wonOpportunitiesCount: number
   totalOpenValue: number
   primaryCurrency: string | null
 }) {
+  const messages = useAdminMessages().crm.personDetail
+  const activityTypeOptions = getActivityTypeOptions(messages)
+
   return (
     <main className="col-span-12 flex flex-col gap-4 lg:col-span-6">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList className="w-full">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview">{messages.overviewTab}</TabsTrigger>
           <TabsTrigger value="notes">
-            Notes{notes.length > 0 ? ` (${notes.length})` : ""}
+            {messages.notesTab}
+            {notes.length > 0 ? ` (${notes.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="activities">
-            Activities{activities.length > 0 ? ` (${activities.length})` : ""}
+            {messages.activitiesTab}
+            {activities.length > 0 ? ` (${activities.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="addresses">
+            {messages.addressesTab}
+            {addresses.length > 0 ? ` (${addresses.length})` : ""}
           </TabsTrigger>
         </TabsList>
 
@@ -1382,13 +1753,13 @@ export function PersonMain({
           <div className="grid grid-cols-3 gap-3">
             <Card size="sm">
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">Open deals</p>
+                <p className="text-xs text-muted-foreground">{messages.statOpenDeals}</p>
                 <p className="text-2xl font-semibold">{openOpportunitiesCount}</p>
               </CardContent>
             </Card>
             <Card size="sm">
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">Pipeline value</p>
+                <p className="text-xs text-muted-foreground">{messages.statPipelineValue}</p>
                 <p className="text-2xl font-semibold">
                   {formatMoney(totalOpenValue, primaryCurrency)}
                 </p>
@@ -1396,7 +1767,7 @@ export function PersonMain({
             </Card>
             <Card size="sm">
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">Won deals</p>
+                <p className="text-xs text-muted-foreground">{messages.statWonDeals}</p>
                 <p className="text-2xl font-semibold">{wonOpportunitiesCount}</p>
               </CardContent>
             </Card>
@@ -1404,7 +1775,9 @@ export function PersonMain({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                {messages.recentActivityTitle}
+              </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1412,17 +1785,26 @@ export function PersonMain({
                 onClick={onOpenActivityComposer}
               >
                 <Plus className="mr-1 h-3 w-3" />
-                Log activity
+                {messages.logActivity}
               </Button>
             </CardHeader>
             <CardContent className="pt-0">
               {activitiesPending ? (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: stable placeholder
+                    <div key={i} className="flex items-start gap-3">
+                      <Skeleton className="mt-1 h-2.5 w-2.5 rounded-full" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3.5 w-40" />
+                        <Skeleton className="h-3 w-56" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : activities.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  No activities logged yet.
+                  {messages.noActivitiesLoggedYet}
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
@@ -1435,7 +1817,7 @@ export function PersonMain({
                         <div className="flex items-center gap-2">
                           <p className="truncate text-sm font-medium">{activity.subject}</p>
                           <Badge variant="outline" className="capitalize text-[10px]">
-                            {activity.status}
+                            {personActivityStatusLabel(activity.status, messages)}
                           </Badge>
                         </div>
                         {activity.description && (
@@ -1444,7 +1826,7 @@ export function PersonMain({
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatRelative(activity.createdAt)}
+                          {formatPersonRelative(activity.createdAt, messages)}
                         </p>
                       </div>
                     </div>
@@ -1456,15 +1838,23 @@ export function PersonMain({
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Recent notes</CardTitle>
+              <CardTitle className="text-sm font-semibold">{messages.recentNotesTitle}</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {notesPending ? (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <div className="flex flex-col gap-3">
+                  {["note-skeleton-1", "note-skeleton-2", "note-skeleton-3"].map((key) => (
+                    <div key={key} className="rounded-md border p-3">
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="mt-2 h-3 w-3/4" />
+                      <Skeleton className="mt-3 h-2.5 w-20" />
+                    </div>
+                  ))}
                 </div>
               ) : notes.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No notes yet.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {messages.noNotesYet}
+                </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {notes.slice(0, 3).map((note) => (
@@ -1487,12 +1877,12 @@ export function PersonMain({
         <TabsContent value="notes" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Notes</CardTitle>
+              <CardTitle className="text-sm font-semibold">{messages.notesTitle}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-2 rounded-md border p-3">
                 <Textarea
-                  placeholder="Add a note..."
+                  placeholder={messages.addNotePlaceholder}
                   value={addNoteOpenValue}
                   onChange={(e) => setAddNoteOpenValue(e.target.value)}
                   className="min-h-[80px] resize-y border-0 p-0 shadow-none focus-visible:ring-0"
@@ -1506,17 +1896,19 @@ export function PersonMain({
                     {addNotePending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving…
+                        {messages.saving}
                       </>
                     ) : (
-                      "Add note"
+                      messages.addNoteButton
                     )}
                   </Button>
                 </div>
               </div>
 
               {notes.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">No notes yet.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  {messages.noNotesYet}
+                </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {notes.map((note) => (
@@ -1538,7 +1930,9 @@ export function PersonMain({
         <TabsContent value="activities" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-sm font-semibold">Activity timeline</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                {messages.activityTimelineTitle}
+              </CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -1546,7 +1940,7 @@ export function PersonMain({
                 onClick={onOpenActivityComposer}
               >
                 <Plus className="mr-1 h-3 w-3" />
-                New activity
+                {messages.newActivity}
               </Button>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0">
@@ -1561,7 +1955,7 @@ export function PersonMain({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {ACTIVITY_TYPES.map((t) => (
+                        {activityTypeOptions.map((t) => (
                           <SelectItem key={t.value} value={t.value}>
                             {t.label}
                           </SelectItem>
@@ -1569,14 +1963,14 @@ export function PersonMain({
                       </SelectContent>
                     </Select>
                     <Input
-                      placeholder="Subject"
+                      placeholder={messages.subjectPlaceholder}
                       value={activitySubject}
                       onChange={(e) => setActivitySubject(e.target.value)}
                       className="flex-1"
                     />
                   </div>
                   <Textarea
-                    placeholder="Description (optional)"
+                    placeholder={messages.descriptionOptionalPlaceholder}
                     value={activityDescription}
                     onChange={(e) => setActivityDescription(e.target.value)}
                     className="min-h-[60px]"
@@ -1592,7 +1986,7 @@ export function PersonMain({
                       }}
                       disabled={addActivityPending}
                     >
-                      Cancel
+                      {messages.cancel}
                     </Button>
                     <Button
                       size="sm"
@@ -1602,22 +1996,34 @@ export function PersonMain({
                       {addActivityPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Logging…
+                          {messages.loggingActivity}
                         </>
                       ) : (
-                        "Log activity"
+                        messages.logActivity
                       )}
                     </Button>
                   </div>
                 </div>
               )}
               {activitiesPending ? (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
+                <ol className="relative ml-3 border-l">
+                  {[
+                    "activity-skeleton-1",
+                    "activity-skeleton-2",
+                    "activity-skeleton-3",
+                    "activity-skeleton-4",
+                  ].map((key) => (
+                    <li key={key} className="mb-6 ml-4">
+                      <Skeleton className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full" />
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="mt-2 h-3.5 w-48" />
+                      <Skeleton className="mt-1.5 h-3 w-64" />
+                    </li>
+                  ))}
+                </ol>
               ) : activities.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  No activities logged yet.
+                  {messages.noActivitiesLoggedYet}
                 </p>
               ) : (
                 <ol className="relative ml-3 border-l">
@@ -1637,6 +2043,19 @@ export function PersonMain({
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="addresses" className="mt-4">
+          <PersonAddressesSection
+            addresses={addresses}
+            pending={addressesPending}
+            creating={addressCreating}
+            updatingAddressId={addressUpdatingFor}
+            deletingAddressId={addressDeletingFor}
+            onCreate={onCreateAddress}
+            onUpdate={onUpdateAddress}
+            onDelete={onDeleteAddress}
+          />
         </TabsContent>
       </Tabs>
     </main>
@@ -1658,6 +2077,7 @@ export function PersonAside({
   }
   organization:
     | {
+        id: string
         name: string
         industry: string | null
         website: string | null
@@ -1672,18 +2092,33 @@ export function PersonAside({
   updatePending: boolean
   updateField: (patch: Record<string, unknown>) => Promise<void>
 }) {
+  const messages = useAdminMessages().crm.personDetail
+  const { resolvedLocale } = useLocale()
   return (
     <aside className="col-span-12 flex flex-col gap-4 lg:col-span-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-sm font-semibold">Organization</CardTitle>
+          <CardTitle className="text-sm font-semibold">{messages.organizationTitle}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {!person.organizationId ? (
-            <p className="py-2 text-sm text-muted-foreground">No organization associated.</p>
+            <p className="py-2 text-sm text-muted-foreground">
+              {messages.noOrganizationAssociated}
+            </p>
           ) : organizationPending ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-40" />
+              <div className="flex gap-1">
+                <Skeleton className="h-4 w-14 rounded-full" />
+                <Skeleton className="h-4 w-12 rounded-full" />
+              </div>
             </div>
           ) : organization ? (
             <div className="flex flex-col gap-2">
@@ -1717,16 +2152,16 @@ export function PersonAside({
               <div className="flex flex-wrap gap-1">
                 {organization.relation && (
                   <Badge variant="secondary" className="capitalize text-[10px]">
-                    {organization.relation}
+                    {personRelationLabel(organization.relation, messages)}
                   </Badge>
                 )}
                 <Badge variant="outline" className="capitalize text-[10px]">
-                  {organization.status}
+                  {personStatusLabel(organization.status, messages)}
                 </Badge>
               </div>
             </div>
           ) : (
-            <p className="py-2 text-sm text-muted-foreground">Organization not found.</p>
+            <p className="py-2 text-sm text-muted-foreground">{messages.organizationNotFound}</p>
           )}
         </CardContent>
       </Card>
@@ -1734,16 +2169,30 @@ export function PersonAside({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold">
-            Deals{opportunities.length > 0 ? ` (${opportunities.length})` : ""}
+            {messages.dealsTitle}
+            {opportunities.length > 0 ? ` (${opportunities.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {opportunitiesPending ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <div className="flex flex-col gap-3">
+              {["opportunity-skeleton-1", "opportunity-skeleton-2", "opportunity-skeleton-3"].map(
+                (key) => (
+                  <div key={key} className="flex flex-col gap-1 rounded-md border p-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-4 w-14 rounded-full" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ),
+              )}
             </div>
           ) : opportunities.length === 0 ? (
-            <p className="py-2 text-sm text-muted-foreground">No deals yet.</p>
+            <p className="py-2 text-sm text-muted-foreground">{messages.noDealsYet}</p>
           ) : (
             <div className="flex flex-col gap-3">
               {opportunities.slice(0, 5).map((opp) => (
@@ -1754,7 +2203,9 @@ export function PersonAside({
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{formatMoney(opp.valueAmountCents, opp.valueCurrency)}</span>
-                    {opp.expectedCloseDate && <span>{formatDate(opp.expectedCloseDate)}</span>}
+                    {opp.expectedCloseDate && (
+                      <span>{formatPersonDate(opp.expectedCloseDate, resolvedLocale)}</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1765,7 +2216,7 @@ export function PersonAside({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Tags</CardTitle>
+          <CardTitle className="text-sm font-semibold">{messages.tagsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <TagsEditor

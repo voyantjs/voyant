@@ -21,26 +21,31 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const unitFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
-  code: z.string().max(100).optional().nullable(),
-  description: z.string().optional().nullable(),
-  unitType: z.enum(["person", "group", "room", "vehicle", "service", "other"]),
-  minQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  maxQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  minAge: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  maxAge: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  occupancyMin: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  occupancyMax: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  isRequired: z.boolean(),
-  isHidden: z.boolean(),
-  sortOrder: z.coerce.number().int(),
-})
+type UnitMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["units"]
 
-type UnitFormValues = z.input<typeof unitFormSchema>
-type UnitFormOutput = z.output<typeof unitFormSchema>
+const buildUnitFormSchema = (messages: UnitMessages) =>
+  z.object({
+    name: z.string().min(1, messages.validationNameRequired).max(255),
+    code: z.string().max(100).optional().nullable(),
+    description: z.string().optional().nullable(),
+    unitType: z.enum(["person", "group", "room", "vehicle", "service", "other"]),
+    minQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    maxQuantity: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    minAge: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    maxAge: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    occupancyMin: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    occupancyMax: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    isRequired: z.boolean(),
+    isHidden: z.boolean(),
+    sortOrder: z.coerce.number().int(),
+  })
+
+type UnitFormSchema = ReturnType<typeof buildUnitFormSchema>
+type UnitFormValues = z.input<UnitFormSchema>
+type UnitFormOutput = z.output<UnitFormSchema>
 
 export type OptionUnitData = {
   id: string
@@ -69,15 +74,6 @@ type UnitDialogProps = {
   onSuccess: () => void
 }
 
-const UNIT_TYPES = [
-  { value: "person", label: "Person" },
-  { value: "group", label: "Group" },
-  { value: "room", label: "Room" },
-  { value: "vehicle", label: "Vehicle" },
-  { value: "service", label: "Service" },
-  { value: "other", label: "Other" },
-] as const
-
 export function UnitDialog({
   open,
   onOpenChange,
@@ -86,8 +82,20 @@ export function UnitDialog({
   nextSortOrder,
   onSuccess,
 }: UnitDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const unitMessages = messages.products.operations.units
   const isEditing = !!unit
   const { create, update } = useOptionUnitMutation()
+  const unitFormSchema = buildUnitFormSchema(unitMessages)
+  const unitTypes = [
+    { value: "person", label: unitMessages.typePerson },
+    { value: "group", label: unitMessages.typeGroup },
+    { value: "room", label: unitMessages.typeRoom },
+    { value: "vehicle", label: unitMessages.typeVehicle },
+    { value: "service", label: unitMessages.typeService },
+    { value: "other", label: unitMessages.typeOther },
+  ] as const
 
   const form = useForm<UnitFormValues, unknown, UnitFormOutput>({
     resolver: zodResolver(unitFormSchema),
@@ -173,7 +181,7 @@ export function UnitDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Unit" : "New Unit"}</SheetTitle>
+          <SheetTitle>{isEditing ? unitMessages.editTitle : unitMessages.newTitle}</SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -182,31 +190,31 @@ export function UnitDialog({
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Adult" />
+                <Label>{unitMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={unitMessages.namePlaceholder} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Code</Label>
-                <Input {...form.register("code")} placeholder="adult" />
+                <Label>{unitMessages.codeLabel}</Label>
+                <Input {...form.register("code")} placeholder={unitMessages.codePlaceholder} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{unitMessages.typeLabel}</Label>
                 <Select
                   value={form.watch("unitType")}
                   onValueChange={(v) => form.setValue("unitType", v as UnitFormValues["unitType"])}
-                  items={UNIT_TYPES}
+                  items={unitTypes}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNIT_TYPES.map((t) => (
+                    {unitTypes.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
                       </SelectItem>
@@ -215,18 +223,18 @@ export function UnitDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Sort order</Label>
+                <Label>{unitMessages.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Min quantity</Label>
+                <Label>{unitMessages.minQuantityLabel}</Label>
                 <Input {...form.register("minQuantity")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max quantity</Label>
+                <Label>{unitMessages.maxQuantityLabel}</Label>
                 <Input {...form.register("maxQuantity")} type="number" min="0" />
               </div>
             </div>
@@ -234,11 +242,11 @@ export function UnitDialog({
             {form.watch("unitType") === "person" && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label>Min age</Label>
+                  <Label>{unitMessages.minAgeLabel}</Label>
                   <Input {...form.register("minAge")} type="number" min="0" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Max age</Label>
+                  <Label>{unitMessages.maxAgeLabel}</Label>
                   <Input {...form.register("maxAge")} type="number" min="0" />
                 </div>
               </div>
@@ -249,18 +257,18 @@ export function UnitDialog({
               form.watch("unitType") === "group") && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label>Occupancy min</Label>
+                  <Label>{unitMessages.occupancyMinLabel}</Label>
                   <Input {...form.register("occupancyMin")} type="number" min="0" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Occupancy max</Label>
+                  <Label>{unitMessages.occupancyMaxLabel}</Label>
                   <Input {...form.register("occupancyMax")} type="number" min="0" />
                 </div>
               </div>
             )}
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
+              <Label>{unitMessages.descriptionLabel}</Label>
               <Textarea {...form.register("description")} />
             </div>
 
@@ -270,20 +278,20 @@ export function UnitDialog({
                   checked={form.watch("isRequired")}
                   onCheckedChange={(v) => form.setValue("isRequired", v)}
                 />
-                <Label>Required</Label>
+                <Label>{unitMessages.requiredLabel}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("isHidden")}
                   onCheckedChange={(v) => form.setValue("isHidden", v)}
                 />
-                <Label>Hidden</Label>
+                <Label>{unitMessages.hiddenLabel}</Label>
               </div>
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button
               type="submit"
@@ -293,7 +301,7 @@ export function UnitDialog({
               {(form.formState.isSubmitting || create.isPending || update.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isEditing ? "Save Changes" : "Create Unit"}
+              {isEditing ? productMessages.saveChanges : unitMessages.create}
             </Button>
           </SheetFooter>
         </form>

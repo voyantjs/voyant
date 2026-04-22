@@ -283,8 +283,8 @@ async function ensureRenderedContract(
 
   if ((!renderedBody || !renderedBodyFormat) && templateVersion) {
     const variables = (contract.variables as Record<string, unknown> | null) ?? {}
-    renderedBody = renderTemplate(templateVersion.body, templateVersion.bodyFormat, variables)
-    renderedBodyFormat = templateVersion.bodyFormat
+    renderedBody = renderTemplate(templateVersion.body, "html", variables)
+    renderedBodyFormat = "html"
 
     const [updated] = await db
       .update(contracts)

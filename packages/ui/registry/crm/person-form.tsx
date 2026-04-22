@@ -22,8 +22,6 @@ interface FormState {
   email: string
   phone: string
   jobTitle: string
-  city: string
-  country: string
 }
 
 function initialState(mode: Mode): FormState {
@@ -35,8 +33,6 @@ function initialState(mode: Mode): FormState {
       email: p.email ?? "",
       phone: p.phone ?? "",
       jobTitle: p.jobTitle ?? "",
-      city: p.city ?? "",
-      country: p.country ?? "",
     }
   }
   return {
@@ -45,8 +41,6 @@ function initialState(mode: Mode): FormState {
     email: "",
     phone: "",
     jobTitle: "",
-    city: "",
-    country: "",
   }
 }
 
@@ -57,8 +51,6 @@ function toPayload(state: FormState): CreatePersonInput {
     email: state.email.trim() || null,
     phone: state.phone.trim() || null,
     jobTitle: state.jobTitle.trim() || null,
-    city: state.city.trim() || null,
-    country: state.country.trim() || null,
   }
 }
 
@@ -134,14 +126,6 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="person-phone">Phone</Label>
           <Input id="person-phone" value={state.phone} onChange={field("phone")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-city">City</Label>
-          <Input id="person-city" value={state.city} onChange={field("city")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-country">Country</Label>
-          <Input id="person-country" value={state.country} onChange={field("country")} />
         </div>
       </div>
 

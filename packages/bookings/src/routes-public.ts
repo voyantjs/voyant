@@ -29,7 +29,7 @@ function sessionConflictError(status: string) {
     case "hold_expired":
       return "Booking session hold has expired"
     case "participant_not_found":
-      return "Booking session participant not found"
+      return "Booking session traveler not found"
     case "pricing_unavailable":
       return "Pricing is not available for the selected booking session items"
     case "quantity_change_requires_reallocation":

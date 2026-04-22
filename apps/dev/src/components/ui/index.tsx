@@ -1,4 +1,5 @@
 import * as React from "react"
+import { RichTextEditor } from "@voyantjs/voyant-ui/components"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar"
 import { Badge } from "./badge"
@@ -184,6 +185,7 @@ export {
   InputOTPSlot,
   Label,
   OverviewMetric,
+  RichTextEditor,
   Select,
   SelectContent,
   SelectItem,

@@ -24,6 +24,18 @@ export interface FileDropzoneProps {
   onError?: (message: string) => void
   /** Helper text shown in the idle state. */
   helperText?: string
+  /** Idle state fallback text. */
+  idleText?: string
+  /** Prefix shown before the accepted mime types/extensions. */
+  acceptedPrefix?: string
+  /** Uploading state text. */
+  uploadingText?: string
+  /** Accessible label for removing the uploaded file. */
+  removeFileAriaLabel?: string
+  /** Generic upload failure message. */
+  uploadFailedMessage?: string
+  /** File too large message template with `{size}` token. */
+  fileTooLargeMessage?: string
   /** Disable interaction. */
   disabled?: boolean
 }
@@ -41,6 +53,12 @@ export function FileDropzone({
   onUploaded,
   onError,
   helperText = "Drag and drop a file here, or click to select",
+  idleText,
+  acceptedPrefix = "Accepted:",
+  uploadingText = "Uploading...",
+  removeFileAriaLabel = "Remove file",
+  uploadFailedMessage = "Upload failed",
+  fileTooLargeMessage = "File too large (max {size})",
   disabled,
 }: FileDropzoneProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -58,7 +76,7 @@ export function FileDropzone({
     setError(null)
 
     if (maxSize && file.size > maxSize) {
-      reportError(`File too large (max ${formatSize(maxSize)})`)
+      reportError(fileTooLargeMessage.replace("{size}", formatSize(maxSize)))
       return
     }
 
@@ -73,7 +91,7 @@ export function FileDropzone({
       })
       if (!res.ok) {
         const body = await res.text()
-        reportError(body || `Upload failed (${res.status})`)
+        reportError(body || `${uploadFailedMessage} (${res.status})`)
         return
       }
       const data = (await res.json()) as Omit<UploadedFile, "name">
@@ -81,7 +99,7 @@ export function FileDropzone({
       setUploaded(result)
       onUploaded(result)
     } catch (err) {
-      reportError(err instanceof Error ? err.message : "Upload failed")
+      reportError(err instanceof Error ? err.message : uploadFailedMessage)
     } finally {
       setIsUploading(false)
     }
@@ -142,7 +160,7 @@ export function FileDropzone({
           type="button"
           onClick={reset}
           className="text-muted-foreground hover:text-destructive"
-          aria-label="Remove file"
+          aria-label={removeFileAriaLabel}
         >
           <X className="h-4 w-4" />
         </button>
@@ -165,13 +183,17 @@ export function FileDropzone({
         {isUploading ? (
           <>
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Uploading...</p>
+            <p className="text-sm text-muted-foreground">{uploadingText}</p>
           </>
         ) : (
           <>
             <Upload className="h-6 w-6 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{helperText}</p>
-            {accept && <p className="text-xs text-muted-foreground">Accepted: {accept}</p>}
+            <p className="text-sm text-muted-foreground">{idleText ?? helperText}</p>
+            {accept && (
+              <p className="text-xs text-muted-foreground">
+                {acceptedPrefix} {accept}
+              </p>
+            )}
           </>
         )}
       </button>

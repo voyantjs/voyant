@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, DollarSign, Loader2, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import {
   getDistributionContractChannelQueryOptions,
@@ -10,6 +12,7 @@ import {
   getDistributionContractQueryOptions,
   getDistributionContractSupplierQueryOptions,
 } from "./distribution-detail-query-options"
+import { formatDistributionDateTime } from "./distribution-shared"
 
 type DistributionContractDetailPageProps = {
   id: string
@@ -18,6 +21,12 @@ type DistributionContractDetailPageProps = {
 export function DistributionContractDetailPage({ id }: DistributionContractDetailPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages()
+  const { resolvedLocale } = useLocale()
+  const commonMessages = messages.distribution.details.common
+  const detailMessages = messages.distribution.details.contract
+  const valueMessages = messages.distribution.values
+  const noValue = messages.distribution.table.noValue
 
   const { data: contractData, isPending } = useQuery(getDistributionContractQueryOptions(id))
   const contract = contractData?.data
@@ -52,9 +61,9 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
   if (!contract) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Contract not found</p>
+        <p className="text-muted-foreground">{detailMessages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/distribution" })}>
-          Back to Distribution
+          {commonMessages.back}
         </Button>
       </div>
     )
@@ -71,10 +80,10 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Channel Contract</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{detailMessages.title}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {contract.status}
+              {valueMessages.contractStatus[contract.status] ?? contract.status}
             </Badge>
             <Badge variant="secondary">{contract.startsAt}</Badge>
           </div>
@@ -86,19 +95,19 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
               void navigate({ to: "/distribution/$id", params: { id: contract.channelId } })
             }
           >
-            Open Channel
+            {commonMessages.openChannel}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this contract?")) {
+              if (confirm(detailMessages.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {commonMessages.delete}
           </Button>
         </div>
       </div>
@@ -106,52 +115,61 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Contract Details</CardTitle>
+            <CardTitle>{detailMessages.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Channel:</span>{" "}
+              <span className="text-muted-foreground">{detailMessages.fields.channel}:</span>{" "}
               <span>{channelQuery.data?.data.name ?? contract.channelId}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Supplier:</span>{" "}
-              <span>{supplierQuery.data?.data.name ?? contract.supplierId ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.supplier}:</span>{" "}
+              <span>{supplierQuery.data?.data.name ?? contract.supplierId ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Ends At:</span>{" "}
-              <span>{contract.endsAt ?? "Open-ended"}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.endsAt}:</span>{" "}
+              <span>{contract.endsAt ?? detailMessages.openEnded}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Payment Owner:</span>{" "}
-              <span>{contract.paymentOwner}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.paymentOwner}:</span>{" "}
+              <span>
+                {valueMessages.paymentOwner[contract.paymentOwner] ?? contract.paymentOwner}
+              </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Cancellation Owner:</span>{" "}
-              <span>{contract.cancellationOwner}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.fields.cancellationOwner}:
+              </span>{" "}
+              <span>
+                {valueMessages.cancellationOwner[contract.cancellationOwner] ??
+                  contract.cancellationOwner}
+              </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(contract.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.created}:</span>{" "}
+              <span>{formatDistributionDateTime(contract.createdAt, resolvedLocale, noValue)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(contract.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.updated}:</span>{" "}
+              <span>{formatDistributionDateTime(contract.updatedAt, resolvedLocale, noValue)}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Commercial Notes</CardTitle>
+            <CardTitle>{detailMessages.notesTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm">
             <div>
-              <div className="mb-1 text-muted-foreground">Settlement Terms</div>
-              <div className="whitespace-pre-wrap">{contract.settlementTerms ?? "-"}</div>
+              <div className="mb-1 text-muted-foreground">
+                {detailMessages.fields.settlementTerms}
+              </div>
+              <div className="whitespace-pre-wrap">{contract.settlementTerms ?? noValue}</div>
             </div>
             <div>
-              <div className="mb-1 text-muted-foreground">Notes</div>
-              <div className="whitespace-pre-wrap">{contract.notes ?? "-"}</div>
+              <div className="mb-1 text-muted-foreground">{detailMessages.fields.notes}</div>
+              <div className="whitespace-pre-wrap">{contract.notes ?? noValue}</div>
             </div>
           </CardContent>
         </Card>
@@ -160,11 +178,11 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <DollarSign className="h-4 w-4" />
-          <CardTitle>Commission Rules</CardTitle>
+          <CardTitle>{detailMessages.commissionRulesTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(commissionRulesQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No commission rules on this contract.</p>
+            <p className="text-muted-foreground">{detailMessages.noCommissionRules}</p>
           ) : (
             commissionRulesQuery.data?.data.map((rule) => (
               <button
@@ -180,23 +198,27 @@ export function DistributionContractDetailPage({ id }: DistributionContractDetai
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="capitalize">
-                    {rule.scope}
+                    {valueMessages.commissionScope[rule.scope] ?? rule.scope}
                   </Badge>
                   <Badge variant="secondary" className="capitalize">
-                    {rule.commissionType}
+                    {valueMessages.commissionType[rule.commissionType] ?? rule.commissionType}
                   </Badge>
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  Product: {productsById.get(rule.productId ?? "")?.name ?? rule.productId ?? "-"}
+                  {detailMessages.fields.product}:{" "}
+                  {productsById.get(rule.productId ?? "")?.name ?? rule.productId ?? noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Amount: {rule.amountCents ?? "-"} · Basis Points: {rule.percentBasisPoints ?? "-"}
+                  {detailMessages.fields.amount}: {rule.amountCents ?? noValue} ·{" "}
+                  {detailMessages.fields.basisPoints}: {rule.percentBasisPoints ?? noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Rate: {rule.externalRateId ?? "-"} · Category: {rule.externalCategoryId ?? "-"}
+                  {detailMessages.fields.rate}: {rule.externalRateId ?? noValue} ·{" "}
+                  {detailMessages.fields.category}: {rule.externalCategoryId ?? noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Valid: {rule.validFrom ?? "-"} to {rule.validTo ?? "-"}
+                  {detailMessages.fields.valid}: {rule.validFrom ?? noValue} to{" "}
+                  {rule.validTo ?? noValue}
                 </div>
               </button>
             ))

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { formatDateTime } from "@voyantjs/distribution-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Link2, Loader2, Package, Trash2, Webhook } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import {
   getDistributionChannelBookingLinksQueryOptions,
@@ -14,6 +15,7 @@ import {
   getDistributionChannelSuppliersQueryOptions,
   getDistributionChannelWebhookEventsQueryOptions,
 } from "./distribution-detail-query-options"
+import { formatDistributionDateTime } from "./distribution-shared"
 
 type ChannelDetailPageProps = {
   id: string
@@ -22,6 +24,12 @@ type ChannelDetailPageProps = {
 export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages()
+  const { resolvedLocale } = useLocale()
+  const commonMessages = messages.distribution.details.common
+  const detailMessages = messages.distribution.details.channel
+  const valueMessages = messages.distribution.values
+  const noValue = messages.distribution.table.noValue
 
   const { data: channelData, isPending } = useQuery(getDistributionChannelQueryOptions(id))
   const contractsQuery = useQuery(getDistributionChannelContractsQueryOptions(id))
@@ -52,9 +60,9 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
   if (!channel) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Channel not found</p>
+        <p className="text-muted-foreground">{detailMessages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/distribution" })}>
-          Back to Distribution
+          {commonMessages.back}
         </Button>
       </div>
     )
@@ -80,62 +88,62 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
           <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {channel.kind.replace("_", " ")}
+              {valueMessages.channelKind[channel.kind] ?? channel.kind.replace("_", " ")}
             </Badge>
             <Badge
               variant={channel.status === "active" ? "default" : "secondary"}
               className="capitalize"
             >
-              {channel.status}
+              {valueMessages.channelStatus[channel.status] ?? channel.status}
             </Badge>
           </div>
         </div>
         <Button
           variant="destructive"
           onClick={() => {
-            if (confirm("Delete this channel?")) {
+            if (confirm(detailMessages.deleteConfirm)) {
               deleteMutation.mutate()
             }
           }}
           disabled={deleteMutation.isPending}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Delete
+          {commonMessages.delete}
         </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Channel Details</CardTitle>
+            <CardTitle>{detailMessages.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Website:</span>{" "}
-              <span>{channel.website ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.website}:</span>{" "}
+              <span>{channel.website ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Contact Name:</span>{" "}
-              <span>{channel.contactName ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.contactName}:</span>{" "}
+              <span>{channel.contactName ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Contact Email:</span>{" "}
-              <span>{channel.contactEmail ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.contactEmail}:</span>{" "}
+              <span>{channel.contactEmail ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(channel.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.created}:</span>{" "}
+              <span>{formatDistributionDateTime(channel.createdAt, resolvedLocale, noValue)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(channel.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{detailMessages.fields.updated}:</span>{" "}
+              <span>{formatDistributionDateTime(channel.updatedAt, resolvedLocale, noValue)}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Metadata</CardTitle>
+            <CardTitle>{detailMessages.metadataTitle}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
             {channel.metadata ? (
@@ -143,7 +151,7 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
                 {JSON.stringify(channel.metadata, null, 2)}
               </pre>
             ) : (
-              <p className="text-muted-foreground">No metadata set.</p>
+              <p className="text-muted-foreground">{detailMessages.noMetadata}</p>
             )}
           </CardContent>
         </Card>
@@ -152,11 +160,11 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Link2 className="h-4 w-4" />
-          <CardTitle>Contracts</CardTitle>
+          <CardTitle>{detailMessages.contractsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(contractsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No contracts for this channel.</p>
+            <p className="text-muted-foreground">{detailMessages.noContracts}</p>
           ) : (
             contractsQuery.data?.data.map((contract) => (
               <button
@@ -172,18 +180,24 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="capitalize">
-                    {contract.status}
+                    {valueMessages.contractStatus[contract.status] ?? contract.status}
                   </Badge>
                   <span>
-                    {contract.startsAt} to {contract.endsAt ?? "open-ended"}
+                    {contract.startsAt} to {contract.endsAt ?? detailMessages.openEnded}
                   </span>
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  Supplier:{" "}
-                  {suppliersById.get(contract.supplierId ?? "")?.name ?? contract.supplierId ?? "-"}
+                  {detailMessages.fields.supplier}:{" "}
+                  {suppliersById.get(contract.supplierId ?? "")?.name ??
+                    contract.supplierId ??
+                    noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Payment: {contract.paymentOwner} · Cancellation: {contract.cancellationOwner}
+                  {detailMessages.fields.payment}:{" "}
+                  {valueMessages.paymentOwner[contract.paymentOwner] ?? contract.paymentOwner} ·{" "}
+                  {detailMessages.fields.cancellation}:{" "}
+                  {valueMessages.cancellationOwner[contract.cancellationOwner] ??
+                    contract.cancellationOwner}
                 </div>
                 {contract.settlementTerms ? (
                   <div className="mt-2 whitespace-pre-wrap">{contract.settlementTerms}</div>
@@ -200,11 +214,11 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Package className="h-4 w-4" />
-          <CardTitle>Product Mappings</CardTitle>
+          <CardTitle>{detailMessages.mappingsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(mappingsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No product mappings for this channel.</p>
+            <p className="text-muted-foreground">{detailMessages.noMappings}</p>
           ) : (
             mappingsQuery.data?.data.map((mapping) => (
               <button
@@ -222,15 +236,17 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
                   {productsById.get(mapping.productId)?.name ?? mapping.productId}
                 </div>
                 <div className="text-muted-foreground">
-                  External Product: {mapping.externalProductId}
+                  {detailMessages.fields.externalProduct}: {mapping.externalProductId}
                 </div>
                 <div className="text-muted-foreground">
-                  Rate: {mapping.externalRateId ?? "-"} · Category:{" "}
-                  {mapping.externalCategoryId ?? "-"}
+                  {detailMessages.fields.rate}: {mapping.externalRateId ?? noValue} ·{" "}
+                  {detailMessages.fields.category}: {mapping.externalCategoryId ?? noValue}
                 </div>
                 <div className="mt-2">
                   <Badge variant={mapping.active ? "default" : "secondary"}>
-                    {mapping.active ? "Active" : "Inactive"}
+                    {mapping.active
+                      ? valueMessages.mappingStatus.active
+                      : valueMessages.mappingStatus.inactive}
                   </Badge>
                 </div>
               </button>
@@ -241,11 +257,11 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Booking Links</CardTitle>
+          <CardTitle>{detailMessages.bookingLinksTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(bookingLinksQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No booking links for this channel.</p>
+            <p className="text-muted-foreground">{detailMessages.noBookingLinks}</p>
           ) : (
             bookingLinksQuery.data?.data.map((link) => (
               <button
@@ -263,11 +279,13 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
                   {bookingsById.get(link.bookingId)?.bookingNumber ?? link.bookingId}
                 </div>
                 <div className="text-muted-foreground">
-                  External Booking: {link.externalBookingId ?? "-"} · Ref:{" "}
-                  {link.externalReference ?? "-"}
+                  {detailMessages.fields.externalBooking}: {link.externalBookingId ?? noValue} ·{" "}
+                  {detailMessages.fields.reference}: {link.externalReference ?? noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Status: {link.externalStatus ?? "-"} · Synced: {formatDateTime(link.lastSyncedAt)}
+                  {detailMessages.fields.status}: {link.externalStatus ?? noValue} ·{" "}
+                  {detailMessages.fields.synced}:{" "}
+                  {formatDistributionDateTime(link.lastSyncedAt, resolvedLocale, noValue)}
                 </div>
               </button>
             ))
@@ -278,11 +296,11 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Webhook className="h-4 w-4" />
-          <CardTitle>Webhook Events</CardTitle>
+          <CardTitle>{detailMessages.webhooksTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(webhookEventsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No webhook events recorded for this channel.</p>
+            <p className="text-muted-foreground">{detailMessages.noWebhooks}</p>
           ) : (
             webhookEventsQuery.data?.data.map((event) => (
               <button
@@ -298,16 +316,18 @@ export function ChannelDetailPage({ id }: ChannelDetailPageProps) {
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="capitalize">
-                    {event.status}
+                    {valueMessages.webhookStatus[event.status] ?? event.status}
                   </Badge>
                   <span>{event.eventType}</span>
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  External Event: {event.externalEventId ?? "-"}
+                  {detailMessages.fields.externalEvent}: {event.externalEventId ?? noValue}
                 </div>
                 <div className="text-muted-foreground">
-                  Received: {formatDateTime(event.receivedAt)} · Processed:{" "}
-                  {formatDateTime(event.processedAt)}
+                  {detailMessages.fields.received}:{" "}
+                  {formatDistributionDateTime(event.receivedAt, resolvedLocale, noValue)} ·{" "}
+                  {detailMessages.fields.processed}:{" "}
+                  {formatDistributionDateTime(event.processedAt, resolvedLocale, noValue)}
                 </div>
                 {event.errorMessage ? (
                   <div className="mt-2 whitespace-pre-wrap">{event.errorMessage}</div>

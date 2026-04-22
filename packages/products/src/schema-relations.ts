@@ -4,6 +4,7 @@ import { optionUnits, productOptions, products } from "./schema-core"
 import {
   productDayServices,
   productDays,
+  productItineraries,
   productMedia,
   productNotes,
   productVersions,
@@ -46,8 +47,8 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   faqs: many(productFaqs),
   locations: many(productLocations),
   options: many(productOptions),
+  itineraries: many(productItineraries),
   translations: many(productTranslations),
-  days: many(productDays),
   versions: many(productVersions),
   notes: many(productNotes),
   media: many(productMedia),
@@ -153,8 +154,19 @@ export const optionUnitTranslationsRelations = relations(optionUnitTranslations,
   }),
 }))
 
+export const productItinerariesRelations = relations(productItineraries, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productItineraries.productId],
+    references: [products.id],
+  }),
+  days: many(productDays),
+}))
+
 export const productDaysRelations = relations(productDays, ({ one, many }) => ({
-  product: one(products, { fields: [productDays.productId], references: [products.id] }),
+  itinerary: one(productItineraries, {
+    fields: [productDays.itineraryId],
+    references: [productItineraries.id],
+  }),
   services: many(productDayServices),
   media: many(productMedia),
 }))

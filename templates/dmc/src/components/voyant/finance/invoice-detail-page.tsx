@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Badge, Button } from "@/components/ui"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 
 import { CreditNoteDialog } from "./credit-note-dialog"
 import {
@@ -22,12 +23,32 @@ import {
   InvoiceNotesCard,
   InvoicePaymentsCard,
 } from "./invoice-detail-sections"
-import { formatStatus, type LineItem, statusVariant } from "./invoice-detail-shared"
+import { type LineItem, statusVariant } from "./invoice-detail-shared"
 import { InvoiceDialog } from "./invoice-dialog"
 import { LineItemDialog } from "./line-item-dialog"
 import { PaymentDialog } from "./payment-dialog"
 
+function getInvoiceStatusLabel(messages: AdminMessages, status: string): string {
+  switch (status) {
+    case "draft":
+      return messages.finance.invoiceStatusDraft
+    case "sent":
+      return messages.finance.invoiceStatusSent
+    case "partially_paid":
+      return messages.finance.invoiceStatusPartiallyPaid
+    case "paid":
+      return messages.finance.invoiceStatusPaid
+    case "overdue":
+      return messages.finance.invoiceStatusOverdue
+    case "void":
+      return messages.finance.invoiceStatusVoid
+    default:
+      return status.replace(/_/g, " ")
+  }
+}
+
 export function InvoiceDetailPage({ id }: { id: string }) {
+  const messages = useAdminMessages()
   const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
   const [lineItemDialogOpen, setLineItemDialogOpen] = useState(false)
@@ -57,9 +78,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
   if (!invoice) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Invoice not found</p>
+        <p className="text-muted-foreground">{messages.finance.detailPage.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/finance" })}>
-          Back to Finance
+          {messages.finance.detailPage.backToFinance}
         </Button>
       </div>
     )
@@ -75,23 +96,23 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{invoice.invoiceNumber}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant={statusVariant[invoice.status] ?? "secondary"} className="capitalize">
-              {formatStatus(invoice.status)}
+              {getInvoiceStatusLabel(messages, invoice.status)}
             </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {messages.finance.detailPage.edit}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
               if (invoice.status !== "draft") {
-                alert("Only draft invoices can be deleted")
+                alert(messages.finance.detailPage.deleteOnlyDraftAlert)
                 return
               }
-              if (confirm("Are you sure you want to delete this invoice?")) {
+              if (confirm(messages.finance.detailPage.deleteConfirm)) {
                 deleteInvoice.mutate(id, {
                   onSuccess: () => {
                     void navigate({ to: "/finance" })
@@ -102,7 +123,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
             disabled={deleteInvoice.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {messages.finance.detailPage.delete}
           </Button>
         </div>
       </div>
@@ -128,7 +149,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           setLineItemDialogOpen(true)
         }}
         onDelete={(lineId) => {
-          if (confirm("Delete this line item?")) {
+          if (confirm(messages.finance.detailPage.deleteLineItemConfirm)) {
             deleteLineItem.mutate(lineId)
           }
         }}

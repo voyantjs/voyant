@@ -14,19 +14,21 @@ import {
   productTicketSettingsRef,
 } from "../../src/products-ref.js"
 import { bookingRoutes } from "../../src/routes.js"
-import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
+import { bookingTravelerTravelDetails } from "../../src/schema/travel-details.js"
 import {
   bookingAllocations,
   bookingDocuments,
   bookingFulfillments,
-  bookingParticipants,
   bookingPiiAccessLog,
+  bookingStaffAssignments,
+  bookingTravelers,
 } from "../../src/schema.js"
 import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
   offerItemsRef,
   offerParticipantsRef,
+  offerStaffAssignmentsRef,
   offersRef,
   orderItemParticipantsRef,
   orderItemsRef,
@@ -78,7 +80,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       CREATE TABLE IF NOT EXISTS booking_pii_access_log (
         id text PRIMARY KEY NOT NULL,
         booking_id text,
-        participant_id text,
+        traveler_id text,
         actor_id text,
         actor_type text,
         caller_type text,
@@ -93,7 +95,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_booking ON booking_pii_access_log (booking_id)`,
     )
     await db.execute(
-      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_participant ON booking_pii_access_log (participant_id)`,
+      sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_traveler ON booking_pii_access_log (traveler_id)`,
     )
     await db.execute(
       sql`CREATE INDEX IF NOT EXISTS idx_booking_pii_access_log_actor ON booking_pii_access_log (actor_id)`,
@@ -178,6 +180,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         offerNumber: `OFF-${String(bookingSeq + 1).padStart(6, "0")}`,
         title: "City pass",
         status: "published",
+        contactFirstName: "Daria",
+        contactLastName: "Booker",
+        contactEmail: "daria.offer@example.com",
+        contactPhone: "+40111222333",
         currency: "USD",
         totalAmountCents: 12000,
         costAmountCents: 8000,
@@ -215,7 +221,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     await db.insert(offerItemParticipantsRef).values({
       offerItemId: item.id,
-      participantId: participant.id,
+      travelerId: participant.id,
       role: "traveler",
       isPrimary: true,
     })
@@ -230,6 +236,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         orderNumber: `ORD-${String(bookingSeq + 1).padStart(6, "0")}`,
         title: "Museum booking",
         status: "pending",
+        contactFirstName: "Matei",
+        contactLastName: "Order",
+        contactEmail: "matei.order@example.com",
+        contactPhone: "+40222333444",
         currency: "USD",
         totalAmountCents: 6000,
         costAmountCents: 3500,
@@ -267,7 +277,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     await db.insert(orderItemParticipantsRef).values({
       orderItemId: item.id,
-      participantId: participant.id,
+      travelerId: participant.id,
       role: "traveler",
       isPrimary: true,
     })
@@ -345,7 +355,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         sellAmountCents: 24000,
       })
 
-      await db.insert(bookingParticipants).values({
+      await db.insert(bookingTravelers).values({
         bookingId: booking.id,
         participantType: "traveler",
         firstName: "Elena",
@@ -377,7 +387,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       expect(body.data.documents).toHaveLength(1)
       expect(body.data.fulfillments).toHaveLength(1)
-      expect(body.data.participants[0]?.firstName).toBe("Elena")
+      expect(body.data.travelers[0]?.firstName).toBe("Elena")
     })
 
     it("creates a booking from a product", async () => {
@@ -816,9 +826,13 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(res.status).toBe(201)
       const body = await res.json()
       expect(body.data.status).toBe("on_hold")
+      expect(body.data.contactFirstName).toBe("Daria")
+      expect(body.data.contactLastName).toBe("Booker")
+      expect(body.data.contactEmail).toBe("daria.offer@example.com")
+      expect(body.data.contactPhone).toBe("+40111222333")
 
-      const participantsRes = await app.request(`/${body.data.id}/participants`, { method: "GET" })
-      expect((await participantsRes.json()).data).toHaveLength(1)
+      const travelersRes = await app.request(`/${body.data.id}/travelers`, { method: "GET" })
+      expect((await travelersRes.json()).data).toHaveLength(1)
 
       const itemsRes = await app.request(`/${body.data.id}/items`, { method: "GET" })
       const itemsBody = await itemsRes.json()
@@ -844,6 +858,97 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(updatedOffer?.convertedAt).toBeTruthy()
     })
 
+    it("moves staff participants from transaction bundles into booking staff assignments", async () => {
+      const slot = await seedSlot({ initialPax: 5, remainingPax: 5 })
+      const [offer] = await db
+        .insert(offersRef)
+        .values({
+          offerNumber: `OFF-${String(bookingSeq + 1).padStart(6, "0")}`,
+          title: "Guided city pass",
+          status: "published",
+          currency: "USD",
+          totalAmountCents: 12000,
+          costAmountCents: 8000,
+        })
+        .returning()
+
+      const [traveler] = await db
+        .insert(offerParticipantsRef)
+        .values([
+          {
+            offerId: offer.id,
+            participantType: "traveler",
+            firstName: "Offer",
+            lastName: "Guest",
+            isPrimary: true,
+          },
+        ])
+        .returning()
+
+      const [item] = await db
+        .insert(offerItemsRef)
+        .values({
+          offerId: offer.id,
+          productId: "prod_test",
+          optionId: "opt_test",
+          unitId: "ount_test",
+          slotId: slot.id,
+          title: "Entry ticket",
+          itemType: "unit",
+          status: "priced",
+          quantity: 2,
+          sellCurrency: "USD",
+          totalSellAmountCents: 12000,
+          totalCostAmountCents: 8000,
+        })
+        .returning()
+
+      await db.insert(offerItemParticipantsRef).values([
+        {
+          offerItemId: item.id,
+          travelerId: traveler.id,
+          role: "traveler",
+          isPrimary: true,
+        },
+      ])
+      await db.insert(offerStaffAssignmentsRef).values({
+        offerId: offer.id,
+        offerItemId: item.id,
+        role: "service_assignee",
+        firstName: "Guide",
+        lastName: "Local",
+      })
+
+      const res = await app.request(`/from-offer/${offer.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+
+      const travelers = await db
+        .select()
+        .from(bookingTravelers)
+        .where(eq(bookingTravelers.bookingId, body.data.id))
+      expect(travelers).toHaveLength(1)
+      expect(travelers[0]?.participantType).toBe("traveler")
+
+      const staffAssignments = await db
+        .select()
+        .from(bookingStaffAssignments)
+        .where(eq(bookingStaffAssignments.bookingId, body.data.id))
+      expect(staffAssignments).toHaveLength(1)
+      expect(staffAssignments[0]).toMatchObject({
+        firstName: "Guide",
+        lastName: "Local",
+        role: "service_assignee",
+      })
+      expect(staffAssignments[0]?.bookingItemId).toBeTruthy()
+    })
+
     it("reserves a booking from an order and links order provenance", async () => {
       const slot = await seedSlot({ initialPax: 3, remainingPax: 3 })
       const { order } = await seedOrderBundle(slot.id)
@@ -859,6 +964,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(res.status).toBe(201)
       const body = await res.json()
       expect(body.data.status).toBe("on_hold")
+      expect(body.data.contactFirstName).toBe("Matei")
+      expect(body.data.contactLastName).toBe("Order")
+      expect(body.data.contactEmail).toBe("matei.order@example.com")
+      expect(body.data.contactPhone).toBe("+40222333444")
 
       const allocationsRes = await app.request(`/${body.data.id}/allocations`, { method: "GET" })
       expect((await allocationsRes.json()).data[0]?.status).toBe("held")
@@ -889,6 +998,32 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const [cancelledOrder] = await db.select().from(ordersRef).where(eq(ordersRef.id, order.id))
       expect(cancelledOrder?.status).toBe("cancelled")
       expect(cancelledOrder?.cancelledAt).toBeTruthy()
+    })
+
+    it("hydrates booking contact snapshots from order reservations", async () => {
+      const slot = await seedSlot({ initialPax: 3, remainingPax: 3 })
+      const { order } = await seedOrderBundle(slot.id)
+
+      const res = await app.request(`/from-order/${order.id}/reserve`, {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          includeParticipants: true,
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.data.contactFirstName).toBe("Matei")
+      expect(body.data.contactLastName).toBe("Order")
+      expect(body.data.contactEmail).toBe("matei.order@example.com")
+      expect(body.data.contactPhone).toBe("+40222333444")
+
+      const links = await db
+        .select()
+        .from(bookingTransactionDetailsRef)
+        .where(eq(bookingTransactionDetailsRef.bookingId, body.data.id))
+      expect(links[0]?.orderId).toBe(order.id)
     })
 
     it("expires pending transaction orders with booking holds", async () => {
@@ -933,7 +1068,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const itemId = itemsBody.data[0]?.id
       expect(itemId).toBeTruthy()
 
-      const participantRes = await app.request(`/${booking.id}/participants`, {
+      const participantRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Redeem", lastName: "Guest" }),
       })
@@ -943,7 +1078,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         method: "POST",
         ...json({
           bookingItemId: itemId,
-          participantId: participant.id,
+          travelerId: participant.id,
         }),
       })
 
@@ -952,10 +1087,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
     })
   })
 
-  describe("Participants", () => {
-    it("creates a participant", async () => {
+  describe("Travelers", () => {
+    it("creates a traveler", async () => {
       const booking = await seedBooking()
-      const res = await app.request(`/${booking.id}/participants`, {
+      const res = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "John", lastName: "Doe" }),
       })
@@ -965,27 +1100,27 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(body.data.participantType).toBe("traveler")
     })
 
-    it("lists participants", async () => {
+    it("lists travelers", async () => {
       const booking = await seedBooking()
-      await app.request(`/${booking.id}/participants`, {
+      await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Jane", lastName: "Smith" }),
       })
 
-      const res = await app.request(`/${booking.id}/participants`, { method: "GET" })
+      const res = await app.request(`/${booking.id}/travelers`, { method: "GET" })
       expect(res.status).toBe(200)
       expect((await res.json()).data.length).toBe(1)
     })
 
-    it("updates a participant", async () => {
+    it("updates a traveler", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "John", lastName: "Doe" }),
       })
       const { data: participant } = await createRes.json()
 
-      const res = await app.request(`/${booking.id}/participants/${participant.id}`, {
+      const res = await app.request(`/${booking.id}/travelers/${participant.id}`, {
         method: "PATCH",
         ...json({ firstName: "Jonathan" }),
       })
@@ -993,23 +1128,23 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect((await res.json()).data.firstName).toBe("Jonathan")
     })
 
-    it("deletes a participant", async () => {
+    it("deletes a traveler", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "John", lastName: "Doe" }),
       })
       const { data: participant } = await createRes.json()
 
-      const res = await app.request(`/${booking.id}/participants/${participant.id}`, {
+      const res = await app.request(`/${booking.id}/travelers/${participant.id}`, {
         method: "DELETE",
       })
       expect(res.status).toBe(200)
       expect((await res.json()).success).toBe(true)
     })
 
-    it("returns 404 when adding participant to non-existent booking", async () => {
-      const res = await app.request("/book_00000000000000000000000000/participants", {
+    it("returns 404 when adding traveler to non-existent booking", async () => {
+      const res = await app.request("/book_00000000000000000000000000/travelers", {
         method: "POST",
         ...json({ firstName: "John", lastName: "Doe" }),
       })
@@ -1018,14 +1153,14 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     it("stores participant travel details encrypted and reads them back through the route", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Ana", lastName: "Traveler" }),
       })
       const { data: participant } = await createRes.json()
 
       const patchRes = await app.request(
-        `/${booking.id}/participants/${participant.id}/travel-details`,
+        `/${booking.id}/travelers/${participant.id}/travel-details`,
         {
           method: "PATCH",
           ...json({
@@ -1042,14 +1177,14 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
       const [stored] = await db
         .select()
-        .from(bookingParticipantTravelDetails)
-        .where(eq(bookingParticipantTravelDetails.participantId, participant.id))
+        .from(bookingTravelerTravelDetails)
+        .where(eq(bookingTravelerTravelDetails.travelerId, participant.id))
 
       expect(stored?.identityEncrypted?.enc).toMatch(/^env:v1:/)
       expect(stored?.identityEncrypted?.enc).not.toContain("X1234567")
 
       const getRes = await app.request(
-        `/${booking.id}/participants/${participant.id}/travel-details`,
+        `/${booking.id}/travelers/${participant.id}/travel-details`,
         {
           method: "GET",
         },
@@ -1064,13 +1199,13 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     it("preserves unspecified travel detail fields on partial update", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Mira", lastName: "Traveler" }),
       })
       const { data: participant } = await createRes.json()
 
-      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+      await app.request(`/${booking.id}/travelers/${participant.id}/travel-details`, {
         method: "PATCH",
         ...json({
           passportNumber: "AB12345",
@@ -1079,7 +1214,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
 
       const patchRes = await app.request(
-        `/${booking.id}/participants/${participant.id}/travel-details`,
+        `/${booking.id}/travelers/${participant.id}/travel-details`,
         {
           method: "PATCH",
           ...json({
@@ -1096,13 +1231,13 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     it("keeps travel details out of the standard participant list response", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Safe", lastName: "Boundary" }),
       })
       const { data: participant } = await createRes.json()
 
-      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+      await app.request(`/${booking.id}/travelers/${participant.id}/travel-details`, {
         method: "PATCH",
         ...json({
           passportNumber: "SECRET123",
@@ -1110,7 +1245,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         }),
       })
 
-      const listRes = await app.request(`/${booking.id}/participants`, { method: "GET" })
+      const listRes = await app.request(`/${booking.id}/travelers`, { method: "GET" })
       expect(listRes.status).toBe(200)
       const body = await listRes.json()
 
@@ -1122,31 +1257,28 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
     it("returns 404 when reading travel details for a participant outside the booking scope", async () => {
       const bookingA = await seedBooking()
       const bookingB = await seedBooking()
-      const createRes = await app.request(`/${bookingA.id}/participants`, {
+      const createRes = await app.request(`/${bookingA.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Scoped", lastName: "Traveler" }),
       })
       const { data: participant } = await createRes.json()
 
-      const res = await app.request(
-        `/${bookingB.id}/participants/${participant.id}/travel-details`,
-        {
-          method: "GET",
-        },
-      )
+      const res = await app.request(`/${bookingB.id}/travelers/${participant.id}/travel-details`, {
+        method: "GET",
+      })
 
       expect(res.status).toBe(404)
     })
 
     it("persists pii access audit rows for allowed access", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Audit", lastName: "Allowed" }),
       })
       const { data: participant } = await createRes.json()
 
-      await app.request(`/${booking.id}/participants/${participant.id}/travel-details`, {
+      await app.request(`/${booking.id}/travelers/${participant.id}/travel-details`, {
         method: "PATCH",
         ...json({ passportNumber: "AUDIT-1" }),
       })
@@ -1154,7 +1286,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const rows = await db
         .select()
         .from(bookingPiiAccessLog)
-        .where(eq(bookingPiiAccessLog.participantId, participant.id))
+        .where(eq(bookingPiiAccessLog.travelerId, participant.id))
 
       expect(
         rows.some(
@@ -1172,7 +1304,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
     it("forbids pii access for non-staff actors without explicit scope and audits the denial", async () => {
       const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/participants`, {
+      const createRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Audit", lastName: "Denied" }),
       })
@@ -1188,7 +1320,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       restrictedApp.route("/", bookingRoutes)
 
       const res = await restrictedApp.request(
-        `/${booking.id}/participants/${participant.id}/travel-details`,
+        `/${booking.id}/travelers/${participant.id}/travel-details`,
         {
           method: "GET",
         },
@@ -1203,7 +1335,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const rows = await db
         .select()
         .from(bookingPiiAccessLog)
-        .where(eq(bookingPiiAccessLog.participantId, participant.id))
+        .where(eq(bookingPiiAccessLog.travelerId, participant.id))
 
       expect(
         rows.some(
@@ -1219,63 +1351,6 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
             row.actorId === "test-customer-id",
         ),
       ).toBe(true)
-    })
-  })
-
-  describe("Passengers (legacy)", () => {
-    it("creates a passenger", async () => {
-      const booking = await seedBooking()
-      const res = await app.request(`/${booking.id}/passengers`, {
-        method: "POST",
-        ...json({ firstName: "Jane", lastName: "Smith" }),
-      })
-      expect(res.status).toBe(201)
-      const body = await res.json()
-      expect(body.data.firstName).toBe("Jane")
-      expect(body.data.isLeadPassenger).toBe(false)
-    })
-
-    it("lists passengers (filtered to traveler types)", async () => {
-      const booking = await seedBooking()
-      await app.request(`/${booking.id}/passengers`, {
-        method: "POST",
-        ...json({ firstName: "Traveler", lastName: "One" }),
-      })
-
-      const res = await app.request(`/${booking.id}/passengers`, { method: "GET" })
-      expect(res.status).toBe(200)
-      expect((await res.json()).data.length).toBe(1)
-    })
-
-    it("updates a passenger", async () => {
-      const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/passengers`, {
-        method: "POST",
-        ...json({ firstName: "Jane", lastName: "Smith" }),
-      })
-      const { data: passenger } = await createRes.json()
-
-      const res = await app.request(`/${booking.id}/passengers/${passenger.id}`, {
-        method: "PATCH",
-        ...json({ isLeadPassenger: true }),
-      })
-      expect(res.status).toBe(200)
-      expect((await res.json()).data.isLeadPassenger).toBe(true)
-    })
-
-    it("deletes a passenger", async () => {
-      const booking = await seedBooking()
-      const createRes = await app.request(`/${booking.id}/passengers`, {
-        method: "POST",
-        ...json({ firstName: "Jane", lastName: "Smith" }),
-      })
-      const { data: passenger } = await createRes.json()
-
-      const res = await app.request(`/${booking.id}/passengers/${passenger.id}`, {
-        method: "DELETE",
-      })
-      expect(res.status).toBe(200)
-      expect((await res.json()).success).toBe(true)
     })
   })
 
@@ -1343,8 +1418,8 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
     })
   })
 
-  describe("Item Participants", () => {
-    async function seedBookingWithItemAndParticipant() {
+  describe("Item Travelers", () => {
+    async function seedBookingWithItemAndTraveler() {
       const booking = await seedBooking()
       const itemRes = await app.request(`/${booking.id}/items`, {
         method: "POST",
@@ -1352,7 +1427,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       const { data: item } = await itemRes.json()
 
-      const partRes = await app.request(`/${booking.id}/participants`, {
+      const partRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "John", lastName: "Doe" }),
       })
@@ -1361,41 +1436,41 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       return { booking, item, participant }
     }
 
-    it("links a participant to an item", async () => {
-      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
-      const res = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+    it("links a traveler to an item", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndTraveler()
+      const res = await app.request(`/${booking.id}/items/${item.id}/travelers`, {
         method: "POST",
-        ...json({ participantId: participant.id }),
+        ...json({ travelerId: participant.id }),
       })
       expect(res.status).toBe(201)
       const body = await res.json()
-      expect(body.data.participantId).toBe(participant.id)
+      expect(body.data.travelerId).toBe(participant.id)
       expect(body.data.role).toBe("traveler")
     })
 
-    it("lists item participants", async () => {
-      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
-      await app.request(`/${booking.id}/items/${item.id}/participants`, {
+    it("lists item travelers", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndTraveler()
+      await app.request(`/${booking.id}/items/${item.id}/travelers`, {
         method: "POST",
-        ...json({ participantId: participant.id }),
+        ...json({ travelerId: participant.id }),
       })
 
-      const res = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+      const res = await app.request(`/${booking.id}/items/${item.id}/travelers`, {
         method: "GET",
       })
       expect(res.status).toBe(200)
       expect((await res.json()).data.length).toBe(1)
     })
 
-    it("unlinks a participant from an item", async () => {
-      const { booking, item, participant } = await seedBookingWithItemAndParticipant()
-      const linkRes = await app.request(`/${booking.id}/items/${item.id}/participants`, {
+    it("unlinks a traveler from an item", async () => {
+      const { booking, item, participant } = await seedBookingWithItemAndTraveler()
+      const linkRes = await app.request(`/${booking.id}/items/${item.id}/travelers`, {
         method: "POST",
-        ...json({ participantId: participant.id }),
+        ...json({ travelerId: participant.id }),
       })
       const { data: link } = await linkRes.json()
 
-      const res = await app.request(`/${booking.id}/items/${item.id}/participants/${link.id}`, {
+      const res = await app.request(`/${booking.id}/items/${item.id}/travelers/${link.id}`, {
         method: "DELETE",
       })
       expect(res.status).toBe(200)
@@ -1470,7 +1545,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       const { data: item } = await itemRes.json()
 
-      const participantRes = await app.request(`/${booking.id}/participants`, {
+      const participantRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Ana", lastName: "Traveler" }),
       })
@@ -1480,7 +1555,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         method: "POST",
         ...json({
           bookingItemId: item.id,
-          participantId: participant.id,
+          travelerId: participant.id,
           fulfillmentType: "voucher",
           deliveryChannel: "download",
           artifactUrl: "https://example.com/voucher.pdf",
@@ -1491,7 +1566,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const { data: fulfillment } = await createRes.json()
       expect(fulfillment.status).toBe("issued")
       expect(fulfillment.bookingItemId).toBe(item.id)
-      expect(fulfillment.participantId).toBe(participant.id)
+      expect(fulfillment.travelerId).toBe(participant.id)
 
       const listRes = await app.request(`/${booking.id}/fulfillments`, { method: "GET" })
       expect(listRes.status).toBe(200)
@@ -1524,7 +1599,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       const { data: items } = await itemsRes.json()
       const item = items[0]
 
-      const participantRes = await app.request(`/${booking.id}/participants`, {
+      const participantRes = await app.request(`/${booking.id}/travelers`, {
         method: "POST",
         ...json({ firstName: "Mihai", lastName: "Guest" }),
       })
@@ -1534,7 +1609,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
         method: "POST",
         ...json({
           bookingItemId: item.id,
-          participantId: participant.id,
+          travelerId: participant.id,
           method: "scan",
           location: "North gate",
         }),

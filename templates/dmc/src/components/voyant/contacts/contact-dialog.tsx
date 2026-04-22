@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { Contact } from "./contact-shared"
@@ -31,9 +32,6 @@ const contactFormSchema = z.object({
   email: z.string().email().optional().or(z.literal("")).nullable(),
   phone: z.string().optional().nullable(),
   website: z.string().url().optional().or(z.literal("")).nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  country: z.string().optional().nullable(),
   preferredLanguage: z.string().optional().nullable(),
   preferredCurrency: z.string().optional().nullable(),
 })
@@ -49,6 +47,8 @@ type ContactDialogProps = {
 }
 
 export function ContactDialog({ open, onOpenChange, contact, onSuccess }: ContactDialogProps) {
+  const dialogMessages = useAdminMessages().contacts.dialog
+  const formMessages = useAdminMessages().contacts.form
   const isEditing = !!contact
 
   const form = useForm<ContactFormValues, unknown, ContactFormOutput>({
@@ -62,9 +62,6 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
       email: "",
       phone: "",
       website: "",
-      address: "",
-      city: "",
-      country: "",
       preferredLanguage: "",
       preferredCurrency: "",
     },
@@ -81,9 +78,6 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
         email: contact.email ?? "",
         phone: contact.phone ?? "",
         website: contact.website ?? "",
-        address: contact.address ?? "",
-        city: contact.city ?? "",
-        country: contact.country ?? "",
         preferredLanguage: contact.preferredLanguage ?? "",
         preferredCurrency: contact.preferredCurrency ?? "",
       })
@@ -103,9 +97,6 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
       firstName: values.firstName || null,
       lastName: values.lastName || null,
       phone: values.phone || null,
-      address: values.address || null,
-      city: values.city || null,
-      country: values.country || null,
       preferredLanguage: values.preferredLanguage || null,
       preferredCurrency: values.preferredCurrency || null,
     }
@@ -122,14 +113,20 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Contact" : "New Contact"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{formMessages.typeLabel}</Label>
                 <Select
+                  items={[
+                    { label: formMessages.typeIndividual, value: "individual" },
+                    { label: formMessages.typeCompany, value: "company" },
+                  ]}
                   value={contactType}
                   onValueChange={(v) => form.setValue("type", v as "individual" | "company")}
                 >
@@ -137,15 +134,21 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="company">Company</SelectItem>
+                    <SelectItem value="individual">{formMessages.typeIndividual}</SelectItem>
+                    <SelectItem value="company">{formMessages.typeCompany}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Relation</Label>
+                <Label>{formMessages.relationLabel}</Label>
                 <Select
+                  items={[
+                    { label: formMessages.relationClient, value: "client" },
+                    { label: formMessages.relationPartner, value: "partner" },
+                    { label: formMessages.relationSupplier, value: "supplier" },
+                    { label: formMessages.relationOther, value: "other" },
+                  ]}
                   value={form.watch("relation")}
                   onValueChange={(v) =>
                     form.setValue("relation", v as "client" | "partner" | "supplier" | "other")
@@ -155,10 +158,10 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="client">Client</SelectItem>
-                    <SelectItem value="partner">Partner</SelectItem>
-                    <SelectItem value="supplier">Supplier</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="client">{formMessages.relationClient}</SelectItem>
+                    <SelectItem value="partner">{formMessages.relationPartner}</SelectItem>
+                    <SelectItem value="supplier">{formMessages.relationSupplier}</SelectItem>
+                    <SelectItem value="other">{formMessages.relationOther}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -166,8 +169,11 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
 
             {contactType === "company" ? (
               <div className="flex flex-col gap-2">
-                <Label>Company Name</Label>
-                <Input {...form.register("companyName")} placeholder="Acme Travel Co." />
+                <Label>{formMessages.companyNameLabel}</Label>
+                <Input
+                  {...form.register("companyName")}
+                  placeholder={formMessages.companyNamePlaceholder}
+                />
                 {form.formState.errors.companyName && (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.companyName.message}
@@ -177,61 +183,55 @@ export function ContactDialog({ open, onOpenChange, contact, onSuccess }: Contac
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label>First Name</Label>
-                  <Input {...form.register("firstName")} placeholder="John" />
+                  <Label>{formMessages.firstNameLabel}</Label>
+                  <Input
+                    {...form.register("firstName")}
+                    placeholder={formMessages.firstNamePlaceholder}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Last Name</Label>
-                  <Input {...form.register("lastName")} placeholder="Doe" />
+                  <Label>{formMessages.lastNameLabel}</Label>
+                  <Input
+                    {...form.register("lastName")}
+                    placeholder={formMessages.lastNamePlaceholder}
+                  />
                 </div>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Email</Label>
-                <Input {...form.register("email")} type="email" placeholder="john@example.com" />
+                <Label>{formMessages.emailLabel}</Label>
+                <Input
+                  {...form.register("email")}
+                  type="email"
+                  placeholder={formMessages.emailPlaceholder}
+                />
                 {form.formState.errors.email && (
                   <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Phone</Label>
-                <Input {...form.register("phone")} placeholder="+1 234 567 890" />
+                <Label>{formMessages.phoneLabel}</Label>
+                <Input {...form.register("phone")} placeholder={formMessages.phonePlaceholder} />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Website</Label>
-              <Input {...form.register("website")} placeholder="https://example.com" />
+              <Label>{formMessages.websiteLabel}</Label>
+              <Input {...form.register("website")} placeholder={formMessages.websitePlaceholder} />
               {form.formState.errors.website && (
                 <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
               )}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Address</Label>
-                <Input {...form.register("address")} placeholder="123 Main St" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>City</Label>
-                <Input {...form.register("city")} placeholder="New York" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Country</Label>
-              <Input {...form.register("country")} placeholder="US" />
-            </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {formMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Contact"}
+              {isEditing ? formMessages.saveChanges : formMessages.create}
             </Button>
           </DialogFooter>
         </form>

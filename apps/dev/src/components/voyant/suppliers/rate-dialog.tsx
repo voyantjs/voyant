@@ -160,6 +160,7 @@ export function RateDialog({
               <div className="flex flex-col gap-2">
                 <Label>Unit</Label>
                 <Select
+                  items={RATE_UNITS}
                   value={form.watch("unit")}
                   onValueChange={(v) => form.setValue("unit", v as RateFormValues["unit"])}
                 >

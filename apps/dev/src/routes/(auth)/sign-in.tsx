@@ -14,15 +14,19 @@ import {
 } from "@/components/ui"
 
 import { authClient } from "@/lib/auth"
-import { getCurrentUser } from "@/lib/current-user"
+import { getBootstrapStatus, getCurrentUser } from "@/lib/current-user"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/(auth)/sign-in")({
   loader: async () => {
-    const user = await getCurrentUser()
+    const [user, bootstrap] = await Promise.all([getCurrentUser(), getBootstrapStatus()])
 
     if (user) {
       throw redirect({ to: "/" })
+    }
+
+    if (!bootstrap.hasUsers) {
+      throw redirect({ to: "/sign-up" })
     }
 
     return null
@@ -185,13 +189,6 @@ function SignInPage() {
           </svg>
           Continue with Google
         </Button>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link to="/sign-up" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
       </CardContent>
     </Card>
   )

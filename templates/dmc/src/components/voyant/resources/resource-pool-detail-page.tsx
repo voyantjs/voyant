@@ -1,9 +1,16 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ArrowLeft, Loader2, Package, Trash2, Users, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import {
+  getAllocationModeLabel,
+  getAssignmentStatusLabel,
+  getResourceKindLabel,
+} from "./resources-shared"
 
 type PoolDetail = {
   id: string
@@ -122,6 +129,10 @@ export async function ensureResourcePoolDetailPageData(queryClient: QueryClient,
 export function ResourcePoolDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.resources.details
+  const noValue = detailMessages.noValue
 
   const { data: poolData, isPending } = useQuery(getResourcePoolDetailQueryOptions(id))
 
@@ -131,17 +142,11 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
     ...getResourcePoolProductQueryOptions(pool?.productId ?? ""),
     enabled: Boolean(pool?.productId),
   })
-
   const membersQuery = useQuery(getResourcePoolMembersQueryOptions(id))
-
   const resourcesQuery = useQuery(getResourcePoolResourcesQueryOptions())
-
   const allocationsQuery = useQuery(getResourcePoolAllocationsQueryOptions(id))
-
   const assignmentsQuery = useQuery(getResourcePoolAssignmentsQueryOptions(id))
-
   const slotsQuery = useQuery(getResourcePoolSlotsQueryOptions())
-
   const bookingsQuery = useQuery(getResourcePoolBookingsQueryOptions())
 
   const deleteMutation = useMutation({
@@ -163,9 +168,9 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
   if (!pool) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Pool not found</p>
+        <p className="text-muted-foreground">{detailMessages.pool.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/resources" })}>
-          Back to Resources
+          {detailMessages.backToResources}
         </Button>
       </div>
     )
@@ -189,10 +194,10 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{pool.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {pool.kind}
+              {getResourceKindLabel(pool.kind, messages)}
             </Badge>
             <Badge variant={pool.active ? "default" : "secondary"}>
-              {pool.active ? "Active" : "Inactive"}
+              {pool.active ? messages.resources.activeLabel : messages.resources.inactiveLabel}
             </Badge>
           </div>
         </div>
@@ -202,44 +207,46 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
             onClick={() => void navigate({ to: "/products/$id", params: { id: pool.productId! } })}
           >
             <Package className="mr-2 h-4 w-4" />
-            Open Product
+            {detailMessages.openProduct}
           </Button>
         ) : null}
         <Button
           variant="destructive"
           onClick={() => {
-            if (confirm("Delete this resource pool?")) {
+            if (confirm(detailMessages.pool.deleteConfirm)) {
               deleteMutation.mutate()
             }
           }}
           disabled={deleteMutation.isPending}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Delete
+          {detailMessages.delete}
         </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Pool Details</CardTitle>
+            <CardTitle>{detailMessages.pool.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Product:</span>{" "}
-              <span>{productQuery.data?.data.name ?? pool.productId ?? "-"}</span>
+              <span className="text-muted-foreground">{messages.resources.productLabel}:</span>{" "}
+              <span>{productQuery.data?.data.name ?? pool.productId ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Shared Capacity:</span>{" "}
-              <span>{pool.sharedCapacity ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {messages.resources.dialogs.pool.sharedCapacityLabel}:
+              </span>{" "}
+              <span>{pool.sharedCapacity ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(pool.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{messages.resources.createdLabel}:</span>{" "}
+              <span>{new Date(pool.createdAt).toLocaleString(resolvedLocale)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(pool.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{messages.resources.updatedLabel}:</span>{" "}
+              <span>{new Date(pool.updatedAt).toLocaleString(resolvedLocale)}</span>
             </div>
           </CardContent>
         </Card>
@@ -247,7 +254,7 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
         {pool.notes ? (
           <Card>
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle>{messages.resources.notesTitle}</CardTitle>
             </CardHeader>
             <CardContent className="text-sm whitespace-pre-wrap">{pool.notes}</CardContent>
           </Card>
@@ -257,11 +264,11 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Users className="h-4 w-4" />
-          <CardTitle>Members</CardTitle>
+          <CardTitle>{detailMessages.pool.membersTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(membersQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No resources are assigned to this pool.</p>
+            <p className="text-muted-foreground">{detailMessages.pool.membersEmpty}</p>
           ) : (
             membersQuery.data?.data.map((member) => {
               const resource = resourcesById.get(member.resourceId)
@@ -277,8 +284,14 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
                   }
                 >
                   <div className="font-medium">{resource?.name ?? member.resourceId}</div>
-                  <div className="text-muted-foreground capitalize">
-                    {resource?.kind ?? "resource"} · {resource?.active ? "active" : "inactive"}
+                  <div className="text-muted-foreground">
+                    {resource
+                      ? getResourceKindLabel(resource.kind as PoolDetail["kind"], messages)
+                      : detailMessages.pool.noResourcesFallback}{" "}
+                    ·{" "}
+                    {resource?.active
+                      ? messages.resources.activeLabel
+                      : messages.resources.inactiveLabel}
                   </div>
                 </button>
               )
@@ -290,11 +303,11 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Package className="h-4 w-4" />
-          <CardTitle>Allocations</CardTitle>
+          <CardTitle>{detailMessages.pool.allocationsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(allocationsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No allocations configured for this pool.</p>
+            <p className="text-muted-foreground">{detailMessages.pool.allocationsEmpty}</p>
           ) : (
             allocationsQuery.data?.data.map((allocation) => (
               <button
@@ -310,14 +323,21 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="capitalize">
-                    {allocation.allocationMode}
+                    {getAllocationModeLabel(allocation.allocationMode, messages)}
                   </Badge>
-                  <span>Qty {allocation.quantityRequired}</span>
+                  <span>
+                    {detailMessages.quantityPrefix} {allocation.quantityRequired}
+                  </span>
                 </div>
-                <div className="mt-2 text-muted-foreground">Product: {allocation.productId}</div>
+                <div className="mt-2 text-muted-foreground">
+                  {messages.resources.productLabel}: {allocation.productId}
+                </div>
                 <div className="text-muted-foreground">
-                  Rule: {allocation.availabilityRuleId ?? "-"} · Start Time:{" "}
-                  {allocation.startTimeId ?? "-"} · Priority: {allocation.priority}
+                  {detailMessages.allocation.ruleLabel}:{" "}
+                  {allocation.availabilityRuleId ?? detailMessages.noRule} ·{" "}
+                  {detailMessages.allocation.startTimeLabel}:{" "}
+                  {allocation.startTimeId ?? detailMessages.noStartTime} ·{" "}
+                  {detailMessages.pool.priorityLabel}: {allocation.priority}
                 </div>
               </button>
             ))
@@ -328,11 +348,11 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Wrench className="h-4 w-4" />
-          <CardTitle>Live Assignments</CardTitle>
+          <CardTitle>{detailMessages.pool.liveAssignmentsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(assignmentsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No slot assignments reference this pool.</p>
+            <p className="text-muted-foreground">{detailMessages.pool.liveAssignmentsEmpty}</p>
           ) : (
             assignmentsQuery.data?.data.map((assignment) => {
               const slot = slotsById.get(assignment.slotId)
@@ -351,7 +371,7 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="capitalize">
-                      {assignment.status}
+                      {getAssignmentStatusLabel(assignment.status, messages)}
                     </Badge>
                     <span>
                       {slot
@@ -360,10 +380,12 @@ export function ResourcePoolDetailPage({ id }: { id: string }) {
                     </span>
                   </div>
                   <div className="mt-2 text-muted-foreground">
-                    Booking: {booking?.bookingNumber ?? assignment.bookingId ?? "-"}
+                    {messages.resources.bookingLabel}:{" "}
+                    {booking?.bookingNumber ?? assignment.bookingId ?? detailMessages.noBooking}
                   </div>
                   <div className="text-muted-foreground">
-                    Resource: {assignment.resourceId ?? "-"}
+                    {messages.resources.resourceLabel}:{" "}
+                    {assignment.resourceId ?? detailMessages.noResource}
                   </div>
                 </button>
               )

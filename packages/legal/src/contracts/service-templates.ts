@@ -144,7 +144,6 @@ export const contractTemplatesService = {
         .values({
           templateId,
           version: nextVersion,
-          bodyFormat: data.bodyFormat,
           body: data.body,
           variableSchema: data.variableSchema ?? null,
           changelog: data.changelog ?? null,
@@ -162,7 +161,6 @@ export const contractTemplatesService = {
   },
   renderPreview(input: RenderTemplateInput): string {
     const body = input.body ?? ""
-    const format = input.bodyFormat ?? "markdown"
-    return renderTemplate(body, format, input.variables)
+    return renderTemplate(body, "html", input.variables)
   },
 }

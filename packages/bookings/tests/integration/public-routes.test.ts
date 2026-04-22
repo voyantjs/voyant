@@ -10,7 +10,7 @@ import {
   priceCatalogsRef,
 } from "../../src/pricing-ref.js"
 import { publicBookingRoutes } from "../../src/routes-public.js"
-import { bookingDocuments, bookingFulfillments } from "../../src/schema.js"
+import { bookingDocuments, bookingFulfillments, bookings } from "../../src/schema.js"
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
 const DB_AVAILABLE = !!TEST_DATABASE_URL
@@ -161,7 +161,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
             optionId: slot.optionId,
           },
         ],
-        participants: [
+        travelers: [
           {
             firstName: "Ana",
             lastName: "Popescu",
@@ -176,7 +176,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     const body = await res.json()
     expect(body.data.status).toBe("on_hold")
     expect(body.data.bookingNumber).toMatch(/^BK-\d{4}-\d{6}$/)
-    expect(body.data.participants).toHaveLength(1)
+    expect(body.data.travelers).toHaveLength(1)
     expect(body.data.allocations).toHaveLength(1)
     expect(body.data.checklist.readyForConfirmation).toBe(true)
 
@@ -203,7 +203,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
             totalSellAmountCents: 12000,
           },
         ],
-        participants: [
+        travelers: [
           {
             firstName: "Mihai",
             lastName: "Ionescu",
@@ -220,9 +220,9 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
       method: "PATCH",
       ...json({
         communicationLanguage: "ro",
-        participants: [
+        travelers: [
           {
-            id: session.participants[0].id,
+            id: session.travelers[0].id,
             firstName: "Mihai",
             lastName: "Ionescu",
             email: "mihai@example.com",
@@ -241,7 +241,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.data.communicationLanguage).toBe("ro")
-    expect(body.data.participants).toHaveLength(2)
+    expect(body.data.travelers).toHaveLength(2)
     expect(body.data.pax).toBe(2)
   })
 
@@ -260,7 +260,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
             totalSellAmountCents: 15000,
           },
         ],
-        participants: [
+        travelers: [
           {
             firstName: "Elena",
             lastName: "Marin",
@@ -284,7 +284,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
 
     await db.insert(bookingDocuments).values({
       bookingId: session.sessionId,
-      participantId: session.participants[0].id,
+      participantId: session.travelers[0].id,
       type: "other",
       fileName: "voucher.pdf",
       fileUrl: "https://example.com/voucher.pdf",
@@ -293,7 +293,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     await db.insert(bookingFulfillments).values({
       bookingId: session.sessionId,
       bookingItemId: session.items[0].id,
-      participantId: session.participants[0].id,
+      participantId: session.travelers[0].id,
       fulfillmentType: "voucher",
       deliveryChannel: "download",
       status: "issued",
@@ -310,7 +310,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     expect(overview.status).toBe("confirmed")
     expect(overview.documents).toHaveLength(1)
     expect(overview.fulfillments).toHaveLength(1)
-    expect(overview.participants[0]?.firstName).toBe("Elena")
+    expect(overview.travelers[0]?.firstName).toBe("Elena")
   })
 
   it("persists wizard session state and includes it in session reads", async () => {
@@ -358,6 +358,72 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
     expect(sessionBody.data.state.completedSteps).toEqual(["travelers"])
   })
 
+  it("syncs billing contact from wizard state into the booking snapshot", async () => {
+    const slot = await seedSlot()
+
+    const createRes = await app.request("/sessions", {
+      method: "POST",
+      ...json({
+        sellCurrency: "EUR",
+        items: [
+          {
+            title: "Timisoara break",
+            availabilitySlotId: slot.id,
+            quantity: 1,
+            totalSellAmountCents: 18000,
+            productId: slot.productId,
+            optionId: slot.optionId,
+          },
+        ],
+      }),
+    })
+
+    const session = (await createRes.json()).data
+
+    const stateRes = await app.request(`/sessions/${session.sessionId}/state`, {
+      method: "PUT",
+      ...json({
+        currentStep: "billing",
+        completedSteps: ["travelers"],
+        payload: {
+          stepData: {
+            billing: {
+              billing: {
+                firstName: "Anca",
+                lastName: "Ionescu",
+                email: "anca@example.com",
+                phone: "+40999888777",
+                country: "FR",
+                state: "Ile-de-France",
+                city: "Paris",
+                addressLine1: "Rue de Rivoli 22",
+                postalCode: "75001",
+              },
+            },
+          },
+        },
+      }),
+    })
+
+    expect(stateRes.status).toBe(200)
+
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, session.sessionId))
+
+    expect(booking).toEqual(
+      expect.objectContaining({
+        contactFirstName: "Anca",
+        contactLastName: "Ionescu",
+        contactEmail: "anca@example.com",
+        contactPhone: "+40999888777",
+        contactCountry: "FR",
+        contactRegion: "Ile-de-France",
+        contactCity: "Paris",
+        contactAddressLine1: "Rue de Rivoli 22",
+        contactPostalCode: "75001",
+      }),
+    )
+  })
+
   it("reprices a room selection and can apply the priced selection back onto the session", async () => {
     const slot = await seedSlot({
       productId: "prod_room_booking",
@@ -380,7 +446,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking routes", () => {
             optionId: slot.optionId,
           },
         ],
-        participants: [
+        travelers: [
           {
             firstName: "Radu",
             lastName: "Pop",

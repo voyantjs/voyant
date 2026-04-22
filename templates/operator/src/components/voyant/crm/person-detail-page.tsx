@@ -6,13 +6,14 @@ import {
   usePerson,
   usePersonMutation,
 } from "@voyantjs/crm-react"
-import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui"
+import { PersonDetailSkeleton } from "@/components/voyant/crm/person-detail-skeleton"
 import { PersonDialog } from "@/components/voyant/crm/person-dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import type { AddressRecord, AddressUpsertInput } from "./person-addresses"
 import {
-  ACTIVITY_TYPES,
   type ActivityRecord,
   type ListEnvelope,
   type OpportunityRecord,
@@ -26,11 +27,14 @@ import {
 export function PersonDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages().crm.personDetail
   const [editOpen, setEditOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
-  const [activeTab, setActiveTab] = useState<"overview" | "notes" | "activities">("overview")
+  const [activeTab, setActiveTab] = useState<"overview" | "notes" | "activities" | "addresses">(
+    "overview",
+  )
   const [activityOpen, setActivityOpen] = useState(false)
-  const [activityType, setActivityType] = useState<ActivityRecord["type"]>(ACTIVITY_TYPES[0].value)
+  const [activityType, setActivityType] = useState<ActivityRecord["type"]>("note")
   const [activitySubject, setActivitySubject] = useState("")
   const [activityDescription, setActivityDescription] = useState("")
 
@@ -74,6 +78,12 @@ export function PersonDetailPage({ id }: { id: string }) {
     enabled: Boolean(person),
   })
 
+  const addressesQuery = useQuery({
+    queryKey: ["person-addresses", id],
+    queryFn: () => api.get<{ data: AddressRecord[] }>(`/v1/crm/people/${id}/addresses`),
+    enabled: Boolean(person),
+  })
+
   const addNoteMutation = useMutation({
     mutationFn: (content: string) =>
       api.post<{ data: PersonNote }>(`/v1/crm/people/${id}/notes`, { content }),
@@ -105,7 +115,7 @@ export function PersonDetailPage({ id }: { id: string }) {
     onSuccess: () => {
       setActivitySubject("")
       setActivityDescription("")
-      setActivityType(ACTIVITY_TYPES[0].value)
+      setActivityType("note")
       setActivityOpen(false)
       void queryClient.invalidateQueries({ queryKey: ["person-activities", id] })
     },
@@ -157,31 +167,67 @@ export function PersonDetailPage({ id }: { id: string }) {
     })
   }
 
+  const createAddressMutation = useMutation({
+    mutationFn: (input: AddressUpsertInput) =>
+      api.post<{ data: AddressRecord }>(`/v1/crm/people/${id}/addresses`, {
+        entityType: "person",
+        entityId: id,
+        ...input,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["person-addresses", id] })
+    },
+  })
+
+  const updateAddressMutation = useMutation({
+    mutationFn: (input: { addressId: string; patch: AddressUpsertInput }) =>
+      api.patch<{ data: AddressRecord }>(`/v1/crm/addresses/${input.addressId}`, input.patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["person-addresses", id] })
+    },
+  })
+
+  const deleteAddressMutation = useMutation({
+    mutationFn: (addressId: string) =>
+      api.delete<{ success: true }>(`/v1/crm/addresses/${addressId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["person-addresses", id] })
+    },
+  })
+
   if (personQuery.isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <PersonDetailSkeleton />
   }
 
   if (!person) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Person not found</p>
+        <p className="text-muted-foreground">{messages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/people" })}>
-          Back to People
+          {messages.backAction}
         </Button>
       </div>
     )
   }
 
   const displayName =
-    [person.firstName, person.lastName].filter(Boolean).join(" ") || "Unnamed person"
+    [person.firstName, person.lastName].filter(Boolean).join(" ") || messages.unnamedPerson
   const notes = notesQuery.data?.data ?? []
   const activities = activitiesQuery.data?.data ?? []
   const opportunities = opportunitiesQuery.data?.data ?? []
+  const addresses = addressesQuery.data?.data ?? []
   const organization = organizationQuery.data
+    ? {
+        id: organizationQuery.data.id,
+        name: organizationQuery.data.name,
+        legalName: organizationQuery.data.legalName ?? null,
+        industry: organizationQuery.data.industry ?? null,
+        website: organizationQuery.data.website ?? null,
+        relation: organizationQuery.data.relation ?? null,
+        status: organizationQuery.data.status,
+      }
+    : undefined
+  const primaryAddress = addresses.find((address) => address.isPrimary) ?? addresses[0] ?? null
   const openOpportunities = opportunities.filter((o) => o.status === "open")
   const wonOpportunities = opportunities.filter((o) => o.status === "won")
   const totalOpenValue = openOpportunities.reduce((sum, o) => sum + (o.valueAmountCents ?? 0), 0)
@@ -211,6 +257,7 @@ export function PersonDetailPage({ id }: { id: string }) {
           displayName={displayName}
           organization={organization}
           websiteHref={websiteHref}
+          primaryAddress={primaryAddress}
           updateField={async (patch) => updateField(patch as UpdatePersonInput)}
         />
 
@@ -265,6 +312,24 @@ export function PersonDetailPage({ id }: { id: string }) {
                 patch: { status: activity.status === "done" ? "planned" : "done" },
               })
               .then(() => undefined)
+          }
+          addresses={addresses}
+          addressesPending={addressesQuery.isPending}
+          addressCreating={createAddressMutation.isPending}
+          addressUpdatingFor={updateAddressMutation.variables?.addressId}
+          addressDeletingFor={
+            typeof deleteAddressMutation.variables === "string"
+              ? deleteAddressMutation.variables
+              : undefined
+          }
+          onCreateAddress={(input) =>
+            createAddressMutation.mutateAsync(input).then(() => undefined)
+          }
+          onUpdateAddress={(addressId, input) =>
+            updateAddressMutation.mutateAsync({ addressId, patch: input }).then(() => undefined)
+          }
+          onDeleteAddress={(addressId) =>
+            deleteAddressMutation.mutateAsync(addressId).then(() => undefined)
           }
           openOpportunitiesCount={openOpportunities.length}
           wonOpportunitiesCount={wonOpportunities.length}

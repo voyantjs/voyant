@@ -192,6 +192,10 @@ export function ServiceDialog({
               <div className="flex flex-col gap-2">
                 <Label>Link Supplier Service (optional)</Label>
                 <Select
+                  items={suppliersData.map((opt) => ({
+                    label: `${opt.supplierName} — ${opt.name} (${opt.serviceType})`,
+                    value: opt.id,
+                  }))}
                   value={form.watch("supplierServiceId") ?? ""}
                   onValueChange={handleSupplierServiceSelect}
                 >
@@ -213,6 +217,7 @@ export function ServiceDialog({
               <div className="flex flex-col gap-2">
                 <Label>Service Type</Label>
                 <Select
+                  items={SERVICE_TYPES}
                   value={form.watch("serviceType")}
                   onValueChange={(v) =>
                     form.setValue("serviceType", v as ServiceFormValues["serviceType"])

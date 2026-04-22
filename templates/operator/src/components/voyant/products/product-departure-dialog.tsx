@@ -1,3 +1,5 @@
+import { useProductItineraries } from "@voyantjs/products-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -30,57 +32,59 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { getTimezoneLabel, TIMEZONE_IDS, TIMEZONE_OPTIONS } from "@/lib/timezone-options"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const SLOT_STATUSES = [
-  { value: "open", label: "Open" },
-  { value: "closed", label: "Closed" },
-  { value: "sold_out", label: "Sold out" },
-  { value: "cancelled", label: "Cancelled" },
-] as const
+type DepartureMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["departures"]
 
-const departureFormSchema = z
-  .object({
-    startDate: z.string().min(1, "Start date is required"),
-    startTime: z.string().min(1, "Start time is required"),
-    endDate: z.string().optional().nullable(),
-    endTime: z.string().optional().nullable(),
-    timezone: z.string().min(1, "Timezone is required"),
-    status: z.enum(["open", "closed", "sold_out", "cancelled"]),
-    unlimited: z.boolean(),
-    initialPax: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-    nights: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-    days: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-    notes: z.string().optional().nullable(),
-  })
-  .refine(
-    (v) => {
-      if (!v.endDate || typeof v.endDate !== "string" || v.endDate.length === 0) return true
-      return v.endDate >= v.startDate
-    },
-    { message: "End date must be on or after start date", path: ["endDate"] },
-  )
-  .refine(
-    (v) => {
-      const endDate =
-        v.endDate && typeof v.endDate === "string" && v.endDate.length > 0 ? v.endDate : v.startDate
-      const endTime =
-        v.endTime && typeof v.endTime === "string" && v.endTime.length > 0 ? v.endTime : null
-      if (!endTime) return true
-      if (endDate > v.startDate) return true
-      return endTime >= v.startTime
-    },
-    { message: "End time must be after start time on the same day", path: ["endTime"] },
-  )
+const buildDepartureFormSchema = (messages: DepartureMessages) =>
+  z
+    .object({
+      startDate: z.string().min(1, messages.validationStartDateRequired),
+      startTime: z.string().min(1, messages.validationStartTimeRequired),
+      endDate: z.string().optional().nullable(),
+      endTime: z.string().optional().nullable(),
+      itineraryId: z.string().optional().nullable(),
+      timezone: z.string().min(1, messages.validationTimezoneRequired),
+      status: z.enum(["open", "closed", "sold_out", "cancelled"]),
+      unlimited: z.boolean(),
+      initialPax: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+      nights: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+      days: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+      notes: z.string().optional().nullable(),
+    })
+    .refine(
+      (v) => {
+        if (!v.endDate || typeof v.endDate !== "string" || v.endDate.length === 0) return true
+        return v.endDate >= v.startDate
+      },
+      { message: messages.validationEndDateOrder, path: ["endDate"] },
+    )
+    .refine(
+      (v) => {
+        const endDate =
+          v.endDate && typeof v.endDate === "string" && v.endDate.length > 0
+            ? v.endDate
+            : v.startDate
+        const endTime =
+          v.endTime && typeof v.endTime === "string" && v.endTime.length > 0 ? v.endTime : null
+        if (!endTime) return true
+        if (endDate > v.startDate) return true
+        return endTime >= v.startTime
+      },
+      { message: messages.validationEndTimeOrder, path: ["endTime"] },
+    )
 
-type DepartureFormValues = z.input<typeof departureFormSchema>
-type DepartureFormOutput = z.output<typeof departureFormSchema>
+type DepartureFormSchema = ReturnType<typeof buildDepartureFormSchema>
+type DepartureFormValues = z.input<DepartureFormSchema>
+type DepartureFormOutput = z.output<DepartureFormSchema>
 
 export type DepartureSlot = {
   id: string
   productId: string
+  itineraryId: string | null
   dateLocal: string
   startsAt: string
   endsAt: string | null
@@ -129,7 +133,17 @@ export function DepartureDialog({
   slot,
   onSuccess,
 }: DepartureDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const departureMessages = messages.products.operations.departures
   const isEditing = !!slot
+  const departureFormSchema = buildDepartureFormSchema(departureMessages)
+  const slotStatuses = [
+    { value: "open", label: productMessages.departureStatusOpen },
+    { value: "closed", label: productMessages.departureStatusClosed },
+    { value: "sold_out", label: productMessages.departureStatusSoldOut },
+    { value: "cancelled", label: productMessages.departureStatusCancelled },
+  ] as const
 
   const defaultTz =
     typeof Intl !== "undefined"
@@ -143,6 +157,7 @@ export function DepartureDialog({
       startTime: "09:00",
       endDate: "",
       endTime: "",
+      itineraryId: "",
       timezone: defaultTz,
       status: "open",
       unlimited: false,
@@ -157,6 +172,9 @@ export function DepartureDialog({
   const startDate = form.watch("startDate")
   const endDate = form.watch("endDate")
   const timezone = form.watch("timezone")
+  const { data: itineraryData } = useProductItineraries(productId, { enabled: open })
+  const itineraries = itineraryData?.data ?? []
+  const defaultItinerary = itineraries.find((itinerary) => itinerary.isDefault) ?? itineraries[0]
 
   const nights = (() => {
     if (!startDate || !endDate || typeof endDate !== "string" || endDate.length === 0) return 0
@@ -173,6 +191,7 @@ export function DepartureDialog({
         startTime: isoToLocalTime(slot.startsAt),
         endDate: slot.endsAt ? isoToLocalDate(slot.endsAt) : "",
         endTime: slot.endsAt ? isoToLocalTime(slot.endsAt) : "",
+        itineraryId: slot.itineraryId ?? "",
         timezone: slot.timezone,
         status: slot.status,
         unlimited: slot.unlimited,
@@ -187,6 +206,7 @@ export function DepartureDialog({
         startTime: "09:00",
         endDate: "",
         endTime: "",
+        itineraryId: "",
         timezone: defaultTz,
         status: "open",
         unlimited: false,
@@ -221,6 +241,7 @@ export function DepartureDialog({
 
     const payload = {
       productId,
+      itineraryId: values.itineraryId ? values.itineraryId : null,
       dateLocal: values.startDate,
       startsAt,
       endsAt,
@@ -246,7 +267,9 @@ export function DepartureDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Departure" : "New Departure"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? departureMessages.editTitle : departureMessages.newTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -256,11 +279,11 @@ export function DepartureDialog({
             {/* ── Schedule ── */}
             <fieldset className="grid gap-3">
               <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Schedule
+                {departureMessages.scheduleLegend}
               </legend>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <Label>Start date</Label>
+                  <Label>{departureMessages.startDateLabel}</Label>
                   <DatePicker
                     value={startDate || null}
                     onChange={(v) =>
@@ -269,7 +292,7 @@ export function DepartureDialog({
                         shouldDirty: true,
                       })
                     }
-                    placeholder="Pick a date"
+                    placeholder={departureMessages.datePlaceholder}
                   />
                   {form.formState.errors.startDate && (
                     <p className="text-xs text-destructive">
@@ -278,7 +301,7 @@ export function DepartureDialog({
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label>Start time</Label>
+                  <Label>{departureMessages.startTimeLabel}</Label>
                   <Input {...form.register("startTime")} type="time" />
                   {form.formState.errors.startTime && (
                     <p className="text-xs text-destructive">
@@ -290,7 +313,10 @@ export function DepartureDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label>
-                    End date <span className="text-muted-foreground font-normal">(optional)</span>
+                    {departureMessages.endDateLabel}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {departureMessages.endDateOptional}
+                    </span>
                   </Label>
                   <DatePicker
                     value={typeof endDate === "string" && endDate.length > 0 ? endDate : null}
@@ -300,7 +326,7 @@ export function DepartureDialog({
                         shouldDirty: true,
                       })
                     }
-                    placeholder="Pick a date"
+                    placeholder={departureMessages.datePlaceholder}
                     clearable
                     dateDisabled={
                       startDate ? { before: new Date(`${startDate}T00:00:00`) } : undefined
@@ -314,7 +340,10 @@ export function DepartureDialog({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>
-                    End time <span className="text-muted-foreground font-normal">(optional)</span>
+                    {departureMessages.endTimeLabel}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {departureMessages.endTimeOptional}
+                    </span>
                   </Label>
                   <Input {...form.register("endTime")} type="time" />
                   {form.formState.errors.endTime && (
@@ -327,12 +356,15 @@ export function DepartureDialog({
               {nights > 0 && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    Multi-day departure: {nights} night{nights === 1 ? "" : "s"} ({nights + 1} days)
-                    by calendar. Override if needed.
+                    {formatMessage(departureMessages.multiDayHint, {
+                      nights,
+                      nightSuffix: nights === 1 ? "" : "s",
+                      days: nights + 1,
+                    })}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <Label>Nights (override)</Label>
+                      <Label>{departureMessages.nightsOverrideLabel}</Label>
                       <Input
                         {...form.register("nights")}
                         type="number"
@@ -342,7 +374,7 @@ export function DepartureDialog({
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <Label>Days (override)</Label>
+                      <Label>{departureMessages.daysOverrideLabel}</Label>
                       <Input
                         {...form.register("days")}
                         type="number"
@@ -354,8 +386,46 @@ export function DepartureDialog({
                   </div>
                 </>
               )}
+              {itineraries.length > 1 ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Itinerary</Label>
+                  <Select
+                    items={[
+                      {
+                        label: `Default${defaultItinerary ? `: ${defaultItinerary.name}` : ""}`,
+                        value: "",
+                      },
+                      ...itineraries.map((itinerary) => ({
+                        label: itinerary.name,
+                        value: itinerary.id,
+                      })),
+                    ]}
+                    value={form.watch("itineraryId") ?? ""}
+                    onValueChange={(value) => form.setValue("itineraryId", value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">
+                        Default
+                        {defaultItinerary ? `: ${defaultItinerary.name}` : ""}
+                      </SelectItem>
+                      {itineraries.map((itinerary) => (
+                        <SelectItem key={itinerary.id} value={itinerary.id}>
+                          {itinerary.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Override which itinerary this departure follows. Default tracks whichever
+                    itinerary is marked as default.
+                  </p>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-1.5">
-                <Label>Timezone</Label>
+                <Label>{departureMessages.timezoneLabel}</Label>
                 <Combobox
                   items={TIMEZONE_IDS}
                   value={timezone || null}
@@ -370,9 +440,12 @@ export function DepartureDialog({
                     }
                   }}
                 >
-                  <ComboboxInput placeholder="Search timezones…" className="w-full" />
+                  <ComboboxInput
+                    placeholder={departureMessages.timezoneSearchPlaceholder}
+                    className="w-full"
+                  />
                   <ComboboxContent>
-                    <ComboboxEmpty>No timezone found.</ComboboxEmpty>
+                    <ComboboxEmpty>{departureMessages.timezoneEmpty}</ComboboxEmpty>
                     <ComboboxList>
                       <ComboboxCollection>
                         {(id) => {
@@ -403,23 +476,23 @@ export function DepartureDialog({
             {/* ── Availability ── */}
             <fieldset className="grid gap-3">
               <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Availability
+                {departureMessages.availabilityLegend}
               </legend>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <Label>Status</Label>
+                  <Label>{departureMessages.statusLabel}</Label>
                   <Select
                     value={form.watch("status")}
                     onValueChange={(v) =>
                       form.setValue("status", v as DepartureFormValues["status"])
                     }
-                    items={SLOT_STATUSES}
+                    items={slotStatuses}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SLOT_STATUSES.map((s) => (
+                      {slotStatuses.map((s) => (
                         <SelectItem key={s.value} value={s.value}>
                           {s.label}
                         </SelectItem>
@@ -428,7 +501,7 @@ export function DepartureDialog({
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label>Capacity (pax)</Label>
+                  <Label>{departureMessages.capacityLabel}</Label>
                   <Input
                     {...form.register("initialPax")}
                     type="number"
@@ -446,24 +519,27 @@ export function DepartureDialog({
                   onCheckedChange={(c) => form.setValue("unlimited", c)}
                 />
                 <Label htmlFor="unlimited" className="font-normal cursor-pointer">
-                  Unlimited capacity
+                  {departureMessages.unlimitedLabel}
                 </Label>
               </div>
             </fieldset>
 
             {/* ── Notes ── */}
             <div className="flex flex-col gap-1.5">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Internal notes..." />
+              <Label>{departureMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={departureMessages.notesPlaceholder}
+              />
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Departure"}
+              {isEditing ? productMessages.saveChanges : departureMessages.create}
             </Button>
           </SheetFooter>
         </form>

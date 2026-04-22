@@ -176,6 +176,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, onSuccess }: Invoic
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={INVOICE_STATUSES}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as InvoiceFormValues["status"])

@@ -101,12 +101,14 @@ export const statusVariant: Record<string, "default" | "secondary" | "outline" |
   archived: "secondary",
 }
 
+const DEFAULT_NO_VALUE = "—"
+
 export function formatAmount(cents: number | null, currency: string): string {
-  if (cents == null) return "-"
+  if (cents == null) return DEFAULT_NO_VALUE
   return `${(cents / 100).toFixed(2)} ${currency}`
 }
 
 export function formatMargin(percent: number | null): string {
-  if (percent == null) return "-"
+  if (percent == null) return DEFAULT_NO_VALUE
   return `${(percent / 100).toFixed(2)}%`
 }

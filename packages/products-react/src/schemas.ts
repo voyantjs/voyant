@@ -1,11 +1,14 @@
 import {
+  duplicateItinerarySchema,
   insertDaySchema,
   insertDayServiceSchema,
+  insertItinerarySchema,
   insertProductMediaSchema,
   insertVersionSchema,
   reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
+  updateItinerarySchema,
   updateProductMediaSchema,
 } from "@voyantjs/products"
 import { z } from "zod"
@@ -125,9 +128,21 @@ export const optionUnitRecordSchema = z.object({
 
 export type OptionUnitRecord = z.infer<typeof optionUnitRecordSchema>
 
-export const productDayRecordSchema = z.object({
+export const productItineraryRecordSchema = z.object({
   id: z.string(),
   productId: z.string(),
+  name: z.string(),
+  isDefault: z.boolean(),
+  sortOrder: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export type ProductItineraryRecord = z.infer<typeof productItineraryRecordSchema>
+
+export const productDayRecordSchema = z.object({
+  id: z.string(),
+  itineraryId: z.string(),
   dayNumber: z.number().int(),
   title: z.string().nullable(),
   description: z.string().nullable(),
@@ -198,6 +213,8 @@ export const productOptionListResponse = paginatedEnvelope(productOptionRecordSc
 export const productOptionSingleResponse = singleEnvelope(productOptionRecordSchema)
 export const optionUnitListResponse = paginatedEnvelope(optionUnitRecordSchema)
 export const optionUnitSingleResponse = singleEnvelope(optionUnitRecordSchema)
+export const productItinerariesResponse = arrayEnvelope(productItineraryRecordSchema)
+export const productItineraryResponse = singleEnvelope(productItineraryRecordSchema)
 export const productDaysResponse = arrayEnvelope(productDayRecordSchema)
 export const productDayResponse = singleEnvelope(productDayRecordSchema)
 export const productDayServicesResponse = arrayEnvelope(productDayServiceRecordSchema)
@@ -208,16 +225,22 @@ export const productMediaListResponse = paginatedEnvelope(productMediaRecordSche
 export const productMediaResponse = singleEnvelope(productMediaRecordSchema)
 
 export {
+  duplicateItinerarySchema,
   insertDaySchema,
   insertDayServiceSchema,
+  insertItinerarySchema,
   insertProductMediaSchema,
   insertVersionSchema,
   reorderProductMediaSchema,
   updateDaySchema,
   updateDayServiceSchema,
+  updateItinerarySchema,
   updateProductMediaSchema,
 }
 
+export type CreateProductItineraryInput = z.input<typeof insertItinerarySchema>
+export type UpdateProductItineraryInput = z.input<typeof updateItinerarySchema>
+export type DuplicateProductItineraryInput = z.input<typeof duplicateItinerarySchema>
 export type CreateProductDayInput = z.input<typeof insertDaySchema>
 export type UpdateProductDayInput = z.input<typeof updateDaySchema>
 export type CreateProductDayServiceInput = z.input<typeof insertDayServiceSchema>

@@ -234,6 +234,7 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
               onChange={(e) => setProductSearch(e.target.value)}
             />
             <Select
+              items={products.map((product) => ({ label: product.name, value: product.id }))}
               value={productId}
               onValueChange={(v) => {
                 setProductId(v ?? "")
@@ -257,7 +258,14 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
           {productId && options.length > 0 && (
             <div className="flex flex-col gap-2">
               <Label>Option</Label>
-              <Select value={optionId} onValueChange={(v) => setOptionId(v ?? NONE)}>
+              <Select
+                items={[
+                  { label: "No specific option", value: NONE },
+                  ...options.map((o) => ({ label: o.name, value: o.id })),
+                ]}
+                value={optionId}
+                onValueChange={(v) => setOptionId(v ?? NONE)}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -304,7 +312,14 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
                   value={personSearch}
                   onChange={(e) => setPersonSearch(e.target.value)}
                 />
-                <Select value={personId} onValueChange={(v) => setPersonId(v ?? "")}>
+                <Select
+                  value={personId}
+                  onValueChange={(v) => setPersonId(v ?? "")}
+                  items={people.map((p) => ({
+                    label: `${p.firstName} ${p.lastName}${p.email ? ` · ${p.email}` : ""}`,
+                    value: p.id,
+                  }))}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a person..." />
                   </SelectTrigger>
@@ -365,7 +380,14 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
               value={orgSearch}
               onChange={(e) => setOrgSearch(e.target.value)}
             />
-            <Select value={organizationId} onValueChange={(v) => setOrganizationId(v ?? NONE)}>
+            <Select
+              items={[
+                { label: "No organization", value: NONE },
+                ...orgs.map((o) => ({ label: o.name, value: o.id })),
+              ]}
+              value={organizationId}
+              onValueChange={(v) => setOrganizationId(v ?? NONE)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="No organization" />
               </SelectTrigger>
@@ -417,6 +439,11 @@ export function QuickBookDialog({ open, onOpenChange, onCreated }: QuickBookDial
 
                 {sharedRoomMode === "join" && (
                   <Select
+                    items={
+                      existingGroups.length === 0
+                        ? [{ label: "No existing groups for this product", value: NONE }]
+                        : existingGroups.map((g) => ({ label: g.label, value: g.id }))
+                    }
                     value={sharedRoomGroupId || NONE}
                     onValueChange={(v) => setSharedRoomGroupId(v === NONE ? "" : (v ?? ""))}
                   >

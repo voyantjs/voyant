@@ -87,7 +87,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
         slug: "customer-en",
         scope: "customer",
         language: "en",
-        bodyFormat: "markdown",
         body: "Hello {{customer.firstName}}",
         active: true,
       },
@@ -96,7 +95,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
         slug: "customer-ro",
         scope: "customer",
         language: "ro",
-        bodyFormat: "markdown",
         body: "Salut {{customer.firstName}}",
         active: true,
       },
@@ -123,7 +121,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
         slug: "customer-ro",
         scope: "customer",
         language: "ro",
-        bodyFormat: "markdown",
         body: "Salut {{customer.firstName}} {{customer.lastName}}",
         active: true,
       })
@@ -141,7 +138,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
     expect(res.status).toBe(200)
     expect((await res.json()).data).toEqual({
       rendered: "Salut Ana Popescu",
-      bodyFormat: "markdown",
     })
   })
 
@@ -153,7 +149,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
         slug: "customer-ro",
         scope: "customer",
         language: "ro",
-        bodyFormat: "markdown",
         body: "Salut {{customer.firstName}}",
         active: true,
       })
@@ -164,7 +159,6 @@ describe.skipIf(!DB_AVAILABLE)("Legal public routes", () => {
       .values({
         templateId: template.id,
         version: 1,
-        bodyFormat: "markdown",
         body: "Salut {{customer.firstName}}",
       })
       .returning()

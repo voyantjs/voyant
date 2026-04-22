@@ -6,6 +6,7 @@ import {
 } from "@voyantjs/finance-react"
 
 import { FinancePage } from "@/components/voyant/finance/finance-page"
+import { FinancePageSkeleton } from "@/components/voyant/finance/finance-page-skeleton"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/finance/")({
@@ -18,5 +19,6 @@ export const Route = createFileRoute("/_workspace/finance/")({
         getSupplierPaymentsQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }),
       ),
     ]),
+  pendingComponent: FinancePageSkeleton,
   component: FinancePage,
 })

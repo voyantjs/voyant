@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import type { RowSelectionState } from "@tanstack/react-table"
+import { formatMessage, useLocale } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -26,9 +27,10 @@ import type {
   ChannelWebhookEventRow,
 } from "@/components/voyant/distribution/distribution-shared"
 import {
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   labelById,
 } from "@/components/voyant/distribution/distribution-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { DistributionDialogs } from "./distribution-dialogs"
 import { DistributionOverview } from "./distribution-overview"
@@ -44,6 +46,8 @@ import {
 } from "./distribution-tabs-secondary"
 
 export function DistributionPage() {
+  const messages = useAdminMessages()
+  const { resolvedLocale } = useLocale()
   const navigate = useNavigate()
   const [search, setSearch] = useState("")
   const [channelFilter, setChannelFilter] = useState("all")
@@ -207,7 +211,7 @@ export function DistributionPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nouns,
     payload,
     successVerb,
     clearSelection,
@@ -215,7 +219,7 @@ export function DistributionPage() {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nouns: { singular: string; plural: string }
     payload: Record<string, unknown>
     successVerb: string
     clearSelection: () => void
@@ -234,12 +238,21 @@ export function DistributionPage() {
     setBulkActionTarget(null)
 
     if (result.failed.length === 0) {
-      toast.success(`${successVerb} ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.distribution.toasts.success, {
+          verb: successVerb,
+          selection: formatLocalizedSelectionLabel(result.succeeded, nouns),
+        }),
+      )
       return
     }
 
     toast.error(
-      `${successVerb} ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`,
+      formatMessage(messages.distribution.toasts.partial, {
+        verb: successVerb,
+        succeeded: result.succeeded,
+        selection: formatLocalizedSelectionLabel(result.total, nouns),
+      }),
     )
   }
 
@@ -247,13 +260,13 @@ export function DistributionPage() {
     ids,
     endpoint,
     target,
-    noun,
+    nouns,
     clearSelection,
   }: {
     ids: string[]
     endpoint: string
     target: string
-    noun: string
+    nouns: { singular: string; plural: string }
     clearSelection: () => void
   }) => {
     if (ids.length === 0) return
@@ -267,25 +280,35 @@ export function DistributionPage() {
     setBulkActionTarget(null)
 
     if (result.failed.length === 0) {
-      toast.success(`Deleted ${formatSelectionLabel(result.succeeded, noun)}.`)
+      toast.success(
+        formatMessage(messages.distribution.toasts.success, {
+          verb: messages.distribution.toasts.deleted,
+          selection: formatLocalizedSelectionLabel(result.succeeded, nouns),
+        }),
+      )
       return
     }
 
-    toast.error(`Deleted ${result.succeeded} of ${formatSelectionLabel(result.total, noun)}.`)
+    toast.error(
+      formatMessage(messages.distribution.toasts.partial, {
+        verb: messages.distribution.toasts.deleted,
+        succeeded: result.succeeded,
+        selection: formatLocalizedSelectionLabel(result.total, nouns),
+      }),
+    )
   }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Distribution</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage sales channels, commercial contracts, external mappings, and sync events.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{messages.distribution.title}</h1>
+        <p className="text-sm text-muted-foreground">{messages.distribution.description}</p>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="text-sm">{messages.distribution.loading}</span>
         </div>
       ) : (
         <>
@@ -322,12 +345,16 @@ export function DistributionPage() {
 
           <Tabs defaultValue="channels">
             <TabsList variant="line">
-              <TabsTrigger value="channels">Channels</TabsTrigger>
-              <TabsTrigger value="contracts">Contracts</TabsTrigger>
-              <TabsTrigger value="commissions">Commission Rules</TabsTrigger>
-              <TabsTrigger value="mappings">Product Mappings</TabsTrigger>
-              <TabsTrigger value="booking-links">Booking Links</TabsTrigger>
-              <TabsTrigger value="webhooks">Webhook Events</TabsTrigger>
+              <TabsTrigger value="channels">{messages.distribution.tabs.channels}</TabsTrigger>
+              <TabsTrigger value="contracts">{messages.distribution.tabs.contracts}</TabsTrigger>
+              <TabsTrigger value="commissions">
+                {messages.distribution.tabs.commissions}
+              </TabsTrigger>
+              <TabsTrigger value="mappings">{messages.distribution.tabs.mappings}</TabsTrigger>
+              <TabsTrigger value="booking-links">
+                {messages.distribution.tabs.bookingLinks}
+              </TabsTrigger>
+              <TabsTrigger value="webhooks">{messages.distribution.tabs.webhooks}</TabsTrigger>
             </TabsList>
             <DistributionChannelsTab
               filteredChannels={filteredChannels}
@@ -350,6 +377,7 @@ export function DistributionPage() {
             />
             <DistributionContractsTab
               channels={channels}
+              locale={resolvedLocale}
               suppliers={suppliers}
               filteredContracts={filteredContracts}
               contractSelection={contractSelection}
@@ -415,6 +443,7 @@ export function DistributionPage() {
             />
             <DistributionBookingLinksTab
               channels={channels}
+              locale={resolvedLocale}
               bookings={bookings}
               filteredBookingLinks={filteredBookingLinks}
               bookingLinkSelection={bookingLinkSelection}
@@ -438,6 +467,7 @@ export function DistributionPage() {
             />
             <DistributionWebhooksTab
               channels={channels}
+              locale={resolvedLocale}
               filteredWebhookEvents={filteredWebhookEvents}
               webhookSelection={webhookSelection}
               setWebhookSelection={setWebhookSelection}

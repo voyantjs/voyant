@@ -1,4 +1,5 @@
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { ConfirmActionButton, SelectionActionBar } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
@@ -9,16 +10,18 @@ import type {
 } from "@/components/voyant/availability/availability-shared"
 import {
   closeoutColumns,
-  formatSelectionLabel,
+  formatLocalizedSelectionLabel,
   pickupPointColumns,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { SectionHeader } from "./availability-dialogs"
 
 type DeleteFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   clearSelection: () => void
 }) => Promise<void>
 
@@ -26,7 +29,8 @@ type BulkFn = (args: {
   ids: string[]
   endpoint: string
   target: string
-  noun: string
+  nounSingular: string
+  nounPlural: string
   payload: Record<string, unknown>
   successVerb: string
   clearSelection: () => void
@@ -42,18 +46,25 @@ export function AvailabilityCloseoutsTab(props: {
   onCreate: () => void
   onEdit: (row: AvailabilityCloseoutRow) => void
 }) {
+  const messages = useAdminMessages()
+  const selection = (count: number) =>
+    formatLocalizedSelectionLabel(
+      count,
+      messages.availability.nouns.closeoutSingular,
+      messages.availability.nouns.closeoutPlural,
+    )
   return (
     <TabsContent value="closeouts" className="space-y-4">
       <SectionHeader
-        title="Closeouts"
-        description="Block product-level or slot-level availability for specific dates."
-        actionLabel="New Closeout"
+        title={messages.availability.tabs.closeouts.title}
+        description={messages.availability.tabs.closeouts.description}
+        actionLabel={messages.availability.tabs.closeouts.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={closeoutColumns(props.products)}
+        columns={closeoutColumns(props.products, messages)}
         data={props.filteredCloseouts}
-        emptyMessage="No closeouts match the current filters."
+        emptyMessage={messages.availability.tabs.closeouts.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.closeoutSelection}
@@ -61,10 +72,12 @@ export function AvailabilityCloseoutsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Closeouts"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "closeout")}?`}
-              description="This permanently removes the selected closeouts and can reopen blocked dates if no other restriction applies."
+              buttonLabel={messages.availability.tabs.closeouts.bulkDeleteButton}
+              confirmLabel={messages.availability.tabs.closeouts.bulkDeleteConfirm}
+              title={formatMessage(messages.availability.tabs.closeouts.bulkDeleteTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.closeouts.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "closeouts-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -73,7 +86,8 @@ export function AvailabilityCloseoutsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/closeouts",
                   target: "closeouts-delete",
-                  noun: "closeout",
+                  nounSingular: messages.availability.nouns.closeoutSingular,
+                  nounPlural: messages.availability.nouns.closeoutPlural,
                   clearSelection,
                 })
               }
@@ -97,18 +111,25 @@ export function AvailabilityPickupPointsTab(props: {
   onCreate: () => void
   onEdit: (row: AvailabilityPickupPointRow) => void
 }) {
+  const messages = useAdminMessages()
+  const selection = (count: number) =>
+    formatLocalizedSelectionLabel(
+      count,
+      messages.availability.nouns.pickupPointSingular,
+      messages.availability.nouns.pickupPointPlural,
+    )
   return (
     <TabsContent value="pickup-points" className="space-y-4">
       <SectionHeader
-        title="Pickup Points"
-        description="Operational pickup locations by product."
-        actionLabel="New Pickup Point"
+        title={messages.availability.tabs.pickupPoints.title}
+        description={messages.availability.tabs.pickupPoints.description}
+        actionLabel={messages.availability.tabs.pickupPoints.actionLabel}
         onAction={props.onCreate}
       />
       <DataTable
-        columns={pickupPointColumns(props.products)}
+        columns={pickupPointColumns(props.products, messages)}
         data={props.filteredPickupPoints}
-        emptyMessage="No pickup points match the current filters."
+        emptyMessage={messages.availability.tabs.pickupPoints.emptyMessage}
         enableRowSelection
         getRowId={(row) => row.id}
         rowSelection={props.pickupPointSelection}
@@ -116,46 +137,54 @@ export function AvailabilityPickupPointsTab(props: {
         renderSelectionActions={({ selectedRows, clearSelection }) => (
           <SelectionActionBar selectedCount={selectedRows.length} onClear={clearSelection}>
             <ConfirmActionButton
-              buttonLabel="Activate"
-              confirmLabel="Activate Pickup Points"
-              title={`Activate ${formatSelectionLabel(selectedRows.length, "pickup point")}?`}
-              description="This makes the selected pickup points available again for operational planning."
+              buttonLabel={messages.availability.tabs.pickupPoints.bulkActivateButton}
+              confirmLabel={messages.availability.tabs.pickupPoints.bulkActivateConfirm}
+              title={formatMessage(messages.availability.tabs.pickupPoints.bulkActivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.pickupPoints.bulkActivateDescription}
               disabled={props.bulkActionTarget === "pickup-points-activate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/pickup-points",
                   target: "pickup-points-activate",
-                  noun: "pickup point",
+                  nounSingular: messages.availability.nouns.pickupPointSingular,
+                  nounPlural: messages.availability.nouns.pickupPointPlural,
                   payload: { active: true },
-                  successVerb: "Activated",
+                  successVerb: messages.availability.verbActivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Deactivate"
-              confirmLabel="Deactivate Pickup Points"
-              title={`Deactivate ${formatSelectionLabel(selectedRows.length, "pickup point")}?`}
-              description="This removes the selected pickup points from active use without deleting their history."
+              buttonLabel={messages.availability.tabs.pickupPoints.bulkDeactivateButton}
+              confirmLabel={messages.availability.tabs.pickupPoints.bulkDeactivateConfirm}
+              title={formatMessage(messages.availability.tabs.pickupPoints.bulkDeactivateTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.pickupPoints.bulkDeactivateDescription}
               disabled={props.bulkActionTarget === "pickup-points-deactivate"}
               onConfirm={() =>
                 props.handleBulkUpdate({
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/pickup-points",
                   target: "pickup-points-deactivate",
-                  noun: "pickup point",
+                  nounSingular: messages.availability.nouns.pickupPointSingular,
+                  nounPlural: messages.availability.nouns.pickupPointPlural,
                   payload: { active: false },
-                  successVerb: "Deactivated",
+                  successVerb: messages.availability.verbDeactivated,
                   clearSelection,
                 })
               }
             />
             <ConfirmActionButton
-              buttonLabel="Delete Selected"
-              confirmLabel="Delete Pickup Points"
-              title={`Delete ${formatSelectionLabel(selectedRows.length, "pickup point")}?`}
-              description="This permanently removes the selected pickup points from the product setup."
+              buttonLabel={messages.availability.tabs.pickupPoints.bulkDeleteButton}
+              confirmLabel={messages.availability.tabs.pickupPoints.bulkDeleteConfirm}
+              title={formatMessage(messages.availability.tabs.pickupPoints.bulkDeleteTitle, {
+                selection: selection(selectedRows.length),
+              })}
+              description={messages.availability.tabs.pickupPoints.bulkDeleteDescription}
               disabled={props.bulkActionTarget === "pickup-points-delete"}
               variant="destructive"
               confirmVariant="destructive"
@@ -164,7 +193,8 @@ export function AvailabilityPickupPointsTab(props: {
                   ids: selectedRows.map((row) => row.original.id),
                   endpoint: "/v1/availability/pickup-points",
                   target: "pickup-points-delete",
-                  noun: "pickup point",
+                  nounSingular: messages.availability.nouns.pickupPointSingular,
+                  nounPlural: messages.availability.nouns.pickupPointPlural,
                   clearSelection,
                 })
               }

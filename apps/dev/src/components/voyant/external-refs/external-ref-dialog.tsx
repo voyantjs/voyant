@@ -207,6 +207,10 @@ export function ExternalRefDialog({
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={EXTERNAL_REF_STATUSES.map((x) => ({
+                    label: x.replace(/_/g, " "),
+                    value: x,
+                  }))}
                   value={form.watch("status")}
                   onValueChange={(value) => form.setValue("status", value as RefStatus)}
                 >

@@ -35,7 +35,6 @@ const templateFormSchema = z.object({
   scope: z.enum(["customer", "supplier", "partner", "channel", "other"]),
   language: z.string().min(2).max(10).optional(),
   description: z.string().optional(),
-  bodyFormat: z.enum(["markdown", "html", "lexical_json"]),
   body: z.string().min(1, "Body is required"),
   variableSchema: z.string().optional(),
   active: z.boolean(),
@@ -59,12 +58,6 @@ const SCOPES = [
   { value: "other", label: "Other" },
 ] as const
 
-const BODY_FORMATS = [
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "lexical_json", label: "Lexical JSON" },
-] as const
-
 export function TemplateDialog({ open, onOpenChange, template, onSuccess }: TemplateDialogProps) {
   const isEditing = !!template
   const { create, update } = useLegalContractTemplateMutation()
@@ -77,7 +70,6 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
       scope: "customer",
       language: "en",
       description: "",
-      bodyFormat: "markdown",
       body: "",
       variableSchema: "",
       active: true,
@@ -92,7 +84,6 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
         scope: template.scope as FormValues["scope"],
         language: template.language,
         description: template.description ?? "",
-        bodyFormat: template.bodyFormat as FormValues["bodyFormat"],
         body: template.body,
         variableSchema: template.variableSchema
           ? JSON.stringify(template.variableSchema, null, 2)
@@ -111,7 +102,6 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
       scope: values.scope,
       language: values.language || "en",
       description: values.description || undefined,
-      bodyFormat: values.bodyFormat,
       body: values.body,
       variableSchema: values.variableSchema ? JSON.parse(values.variableSchema) : undefined,
       active: values.active,
@@ -150,10 +140,11 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Scope</Label>
                 <Select
+                  items={SCOPES}
                   value={form.watch("scope")}
                   onValueChange={(v) => form.setValue("scope", v as FormValues["scope"])}
                 >
@@ -172,24 +163,6 @@ export function TemplateDialog({ open, onOpenChange, template, onSuccess }: Temp
               <div className="flex flex-col gap-2">
                 <Label>Language</Label>
                 <Input {...form.register("language")} placeholder="en" maxLength={10} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Body Format</Label>
-                <Select
-                  value={form.watch("bodyFormat")}
-                  onValueChange={(v) => form.setValue("bodyFormat", v as FormValues["bodyFormat"])}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BODY_FORMATS.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 

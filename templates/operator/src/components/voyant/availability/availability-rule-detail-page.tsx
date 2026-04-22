@@ -1,9 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, CalendarDays, Loader2, Package, Trash2 } from "lucide-react"
+import { ArrowLeft, CalendarDays, Package, Trash2 } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { AvailabilityRuleDetailSkeleton } from "./availability-rule-detail-skeleton"
+import { getSlotStatusLabel } from "./availability-shared"
 
 type RuleDetail = {
   id: string
@@ -72,6 +75,9 @@ function formatDateTime(value: string) {
 export function AvailabilityRuleDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const messages = useAdminMessages()
+  const detailMessages = messages.availability.details
+  const noValue = detailMessages.noValue
 
   const { data: ruleData, isPending } = useQuery(getAvailabilityRuleQueryOptions(id))
 
@@ -93,19 +99,15 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
   })
 
   if (isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <AvailabilityRuleDetailSkeleton />
   }
 
   if (!rule) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Availability rule not found</p>
+        <p className="text-muted-foreground">{detailMessages.rule.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/availability" })}>
-          Back to Availability
+          {detailMessages.backToAvailability}
         </Button>
       </div>
     )
@@ -118,10 +120,12 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Availability Rule</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{detailMessages.rule.pageTitle}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant={rule.active ? "default" : "secondary"}>
-              {rule.active ? "Active" : "Inactive"}
+              {rule.active
+                ? messages.availability.statusActive
+                : messages.availability.statusInactive}
             </Badge>
             <Badge variant="outline">{rule.timezone}</Badge>
           </div>
@@ -132,19 +136,19 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
             onClick={() => void navigate({ to: "/products/$id", params: { id: rule.productId } })}
           >
             <Package className="mr-2 h-4 w-4" />
-            Open Product
+            {detailMessages.openProduct}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this availability rule?")) {
+              if (confirm(detailMessages.rule.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
@@ -152,15 +156,17 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Rule Details</CardTitle>
+            <CardTitle>{detailMessages.rule.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Product:</span>{" "}
+              <span className="text-muted-foreground">{messages.availability.productLabel}:</span>{" "}
               <span>{productQuery.data?.data.name ?? rule.productId}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Recurrence:</span>
+              <span className="text-muted-foreground">
+                {messages.availability.recurrenceLabel}:
+              </span>
               <pre className="mt-1 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs">
                 {rule.recurrenceRule}
               </pre>
@@ -170,28 +176,34 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Capacity Policy</CardTitle>
+            <CardTitle>{detailMessages.rule.capacityPolicyTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Max Capacity:</span>{" "}
+              <span className="text-muted-foreground">{messages.availability.maxPaxLabel}:</span>{" "}
               <span>{rule.maxCapacity}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Max Pickup Capacity:</span>{" "}
-              <span>{rule.maxPickupCapacity ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.rule.maxPickupCapacityLabel}:
+              </span>{" "}
+              <span>{rule.maxPickupCapacity ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Min Total Pax:</span>{" "}
-              <span>{rule.minTotalPax ?? "-"}</span>
+              <span className="text-muted-foreground">{detailMessages.rule.minTotalPaxLabel}:</span>{" "}
+              <span>{rule.minTotalPax ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Cutoff Minutes:</span>{" "}
-              <span>{rule.cutoffMinutes ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.rule.cutoffMinutesLabel}:
+              </span>{" "}
+              <span>{rule.cutoffMinutes ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Early Booking Limit:</span>{" "}
-              <span>{rule.earlyBookingLimitMinutes ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {detailMessages.rule.earlyBookingLimitLabel}:
+              </span>{" "}
+              <span>{rule.earlyBookingLimitMinutes ?? noValue}</span>
             </div>
           </CardContent>
         </Card>
@@ -200,11 +212,11 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <CalendarDays className="h-4 w-4" />
-          <CardTitle>Generated Slots</CardTitle>
+          <CardTitle>{detailMessages.rule.generatedSlotsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(slotsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No slots currently reference this rule.</p>
+            <p className="text-muted-foreground">{detailMessages.rule.generatedSlotsEmpty}</p>
           ) : (
             slotsQuery.data?.data.map((slot) => (
               <button
@@ -214,15 +226,13 @@ export function AvailabilityRuleDetailPage({ id }: { id: string }) {
                 onClick={() => void navigate({ to: "/availability/$id", params: { id: slot.id } })}
               >
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="capitalize">
-                    {slot.status.replace("_", " ")}
-                  </Badge>
+                  <Badge variant="outline">{getSlotStatusLabel(slot.status, messages)}</Badge>
                   <span>
                     {slot.dateLocal} · {formatDateTime(slot.startsAt)}
                   </span>
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  Remaining Pax: {slot.remainingPax ?? "-"}
+                  {messages.availability.remainingPaxLabel}: {slot.remainingPax ?? noValue}
                 </div>
               </button>
             ))

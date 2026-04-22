@@ -2,7 +2,6 @@
 
 import {
   type BookingRecord,
-  bookingStatusOptions,
   bookingStatusSchema,
   useBookingStatusMutation,
 } from "@voyantjs/bookings-react"
@@ -27,6 +26,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const statusChangeFormSchema = z.object({
@@ -52,7 +52,17 @@ export function StatusChangeDialog({
   currentStatus,
   onSuccess,
 }: StatusChangeDialogProps) {
+  const statusChangeMessages = useAdminMessages().bookings.detail.statusChangeDialog
   const mutation = useBookingStatusMutation(bookingId)
+  const bookingStatusOptions = [
+    { value: "draft", label: statusChangeMessages.statusDraft },
+    { value: "on_hold", label: statusChangeMessages.statusOnHold },
+    { value: "confirmed", label: statusChangeMessages.statusConfirmed },
+    { value: "in_progress", label: statusChangeMessages.statusInProgress },
+    { value: "completed", label: statusChangeMessages.statusCompleted },
+    { value: "cancelled", label: statusChangeMessages.statusCancelled },
+    { value: "expired", label: statusChangeMessages.statusExpired },
+  ] as const
 
   const form = useForm<StatusChangeFormValues, unknown, StatusChangeFormOutput>({
     resolver: zodResolver(statusChangeFormSchema),
@@ -84,7 +94,7 @@ export function StatusChangeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Booking Status</DialogTitle>
+          <DialogTitle>{statusChangeMessages.title}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -92,7 +102,7 @@ export function StatusChangeDialog({
         >
           <DialogBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>New Status</Label>
+              <Label>{statusChangeMessages.newStatusLabel}</Label>
               <Select
                 value={form.watch("status")}
                 onValueChange={(value) =>
@@ -114,17 +124,20 @@ export function StatusChangeDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Note (optional)</Label>
-              <Textarea {...form.register("note")} placeholder="Reason for status change..." />
+              <Label>{statusChangeMessages.noteLabel}</Label>
+              <Textarea
+                {...form.register("note")}
+                placeholder={statusChangeMessages.notePlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {statusChangeMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={mutation.isPending}>
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update Status
+              {statusChangeMessages.submit}
             </Button>
           </DialogFooter>
         </form>

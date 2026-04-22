@@ -29,23 +29,29 @@ import {
   nullableNumber,
   nullableString,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const ruleFormSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  timezone: z.string().min(1, "Timezone is required"),
-  recurrenceRule: z.string().min(1, "Recurrence rule is required"),
-  maxCapacity: z.coerce.number().int().min(0),
-  maxPickupCapacity: z.string().optional(),
-  minTotalPax: z.string().optional(),
-  cutoffMinutes: z.string().optional(),
-  earlyBookingLimitMinutes: z.string().optional(),
-  active: z.boolean(),
-})
+function getRuleFormSchema(messages: ReturnType<typeof useAdminMessages>) {
+  return z.object({
+    productId: z.string().min(1, messages.availability.dialogs.rule.validationProductRequired),
+    timezone: z.string().min(1, messages.availability.dialogs.rule.validationTimezoneRequired),
+    recurrenceRule: z
+      .string()
+      .min(1, messages.availability.dialogs.rule.validationRecurrenceRequired),
+    maxCapacity: z.coerce.number().int().min(0),
+    maxPickupCapacity: z.string().optional(),
+    minTotalPax: z.string().optional(),
+    cutoffMinutes: z.string().optional(),
+    earlyBookingLimitMinutes: z.string().optional(),
+    active: z.boolean(),
+  })
+}
 
-type RuleFormValues = z.input<typeof ruleFormSchema>
-type RuleFormOutput = z.output<typeof ruleFormSchema>
+type RuleFormSchema = ReturnType<typeof getRuleFormSchema>
+type RuleFormValues = z.input<RuleFormSchema>
+type RuleFormOutput = z.output<RuleFormSchema>
 
 export function AvailabilityRuleDialog({
   open,
@@ -60,6 +66,9 @@ export function AvailabilityRuleDialog({
   products: ProductOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const ruleMessages = messages.availability.dialogs.rule
+  const ruleFormSchema = getRuleFormSchema(messages)
   const form = useForm<RuleFormValues, unknown, RuleFormOutput>({
     resolver: zodResolver(ruleFormSchema),
     defaultValues: {
@@ -120,20 +129,19 @@ export function AvailabilityRuleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Availability Rule" : "New Availability Rule"}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? ruleMessages.editTitle : ruleMessages.newTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{ruleMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={ruleMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -152,49 +160,50 @@ export function AvailabilityRuleDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Timezone</Label>
-                <Input {...form.register("timezone")} placeholder="Europe/Bucharest" />
+                <Label>{ruleMessages.timezoneLabel}</Label>
+                <Input
+                  {...form.register("timezone")}
+                  placeholder={ruleMessages.timezonePlaceholder}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Max Capacity</Label>
+                <Label>{ruleMessages.maxCapacityLabel}</Label>
                 <Input {...form.register("maxCapacity")} type="number" min={0} />
               </div>
             </div>
 
             <div className="grid gap-2">
-              <Label>Recurrence Rule</Label>
+              <Label>{ruleMessages.recurrenceRuleLabel}</Label>
               <Textarea
                 {...form.register("recurrenceRule")}
-                placeholder="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+                placeholder={ruleMessages.recurrenceRulePlaceholder}
                 className="font-mono text-xs"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Max Pickup Capacity</Label>
+                <Label>{ruleMessages.maxPickupCapacityLabel}</Label>
                 <Input {...form.register("maxPickupCapacity")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Minimum Total Pax</Label>
+                <Label>{ruleMessages.minimumTotalPaxLabel}</Label>
                 <Input {...form.register("minTotalPax")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Cutoff Minutes</Label>
+                <Label>{ruleMessages.cutoffMinutesLabel}</Label>
                 <Input {...form.register("cutoffMinutes")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Early Booking Limit Minutes</Label>
+                <Label>{ruleMessages.earlyBookingLimitMinutesLabel}</Label>
                 <Input {...form.register("earlyBookingLimitMinutes")} type="number" min={0} />
               </div>
             </div>
 
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
-                <p className="text-xs text-muted-foreground">
-                  Use this rule when generating live slots.
-                </p>
+                <p className="text-sm font-medium">{ruleMessages.activeTitle}</p>
+                <p className="text-xs text-muted-foreground">{ruleMessages.activeDescription}</p>
               </div>
               <Switch
                 checked={form.watch("active")}
@@ -204,11 +213,11 @@ export function AvailabilityRuleDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {ruleMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Rule" : "Create Rule"}
+              {isEditing ? ruleMessages.save : ruleMessages.create}
             </Button>
           </DialogFooter>
         </form>
@@ -217,17 +226,22 @@ export function AvailabilityRuleDialog({
   )
 }
 
-const startTimeFormSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  label: z.string().optional(),
-  startTimeLocal: z.string().min(1, "Start time is required"),
-  durationMinutes: z.string().optional(),
-  sortOrder: z.coerce.number().int(),
-  active: z.boolean(),
-})
+function getStartTimeFormSchema(messages: ReturnType<typeof useAdminMessages>) {
+  return z.object({
+    productId: z.string().min(1, messages.availability.dialogs.startTime.validationProductRequired),
+    label: z.string().optional(),
+    startTimeLocal: z
+      .string()
+      .min(1, messages.availability.dialogs.startTime.validationStartTimeRequired),
+    durationMinutes: z.string().optional(),
+    sortOrder: z.coerce.number().int(),
+    active: z.boolean(),
+  })
+}
 
-type StartTimeFormValues = z.input<typeof startTimeFormSchema>
-type StartTimeFormOutput = z.output<typeof startTimeFormSchema>
+type StartTimeFormSchema = ReturnType<typeof getStartTimeFormSchema>
+type StartTimeFormValues = z.input<StartTimeFormSchema>
+type StartTimeFormOutput = z.output<StartTimeFormSchema>
 
 export function AvailabilityStartTimeDialog({
   open,
@@ -242,6 +256,9 @@ export function AvailabilityStartTimeDialog({
   products: ProductOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const startTimeMessages = messages.availability.dialogs.startTime
+  const startTimeFormSchema = getStartTimeFormSchema(messages)
   const form = useForm<StartTimeFormValues, unknown, StartTimeFormOutput>({
     resolver: zodResolver(startTimeFormSchema),
     defaultValues: {
@@ -293,18 +310,21 @@ export function AvailabilityStartTimeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Start Time" : "New Start Time"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? startTimeMessages.editTitle : startTimeMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{startTimeMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={startTimeMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -317,27 +337,30 @@ export function AvailabilityStartTimeDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Label</Label>
-                <Input {...form.register("label")} placeholder="Morning departure" />
+                <Label>{startTimeMessages.labelLabel}</Label>
+                <Input
+                  {...form.register("label")}
+                  placeholder={startTimeMessages.labelPlaceholder}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Start Time</Label>
+                <Label>{startTimeMessages.startTimeLabel}</Label>
                 <Input {...form.register("startTimeLocal")} type="time" />
               </div>
               <div className="grid gap-2">
-                <Label>Duration Minutes</Label>
+                <Label>{startTimeMessages.durationMinutesLabel}</Label>
                 <Input {...form.register("durationMinutes")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Sort Order</Label>
+                <Label>{startTimeMessages.sortOrderLabel}</Label>
                 <Input {...form.register("sortOrder")} type="number" />
               </div>
             </div>
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
+                <p className="text-sm font-medium">{startTimeMessages.activeTitle}</p>
                 <p className="text-xs text-muted-foreground">
-                  Expose this start time for operational planning.
+                  {startTimeMessages.activeDescription}
                 </p>
               </div>
               <Switch
@@ -348,11 +371,11 @@ export function AvailabilityStartTimeDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {startTimeMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Start Time" : "Create Start Time"}
+              {isEditing ? startTimeMessages.save : startTimeMessages.create}
             </Button>
           </DialogFooter>
         </form>

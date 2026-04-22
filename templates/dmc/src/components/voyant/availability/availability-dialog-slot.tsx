@@ -35,31 +35,35 @@ import {
   toIsoDateTime,
   toLocalDateTimeInput,
 } from "@/components/voyant/availability/availability-shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const slotFormSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  availabilityRuleId: z.string().optional(),
-  startTimeId: z.string().optional(),
-  dateLocal: z.string().min(1, "Date is required"),
-  startsAt: z.string().min(1, "Start datetime is required"),
-  endsAt: z.string().optional(),
-  timezone: z.string().min(1, "Timezone is required"),
-  status: z.enum(["open", "closed", "sold_out", "cancelled"]),
-  unlimited: z.boolean(),
-  initialPax: z.string().optional(),
-  remainingPax: z.string().optional(),
-  initialPickups: z.string().optional(),
-  remainingPickups: z.string().optional(),
-  remainingResources: z.string().optional(),
-  pastCutoff: z.boolean(),
-  tooEarly: z.boolean(),
-  notes: z.string().optional(),
-})
+function getSlotFormSchema(messages: ReturnType<typeof useAdminMessages>) {
+  return z.object({
+    productId: z.string().min(1, messages.availability.dialogs.slot.validationProductRequired),
+    availabilityRuleId: z.string().optional(),
+    startTimeId: z.string().optional(),
+    dateLocal: z.string().min(1, messages.availability.dialogs.slot.validationDateRequired),
+    startsAt: z.string().min(1, messages.availability.dialogs.slot.validationStartsAtRequired),
+    endsAt: z.string().optional(),
+    timezone: z.string().min(1, messages.availability.dialogs.slot.validationTimezoneRequired),
+    status: z.enum(["open", "closed", "sold_out", "cancelled"]),
+    unlimited: z.boolean(),
+    initialPax: z.string().optional(),
+    remainingPax: z.string().optional(),
+    initialPickups: z.string().optional(),
+    remainingPickups: z.string().optional(),
+    remainingResources: z.string().optional(),
+    pastCutoff: z.boolean(),
+    tooEarly: z.boolean(),
+    notes: z.string().optional(),
+  })
+}
 
-type SlotFormValues = z.input<typeof slotFormSchema>
-type SlotFormOutput = z.output<typeof slotFormSchema>
+type SlotFormSchema = ReturnType<typeof getSlotFormSchema>
+type SlotFormValues = z.input<SlotFormSchema>
+type SlotFormOutput = z.output<SlotFormSchema>
 
 export function AvailabilitySlotDialog({
   open,
@@ -78,6 +82,9 @@ export function AvailabilitySlotDialog({
   startTimes: AvailabilityStartTimeRow[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const slotMessages = messages.availability.dialogs.slot
+  const slotFormSchema = getSlotFormSchema(messages)
   const form = useForm<SlotFormValues, unknown, SlotFormOutput>({
     resolver: zodResolver(slotFormSchema),
     defaultValues: {
@@ -168,18 +175,19 @@ export function AvailabilitySlotDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Slot" : "New Slot"}</DialogTitle>
+          <DialogTitle>{isEditing ? slotMessages.editTitle : slotMessages.newTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{slotMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={slotMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -193,7 +201,7 @@ export function AvailabilitySlotDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Rule</Label>
+                <Label>{slotMessages.ruleLabel}</Label>
                 <Select
                   value={form.watch("availabilityRuleId") ?? NONE_VALUE}
                   onValueChange={(value) =>
@@ -201,10 +209,10 @@ export function AvailabilitySlotDialog({
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Optional rule" />
+                    <SelectValue placeholder={slotMessages.optionalRulePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No rule</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{slotMessages.noRule}</SelectItem>
                     {filteredRules.map((rule) => (
                       <SelectItem key={rule.id} value={rule.id}>
                         {rule.timezone} · {rule.recurrenceRule}
@@ -214,16 +222,16 @@ export function AvailabilitySlotDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Start Time</Label>
+                <Label>{slotMessages.startTimeLabel}</Label>
                 <Select
                   value={form.watch("startTimeId") ?? NONE_VALUE}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Optional start time" />
+                    <SelectValue placeholder={slotMessages.optionalStartTimePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No start time</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{slotMessages.noStartTime}</SelectItem>
                     {filteredStartTimes.map((startTime) => (
                       <SelectItem key={startTime.id} value={startTime.id}>
                         {startTime.label ?? startTime.startTimeLocal}
@@ -236,27 +244,31 @@ export function AvailabilitySlotDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Date</Label>
+                <Label>{slotMessages.dateLabel}</Label>
                 <Input {...form.register("dateLocal")} type="date" />
               </div>
               <div className="grid gap-2">
-                <Label>Timezone</Label>
-                <Input {...form.register("timezone")} placeholder="Europe/Bucharest" />
+                <Label>{slotMessages.timezoneLabel}</Label>
+                <Input
+                  {...form.register("timezone")}
+                  placeholder={slotMessages.timezonePlaceholder}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Starts At</Label>
+                <Label>{slotMessages.startsAtLabel}</Label>
                 <Input {...form.register("startsAt")} type="datetime-local" />
               </div>
               <div className="grid gap-2">
-                <Label>Ends At</Label>
+                <Label>{slotMessages.endsAtLabel}</Label>
                 <Input {...form.register("endsAt")} type="datetime-local" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label>{slotMessages.statusLabel}</Label>
                 <Select
+                  items={slotStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as SlotFormOutput["status"])
@@ -268,15 +280,23 @@ export function AvailabilitySlotDialog({
                   <SelectContent>
                     {slotStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {
+                          {
+                            open: messages.availability.statusOpen,
+                            closed: messages.availability.statusClosed,
+                            sold_out: messages.availability.statusSoldOut,
+                            cancelled: messages.availability.statusCancelled,
+                          }[option.value]
+                        }
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Unlimited</Label>
+                <Label>{slotMessages.unlimitedLabel}</Label>
                 <Select
+                  items={booleanOptions}
                   value={String(form.watch("unlimited"))}
                   onValueChange={(value) => form.setValue("unlimited", value === "true")}
                 >
@@ -286,7 +306,7 @@ export function AvailabilitySlotDialog({
                   <SelectContent>
                     {booleanOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {option.value === "true" ? slotMessages.yes : slotMessages.no}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -296,23 +316,23 @@ export function AvailabilitySlotDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
-                <Label>Initial Pax</Label>
+                <Label>{slotMessages.initialPaxLabel}</Label>
                 <Input {...form.register("initialPax")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Remaining Pax</Label>
+                <Label>{slotMessages.remainingPaxLabel}</Label>
                 <Input {...form.register("remainingPax")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Remaining Resources</Label>
+                <Label>{slotMessages.remainingResourcesLabel}</Label>
                 <Input {...form.register("remainingResources")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Initial Pickups</Label>
+                <Label>{slotMessages.initialPickupsLabel}</Label>
                 <Input {...form.register("initialPickups")} type="number" min={0} />
               </div>
               <div className="grid gap-2">
-                <Label>Remaining Pickups</Label>
+                <Label>{slotMessages.remainingPickupsLabel}</Label>
                 <Input {...form.register("remainingPickups")} type="number" min={0} />
               </div>
             </div>
@@ -320,8 +340,10 @@ export function AvailabilitySlotDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div>
-                  <p className="text-sm font-medium">Past Cutoff</p>
-                  <p className="text-xs text-muted-foreground">Prevent late bookings.</p>
+                  <p className="text-sm font-medium">{slotMessages.pastCutoffTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {slotMessages.pastCutoffDescription}
+                  </p>
                 </div>
                 <Switch
                   checked={form.watch("pastCutoff")}
@@ -330,8 +352,10 @@ export function AvailabilitySlotDialog({
               </div>
               <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div>
-                  <p className="text-sm font-medium">Too Early</p>
-                  <p className="text-xs text-muted-foreground">Prevent very early bookings.</p>
+                  <p className="text-sm font-medium">{slotMessages.tooEarlyTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {slotMessages.tooEarlyDescription}
+                  </p>
                 </div>
                 <Switch
                   checked={form.watch("tooEarly")}
@@ -341,20 +365,17 @@ export function AvailabilitySlotDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label>Notes</Label>
-              <Textarea
-                {...form.register("notes")}
-                placeholder="Operational notes for this slot..."
-              />
+              <Label>{slotMessages.notesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={slotMessages.notesPlaceholder} />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {slotMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Slot" : "Create Slot"}
+              {isEditing ? slotMessages.save : slotMessages.create}
             </Button>
           </DialogFooter>
         </form>

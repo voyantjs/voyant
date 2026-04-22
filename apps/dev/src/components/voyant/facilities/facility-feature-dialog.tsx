@@ -136,6 +136,7 @@ export function FacilityFeatureDialog({
               <div className="flex flex-col gap-2">
                 <Label>Category</Label>
                 <Select
+                  items={CATEGORIES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                   value={form.watch("category")}
                   onValueChange={(value) => form.setValue("category", value as Category)}
                 >

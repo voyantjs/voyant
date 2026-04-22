@@ -1,60 +1,80 @@
 "use client"
 
 import { useBookingNoteMutation, useBookingNotes } from "@voyantjs/bookings-react"
-import { Loader2 } from "lucide-react"
+import { useLocale } from "@voyantjs/voyant-admin"
+import { Loader2, Plus, StickyNote, Trash2 } from "lucide-react"
 import * as React from "react"
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Textarea } from "@/components/ui"
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
+
+import { BookingNoteDialog } from "./booking-note-dialog"
 
 export interface BookingNotesProps {
   bookingId: string
 }
 
 export function BookingNotes({ bookingId }: BookingNotesProps) {
-  const [content, setContent] = React.useState("")
+  const noteMessages = useAdminMessages().bookings.detail.notes
+  const { resolvedLocale } = useLocale()
+  const [dialogOpen, setDialogOpen] = React.useState(false)
   const { data } = useBookingNotes(bookingId)
-  const mutation = useBookingNoteMutation(bookingId)
+  const { remove } = useBookingNoteMutation(bookingId)
 
   const notes = data?.data ?? []
 
   return (
     <Card data-slot="booking-notes">
-      <CardHeader>
-        <CardTitle>Notes</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <StickyNote className="h-4 w-4" />
+          {noteMessages.title}
+        </CardTitle>
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          {noteMessages.addAction}
+        </Button>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex gap-2">
-          <Textarea
-            placeholder="Add a note..."
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            className="min-h-[80px]"
-          />
-          <Button
-            className="self-end"
-            disabled={!content.trim() || mutation.isPending}
-            onClick={async () => {
-              await mutation.mutateAsync({ content: content.trim() })
-              setContent("")
-            }}
-          >
-            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
-          </Button>
-        </div>
-
+      <CardContent>
         {notes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No notes yet.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{noteMessages.empty}</p>
         ) : (
-          notes.map((note) => (
-            <div key={note.id} className="rounded-md border p-3">
-              <p className="whitespace-pre-wrap text-sm">{note.content}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {new Date(note.createdAt).toLocaleString()}
-              </p>
-            </div>
-          ))
+          <div className="flex flex-col gap-3">
+            {notes.map((note) => {
+              const isDeleting = remove.isPending && remove.variables === note.id
+              return (
+                <div key={note.id} className="group relative rounded-md border p-3 pr-11">
+                  <p className="whitespace-pre-wrap text-sm">{note.content}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {new Date(note.createdAt).toLocaleString(resolvedLocale)}
+                  </p>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-2 top-2 h-7 w-7 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    disabled={isDeleting}
+                    onClick={() => {
+                      if (confirm(noteMessages.deleteConfirm)) {
+                        remove.mutate(note.id)
+                      }
+                    }}
+                    aria-label={noteMessages.deleteAriaLabel}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
         )}
       </CardContent>
+
+      <BookingNoteDialog open={dialogOpen} onOpenChange={setDialogOpen} bookingId={bookingId} />
     </Card>
   )
 }

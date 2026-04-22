@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
-
 import {
   Button,
   Dialog,
@@ -27,19 +26,8 @@ import {
   Textarea,
 } from "@/components/ui"
 import { CurrencyCombobox } from "@/components/ui/currency-combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
-
-const supplierStatusFormSchema = z.object({
-  serviceName: z.string().min(1, "Service name is required"),
-  status: z.enum(["pending", "confirmed", "rejected", "cancelled"]),
-  supplierReference: z.string().optional().nullable(),
-  costCurrency: z.string().min(3).max(3, "Use 3-letter ISO code"),
-  costAmountCents: z.coerce.number().int().min(0),
-  notes: z.string().optional().nullable(),
-})
-
-type SupplierStatusFormValues = z.input<typeof supplierStatusFormSchema>
-type SupplierStatusFormOutput = z.output<typeof supplierStatusFormSchema>
 
 export interface SupplierStatusDialogProps {
   open: boolean
@@ -49,13 +37,6 @@ export interface SupplierStatusDialogProps {
   onSuccess?: () => void
 }
 
-const CONFIRMATION_STATUSES = [
-  { value: "pending", label: "Pending" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "rejected", label: "Rejected" },
-  { value: "cancelled", label: "Cancelled" },
-] as const
-
 export function SupplierStatusDialog({
   open,
   onOpenChange,
@@ -63,8 +44,28 @@ export function SupplierStatusDialog({
   supplierStatus,
   onSuccess,
 }: SupplierStatusDialogProps) {
+  const supplierMessages = useAdminMessages().bookings.detail.supplierDialog
   const isEditing = Boolean(supplierStatus)
   const { create, update } = useSupplierStatusMutation(bookingId)
+
+  const supplierStatusFormSchema = z.object({
+    serviceName: z.string().min(1, supplierMessages.validationServiceNameRequired),
+    status: z.enum(["pending", "confirmed", "rejected", "cancelled"]),
+    supplierReference: z.string().optional().nullable(),
+    costCurrency: z.string().min(3).max(3, supplierMessages.validationCostCurrency),
+    costAmountCents: z.coerce.number().int().min(0),
+    notes: z.string().optional().nullable(),
+  })
+
+  type SupplierStatusFormValues = z.input<typeof supplierStatusFormSchema>
+  type SupplierStatusFormOutput = z.output<typeof supplierStatusFormSchema>
+
+  const CONFIRMATION_STATUSES = [
+    { value: "pending", label: supplierMessages.statusPending },
+    { value: "confirmed", label: supplierMessages.statusConfirmed },
+    { value: "rejected", label: supplierMessages.statusRejected },
+    { value: "cancelled", label: supplierMessages.statusCancelled },
+  ] as const
 
   const form = useForm<SupplierStatusFormValues, unknown, SupplierStatusFormOutput>({
     resolver: zodResolver(supplierStatusFormSchema),
@@ -119,7 +120,9 @@ export function SupplierStatusDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Update Supplier Status" : "Add Supplier Status"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? supplierMessages.editTitle : supplierMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -128,10 +131,10 @@ export function SupplierStatusDialog({
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Service Name</Label>
+                <Label>{supplierMessages.serviceNameLabel}</Label>
                 <Input
                   {...form.register("serviceName")}
-                  placeholder="Hotel Dubrovnik Palace"
+                  placeholder={supplierMessages.serviceNamePlaceholder}
                   disabled={isEditing}
                 />
                 {form.formState.errors.serviceName && (
@@ -142,7 +145,7 @@ export function SupplierStatusDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{supplierMessages.statusLabel}</Label>
                 <Select
                   value={form.watch("status")}
                   onValueChange={(value) =>
@@ -166,7 +169,7 @@ export function SupplierStatusDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Cost Currency</Label>
+                <Label>{supplierMessages.costCurrencyLabel}</Label>
                 <CurrencyCombobox
                   value={form.watch("costCurrency") || null}
                   onChange={(next) =>
@@ -178,7 +181,7 @@ export function SupplierStatusDialog({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cost Amount (cents)</Label>
+                <Label>{supplierMessages.costAmountLabel}</Label>
                 <Input
                   {...form.register("costAmountCents", { valueAsNumber: true })}
                   type="number"
@@ -186,23 +189,29 @@ export function SupplierStatusDialog({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Supplier Reference</Label>
-                <Input {...form.register("supplierReference")} placeholder="CONF-12345" />
+                <Label>{supplierMessages.supplierReferenceLabel}</Label>
+                <Input
+                  {...form.register("supplierReference")}
+                  placeholder={supplierMessages.supplierReferencePlaceholder}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional notes..." />
+              <Label>{supplierMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={supplierMessages.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {supplierMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add"}
+              {isEditing ? supplierMessages.saveChanges : supplierMessages.create}
             </Button>
           </DialogFooter>
         </form>

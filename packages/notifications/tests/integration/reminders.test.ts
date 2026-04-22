@@ -26,7 +26,7 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder routes", () => {
       VALUES ('book_test', 'BK-REM-1', 'person_1', 'EUR', 45000)
     `)
     await ctx.db.execute(sql`
-      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      INSERT INTO booking_travelers (id, booking_id, first_name, last_name, email, participant_type, is_primary)
       VALUES ('bkpt_test', 'book_test', 'Ana', 'Traveler', 'ana@example.com', 'traveler', true)
     `)
     await ctx.db.execute(sql`
@@ -128,7 +128,7 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder routes", () => {
       VALUES ('book_inv', 'BK-INV-1', 'person_2', 'EUR', 90000)
     `)
     await ctx.db.execute(sql`
-      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      INSERT INTO booking_travelers (id, booking_id, first_name, last_name, email, participant_type, is_primary)
       VALUES ('bkpt_inv', 'book_inv', 'Mara', 'Traveler', 'mara@example.com', 'traveler', true)
     `)
     await ctx.db.execute(sql`

@@ -182,7 +182,11 @@ export function ProductDayServiceForm({
   ) : supplierServiceOptions.length > 0 ? (
     <div className="flex flex-col gap-1.5 sm:col-span-2">
       <Label>Supplier service</Label>
-      <Select value={state.supplierServiceId} onValueChange={handleSupplierServiceSelect}>
+      <Select
+        items={supplierServiceOptions.map((option) => ({ label: option.label, value: option.id }))}
+        value={state.supplierServiceId}
+        onValueChange={handleSupplierServiceSelect}
+      >
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select a supplier service" />
         </SelectTrigger>
@@ -275,6 +279,7 @@ export function ProductDayServiceForm({
         <div className="flex flex-col gap-1.5">
           <Label>Service type</Label>
           <Select
+            items={SERVICE_TYPES}
             value={state.serviceType}
             onValueChange={(value) => field("serviceType")(value as ServiceType)}
           >

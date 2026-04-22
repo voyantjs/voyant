@@ -1,15 +1,17 @@
 "use client"
 
 import {
-  type BookingPassengerRecord,
-  useBookingDocumentMutation,
-  useBookingDocuments,
-  usePassengers,
+  type BookingTravelerRecord,
+  useBookingTravelerDocumentMutation,
+  useBookingTravelerDocuments,
+  useTravelers,
 } from "@voyantjs/bookings-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { ExternalLink, FileText, Plus, Trash2 } from "lucide-react"
 import * as React from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { BookingDocumentDialog } from "./booking-document-dialog"
 
@@ -21,22 +23,45 @@ const typeVariant: Record<string, "default" | "secondary" | "outline" | "destruc
   other: "outline",
 }
 
+function getDocumentTypeLabel(
+  type: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["documents"],
+) {
+  switch (type) {
+    case "visa":
+      return messages.typeVisa
+    case "insurance":
+      return messages.typeInsurance
+    case "health":
+      return messages.typeHealth
+    case "passport_copy":
+      return messages.typePassportCopy
+    case "other":
+      return messages.typeOther
+    default:
+      return type.replace(/_/g, " ")
+  }
+}
+
 export interface BookingDocumentListProps {
   bookingId: string
 }
 
 export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
+  const documentMessages = useAdminMessages().bookings.detail.documents
+  const noValue = useAdminMessages().bookings.detail.noValue
+  const { resolvedLocale } = useLocale()
   const [dialogOpen, setDialogOpen] = React.useState(false)
-  const { data } = useBookingDocuments(bookingId)
-  const { data: passengersData } = usePassengers(bookingId)
-  const { remove } = useBookingDocumentMutation(bookingId)
+  const { data } = useBookingTravelerDocuments(bookingId)
+  const { data: travelersData } = useTravelers(bookingId)
+  const { remove } = useBookingTravelerDocumentMutation(bookingId)
 
   const documents = data?.data ?? []
-  const passengers = passengersData?.data ?? []
+  const travelers = travelersData?.data ?? []
 
-  const passengerMap = new Map<string, BookingPassengerRecord>()
-  for (const p of passengers) {
-    passengerMap.set(p.id, p)
+  const travelerMap = new Map<string, BookingTravelerRecord>()
+  for (const traveler of travelers) {
+    travelerMap.set(traveler.id, traveler)
   }
 
   return (
@@ -44,39 +69,37 @@ export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Documents
+          {documentMessages.title}
         </CardTitle>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Document
+          {documentMessages.addAction}
         </Button>
       </CardHeader>
       <CardContent>
         {documents.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No documents yet.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{documentMessages.empty}</p>
         ) : (
           <div className="rounded border bg-background">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="p-2 text-left font-medium">Type</th>
-                  <th className="p-2 text-left font-medium">File</th>
-                  <th className="p-2 text-left font-medium">Passenger</th>
-                  <th className="p-2 text-left font-medium">Expires</th>
-                  <th className="p-2 text-left font-medium">Notes</th>
+                  <th className="p-2 text-left font-medium">{documentMessages.tableType}</th>
+                  <th className="p-2 text-left font-medium">{documentMessages.tableFile}</th>
+                  <th className="p-2 text-left font-medium">{documentMessages.tableTraveler}</th>
+                  <th className="p-2 text-left font-medium">{documentMessages.tableExpires}</th>
+                  <th className="p-2 text-left font-medium">{documentMessages.tableNotes}</th>
                   <th className="w-20 p-2" />
                 </tr>
               </thead>
               <tbody>
                 {documents.map((doc) => {
-                  const passenger = doc.participantId
-                    ? passengerMap.get(doc.participantId)
-                    : undefined
+                  const traveler = doc.travelerId ? travelerMap.get(doc.travelerId) : undefined
                   return (
                     <tr key={doc.id} className="border-b last:border-b-0">
                       <td className="p-2">
-                        <Badge variant={typeVariant[doc.type] ?? "outline"} className="capitalize">
-                          {doc.type.replace(/_/g, " ")}
+                        <Badge variant={typeVariant[doc.type] ?? "outline"}>
+                          {getDocumentTypeLabel(doc.type, documentMessages)}
                         </Badge>
                       </td>
                       <td className="p-2">
@@ -91,23 +114,25 @@ export function BookingDocumentList({ bookingId }: BookingDocumentListProps) {
                         </a>
                       </td>
                       <td className="p-2">
-                        {passenger
-                          ? `${passenger.firstName} ${passenger.lastName}`
-                          : doc.participantId
-                            ? doc.participantId
-                            : "—"}
+                        {traveler
+                          ? `${traveler.firstName} ${traveler.lastName}`
+                          : doc.travelerId
+                            ? doc.travelerId
+                            : noValue}
                       </td>
                       <td className="p-2">
-                        {doc.expiresAt ? new Date(doc.expiresAt).toLocaleDateString() : "-"}
+                        {doc.expiresAt
+                          ? new Date(doc.expiresAt).toLocaleDateString(resolvedLocale)
+                          : noValue}
                       </td>
                       <td className="max-w-[200px] truncate p-2 text-muted-foreground">
-                        {doc.notes ?? "-"}
+                        {doc.notes ?? noValue}
                       </td>
                       <td className="p-2">
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm("Delete this document?")) {
+                            if (confirm(documentMessages.deleteConfirm)) {
                               remove.mutate(doc.id)
                             }
                           }}

@@ -193,6 +193,7 @@ export function OptionUnitForm({ mode, onSuccess, onCancel }: OptionUnitFormProp
         <div className="flex flex-col gap-1.5">
           <Label>Unit type</Label>
           <Select
+            items={UNIT_TYPES}
             value={state.unitType}
             onValueChange={(value) => value && field("unitType")(value)}
           >

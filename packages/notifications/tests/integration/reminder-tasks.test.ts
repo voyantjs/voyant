@@ -29,7 +29,7 @@ describe.skipIf(!DB_AVAILABLE)("Notification reminder tasks", () => {
       VALUES ('book_queue', 'BK-QUEUE-1', 'person_queue', 'EUR', 45000)
     `)
     await ctx.db.execute(sql`
-      INSERT INTO booking_participants (id, booking_id, first_name, last_name, email, participant_type, is_primary)
+      INSERT INTO booking_travelers (id, booking_id, first_name, last_name, email, participant_type, is_primary)
       VALUES ('bkpt_queue', 'book_queue', 'Mia', 'Traveler', 'mia@example.com', 'traveler', true)
     `)
     await ctx.db.execute(sql`

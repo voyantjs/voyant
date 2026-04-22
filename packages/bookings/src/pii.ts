@@ -3,14 +3,14 @@ import { decryptOptionalJsonEnvelope, encryptOptionalJsonEnvelope } from "@voyan
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import {
-  bookingParticipantDietarySchema,
-  bookingParticipantIdentitySchema,
-  bookingParticipantTravelDetails,
-  type DecryptedBookingParticipantTravelDetail,
+  bookingTravelerDietarySchema,
+  bookingTravelerIdentitySchema,
+  bookingTravelerTravelDetails,
+  type DecryptedBookingTravelerTravelDetail,
 } from "./schema/travel-details.js"
-import { bookingParticipants } from "./schema.js"
+import { bookingTravelers } from "./schema.js"
 
-export interface UpsertBookingParticipantTravelDetailInput {
+export interface UpsertBookingTravelerTravelDetailInput {
   nationality?: string | null
   passportNumber?: string | null
   passportExpiry?: string | null
@@ -21,7 +21,7 @@ export interface UpsertBookingParticipantTravelDetailInput {
 
 export interface BookingPiiAuditEvent {
   action: "encrypt" | "decrypt" | "delete"
-  participantId: string
+  travelerId: string
   actorId?: string | null
 }
 
@@ -31,8 +31,27 @@ export interface BookingPiiServiceOptions {
   onAudit?: (event: BookingPiiAuditEvent) => void | Promise<void>
 }
 
-function buildIdentityPayload(input: UpsertBookingParticipantTravelDetailInput) {
-  const payload = bookingParticipantIdentitySchema.parse({
+export interface BookingPiiService {
+  getTravelerTravelDetails(
+    db: PostgresJsDatabase,
+    travelerId: string,
+    actorId?: string | null,
+  ): Promise<DecryptedBookingTravelerTravelDetail | null>
+  upsertTravelerTravelDetails(
+    db: PostgresJsDatabase,
+    travelerId: string,
+    input: UpsertBookingTravelerTravelDetailInput,
+    actorId?: string | null,
+  ): Promise<DecryptedBookingTravelerTravelDetail | null>
+  deleteTravelerTravelDetails(
+    db: PostgresJsDatabase,
+    travelerId: string,
+    actorId?: string | null,
+  ): Promise<{ travelerId: string } | null>
+}
+
+function buildIdentityPayload(input: UpsertBookingTravelerTravelDetailInput) {
+  const payload = bookingTravelerIdentitySchema.parse({
     nationality: input.nationality ?? null,
     passportNumber: input.passportNumber ?? null,
     passportExpiry: input.passportExpiry ?? null,
@@ -51,8 +70,8 @@ function buildIdentityPayload(input: UpsertBookingParticipantTravelDetailInput) 
   return payload
 }
 
-function buildDietaryPayload(input: UpsertBookingParticipantTravelDetailInput) {
-  const payload = bookingParticipantDietarySchema.parse({
+function buildDietaryPayload(input: UpsertBookingTravelerTravelDetailInput) {
+  const payload = bookingTravelerDietarySchema.parse({
     dietaryRequirements: input.dietaryRequirements ?? null,
   })
 
@@ -65,14 +84,14 @@ function buildDietaryPayload(input: UpsertBookingParticipantTravelDetailInput) {
 
 async function loadExistingTravelDetails(
   db: PostgresJsDatabase,
-  participantId: string,
+  travelerId: string,
   options: BookingPiiServiceOptions,
   keyRef: KeyRef,
 ) {
   const [row] = await db
     .select()
-    .from(bookingParticipantTravelDetails)
-    .where(eq(bookingParticipantTravelDetails.participantId, participantId))
+    .from(bookingTravelerTravelDetails)
+    .where(eq(bookingTravelerTravelDetails.travelerId, travelerId))
     .limit(1)
 
   if (!row) {
@@ -83,13 +102,13 @@ async function loadExistingTravelDetails(
     options.kms,
     keyRef,
     row.identityEncrypted,
-    bookingParticipantIdentitySchema,
+    bookingTravelerIdentitySchema,
   )
   const dietary = await decryptOptionalJsonEnvelope(
     options.kms,
     keyRef,
     row.dietaryEncrypted,
-    bookingParticipantDietarySchema,
+    bookingTravelerDietarySchema,
   )
 
   return {
@@ -104,8 +123,8 @@ async function loadExistingTravelDetails(
 
 function mergeTravelDetailInput(
   existing: Awaited<ReturnType<typeof loadExistingTravelDetails>>,
-  input: UpsertBookingParticipantTravelDetailInput,
-): UpsertBookingParticipantTravelDetailInput {
+  input: UpsertBookingTravelerTravelDetailInput,
+): UpsertBookingTravelerTravelDetailInput {
   return {
     nationality:
       input.nationality === undefined ? (existing?.nationality ?? null) : input.nationality,
@@ -130,19 +149,19 @@ function mergeTravelDetailInput(
   }
 }
 
-export function createBookingPiiService(options: BookingPiiServiceOptions) {
+export function createBookingPiiService(options: BookingPiiServiceOptions): BookingPiiService {
   const keyRef = options.keyRef ?? { keyType: "people" as const }
 
   return {
-    async getParticipantTravelDetails(
+    async getTravelerTravelDetails(
       db: PostgresJsDatabase,
-      participantId: string,
+      travelerId: string,
       actorId?: string | null,
-    ): Promise<DecryptedBookingParticipantTravelDetail | null> {
+    ): Promise<DecryptedBookingTravelerTravelDetail | null> {
       const [row] = await db
         .select()
-        .from(bookingParticipantTravelDetails)
-        .where(eq(bookingParticipantTravelDetails.participantId, participantId))
+        .from(bookingTravelerTravelDetails)
+        .where(eq(bookingTravelerTravelDetails.travelerId, travelerId))
         .limit(1)
 
       if (!row) {
@@ -153,19 +172,19 @@ export function createBookingPiiService(options: BookingPiiServiceOptions) {
         options.kms,
         keyRef,
         row.identityEncrypted,
-        bookingParticipantIdentitySchema,
+        bookingTravelerIdentitySchema,
       )
       const dietary = await decryptOptionalJsonEnvelope(
         options.kms,
         keyRef,
         row.dietaryEncrypted,
-        bookingParticipantDietarySchema,
+        bookingTravelerDietarySchema,
       )
 
-      await options.onAudit?.({ action: "decrypt", participantId, actorId })
+      await options.onAudit?.({ action: "decrypt", travelerId, actorId })
 
       return {
-        participantId: row.participantId,
+        travelerId: row.travelerId,
         nationality: identity?.nationality ?? null,
         passportNumber: identity?.passportNumber ?? null,
         passportExpiry: identity?.passportExpiry ?? null,
@@ -177,23 +196,23 @@ export function createBookingPiiService(options: BookingPiiServiceOptions) {
       }
     },
 
-    async upsertParticipantTravelDetails(
+    async upsertTravelerTravelDetails(
       db: PostgresJsDatabase,
-      participantId: string,
-      input: UpsertBookingParticipantTravelDetailInput,
+      travelerId: string,
+      input: UpsertBookingTravelerTravelDetailInput,
       actorId?: string | null,
-    ): Promise<DecryptedBookingParticipantTravelDetail | null> {
-      const [participant] = await db
-        .select({ id: bookingParticipants.id })
-        .from(bookingParticipants)
-        .where(eq(bookingParticipants.id, participantId))
+    ): Promise<DecryptedBookingTravelerTravelDetail | null> {
+      const [traveler] = await db
+        .select({ id: bookingTravelers.id })
+        .from(bookingTravelers)
+        .where(eq(bookingTravelers.id, travelerId))
         .limit(1)
 
-      if (!participant) {
+      if (!traveler) {
         return null
       }
 
-      const existing = await loadExistingTravelDetails(db, participantId, options, keyRef)
+      const existing = await loadExistingTravelDetails(db, travelerId, options, keyRef)
       const mergedInput = mergeTravelDetailInput(existing, input)
 
       const identityEncrypted = await encryptOptionalJsonEnvelope(
@@ -209,16 +228,16 @@ export function createBookingPiiService(options: BookingPiiServiceOptions) {
       const now = new Date()
 
       await db
-        .insert(bookingParticipantTravelDetails)
+        .insert(bookingTravelerTravelDetails)
         .values({
-          participantId,
+          travelerId,
           identityEncrypted,
           dietaryEncrypted,
           isLeadTraveler: mergedInput.isLeadTraveler ?? false,
           updatedAt: now,
         })
         .onConflictDoUpdate({
-          target: bookingParticipantTravelDetails.participantId,
+          target: bookingTravelerTravelDetails.travelerId,
           set: {
             identityEncrypted,
             dietaryEncrypted,
@@ -227,23 +246,23 @@ export function createBookingPiiService(options: BookingPiiServiceOptions) {
           },
         })
 
-      await options.onAudit?.({ action: "encrypt", participantId, actorId })
+      await options.onAudit?.({ action: "encrypt", travelerId, actorId })
 
-      return this.getParticipantTravelDetails(db, participantId, actorId)
+      return this.getTravelerTravelDetails(db, travelerId, actorId)
     },
 
-    async deleteParticipantTravelDetails(
+    async deleteTravelerTravelDetails(
       db: PostgresJsDatabase,
-      participantId: string,
+      travelerId: string,
       actorId?: string | null,
     ) {
       const [row] = await db
-        .delete(bookingParticipantTravelDetails)
-        .where(eq(bookingParticipantTravelDetails.participantId, participantId))
-        .returning({ participantId: bookingParticipantTravelDetails.participantId })
+        .delete(bookingTravelerTravelDetails)
+        .where(eq(bookingTravelerTravelDetails.travelerId, travelerId))
+        .returning({ travelerId: bookingTravelerTravelDetails.travelerId })
 
       if (row) {
-        await options.onAudit?.({ action: "delete", participantId, actorId })
+        await options.onAudit?.({ action: "delete", travelerId, actorId })
       }
 
       return row ?? null

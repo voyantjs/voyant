@@ -16,6 +16,7 @@ export {
   getCustomerPortalPhoneContactExists,
   getCustomerPortalProfile,
   importCustomerPortalBookingParticipants,
+  importCustomerPortalBookingTravelers,
   listCustomerPortalBookingDocuments,
   listCustomerPortalBookings,
   listCustomerPortalCompanions,

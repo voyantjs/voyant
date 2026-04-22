@@ -1,12 +1,13 @@
 "use client"
 
 import type { PersonRecord } from "@voyantjs/crm-react"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail, Phone } from "lucide-react"
 import type * as React from "react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { cn } from "@/lib/utils"
 
 export interface PersonCardProps extends React.ComponentPropsWithoutRef<typeof Card> {
@@ -15,13 +16,12 @@ export interface PersonCardProps extends React.ComponentPropsWithoutRef<typeof C
 }
 
 export function PersonCard({ person, onEdit, className, ...props }: PersonCardProps) {
+  const messages = useAdminMessages().crm.personDetail
   const fullName = [person.firstName, person.lastName].filter(Boolean).join(" ")
   const initials = [person.firstName?.[0], person.lastName?.[0]]
     .filter(Boolean)
     .join("")
     .toUpperCase()
-  const location = [person.city, person.country].filter(Boolean).join(", ")
-
   return (
     <Card
       data-slot="person-card"
@@ -34,14 +34,22 @@ export function PersonCard({ person, onEdit, className, ...props }: PersonCardPr
           <AvatarFallback>{initials || "?"}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold truncate">{fullName || "Unnamed"}</div>
+          <div className="font-semibold truncate">{fullName || messages.unnamedPerson}</div>
           {person.jobTitle ? (
             <div className="text-sm text-muted-foreground truncate">{person.jobTitle}</div>
           ) : null}
         </div>
         {person.relation ? (
           <Badge data-slot="person-card-relation" variant="secondary" className="capitalize">
-            {person.relation}
+            {person.relation === "client"
+              ? messages.relationClient
+              : person.relation === "partner"
+                ? messages.relationPartner
+                : person.relation === "supplier"
+                  ? messages.relationSupplier
+                  : person.relation === "other"
+                    ? messages.relationOther
+                    : person.relation}
           </Badge>
         ) : null}
       </CardHeader>
@@ -56,12 +64,6 @@ export function PersonCard({ person, onEdit, className, ...props }: PersonCardPr
           <div className="flex items-center gap-2 text-muted-foreground">
             <Phone className="size-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{person.phone}</span>
-          </div>
-        ) : null}
-        {location ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{location}</span>
           </div>
         ) : null}
       </CardContent>

@@ -8,15 +8,9 @@
  */
 
 import { createBetterAuth } from "@voyantjs/auth/server"
-import {
-  authMember,
-  authOrganization,
-  authSession,
-  authUser,
-  userProfilesTable,
-} from "@voyantjs/db/schema/iam"
-import type { VoyantPermission, VoyantRequestAuthContext } from "@voyantjs/hono"
-import { asc, eq } from "drizzle-orm"
+import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
+import type { VoyantRequestAuthContext } from "@voyantjs/hono"
+import { eq, sql } from "drizzle-orm"
 import { Hono } from "hono"
 import { Resend } from "resend"
 
@@ -79,7 +73,6 @@ function getBetterAuth(env: CloudflareBindings) {
   const db = getDbFromHyperdrive(env)
   const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
   const emailFrom = env.EMAIL_FROM || "Voyant <noreply@voyantcloud.app>"
-  const appUrl = getAppUrl(env)
 
   return createBetterAuth({
     db,
@@ -107,43 +100,7 @@ function getBetterAuth(env: CloudflareBindings) {
           })
         }
       : undefined,
-    sendInvitationEmail: resend
-      ? async (data) => {
-          const acceptUrl = `${appUrl}/accept-invitation?id=${data.id}`
-          await resend.emails.send({
-            from: emailFrom,
-            to: data.email,
-            subject: `Join ${data.organization.name} on Voyant`,
-            html: `<p>${data.inviter.user.name} invited you to join <strong>${data.organization.name}</strong>.</p><p><a href="${acceptUrl}">Accept invitation</a></p>`,
-          })
-        }
-      : undefined,
   })
-}
-
-async function listWorkspaceOrganizations(
-  env: CloudflareBindings,
-  userId: string,
-  activeOrganizationId: string | null,
-) {
-  const db = getDbFromHyperdrive(env)
-
-  const organizations = await db
-    .select({
-      id: authOrganization.id,
-      name: authOrganization.name,
-      slug: authOrganization.slug,
-      logo: authOrganization.logo,
-    })
-    .from(authMember)
-    .innerJoin(authOrganization, eq(authOrganization.id, authMember.organizationId))
-    .where(eq(authMember.userId, userId))
-    .orderBy(asc(authOrganization.createdAt))
-
-  const activeOrganization =
-    organizations.find((organization) => organization.id === activeOrganizationId) ?? null
-
-  return { activeOrganization, organizations }
 }
 
 export async function resolveAuthRequest(
@@ -160,24 +117,24 @@ export async function resolveAuthRequest(
   return {
     userId: session.user.id,
     sessionId: session.session.id,
-    organizationId: session.session.activeOrganizationId ?? null,
+    organizationId: null,
     callerType: "session",
     email: session.user.email ?? null,
   }
 }
 
+/**
+ * Single-tenant: every authenticated session is a staff user with full access.
+ * When `resolveAuthRequest` has already granted a session, permissions are
+ * implicitly allowed. If you need granular RBAC later, switch on
+ * `user_profiles.isSuperAdmin` / `isSupportUser` here.
+ */
 export async function hasAuthPermission(
   request: Request,
   env: CloudflareBindings,
-  permission: VoyantPermission,
 ): Promise<boolean> {
-  const betterAuth = getBetterAuth(env)
-  const result = await betterAuth.api.hasPermission({
-    headers: request.headers,
-    body: { permissions: { [permission.resource]: [permission.action] } },
-  })
-
-  return Boolean(result?.success)
+  const auth = await resolveAuthRequest(request, env)
+  return auth !== null
 }
 
 /**
@@ -203,6 +160,7 @@ auth.get("/auth/me", async (c) => {
       lastName: userProfilesTable.lastName,
       locale: userProfilesTable.locale,
       timezone: userProfilesTable.timezone,
+      uiPrefs: userProfilesTable.uiPrefs,
       avatarUrl: userProfilesTable.avatarUrl,
       isSuperAdmin: userProfilesTable.isSuperAdmin,
       isSupportUser: userProfilesTable.isSupportUser,
@@ -223,62 +181,12 @@ auth.get("/auth/me", async (c) => {
     lastName: row.lastName ?? null,
     locale: row.locale ?? "en",
     timezone: row.timezone ?? null,
+    uiPrefs: (row.uiPrefs as Record<string, unknown> | null) ?? null,
     isSuperAdmin: row.isSuperAdmin ?? false,
     isSupportUser: row.isSupportUser ?? false,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     profilePictureUrl: row.avatarUrl ?? null,
-    activeOrganizationId: session.session.activeOrganizationId ?? null,
   })
-})
-
-auth.get("/auth/workspace", async (c) => {
-  const betterAuth = getBetterAuth(c.env)
-  const session = await betterAuth.api.getSession({ headers: c.req.raw.headers })
-
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401)
-  }
-
-  const db = getDbFromHyperdrive(c.env)
-  let activeOrganizationId = session.session.activeOrganizationId ?? null
-  let workspace = await listWorkspaceOrganizations(c.env, session.user.id, activeOrganizationId)
-
-  if (workspace.organizations.length === 0) {
-    const organizationId = crypto.randomUUID()
-    const now = new Date()
-
-    await db.insert(authOrganization).values({
-      id: organizationId,
-      name: "My Organization",
-      slug: `default-${session.user.id.slice(0, 8).toLowerCase()}`,
-      logo: null,
-      metadata: null,
-      createdAt: now,
-    })
-
-    await db.insert(authMember).values({
-      id: crypto.randomUUID(),
-      userId: session.user.id,
-      organizationId,
-      role: "owner",
-      createdAt: now,
-    })
-
-    activeOrganizationId = organizationId
-  } else if (!activeOrganizationId) {
-    activeOrganizationId = workspace.organizations[0]?.id ?? null
-  }
-
-  if (activeOrganizationId && activeOrganizationId !== session.session.activeOrganizationId) {
-    await db
-      .update(authSession)
-      .set({ activeOrganizationId, updatedAt: new Date() })
-      .where(eq(authSession.id, session.session.id))
-  }
-
-  workspace = await listWorkspaceOrganizations(c.env, session.user.id, activeOrganizationId)
-
-  return c.json(workspace)
 })
 
 /**
@@ -343,14 +251,25 @@ auth.get("/auth/status", async (c) => {
 })
 
 /**
+ * GET /auth/bootstrap-status
+ * Public endpoint — reveals whether any user exists. Used by the sign-in /
+ * sign-up route loaders to pick the right flow.
+ */
+auth.get("/auth/bootstrap-status", async (c) => {
+  const db = getDbFromHyperdrive(c.env)
+  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(authUser)
+  return c.json({ hasUsers: (row?.count ?? 0) > 0 })
+})
+
+/**
  * Catch-all: delegate to Better Auth handler.
  * Handles sign-in, sign-up, sign-out, password reset, OAuth callbacks, etc.
+ *
+ * Sign-up is gated by a `user.create.before` hook in @voyantjs/auth — once a
+ * user exists, the hook throws and BA returns an error to the client.
  */
 auth.all("/auth/*", async (c) => {
   const betterAuth = getBetterAuth(c.env)
-
-  // Better Auth expects the path relative to its basePath.
-  // Our mount point is /auth, so the request URL already matches.
   const response = await betterAuth.handler(c.req.raw)
   return response
 })

@@ -134,6 +134,7 @@ export function PolicyRuleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Rule Type</Label>
                 <Select
+                  items={RULE_TYPES}
                   value={form.watch("ruleType")}
                   onValueChange={(v) => form.setValue("ruleType", v as FormValues["ruleType"])}
                 >
@@ -183,6 +184,7 @@ export function PolicyRuleDialog({
               <div className="flex flex-col gap-2">
                 <Label>Refund Type</Label>
                 <Select
+                  items={REFUND_TYPES}
                   value={form.watch("refundType") ?? ""}
                   onValueChange={(v) =>
                     form.setValue("refundType", (v || undefined) as FormValues["refundType"])

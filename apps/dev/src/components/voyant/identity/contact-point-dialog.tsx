@@ -115,6 +115,10 @@ export function ContactPointDialog({
               <div className="flex flex-col gap-2">
                 <Label>Kind</Label>
                 <Select
+                  items={CONTACT_POINT_KINDS.map((x) => ({
+                    label: x.replace(/_/g, " "),
+                    value: x,
+                  }))}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ContactPointKind)}
                 >

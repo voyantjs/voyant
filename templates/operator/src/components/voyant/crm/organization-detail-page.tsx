@@ -7,9 +7,10 @@ import {
   useOrganizationMutation,
   usePeople,
 } from "@voyantjs/crm-react"
-import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui"
+import { OrganizationDetailSkeleton } from "@/components/voyant/crm/organization-detail-skeleton"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import {
   OrganizationMain,
   OrganizationSidebar,
@@ -18,6 +19,7 @@ import {
 
 export function OrganizationDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
+  const messages = useAdminMessages().crm.organizationDetail
   const [activeTab, setActiveTab] = useState<
     "overview" | "people" | "opportunities" | "activities"
   >("overview")
@@ -43,19 +45,15 @@ export function OrganizationDetailPage({ id }: { id: string }) {
   })
 
   if (orgQuery.isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <OrganizationDetailSkeleton />
   }
 
   if (!org) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Organization not found</p>
+        <p className="text-muted-foreground">{messages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/organizations" })}>
-          Back to Organizations
+          {messages.backAction}
         </Button>
       </div>
     )

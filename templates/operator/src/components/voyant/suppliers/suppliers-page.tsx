@@ -1,50 +1,68 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Loader2, Plus, Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Input } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table"
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
-import { getSuppliersQueryOptions, type Supplier, statusVariant } from "./shared"
+import { useAdminMessages } from "@/lib/admin-i18n"
+import {
+  getSupplierStatusLabel,
+  getSuppliersQueryOptions,
+  getSupplierTypeLabel,
+  type Supplier,
+  statusVariant,
+} from "./shared"
 import { SupplierDialog } from "./supplier-dialog"
+import { SuppliersTableSkeleton } from "./suppliers-list-skeleton"
 
-const columns: ColumnDef<Supplier>[] = [
+const getColumns = (messages: ReturnType<typeof useAdminMessages>): ColumnDef<Supplier>[] => [
   {
     accessorKey: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.nameColumn} />
+    ),
   },
   {
     accessorKey: "type",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.typeColumn} />
+    ),
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.type}
-      </Badge>
+      <Badge variant="outline">{getSupplierTypeLabel(row.original.type, messages)}</Badge>
     ),
   },
   {
     accessorKey: "status",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.statusColumn} />
+    ),
     cell: ({ row }) => (
-      <Badge variant={statusVariant[row.original.status] ?? "secondary"} className="capitalize">
-        {row.original.status}
+      <Badge variant={statusVariant[row.original.status] ?? "secondary"}>
+        {getSupplierStatusLabel(row.original.status, messages)}
       </Badge>
     ),
   },
   {
     accessorKey: "city",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="City" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.cityColumn} />
+    ),
     cell: ({ row }) => row.original.city ?? "-",
   },
   {
     accessorKey: "country",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Country" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.countryColumn} />
+    ),
     cell: ({ row }) => row.original.country ?? "-",
   },
   {
     accessorKey: "defaultCurrency",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Currency" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={messages.suppliers.currencyColumn} />
+    ),
     cell: ({ row }) => row.original.defaultCurrency ?? "-",
   },
 ]
@@ -53,6 +71,7 @@ const PAGE_SIZE = 25
 
 export function SuppliersPage() {
   const navigate = useNavigate()
+  const messages = useAdminMessages()
   const [search, setSearch] = useState("")
   const [pageIndex, setPageIndex] = useState(0)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -68,21 +87,19 @@ export function SuppliersPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Suppliers</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your hotels, transfers, guides, and service providers.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{messages.suppliers.title}</h1>
+          <p className="text-sm text-muted-foreground">{messages.suppliers.description}</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Supplier
+          {messages.suppliers.newSupplier}
         </Button>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search suppliers..."
+          placeholder={messages.suppliers.searchPlaceholder}
           value={search}
           onChange={(event) => {
             setSearch(event.target.value)
@@ -93,12 +110,10 @@ export function SuppliersPage() {
       </div>
 
       {isPending ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <SuppliersTableSkeleton rows={8} />
       ) : (
         <DataTable
-          columns={columns}
+          columns={getColumns(messages)}
           data={data?.data ?? []}
           pagination={{
             pageIndex,

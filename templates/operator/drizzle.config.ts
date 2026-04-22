@@ -4,6 +4,7 @@ import { defineConfig } from "drizzle-kit"
 config({ path: ".env" })
 config({ path: "../../.env" })
 config({ path: "../../.env.local" })
+config({ path: ".dev.vars", override: true })
 
 function resolveDatabaseUrl(): string {
   return process.env.DATABASE_URL ?? ""
@@ -25,6 +26,7 @@ export default defineConfig({
     "../../packages/booking-requirements/src/schema.ts",
     "../../packages/pricing/src/schema.ts",
     "../../packages/markets/src/schema.ts",
+    "../../packages/notifications/src/schema.ts",
     "../../packages/transactions/src/schema.ts",
     "../../packages/sellability/src/schema.ts",
     "../../packages/resources/src/schema.ts",

@@ -71,6 +71,16 @@ export {
   defaultPdfContractDocumentSerializer,
   defaultStorageBackedContractDocumentSerializer,
 } from "./service-documents.js"
+export type {
+  ContractTemplateLiquidSnippet,
+  ContractTemplateVariableCategory,
+  ContractTemplateVariableDefinition,
+  ContractTemplateVariableType,
+} from "./template-authoring.js"
+export {
+  contractTemplateLiquidSnippets,
+  contractTemplateVariableCatalog,
+} from "./template-authoring.js"
 export {
   contractBodyFormatSchema,
   contractListQuerySchema,

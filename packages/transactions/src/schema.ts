@@ -1,5 +1,7 @@
 export * from "./schema-audit"
+export * from "./schema-contacts"
 export * from "./schema-offers"
 export * from "./schema-orders"
 export * from "./schema-relations"
 export * from "./schema-shared"
+export * from "./schema-staff"

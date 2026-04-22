@@ -9,6 +9,7 @@ import {
 } from "@voyantjs/finance-react"
 
 import { InvoiceDetailPage } from "@/components/voyant/finance/invoice-detail-page"
+import { InvoiceDetailSkeleton } from "@/components/voyant/finance/invoice-detail-skeleton"
 import { getApiUrl } from "@/lib/env"
 
 export const Route = createFileRoute("/_workspace/finance/invoices/$id")({
@@ -39,6 +40,7 @@ export const Route = createFileRoute("/_workspace/finance/invoices/$id")({
         getInvoiceNotesQueryOptions({ baseUrl: getApiUrl(), fetcher: defaultFetcher }, params.id),
       ),
     ]),
+  pendingComponent: InvoiceDetailSkeleton,
   component: InvoiceDetailRoute,
 })
 

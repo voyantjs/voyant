@@ -485,8 +485,8 @@ function PortalView() {
                     </dd>
                   </div>
                   <div>
-                    <dt>Participants</dt>
-                    <dd>{selectedBooking.participants.length}</dd>
+                    <dt>Travelers</dt>
+                    <dd>{selectedBooking.travelers.length}</dd>
                   </div>
                   <div>
                     <dt>Items</dt>
@@ -496,18 +496,16 @@ function PortalView() {
 
                 <div className="detail-columns">
                   <div className="stack-sm">
-                    <h4>Participants</h4>
-                    {selectedBooking.participants.map((participant) => (
-                      <div key={participant.id} className="inline-card inline-card-tight">
+                    <h4>Travelers</h4>
+                    {selectedBooking.travelers.map((traveler) => (
+                      <div key={traveler.id} className="inline-card inline-card-tight">
                         <div>
                           <strong>
-                            {participant.firstName} {participant.lastName}
+                            {traveler.firstName} {traveler.lastName}
                           </strong>
-                          <div className="muted-text">{participant.participantType}</div>
+                          <div className="muted-text">{traveler.participantType}</div>
                         </div>
-                        {participant.isPrimary ? (
-                          <span className="status-chip">Primary</span>
-                        ) : null}
+                        {traveler.isPrimary ? <span className="status-chip">Primary</span> : null}
                       </div>
                     ))}
                   </div>

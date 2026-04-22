@@ -1,9 +1,4 @@
-export type {
-  AuthStatus,
-  CurrentUser,
-  CurrentWorkspace,
-  WorkspaceOrganization,
-} from "@voyantjs/auth/workspace"
+export type { AuthStatus, CurrentUser } from "@voyantjs/auth/workspace"
 export {
   defaultFetcher,
   fetchWithValidation,
@@ -18,11 +13,11 @@ export {
   VoyantAuthProvider,
   type VoyantAuthProviderProps,
 } from "./provider.js"
-export type {
-  OrganizationInvitationsListFilters,
-  OrganizationMembersListFilters,
+export {
+  authQueryKeys,
+  type OrganizationInvitationsListFilters,
+  type OrganizationMembersListFilters,
 } from "./query-keys.js"
-export { authQueryKeys } from "./query-keys.js"
 export {
   getAuthStatusQueryOptions,
   getCurrentUserQueryOptions,

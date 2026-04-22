@@ -7,6 +7,7 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Mode = { kind: "create" } | { kind: "edit"; person: PersonRecord }
 
@@ -22,8 +23,6 @@ interface FormState {
   email: string
   phone: string
   jobTitle: string
-  city: string
-  country: string
 }
 
 function initialState(mode: Mode): FormState {
@@ -35,8 +34,6 @@ function initialState(mode: Mode): FormState {
       email: p.email ?? "",
       phone: p.phone ?? "",
       jobTitle: p.jobTitle ?? "",
-      city: p.city ?? "",
-      country: p.country ?? "",
     }
   }
   return {
@@ -45,8 +42,6 @@ function initialState(mode: Mode): FormState {
     email: "",
     phone: "",
     jobTitle: "",
-    city: "",
-    country: "",
   }
 }
 
@@ -57,8 +52,6 @@ function toPayload(state: FormState): CreatePersonInput {
     email: state.email.trim() || null,
     phone: state.phone.trim() || null,
     jobTitle: state.jobTitle.trim() || null,
-    city: state.city.trim() || null,
-    country: state.country.trim() || null,
   }
 }
 
@@ -68,6 +61,7 @@ function toPayload(state: FormState): CreatePersonInput {
  * friendly `VoyantApiError`s inside the mutation.
  */
 export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
+  const messages = useAdminMessages().contacts.form
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = usePersonMutation()
@@ -85,7 +79,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
     setError(null)
 
     if (!state.firstName.trim() || !state.lastName.trim()) {
-      setError("First and last name are required.")
+      setError(messages.validationNameRequired)
       return
     }
 
@@ -98,7 +92,7 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
           : await update.mutateAsync({ id: mode.person.id, input: payload })
       onSuccess?.(person)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save person.")
+      setError(err instanceof Error ? err.message : messages.saveFailed)
     }
   }
 
@@ -106,42 +100,47 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
     <form data-slot="person-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-first-name">First name</Label>
+          <Label htmlFor="person-first-name">{messages.firstNameLabel}</Label>
           <Input
             id="person-first-name"
             required
             value={state.firstName}
             onChange={field("firstName")}
+            placeholder={messages.firstNamePlaceholder}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-last-name">Last name</Label>
+          <Label htmlFor="person-last-name">{messages.lastNameLabel}</Label>
           <Input
             id="person-last-name"
             required
             value={state.lastName}
             onChange={field("lastName")}
+            placeholder={messages.lastNamePlaceholder}
           />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="person-job-title">Job title</Label>
+          <Label htmlFor="person-job-title">{messages.jobTitleLabel}</Label>
           <Input id="person-job-title" value={state.jobTitle} onChange={field("jobTitle")} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-email">Email</Label>
-          <Input id="person-email" type="email" value={state.email} onChange={field("email")} />
+          <Label htmlFor="person-email">{messages.emailLabel}</Label>
+          <Input
+            id="person-email"
+            type="email"
+            value={state.email}
+            onChange={field("email")}
+            placeholder={messages.emailPlaceholder}
+          />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-phone">Phone</Label>
-          <Input id="person-phone" value={state.phone} onChange={field("phone")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-city">City</Label>
-          <Input id="person-city" value={state.city} onChange={field("city")} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="person-country">Country</Label>
-          <Input id="person-country" value={state.country} onChange={field("country")} />
+          <Label htmlFor="person-phone">{messages.phoneLabel}</Label>
+          <Input
+            id="person-phone"
+            value={state.phone}
+            onChange={field("phone")}
+            placeholder={messages.phonePlaceholder}
+          />
         </div>
       </div>
 
@@ -154,19 +153,19 @@ export function PersonForm({ mode, onSuccess, onCancel }: PersonFormProps) {
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {messages.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-              Saving…
+              {messages.saving}
             </>
           ) : mode.kind === "create" ? (
-            "Create person"
+            messages.create
           ) : (
-            "Save changes"
+            messages.saveChanges
           )}
         </Button>
       </div>

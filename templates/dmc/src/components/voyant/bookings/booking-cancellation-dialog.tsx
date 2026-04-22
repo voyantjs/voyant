@@ -6,6 +6,7 @@ import {
   useBookingPrimaryProduct,
 } from "@voyantjs/bookings-react"
 import { useEvaluateCancellation, useResolvePolicy } from "@voyantjs/legal-react"
+import { formatMessage, useLocale } from "@voyantjs/voyant-admin"
 import { AlertTriangle, Loader2 } from "lucide-react"
 import * as React from "react"
 
@@ -21,6 +22,7 @@ import {
   Label,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 function formatAmount(cents: number, currency: string): string {
   return `${(cents / 100).toFixed(2)} ${currency}`
@@ -35,18 +37,29 @@ function daysBetween(from: Date, to: Date): number {
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
 }
 
-const refundTypeLabel: Record<string, string> = {
-  cash: "Cash refund",
-  credit: "Credit",
-  cash_or_credit: "Cash or credit",
-  none: "No refund",
-}
-
 const refundTypeVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   cash: "default",
   credit: "secondary",
   cash_or_credit: "secondary",
   none: "destructive",
+}
+
+function getRefundTypeLabel(
+  type: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["cancellationDialog"],
+) {
+  switch (type) {
+    case "cash":
+      return messages.refundTypeCash
+    case "credit":
+      return messages.refundTypeCredit
+    case "cash_or_credit":
+      return messages.refundTypeCashOrCredit
+    case "none":
+      return messages.refundTypeNone
+    default:
+      return type.replace(/_/g, " ")
+  }
 }
 
 export interface BookingCancellationDialogProps {
@@ -72,6 +85,9 @@ export function BookingCancellationDialog({
   productId,
   onSuccess,
 }: BookingCancellationDialogProps) {
+  const bookingDetailMessages = useAdminMessages().bookings.detail
+  const cancellationMessages = bookingDetailMessages.cancellationDialog
+  const { resolvedLocale } = useLocale()
   const [reason, setReason] = React.useState("")
 
   const daysBeforeDeparture = React.useMemo(() => {
@@ -135,28 +151,40 @@ export function BookingCancellationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive" />
-            Cancel Booking
+            {cancellationMessages.title}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="grid gap-4">
           {/* Booking summary */}
           <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/30 p-3 text-sm">
             <div>
-              <div className="text-xs text-muted-foreground">Booking</div>
+              <div className="text-xs text-muted-foreground">
+                {cancellationMessages.bookingLabel}
+              </div>
               <div className="font-mono text-xs">{booking.bookingNumber}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Start date</div>
-              <div>{booking.startDate ?? "TBD"}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Total</div>
-              <div className="font-mono">
-                {total != null ? formatAmount(total, booking.sellCurrency) : "—"}
+              <div className="text-xs text-muted-foreground">
+                {cancellationMessages.startDateLabel}
+              </div>
+              <div>
+                {booking.startDate
+                  ? new Date(booking.startDate).toLocaleDateString(resolvedLocale)
+                  : cancellationMessages.startDateTbd}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Days before departure</div>
+              <div className="text-xs text-muted-foreground">{cancellationMessages.totalLabel}</div>
+              <div className="font-mono">
+                {total != null
+                  ? formatAmount(total, booking.sellCurrency)
+                  : bookingDetailMessages.noValue}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">
+                {cancellationMessages.daysBeforeDepartureLabel}
+              </div>
               <div>{daysBeforeDeparture}</div>
             </div>
           </div>
@@ -165,23 +193,24 @@ export function BookingCancellationDialog({
           {resolveLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Resolving cancellation policy...
+              {cancellationMessages.resolvingPolicy}
             </div>
           ) : !policy ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              No cancellation policy configured for this booking. Proceeding will cancel without a
-              refund preview.
+              {cancellationMessages.noPolicy}
             </div>
           ) : (
             <div className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs text-muted-foreground">Applicable policy</div>
+                  <div className="text-xs text-muted-foreground">
+                    {cancellationMessages.applicablePolicyLabel}
+                  </div>
                   <div className="text-sm font-medium">{policy.policy.name}</div>
                 </div>
                 {evaluation && (
                   <Badge variant={refundTypeVariant[evaluation.refundType] ?? "secondary"}>
-                    {refundTypeLabel[evaluation.refundType] ?? evaluation.refundType}
+                    {getRefundTypeLabel(evaluation.refundType, cancellationMessages)}
                   </Badge>
                 )}
               </div>
@@ -189,12 +218,14 @@ export function BookingCancellationDialog({
               {evaluationLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Calculating refund...
+                  {cancellationMessages.calculatingRefund}
                 </div>
               ) : evaluation && total != null ? (
                 <div className="grid grid-cols-3 gap-3 border-t pt-3 text-sm">
                   <div>
-                    <div className="text-xs text-muted-foreground">Refund</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cancellationMessages.refundLabel}
+                    </div>
                     <div className="font-mono font-medium">
                       {formatAmount(evaluation.refundCents, booking.sellCurrency)}
                     </div>
@@ -203,24 +234,30 @@ export function BookingCancellationDialog({
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Penalty</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cancellationMessages.penaltyLabel}
+                    </div>
                     <div className="font-mono font-medium text-destructive">
                       {formatAmount(penalty, booking.sellCurrency)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Rule</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cancellationMessages.ruleLabel}
+                    </div>
                     <div className="text-xs">
                       {evaluation.appliedRule?.label ??
                         (evaluation.appliedRule?.daysBeforeDeparture != null
-                          ? `≥ ${evaluation.appliedRule.daysBeforeDeparture} days`
-                          : "—")}
+                          ? formatMessage(cancellationMessages.ruleDaysTemplate, {
+                              days: evaluation.appliedRule.daysBeforeDeparture,
+                            })
+                          : bookingDetailMessages.noValue)}
                     </div>
                   </div>
                 </div>
               ) : total == null ? (
                 <p className="border-t pt-3 text-sm text-muted-foreground">
-                  Booking has no total amount — refund cannot be calculated.
+                  {cancellationMessages.noAmount}
                 </p>
               ) : null}
             </div>
@@ -229,12 +266,12 @@ export function BookingCancellationDialog({
           {/* Reason */}
           <div className="flex flex-col gap-2">
             <Label>
-              Reason <span className="text-destructive">*</span>
+              {cancellationMessages.reasonLabel} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Why is this booking being cancelled?"
+              placeholder={cancellationMessages.reasonPlaceholder}
               required
             />
           </div>
@@ -243,7 +280,7 @@ export function BookingCancellationDialog({
             <p className="text-xs text-destructive">
               {cancelMutation.error instanceof Error
                 ? cancelMutation.error.message
-                : "Cancellation failed"}
+                : cancellationMessages.errorFallback}
             </p>
           )}
         </DialogBody>
@@ -255,7 +292,7 @@ export function BookingCancellationDialog({
             onClick={() => onOpenChange(false)}
             disabled={cancelMutation.isPending}
           >
-            Close
+            {cancellationMessages.close}
           </Button>
           <Button
             type="button"
@@ -265,7 +302,7 @@ export function BookingCancellationDialog({
             disabled={!reason.trim() || cancelMutation.isPending}
           >
             {cancelMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Cancellation
+            {cancellationMessages.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>

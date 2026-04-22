@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -12,7 +13,7 @@ import {
   Input,
   Label,
 } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { authClient } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/current-user"
 
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/(auth)/forgot-password")({
 })
 
 function ForgotPasswordPage() {
+  const messages = useAdminMessages().auth.forgotPassword
   const [email, setEmail] = useState("")
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,14 +49,14 @@ function ForgotPasswordPage() {
       })
 
       if (result.error) {
-        setError(result.error.message || "Could not send reset email")
+        setError(result.error.message || messages.couldNotSendResetEmail)
         setLoading(false)
         return
       }
 
       setSent(true)
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError(messages.somethingWentWrong)
     } finally {
       setLoading(false)
     }
@@ -64,15 +66,14 @@ function ForgotPasswordPage() {
     return (
       <Card className="text-center">
         <CardHeader>
-          <CardTitle>Check your email</CardTitle>
+          <CardTitle>{messages.checkEmailTitle}</CardTitle>
           <CardDescription>
-            We sent a password reset link to <strong>{email}</strong>. Follow the link in the email
-            to reset your password.
+            {formatMessage(messages.checkEmailDescription, { email })}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link to="/sign-in" className="text-sm text-primary hover:underline">
-            Back to sign in
+            {messages.backToSignIn}
           </Link>
         </CardFooter>
       </Card>
@@ -82,8 +83,8 @@ function ForgotPasswordPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Forgot password</CardTitle>
-        <CardDescription>Enter your email and we&apos;ll send you a reset link</CardDescription>
+        <CardTitle>{messages.title}</CardTitle>
+        <CardDescription>{messages.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,11 +92,11 @@ function ForgotPasswordPage() {
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{messages.emailLabel}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder={messages.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -105,13 +106,13 @@ function ForgotPasswordPage() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send reset link
+            {messages.submit}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="justify-center">
         <Link to="/sign-in" className="text-sm text-muted-foreground hover:underline">
-          Back to sign in
+          {messages.backToSignIn}
         </Link>
       </CardFooter>
     </Card>

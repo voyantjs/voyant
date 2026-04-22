@@ -128,6 +128,7 @@ export function PropertyTab({ facilityId }: Props) {
           <div className="flex flex-col gap-2">
             <Label>Property type</Label>
             <Select
+              items={PROPERTY_TYPES.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
               value={form.watch("propertyType")}
               onValueChange={(value) => form.setValue("propertyType", value as PropertyType)}
             >

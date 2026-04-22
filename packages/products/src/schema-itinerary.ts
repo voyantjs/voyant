@@ -1,16 +1,56 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import { boolean, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
 
 import { products } from "./schema-core"
 import { productMediaTypeEnum, serviceTypeEnum } from "./schema-shared"
+
+export const productItineraries = pgTable(
+  "product_itineraries",
+  {
+    id: typeId("product_itineraries"),
+    productId: typeIdRef("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    isDefault: boolean("is_default").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_product_itineraries_product").on(table.productId),
+    index("idx_product_itineraries_product_sort").on(
+      table.productId,
+      table.sortOrder,
+      table.createdAt,
+    ),
+    index("idx_product_itineraries_product_default").on(table.productId, table.isDefault),
+    uniqueIndex("uidx_product_itineraries_default")
+      .on(table.productId)
+      .where(sql`${table.isDefault} = true`),
+  ],
+)
+
+export type ProductItinerary = typeof productItineraries.$inferSelect
+export type NewProductItinerary = typeof productItineraries.$inferInsert
 
 export const productDays = pgTable(
   "product_days",
   {
     id: typeId("product_days"),
-    productId: typeIdRef("product_id")
+    itineraryId: typeIdRef("itinerary_id")
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+      .references(() => productItineraries.id, { onDelete: "cascade" }),
     dayNumber: integer("day_number").notNull(),
     title: text("title"),
     description: text("description"),
@@ -19,8 +59,8 @@ export const productDays = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("idx_product_days_product").on(table.productId),
-    index("idx_product_days_product_day_number").on(table.productId, table.dayNumber),
+    index("idx_product_days_itinerary").on(table.itineraryId),
+    index("idx_product_days_itinerary_day_number").on(table.itineraryId, table.dayNumber),
   ],
 )
 

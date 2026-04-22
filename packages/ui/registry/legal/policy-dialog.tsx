@@ -120,6 +120,7 @@ export function PolicyDialog({ open, onOpenChange, policy, onSuccess }: PolicyDi
             <div className="flex flex-col gap-2">
               <Label>Kind</Label>
               <Select
+                items={KINDS.map((x) => ({ label: x.replace(/_/g, " "), value: x }))}
                 value={form.watch("kind")}
                 onValueChange={(v) => form.setValue("kind", v as FormValues["kind"])}
               >

@@ -158,6 +158,7 @@ export function PricingCategoryDependencyForm({
       <div className="flex flex-col gap-1.5">
         <Label>Dependency type</Label>
         <Select
+          items={DEPENDENCY_TYPES}
           value={state.dependencyType}
           onValueChange={(value) =>
             setState((prev) => ({

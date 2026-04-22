@@ -1,10 +1,12 @@
+import { useDuplicateOptionPricingMutation } from "@voyantjs/pricing-react"
 import {
+  useDuplicateProductOptionMutation,
   useOptionUnitMutation,
   useOptionUnits,
   useProductOptionMutation,
   useProductOptions,
 } from "@voyantjs/products-react"
-import { ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Copy, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 import {
@@ -46,6 +48,8 @@ export function OptionsSection({ productId }: { productId: string }) {
     limit: 100,
   })
   const { remove: removeOption } = useProductOptionMutation()
+  const duplicateOption = useDuplicateProductOptionMutation()
+  const duplicatePricing = useDuplicateOptionPricingMutation()
   const options = useMemo(
     () => (optionsData?.data ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
     [optionsData?.data],
@@ -98,6 +102,21 @@ export function OptionsSection({ productId }: { productId: string }) {
                 setEditingOptionId(option.id)
                 setOptionDialogOpen(true)
               }}
+              onDuplicate={() => {
+                duplicateOption.mutate(
+                  { sourceOptionId: option.id, productId },
+                  {
+                    onSuccess: async ({ option: duplicatedOption, unitIdMap }) => {
+                      await duplicatePricing.mutateAsync({
+                        sourceOptionId: option.id,
+                        targetOptionId: duplicatedOption.id,
+                        productId,
+                        unitIdMap,
+                      })
+                    },
+                  },
+                )
+              }}
               onDelete={() => {
                 if (confirm(`Delete option "${option.name}" and all its units?`)) {
                   removeOption.mutate(option.id)
@@ -129,6 +148,7 @@ function OptionRow({
   expanded,
   onToggle,
   onEdit,
+  onDuplicate,
   onDelete,
 }: {
   option: NonNullable<ReturnType<typeof useProductOptions>["data"]>["data"][number]
@@ -136,6 +156,7 @@ function OptionRow({
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
+  onDuplicate: () => void
   onDelete: () => void
 }) {
   return (
@@ -159,6 +180,9 @@ function OptionRow({
           {option.isDefault && <Badge variant="secondary">Default</Badge>}
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon-sm" onClick={onDuplicate}>
+            <Copy className="size-4" aria-hidden="true" />
+          </Button>
           <Button variant="ghost" size="icon-sm" onClick={onEdit}>
             <Pencil className="size-4" aria-hidden="true" />
           </Button>

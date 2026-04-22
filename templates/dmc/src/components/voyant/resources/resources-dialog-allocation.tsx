@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type {
@@ -29,15 +30,16 @@ import type {
 } from "./resources-shared"
 import { allocationModeOptions, NONE_VALUE } from "./resources-shared"
 
-const allocationFormSchema = z.object({
-  poolId: z.string().min(1, "Pool is required"),
-  productId: z.string().min(1, "Product is required"),
-  availabilityRuleId: z.string().optional(),
-  startTimeId: z.string().optional(),
-  quantityRequired: z.coerce.number().int().min(1),
-  allocationMode: z.enum(["shared", "exclusive"]),
-  priority: z.coerce.number().int(),
-})
+const getAllocationFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    poolId: z.string().min(1, messages.resources.dialogs.allocation.validationPoolRequired),
+    productId: z.string().min(1, messages.resources.dialogs.allocation.validationProductRequired),
+    availabilityRuleId: z.string().optional(),
+    startTimeId: z.string().optional(),
+    quantityRequired: z.coerce.number().int().min(1),
+    allocationMode: z.enum(["shared", "exclusive"]),
+    priority: z.coerce.number().int(),
+  })
 
 export function ResourceAllocationDialog({
   open,
@@ -58,6 +60,9 @@ export function ResourceAllocationDialog({
   startTimes: StartTimeOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.resources.dialogs.allocation
+  const allocationFormSchema = getAllocationFormSchema(messages)
   const form = useForm({
     resolver: zodResolver(allocationFormSchema),
     defaultValues: {
@@ -118,18 +123,21 @@ export function ResourceAllocationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Allocation" : "New Allocation"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Pool</Label>
+              <Label>{dialogMessages.poolLabel}</Label>
               <Select
+                items={pools.map((pool) => ({ label: pool.name, value: pool.id }))}
                 value={form.watch("poolId")}
                 onValueChange={(value) => form.setValue("poolId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select pool" />
+                  <SelectValue placeholder={dialogMessages.selectPoolPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {pools.map((pool) => (
@@ -141,13 +149,14 @@ export function ResourceAllocationDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{dialogMessages.productLabel}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={dialogMessages.selectProductPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -160,8 +169,15 @@ export function ResourceAllocationDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Rule</Label>
+                <Label>{dialogMessages.ruleLabel}</Label>
                 <Select
+                  items={[
+                    { label: dialogMessages.noRule, value: NONE_VALUE },
+                    ...filteredRules.map((rule) => ({
+                      label: rule.recurrenceRule,
+                      value: rule.id,
+                    })),
+                  ]}
                   value={form.watch("availabilityRuleId")}
                   onValueChange={(value) =>
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
@@ -171,7 +187,7 @@ export function ResourceAllocationDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No rule</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{dialogMessages.noRule}</SelectItem>
                     {filteredRules.map((rule) => (
                       <SelectItem key={rule.id} value={rule.id}>
                         {rule.recurrenceRule}
@@ -181,8 +197,15 @@ export function ResourceAllocationDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Start Time</Label>
+                <Label>{dialogMessages.startTimeLabel}</Label>
                 <Select
+                  items={[
+                    { label: dialogMessages.noStartTime, value: NONE_VALUE },
+                    ...filteredStartTimes.map((startTime) => ({
+                      label: startTime.label ?? startTime.startTimeLocal,
+                      value: startTime.id,
+                    })),
+                  ]}
                   value={form.watch("startTimeId")}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
@@ -190,7 +213,7 @@ export function ResourceAllocationDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No start time</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{dialogMessages.noStartTime}</SelectItem>
                     {filteredStartTimes.map((startTime) => (
                       <SelectItem key={startTime.id} value={startTime.id}>
                         {startTime.label ?? startTime.startTimeLocal}
@@ -200,16 +223,17 @@ export function ResourceAllocationDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Quantity Required</Label>
+                <Label>{dialogMessages.quantityRequiredLabel}</Label>
                 <Input {...form.register("quantityRequired")} type="number" min={1} />
               </div>
               <div className="grid gap-2">
-                <Label>Priority</Label>
+                <Label>{dialogMessages.priorityLabel}</Label>
                 <Input {...form.register("priority")} type="number" />
               </div>
               <div className="grid gap-2">
-                <Label>Allocation Mode</Label>
+                <Label>{dialogMessages.allocationModeLabel}</Label>
                 <Select
+                  items={allocationModeOptions}
                   value={form.watch("allocationMode")}
                   onValueChange={(value) =>
                     form.setValue(
@@ -224,7 +248,7 @@ export function ResourceAllocationDialog({
                   <SelectContent>
                     {allocationModeOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.resources.allocationModeLabels[option.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -234,11 +258,11 @@ export function ResourceAllocationDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Allocation" : "Create Allocation"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   insertOfferSchema,
+  insertOfferTravelerSchema,
+  insertOrderTravelerSchema,
   offerMetadataSchema,
   storefrontOfferMetadataSchema,
 } from "../../src/validation.js"
@@ -53,6 +55,44 @@ describe("transactions offer metadata validation", () => {
           discountType: "fixed_amount",
           discountValue: "",
         },
+      }),
+    ).toThrow()
+  })
+
+  it("rejects non-traveler participant types on traveler create schemas", () => {
+    expect(() =>
+      insertOfferTravelerSchema.parse({
+        offerId: "ofr_123",
+        firstName: "Guide",
+        lastName: "Local",
+        participantType: "staff",
+      }),
+    ).toThrow()
+
+    expect(() =>
+      insertOfferTravelerSchema.parse({
+        offerId: "ofr_123",
+        firstName: "Mihai",
+        lastName: "Booker",
+        participantType: "booker",
+      }),
+    ).toThrow()
+
+    expect(() =>
+      insertOrderTravelerSchema.parse({
+        orderId: "ord_123",
+        firstName: "Guide",
+        lastName: "Local",
+        participantType: "staff",
+      }),
+    ).toThrow()
+
+    expect(() =>
+      insertOrderTravelerSchema.parse({
+        orderId: "ord_123",
+        firstName: "Mihai",
+        lastName: "Contact",
+        participantType: "contact",
       }),
     ).toThrow()
   })

@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { PricingCategoryDependencyForm } from "./pricing-category-dependency-form"
 
@@ -25,6 +26,7 @@ export function PricingCategoryDependencyDialog({
   dependency,
   onSuccess,
 }: PricingCategoryDependencyDialogProps) {
+  const messages = useAdminMessages()
   const isEdit = Boolean(dependency)
 
   return (
@@ -32,11 +34,11 @@ export function PricingCategoryDependencyDialog({
       <DialogContent data-slot="pricing-category-dependency-dialog" className="sm:max-w-[720px]">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit category dependency" : "Add category dependency"}
+            {isEdit
+              ? messages.pricing.dependencies.dialogEditTitle
+              : messages.pricing.dependencies.dialogNewTitle}
           </DialogTitle>
-          <DialogDescription>
-            Rules between pricing categories such as requires, excludes, and quantity limits.
-          </DialogDescription>
+          <DialogDescription>{messages.pricing.dependencies.dialogDescription}</DialogDescription>
         </DialogHeader>
         <PricingCategoryDependencyForm
           mode={dependency ? { kind: "edit", dependency } : { kind: "create" }}

@@ -45,6 +45,7 @@ import { Route as WorkspaceBookingRequirementsIndexRouteImport } from './routes/
 import { Route as WorkspaceAvailabilityIndexRouteImport } from './routes/_workspace/availability/index'
 import { Route as WorkspaceActivitiesIndexRouteImport } from './routes/_workspace/activities/index'
 import { Route as WorkspaceSuppliersIdRouteImport } from './routes/_workspace/suppliers/$id'
+import { Route as WorkspaceSettingsTeamRouteImport } from './routes/_workspace/settings/team'
 import { Route as WorkspaceResourcesIdRouteImport } from './routes/_workspace/resources/$id'
 import { Route as WorkspaceQuotesIdRouteImport } from './routes/_workspace/quotes/$id'
 import { Route as WorkspacePropertyGroupsIdRouteImport } from './routes/_workspace/property-groups/$id'
@@ -277,6 +278,11 @@ const WorkspaceSuppliersIdRoute = WorkspaceSuppliersIdRouteImport.update({
   id: '/suppliers/$id',
   path: '/suppliers/$id',
   getParentRoute: () => WorkspaceRouteRoute,
+} as any)
+const WorkspaceSettingsTeamRoute = WorkspaceSettingsTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => WorkspaceSettingsRouteRoute,
 } as any)
 const WorkspaceResourcesIdRoute = WorkspaceResourcesIdRouteImport.update({
   id: '/resources/$id',
@@ -538,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/property-groups/$id': typeof WorkspacePropertyGroupsIdRoute
   '/quotes/$id': typeof WorkspaceQuotesIdRoute
   '/resources/$id': typeof WorkspaceResourcesIdRoute
+  '/settings/team': typeof WorkspaceSettingsTeamRoute
   '/suppliers/$id': typeof WorkspaceSuppliersIdRoute
   '/activities/': typeof WorkspaceActivitiesIndexRoute
   '/availability/': typeof WorkspaceAvailabilityIndexRoute
@@ -615,6 +622,7 @@ export interface FileRoutesByTo {
   '/property-groups/$id': typeof WorkspacePropertyGroupsIdRoute
   '/quotes/$id': typeof WorkspaceQuotesIdRoute
   '/resources/$id': typeof WorkspaceResourcesIdRoute
+  '/settings/team': typeof WorkspaceSettingsTeamRoute
   '/suppliers/$id': typeof WorkspaceSuppliersIdRoute
   '/activities': typeof WorkspaceActivitiesIndexRoute
   '/availability': typeof WorkspaceAvailabilityIndexRoute
@@ -695,6 +703,7 @@ export interface FileRoutesById {
   '/_workspace/property-groups/$id': typeof WorkspacePropertyGroupsIdRoute
   '/_workspace/quotes/$id': typeof WorkspaceQuotesIdRoute
   '/_workspace/resources/$id': typeof WorkspaceResourcesIdRoute
+  '/_workspace/settings/team': typeof WorkspaceSettingsTeamRoute
   '/_workspace/suppliers/$id': typeof WorkspaceSuppliersIdRoute
   '/_workspace/activities/': typeof WorkspaceActivitiesIndexRoute
   '/_workspace/availability/': typeof WorkspaceAvailabilityIndexRoute
@@ -774,6 +783,7 @@ export interface FileRouteTypes {
     | '/property-groups/$id'
     | '/quotes/$id'
     | '/resources/$id'
+    | '/settings/team'
     | '/suppliers/$id'
     | '/activities/'
     | '/availability/'
@@ -851,6 +861,7 @@ export interface FileRouteTypes {
     | '/property-groups/$id'
     | '/quotes/$id'
     | '/resources/$id'
+    | '/settings/team'
     | '/suppliers/$id'
     | '/activities'
     | '/availability'
@@ -930,6 +941,7 @@ export interface FileRouteTypes {
     | '/_workspace/property-groups/$id'
     | '/_workspace/quotes/$id'
     | '/_workspace/resources/$id'
+    | '/_workspace/settings/team'
     | '/_workspace/suppliers/$id'
     | '/_workspace/activities/'
     | '/_workspace/availability/'
@@ -1244,6 +1256,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/suppliers/$id'
       preLoaderRoute: typeof WorkspaceSuppliersIdRouteImport
       parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/settings/team': {
+      id: '/_workspace/settings/team'
+      path: '/team'
+      fullPath: '/settings/team'
+      preLoaderRoute: typeof WorkspaceSettingsTeamRouteImport
+      parentRoute: typeof WorkspaceSettingsRouteRoute
     }
     '/_workspace/resources/$id': {
       id: '/_workspace/resources/$id'
@@ -1560,6 +1579,7 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface WorkspaceSettingsRouteRouteChildren {
+  WorkspaceSettingsTeamRoute: typeof WorkspaceSettingsTeamRoute
   WorkspaceSettingsPricingCancellationPoliciesRoute: typeof WorkspaceSettingsPricingCancellationPoliciesRoute
   WorkspaceSettingsPricingCatalogsRoute: typeof WorkspaceSettingsPricingCatalogsRoute
   WorkspaceSettingsPricingCategoriesRoute: typeof WorkspaceSettingsPricingCategoriesRoute
@@ -1576,6 +1596,7 @@ interface WorkspaceSettingsRouteRouteChildren {
 
 const WorkspaceSettingsRouteRouteChildren: WorkspaceSettingsRouteRouteChildren =
   {
+    WorkspaceSettingsTeamRoute: WorkspaceSettingsTeamRoute,
     WorkspaceSettingsPricingCancellationPoliciesRoute:
       WorkspaceSettingsPricingCancellationPoliciesRoute,
     WorkspaceSettingsPricingCatalogsRoute:

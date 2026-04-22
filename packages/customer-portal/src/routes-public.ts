@@ -13,7 +13,7 @@ import { publicCustomerPortalService } from "./service-public.js"
 import {
   bootstrapCustomerPortalSchema,
   createCustomerPortalCompanionSchema,
-  importCustomerPortalBookingParticipantsSchema,
+  importCustomerPortalBookingTravelersSchema,
   updateCustomerPortalCompanionSchema,
   updateCustomerPortalProfileSchema,
 } from "./validation-public.js"
@@ -142,13 +142,13 @@ export function createPublicCustomerPortalRoutes(options: PublicCustomerPortalRo
 
       return c.json({ data: companion }, 201)
     })
-    .post("/companions/import-booking-participants", async (c) => {
+    .post("/companions/import-booking-travelers", async (c) => {
       const userId = requireUserId(c)
 
-      const result = await publicCustomerPortalService.importBookingParticipantsAsCompanions(
+      const result = await publicCustomerPortalService.importBookingTravelersAsCompanions(
         c.get("db"),
         userId,
-        await parseJsonBody(c, importCustomerPortalBookingParticipantsSchema),
+        await parseJsonBody(c, importCustomerPortalBookingTravelersSchema),
       )
 
       if (!result) {

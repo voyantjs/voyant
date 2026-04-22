@@ -3,6 +3,7 @@ export type { NotificationService } from "./service-shared.js"
 export {
   createNotificationService,
   NotificationError,
+  previewNotificationTemplate,
   renderNotificationTemplate,
   summarizeNotificationAttachments,
 } from "./service-shared.js"
@@ -19,6 +20,7 @@ import {
   sendPaymentSessionNotification,
 } from "./service-deliveries.js"
 import { runDueReminders } from "./service-reminders.js"
+import { previewNotificationTemplate } from "./service-shared.js"
 import {
   createReminderRule,
   createTemplate,
@@ -39,6 +41,7 @@ export const notificationsService = {
   getTemplateBySlug,
   createTemplate,
   updateTemplate,
+  previewNotificationTemplate,
   listDeliveries,
   getDeliveryById,
   sendNotification,

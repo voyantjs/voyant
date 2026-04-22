@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useOptionPriceRuleMutation, useOptionUnitPriceRuleMutation } from "@voyantjs/pricing-react"
+import { formatMessage } from "@voyantjs/voyant-admin"
 import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -11,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { type OptionPriceRuleData, OptionPriceRuleDialog } from "./product-option-price-rule-dialog"
 import {
   getOptionPriceRulesQueryOptions,
@@ -18,7 +20,50 @@ import {
   getOptionUnitsQueryOptions,
   getPricingCategoriesQueryOptions,
 } from "./product-options-shared"
+import type { OptionUnitData } from "./product-unit-dialog"
 import { type OptionUnitPriceRuleData, UnitPriceRuleDialog } from "./product-unit-price-rule-dialog"
+
+function getRulePricingModeLabel(
+  value: OptionPriceRuleData["pricingMode"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["priceRules"],
+) {
+  switch (value) {
+    case "per_person":
+      return messages.pricingModePerPerson
+    case "per_booking":
+      return messages.pricingModePerBooking
+    case "starting_from":
+      return messages.pricingModeStartingFrom
+    case "free":
+      return messages.pricingModeFree
+    case "on_request":
+      return messages.pricingModeOnRequest
+    default:
+      return value
+  }
+}
+
+function getUnitTypeLabel(
+  type: OptionUnitData["unitType"],
+  messages: ReturnType<typeof useAdminMessages>["products"]["operations"]["units"],
+) {
+  switch (type) {
+    case "person":
+      return messages.typePerson
+    case "group":
+      return messages.typeGroup
+    case "room":
+      return messages.typeRoom
+    case "vehicle":
+      return messages.typeVehicle
+    case "service":
+      return messages.typeService
+    case "other":
+      return messages.typeOther
+    default:
+      return type
+  }
+}
 
 function ActionMenu({ children }: { children: React.ReactNode }) {
   return (
@@ -34,6 +79,8 @@ function ActionMenu({ children }: { children: React.ReactNode }) {
 }
 
 export function PricingPanel({ productId, optionId }: { productId: string; optionId: string }) {
+  const messages = useAdminMessages()
+  const priceRuleMessages = messages.products.operations.priceRules
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<OptionPriceRuleData | undefined>()
   const { data, refetch } = useQuery(getOptionPriceRulesQueryOptions(optionId))
@@ -47,7 +94,9 @@ export function PricingPanel({ productId, optionId }: { productId: string; optio
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pricing</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {priceRuleMessages.sectionTitle}
+        </p>
         <Button
           variant="outline"
           size="sm"
@@ -57,14 +106,12 @@ export function PricingPanel({ productId, optionId }: { productId: string; optio
           }}
         >
           <Plus className="mr-1 h-3 w-3" />
-          Add Price Rule
+          {priceRuleMessages.addAction}
         </Button>
       </div>
 
       {rules.length === 0 ? (
-        <p className="py-2 text-center text-xs text-muted-foreground">
-          No price rules yet. Link a catalog to start pricing.
-        </p>
+        <p className="py-2 text-center text-xs text-muted-foreground">{priceRuleMessages.empty}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {rules.map((rule) => (
@@ -77,7 +124,9 @@ export function PricingPanel({ productId, optionId }: { productId: string; optio
                 setRuleDialogOpen(true)
               }}
               onDelete={() => {
-                if (confirm(`Delete price rule "${rule.name}"?`)) {
+                if (
+                  confirm(formatMessage(priceRuleMessages.deleteRuleConfirm, { name: rule.name }))
+                ) {
                   deleteMutation.mutate(rule.id)
                 }
               }}
@@ -113,6 +162,8 @@ function PriceRuleCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const messages = useAdminMessages()
+  const priceRuleMessages = messages.products.operations.priceRules
   return (
     <div className="rounded-lg border bg-background p-4">
       <div className="flex items-start justify-between">
@@ -120,38 +171,38 @@ function PriceRuleCard({
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{rule.name}</span>
             <Badge variant="outline" className="text-xs capitalize">
-              {rule.pricingMode.replace("_", " ")}
+              {getRulePricingModeLabel(rule.pricingMode, priceRuleMessages)}
             </Badge>
-            {rule.isDefault && <Badge variant="secondary">Default</Badge>}
+            {rule.isDefault && <Badge variant="secondary">{priceRuleMessages.defaultBadge}</Badge>}
             <Badge variant={rule.active ? "default" : "outline"}>
-              {rule.active ? "Active" : "Inactive"}
+              {rule.active ? priceRuleMessages.activeBadge : priceRuleMessages.inactiveBadge}
             </Badge>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>
-              Base sell:{" "}
+              {priceRuleMessages.baseSellLabel}:{" "}
               <span className="font-mono text-foreground">
                 {((rule.baseSellAmountCents ?? 0) / 100).toFixed(2)}
               </span>
             </span>
             <span>
-              Base cost:{" "}
+              {priceRuleMessages.baseCostLabel}:{" "}
               <span className="font-mono text-foreground">
                 {((rule.baseCostAmountCents ?? 0) / 100).toFixed(2)}
               </span>
             </span>
-            {rule.allPricingCategories && <span>All categories</span>}
+            {rule.allPricingCategories && <span>{priceRuleMessages.allCategoriesLabel}</span>}
           </div>
         </div>
         <ActionMenu>
           <DropdownMenuItem onClick={onEdit}>
             <Pencil className="h-4 w-4" />
-            Edit
+            {priceRuleMessages.editAction}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
-            Delete
+            {priceRuleMessages.deleteAction}
           </DropdownMenuItem>
         </ActionMenu>
       </div>
@@ -170,6 +221,9 @@ function UnitPriceMatrix({
   optionPriceRuleId: string
   optionId: string
 }) {
+  const messages = useAdminMessages()
+  const priceRuleMessages = messages.products.operations.priceRules
+  const unitMessages = messages.products.operations.units
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCell, setEditingCell] = useState<OptionUnitPriceRuleData | undefined>()
   const [preselectedUnitId, setPreselectedUnitId] = useState<string | undefined>()
@@ -196,12 +250,12 @@ function UnitPriceMatrix({
     ) ?? null
 
   if (units.length === 0) {
-    return <p className="text-xs italic text-muted-foreground">Add units to configure pricing.</p>
+    return <p className="text-xs italic text-muted-foreground">{priceRuleMessages.addUnitsHint}</p>
   }
   if (categories.length === 0) {
     return (
       <p className="text-xs italic text-muted-foreground">
-        Create global pricing categories in Settings first.
+        {priceRuleMessages.createCategoriesHint}
       </p>
     )
   }
@@ -210,14 +264,14 @@ function UnitPriceMatrix({
     <div>
       <div className="mb-2 flex items-center justify-between">
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Unit x Category Pricing
+          {priceRuleMessages.unitCategoryTitle}
         </p>
       </div>
       <div className="overflow-x-auto rounded border">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b bg-muted/50 text-muted-foreground">
-              <th className="p-2 text-left font-medium">Unit</th>
+              <th className="p-2 text-left font-medium">{priceRuleMessages.tableUnit}</th>
               {categories.map((category) => (
                 <th key={category.id} className="p-2 text-left font-medium">
                   {category.name}
@@ -230,7 +284,9 @@ function UnitPriceMatrix({
               <tr key={unit.id} className="border-b last:border-b-0">
                 <td className="p-2 font-medium">
                   {unit.name}
-                  <span className="ml-1 text-[10px] text-muted-foreground">({unit.unitType})</span>
+                  <span className="ml-1 text-[10px] text-muted-foreground">
+                    ({getUnitTypeLabel(unit.unitType, unitMessages)})
+                  </span>
                 </td>
                 {categories.map((category) => {
                   const cell = findCell(unit.id, category.id)
@@ -253,7 +309,7 @@ function UnitPriceMatrix({
                           <button
                             type="button"
                             onClick={() => {
-                              if (confirm("Delete this price cell?")) {
+                              if (confirm(priceRuleMessages.deleteCellConfirm)) {
                                 deleteMutation.mutate(cell.id)
                               }
                             }}

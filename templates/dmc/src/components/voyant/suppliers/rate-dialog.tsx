@@ -20,6 +20,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const rateFormSchema = z.object({
@@ -58,6 +59,7 @@ export function RateDialog({
 }: RateDialogProps) {
   const isEditing = !!rate
   const rateMutation = useSupplierRateMutation(supplierId)
+  const messages = useAdminMessages().suppliersModule
 
   const form = useForm<RateFormValues, unknown, RateFormOutput>({
     resolver: zodResolver(rateFormSchema),
@@ -117,21 +119,23 @@ export function RateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Rate" : "Add Rate"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? messages.rateDialogEditTitle : messages.rateDialogNewTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Name / Season</Label>
-              <Input {...form.register("name")} placeholder="Summer 2025" />
+              <Label>{messages.rateNameLabel}</Label>
+              <Input {...form.register("name")} placeholder={messages.rateNamePlaceholder} />
               {form.formState.errors.name && (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                <p className="text-xs text-destructive">{messages.validationNameRequired}</p>
               )}
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{messages.rateCurrencyLabel}</Label>
                 <Input
                   {...form.register("currency")}
                   placeholder="EUR"
@@ -139,13 +143,11 @@ export function RateDialog({
                   className="uppercase"
                 />
                 {form.formState.errors.currency && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.currency.message}
-                  </p>
+                  <p className="text-xs text-destructive">{messages.validationIsoCurrency}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Amount</Label>
+                <Label>{messages.rateAmountLabel}</Label>
                 <Input
                   {...form.register("amount")}
                   type="number"
@@ -154,12 +156,13 @@ export function RateDialog({
                   placeholder="150.00"
                 />
                 {form.formState.errors.amount && (
-                  <p className="text-xs text-destructive">{form.formState.errors.amount.message}</p>
+                  <p className="text-xs text-destructive">{messages.validationAmountNonNegative}</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Unit</Label>
+                <Label>{messages.rateUnitLabel}</Label>
                 <Select
+                  items={RATE_UNITS}
                   value={form.watch("unit")}
                   onValueChange={(v) => form.setValue("unit", v as RateFormValues["unit"])}
                 >
@@ -169,7 +172,15 @@ export function RateDialog({
                   <SelectContent>
                     {RATE_UNITS.map((u) => (
                       <SelectItem key={u.value} value={u.value}>
-                        {u.label}
+                        {u.value === "per_person"
+                          ? messages.rateUnitPerPerson
+                          : u.value === "per_group"
+                            ? messages.rateUnitPerGroup
+                            : u.value === "per_night"
+                              ? messages.rateUnitPerNight
+                              : u.value === "per_vehicle"
+                                ? messages.rateUnitPerVehicle
+                                : messages.rateUnitFlat}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -179,38 +190,38 @@ export function RateDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Valid From</Label>
+                <Label>{messages.validFromLabel}</Label>
                 <Input {...form.register("validFrom")} type="date" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Valid To</Label>
+                <Label>{messages.validToLabel}</Label>
                 <Input {...form.register("validTo")} type="date" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Min Pax</Label>
+                <Label>{messages.minPaxLabel}</Label>
                 <Input {...form.register("minPax")} type="number" min="1" placeholder="1" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max Pax</Label>
+                <Label>{messages.maxPaxLabel}</Label>
                 <Input {...form.register("maxPax")} type="number" min="1" placeholder="50" />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Additional pricing notes..." />
+              <Label>{messages.rateNotesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={messages.rateNotesPlaceholder} />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Rate"}
+              {isEditing ? messages.saveChanges : messages.createRate}
             </Button>
           </DialogFooter>
         </form>

@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
-
 import {
   Button,
   Dialog,
@@ -28,22 +27,11 @@ import {
 } from "@/components/ui"
 import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const scheduleTypes = ["deposit", "installment", "balance", "hold", "other"] as const
 const scheduleStatuses = ["pending", "due", "paid", "waived", "cancelled", "expired"] as const
-
-const scheduleFormSchema = z.object({
-  scheduleType: z.enum(scheduleTypes).default("balance"),
-  status: z.enum(scheduleStatuses).default("pending"),
-  dueDate: z.string().min(1, "Due date is required"),
-  currency: z.string().min(3).max(3).default("EUR"),
-  amountCents: z.coerce.number().int().min(0, "Amount is required"),
-  notes: z.string().optional().nullable(),
-})
-
-type ScheduleFormValues = z.input<typeof scheduleFormSchema>
-type ScheduleFormOutput = z.output<typeof scheduleFormSchema>
 
 export interface BookingPaymentScheduleDialogProps {
   open: boolean
@@ -60,8 +48,21 @@ export function BookingPaymentScheduleDialog({
   schedule,
   onSuccess,
 }: BookingPaymentScheduleDialogProps) {
+  const scheduleMessages = useAdminMessages().bookings.detail.paymentScheduleDialog
   const isEditing = Boolean(schedule)
   const { create, update } = useBookingPaymentScheduleMutation(bookingId)
+
+  const scheduleFormSchema = z.object({
+    scheduleType: z.enum(scheduleTypes).default("balance"),
+    status: z.enum(scheduleStatuses).default("pending"),
+    dueDate: z.string().min(1, scheduleMessages.validationDueDateRequired),
+    currency: z.string().min(3).max(3).default("EUR"),
+    amountCents: z.coerce.number().int().min(0, scheduleMessages.validationAmountRequired),
+    notes: z.string().optional().nullable(),
+  })
+
+  type ScheduleFormValues = z.input<typeof scheduleFormSchema>
+  type ScheduleFormOutput = z.output<typeof scheduleFormSchema>
 
   const form = useForm<ScheduleFormValues, unknown, ScheduleFormOutput>({
     resolver: zodResolver(scheduleFormSchema),
@@ -116,7 +117,9 @@ export function BookingPaymentScheduleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Payment Schedule" : "Add Payment Schedule"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? scheduleMessages.editTitle : scheduleMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -125,8 +128,9 @@ export function BookingPaymentScheduleDialog({
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{scheduleMessages.typeLabel}</Label>
                 <Select
+                  items={scheduleTypes.map((t) => ({ label: t.replace("_", " "), value: t }))}
                   value={form.watch("scheduleType")}
                   onValueChange={(v) =>
                     form.setValue(
@@ -141,15 +145,24 @@ export function BookingPaymentScheduleDialog({
                   <SelectContent>
                     {scheduleTypes.map((t) => (
                       <SelectItem key={t} value={t}>
-                        {t.replace("_", " ")}
+                        {t === "deposit"
+                          ? scheduleMessages.typeDeposit
+                          : t === "installment"
+                            ? scheduleMessages.typeInstallment
+                            : t === "balance"
+                              ? scheduleMessages.typeBalance
+                              : t === "hold"
+                                ? scheduleMessages.typeHold
+                                : scheduleMessages.typeOther}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{scheduleMessages.statusLabel}</Label>
                 <Select
+                  items={scheduleStatuses.map((s) => ({ label: s.replace("_", " "), value: s }))}
                   value={form.watch("status")}
                   onValueChange={(v) =>
                     form.setValue("status", (v ?? "pending") as (typeof scheduleStatuses)[number])
@@ -161,7 +174,17 @@ export function BookingPaymentScheduleDialog({
                   <SelectContent>
                     {scheduleStatuses.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {s.replace("_", " ")}
+                        {s === "pending"
+                          ? scheduleMessages.statusPending
+                          : s === "due"
+                            ? scheduleMessages.statusDue
+                            : s === "paid"
+                              ? scheduleMessages.statusPaid
+                              : s === "waived"
+                                ? scheduleMessages.statusWaived
+                                : s === "cancelled"
+                                  ? scheduleMessages.statusCancelled
+                                  : scheduleMessages.statusExpired}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -170,7 +193,7 @@ export function BookingPaymentScheduleDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Due Date</Label>
+              <Label>{scheduleMessages.dueDateLabel}</Label>
               <DatePicker
                 value={form.watch("dueDate") || null}
                 onChange={(next) =>
@@ -179,7 +202,7 @@ export function BookingPaymentScheduleDialog({
                     shouldDirty: true,
                   })
                 }
-                placeholder="Select due date"
+                placeholder={scheduleMessages.dueDatePlaceholder}
                 className="w-full"
               />
               {form.formState.errors.dueDate && (
@@ -189,7 +212,7 @@ export function BookingPaymentScheduleDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{scheduleMessages.currencyLabel}</Label>
                 <CurrencyCombobox
                   value={form.watch("currency") || null}
                   onChange={(next) =>
@@ -201,7 +224,7 @@ export function BookingPaymentScheduleDialog({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Amount (cents)</Label>
+                <Label>{scheduleMessages.amountLabel}</Label>
                 <Input {...form.register("amountCents")} type="number" min={0} />
                 {form.formState.errors.amountCents && (
                   <p className="text-xs text-destructive">
@@ -212,17 +235,20 @@ export function BookingPaymentScheduleDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Payment notes..." />
+              <Label>{scheduleMessages.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={scheduleMessages.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {scheduleMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Schedule"}
+              {isEditing ? scheduleMessages.saveChanges : scheduleMessages.create}
             </Button>
           </DialogFooter>
         </form>

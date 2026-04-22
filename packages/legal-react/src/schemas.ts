@@ -212,8 +212,8 @@ export const legalContractTemplateSingleResponse = singleEnvelope(legalContractT
 export const legalContractTemplateVersionListResponse = singleEnvelope(
   z.array(legalContractTemplateVersionRecordSchema),
 )
-export const legalContractNumberSeriesListResponse = paginatedEnvelope(
-  legalContractNumberSeriesRecordSchema,
+export const legalContractNumberSeriesListResponse = singleEnvelope(
+  z.array(legalContractNumberSeriesRecordSchema),
 )
 export const legalContractNumberSeriesSingleResponse = singleEnvelope(
   legalContractNumberSeriesRecordSchema,

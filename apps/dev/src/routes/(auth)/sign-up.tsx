@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
   Input,
@@ -14,14 +13,18 @@ import {
 } from "@/components/ui"
 
 import { authClient } from "@/lib/auth"
-import { getCurrentUser } from "@/lib/current-user"
+import { getBootstrapStatus, getCurrentUser } from "@/lib/current-user"
 
 export const Route = createFileRoute("/(auth)/sign-up")({
   loader: async () => {
-    const user = await getCurrentUser()
+    const [user, bootstrap] = await Promise.all([getCurrentUser(), getBootstrapStatus()])
 
     if (user) {
       throw redirect({ to: "/" })
+    }
+
+    if (bootstrap.hasUsers) {
+      throw redirect({ to: "/sign-in" })
     }
 
     return null
@@ -71,8 +74,11 @@ function SignUpPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Get started with Voyant</CardDescription>
+        <CardTitle>Create the first admin</CardTitle>
+        <CardDescription>
+          This workspace has no users yet. The account you create will become the super-admin —
+          everyone else joins via invitation.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -150,14 +156,6 @@ function SignUpPage() {
           Continue with Google
         </Button>
       </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/sign-in" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </CardFooter>
     </Card>
   )
 }

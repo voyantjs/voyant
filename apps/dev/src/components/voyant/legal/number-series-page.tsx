@@ -64,7 +64,6 @@ export function NumberSeriesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="p-3 text-left font-medium">Code</th>
                 <th className="p-3 text-left font-medium">Name</th>
                 <th className="p-3 text-left font-medium">Prefix</th>
                 <th className="p-3 text-left font-medium">Separator</th>
@@ -79,7 +78,6 @@ export function NumberSeriesPage() {
             <tbody>
               {rows.map((series) => (
                 <tr key={series.id} className="border-b last:border-b-0">
-                  <td className="p-3 font-mono text-xs">{series.code}</td>
                   <td className="p-3">{series.name}</td>
                   <td className="p-3 font-mono">{series.prefix || "-"}</td>
                   <td className="p-3 font-mono">{series.separator || "-"}</td>
@@ -111,7 +109,7 @@ export function NumberSeriesPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm(`Delete series "${series.code}"?`)) {
+                          if (confirm(`Delete series "${series.name}"?`)) {
                             remove.mutate(series.id, { onSuccess: () => void refetch() })
                           }
                         }}

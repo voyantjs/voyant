@@ -1,4 +1,4 @@
-import { bookingItems, bookingParticipants, bookings } from "@voyantjs/bookings"
+import { bookingItems, bookings, bookingTravelers } from "@voyantjs/bookings"
 import {
   bookingPaymentSchedules,
   financeService,
@@ -51,7 +51,7 @@ export interface CheckoutPolicyOptions {
 type LoadedBookingContext = {
   booking: typeof bookings.$inferSelect
   items: Array<typeof bookingItems.$inferSelect>
-  participants: Array<typeof bookingParticipants.$inferSelect>
+  participants: Array<typeof bookingTravelers.$inferSelect>
   schedules: Array<typeof bookingPaymentSchedules.$inferSelect>
   outstandingInvoices: Array<typeof invoices.$inferSelect>
 }
@@ -337,9 +337,9 @@ async function loadBookingContext(
       .orderBy(bookingItems.createdAt),
     db
       .select()
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.bookingId, bookingId))
-      .orderBy(desc(bookingParticipants.isPrimary), bookingParticipants.createdAt),
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, bookingId))
+      .orderBy(desc(bookingTravelers.isPrimary), bookingTravelers.createdAt),
     db
       .select()
       .from(bookingPaymentSchedules)

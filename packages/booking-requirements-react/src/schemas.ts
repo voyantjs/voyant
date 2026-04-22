@@ -19,7 +19,7 @@ export type ProductLite = z.infer<typeof productLiteSchema>
 
 export const questionTargetSchema = z.enum([
   "booking",
-  "participant",
+  "traveler",
   "lead_traveler",
   "booker",
   "extra",
@@ -87,7 +87,7 @@ export const contactFieldKeySchema = z.enum([
   "other",
 ])
 
-export const contactScopeSchema = z.enum(["booking", "lead_traveler", "participant", "booker"])
+export const contactScopeSchema = z.enum(["booking", "lead_traveler", "traveler", "booker"])
 
 export const contactRequirementSchema = z.object({
   id: z.string(),
@@ -96,7 +96,7 @@ export const contactRequirementSchema = z.object({
   fieldKey: contactFieldKeySchema,
   scope: contactScopeSchema,
   isRequired: z.boolean(),
-  perParticipant: z.boolean(),
+  perTraveler: z.boolean(),
   active: z.boolean(),
   sortOrder: z.number().int(),
   notes: z.string().nullable(),
@@ -120,7 +120,7 @@ export const publicTransportRequirementSummarySchema = z.object({
   fieldKey: transportRequirementFieldSchema,
   scope: contactScopeSchema,
   isRequired: z.boolean(),
-  perParticipant: z.boolean(),
+  perTraveler: z.boolean(),
   notes: z.string().nullable(),
 })
 
@@ -136,7 +136,7 @@ export const publicTransportRequirementsSchema = z.object({
   fieldsByScope: z.object({
     booking: z.array(transportRequirementFieldSchema),
     lead_traveler: z.array(transportRequirementFieldSchema),
-    participant: z.array(transportRequirementFieldSchema),
+    traveler: z.array(transportRequirementFieldSchema),
     booker: z.array(transportRequirementFieldSchema),
   }),
   requirements: z.array(publicTransportRequirementSummarySchema),

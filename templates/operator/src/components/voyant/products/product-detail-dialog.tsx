@@ -30,6 +30,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 
@@ -37,19 +38,6 @@ const CURRENCY_OPTIONS = Object.values(currencies).map((c) => ({
   value: c.code,
   label: `${c.code} — ${c.name} (${c.symbol})`,
 }))
-
-const productFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  status: z.enum(["draft", "active", "archived"]),
-  description: z.string().optional().nullable(),
-  bookingMode: z.enum(["date", "date_time", "open", "stay", "transfer", "itinerary", "other"]),
-  productTypeId: z.string().optional().nullable(),
-  sellCurrency: z.string().min(3).max(3, "Use 3-letter ISO code"),
-  tags: z.array(z.string()).default([]),
-})
-
-type ProductFormValues = z.input<typeof productFormSchema>
-type ProductFormOutput = z.output<typeof productFormSchema>
 
 type ProductData = {
   id: string
@@ -76,24 +64,38 @@ type ProductDialogProps = {
   onSuccess: (id?: string) => void
 }
 
-const PRODUCT_STATUSES = [
-  { value: "draft", label: "Draft" },
-  { value: "active", label: "Active" },
-  { value: "archived", label: "Archived" },
-] as const
-
-const BOOKING_MODES = [
-  { value: "date", label: "Date" },
-  { value: "date_time", label: "Date & Time" },
-  { value: "open", label: "Open" },
-  { value: "stay", label: "Stay" },
-  { value: "transfer", label: "Transfer" },
-  { value: "itinerary", label: "Itinerary" },
-  { value: "other", label: "Other" },
-] as const
-
 export function ProductDialog({ open, onOpenChange, product, onSuccess }: ProductDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const isEditing = !!product
+  const productFormSchema = z.object({
+    name: z.string().min(1, productMessages.validationNameRequired),
+    status: z.enum(["draft", "active", "archived"]),
+    description: z.string().optional().nullable(),
+    bookingMode: z.enum(["date", "date_time", "open", "stay", "transfer", "itinerary", "other"]),
+    productTypeId: z.string().optional().nullable(),
+    sellCurrency: z
+      .string()
+      .min(3, productMessages.validationIsoCurrency)
+      .max(3, productMessages.validationIsoCurrency),
+    tags: z.array(z.string()).default([]),
+  })
+  type ProductFormValues = z.input<typeof productFormSchema>
+  type ProductFormOutput = z.output<typeof productFormSchema>
+  const productStatuses = [
+    { value: "draft", label: productMessages.statusDraft },
+    { value: "active", label: productMessages.statusActive },
+    { value: "archived", label: productMessages.statusArchived },
+  ] as const
+  const bookingModes = [
+    { value: "date", label: productMessages.bookingModeDate },
+    { value: "date_time", label: productMessages.bookingModeDateTime },
+    { value: "open", label: productMessages.bookingModeOpen },
+    { value: "stay", label: productMessages.bookingModeStay },
+    { value: "transfer", label: productMessages.bookingModeTransfer },
+    { value: "itinerary", label: productMessages.bookingModeItinerary },
+    { value: "other", label: productMessages.bookingModeOther },
+  ] as const
 
   const form = useForm<ProductFormValues, unknown, ProductFormOutput>({
     resolver: zodResolver(productFormSchema),
@@ -160,7 +162,9 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Product" : "New Product"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? productMessages.detailSheetEditTitle : productMessages.detailSheetNewTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -168,23 +172,27 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
         >
           <SheetBody className="grid gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Name</Label>
-              <Input {...form.register("name")} placeholder="Croatia Explorer 2025" autoFocus />
+              <Label>{productMessages.nameLabel}</Label>
+              <Input
+                {...form.register("name")}
+                placeholder={productMessages.namePlaceholder}
+                autoFocus
+              />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Description</Label>
+              <Label>{productMessages.descriptionLabel}</Label>
               <Textarea
                 {...form.register("description")}
-                placeholder="Brief overview of the product..."
+                placeholder={productMessages.descriptionPlaceholder}
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Tags</Label>
+              <Label>{productMessages.tagsLabel}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {(form.watch("tags") ?? []).map((tag) => (
                   <Badge key={tag} variant="secondary" className="gap-1 text-xs">
@@ -220,25 +228,25 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                     setTagInput("")
                   }
                 }}
-                placeholder="Type a tag and press Enter"
+                placeholder={productMessages.tagInputPlaceholder}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Booking Mode</Label>
+                <Label>{productMessages.bookingModeLabel}</Label>
                 <Select
                   value={form.watch("bookingMode")}
                   onValueChange={(v) =>
                     form.setValue("bookingMode", v as ProductFormValues["bookingMode"])
                   }
-                  items={BOOKING_MODES}
+                  items={bookingModes}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BOOKING_MODES.map((m) => (
+                    {bookingModes.map((m) => (
                       <SelectItem key={m.value} value={m.value}>
                         {m.label}
                       </SelectItem>
@@ -247,7 +255,7 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Product Type</Label>
+                <Label>{productMessages.productTypeLabel}</Label>
                 <Select
                   value={form.watch("productTypeId") ?? ""}
                   onValueChange={(v) =>
@@ -256,15 +264,15 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                     })
                   }
                   items={[
-                    { value: "__none__", label: "None" },
+                    { value: "__none__", label: productMessages.productTypeNone },
                     ...productTypes.map((t) => ({ value: t.id, label: t.name })),
                   ]}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder={productMessages.productTypeNone} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">{productMessages.productTypeNone}</SelectItem>
                     {productTypes.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         {t.name}
@@ -278,17 +286,17 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
             {isEditing && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label>Status</Label>
+                  <Label>{productMessages.statusLabel}</Label>
                   <Select
                     value={form.watch("status")}
                     onValueChange={(v) => form.setValue("status", v as ProductFormValues["status"])}
-                    items={PRODUCT_STATUSES}
+                    items={productStatuses}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PRODUCT_STATUSES.map((s) => (
+                      {productStatuses.map((s) => (
                         <SelectItem key={s.value} value={s.value}>
                           {s.label}
                         </SelectItem>
@@ -297,10 +305,11 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Sell Currency</Label>
+                  <Label>{productMessages.sellCurrencyLabel}</Label>
                   <CurrencyCombobox
                     value={form.watch("sellCurrency")}
                     onChange={(v) => form.setValue("sellCurrency", v, { shouldDirty: true })}
+                    messages={productMessages}
                   />
                   {form.formState.errors.sellCurrency && (
                     <p className="text-xs text-destructive">
@@ -313,11 +322,11 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Product"}
+              {isEditing ? productMessages.saveChanges : productMessages.createProduct}
             </Button>
           </SheetFooter>
         </form>
@@ -329,13 +338,15 @@ export function ProductDialog({ open, onOpenChange, product, onSuccess }: Produc
 function CurrencyCombobox({
   value,
   onChange,
+  messages,
 }: {
   value: string
   onChange: (value: string) => void
+  messages: ReturnType<typeof useAdminMessages>["products"]["core"]
 }) {
   return (
     <Combobox value={value} onValueChange={(v) => onChange(v ?? "")}>
-      <ComboboxInput placeholder="Search currency..." className="w-full" />
+      <ComboboxInput placeholder={messages.currencySearchPlaceholder} className="w-full" />
       <ComboboxContent>
         <ComboboxList>
           {CURRENCY_OPTIONS.map((c) => (
@@ -344,7 +355,7 @@ function CurrencyCombobox({
               <span className="truncate text-muted-foreground">{c.label.split(" — ")[1]}</span>
             </ComboboxItem>
           ))}
-          <ComboboxEmpty>No currency found</ComboboxEmpty>
+          <ComboboxEmpty>{messages.currencyEmpty}</ComboboxEmpty>
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

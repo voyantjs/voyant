@@ -10,17 +10,18 @@ import {
   bookingItemParticipantRoleSchema,
   bookingItemStatusSchema,
   bookingItemTypeSchema,
-  bookingParticipantTypeSchema,
   bookingStatusSchema,
   bookingTravelerCategorySchema,
 } from "./validation-shared.js"
 
 const isoDateSchema = z.string().date()
 const isoDateTimeSchema = z.string().datetime()
+const publicBookingTravelerTypeSchema = z.enum(["traveler", "occupant"])
+const publicBookingVisibleTravelerTypeSchema = z.enum(["traveler", "occupant", "other"])
 
-export const publicBookingSessionParticipantInputSchema = z.object({
+export const publicBookingSessionTravelerInputSchema = z.object({
   id: z.string().optional(),
-  participantType: bookingParticipantTypeSchema.default("traveler"),
+  participantType: publicBookingTravelerTypeSchema.default("traveler"),
   travelerCategory: bookingTravelerCategorySchema.nullable().optional(),
   firstName: z.string().min(1).max(255),
   lastName: z.string().min(1).max(255),
@@ -76,7 +77,7 @@ export const publicCreateBookingSessionSchema = z.object({
     .default(30),
   holdExpiresAt: isoDateTimeSchema.nullable().optional(),
   items: z.array(publicCreateBookingSessionItemSchema).min(1),
-  participants: z.array(publicBookingSessionParticipantInputSchema).default([]),
+  travelers: z.array(publicBookingSessionTravelerInputSchema).optional(),
 })
 
 export const publicUpdateBookingSessionSchema = z.object({
@@ -90,8 +91,8 @@ export const publicUpdateBookingSessionSchema = z.object({
     .max(24 * 60)
     .optional(),
   holdExpiresAt: isoDateTimeSchema.nullable().optional(),
-  participants: z.array(publicBookingSessionParticipantInputSchema).optional(),
-  removedParticipantIds: z.array(z.string()).default([]),
+  travelers: z.array(publicBookingSessionTravelerInputSchema).optional(),
+  removedTravelerIds: z.array(z.string()).default([]),
 })
 
 export const publicBookingSessionMutationSchema = z.object({
@@ -146,9 +147,9 @@ export const internalBookingOverviewLookupQuerySchema = z
     message: "Provide a bookingId, bookingNumber, or bookingCode",
   })
 
-export const publicBookingSessionParticipantSchema = z.object({
+export const publicBookingSessionTravelerSchema = z.object({
   id: z.string(),
-  participantType: bookingParticipantTypeSchema,
+  participantType: publicBookingVisibleTravelerTypeSchema,
   travelerCategory: bookingTravelerCategorySchema.nullable(),
   firstName: z.string(),
   lastName: z.string(),
@@ -161,9 +162,9 @@ export const publicBookingSessionParticipantSchema = z.object({
   notes: z.string().nullable(),
 })
 
-export const publicBookingSessionItemParticipantSchema = z.object({
+export const publicBookingSessionItemTravelerSchema = z.object({
   id: z.string(),
-  participantId: z.string(),
+  travelerId: z.string(),
   role: bookingItemParticipantRoleSchema,
   isPrimary: z.boolean(),
 })
@@ -189,7 +190,7 @@ export const publicBookingSessionItemSchema = z.object({
   optionId: z.string().nullable(),
   optionUnitId: z.string().nullable(),
   pricingCategoryId: z.string().nullable(),
-  participantLinks: z.array(publicBookingSessionItemParticipantSchema),
+  travelerLinks: z.array(publicBookingSessionItemTravelerSchema),
 })
 
 export const publicBookingSessionAllocationSchema = z.object({
@@ -209,9 +210,8 @@ export const publicBookingSessionAllocationSchema = z.object({
 })
 
 export const publicBookingSessionChecklistSchema = z.object({
-  hasParticipants: z.boolean(),
-  hasTraveler: z.boolean(),
-  hasPrimaryParticipant: z.boolean(),
+  hasTravelers: z.boolean(),
+  hasPrimaryTraveler: z.boolean(),
   hasItems: z.boolean(),
   hasAllocations: z.boolean(),
   readyForConfirmation: z.boolean(),
@@ -233,7 +233,7 @@ export const publicBookingSessionSchema = z.object({
   expiredAt: z.string().nullable(),
   cancelledAt: z.string().nullable(),
   completedAt: z.string().nullable(),
-  participants: z.array(publicBookingSessionParticipantSchema),
+  travelers: z.array(publicBookingSessionTravelerSchema),
   items: z.array(publicBookingSessionItemSchema),
   allocations: z.array(publicBookingSessionAllocationSchema),
   checklist: publicBookingSessionChecklistSchema,
@@ -271,9 +271,9 @@ export const publicBookingSessionRepriceResultSchema = z.object({
   session: publicBookingSessionSchema.nullable(),
 })
 
-export const publicBookingOverviewParticipantSchema = z.object({
+export const publicBookingOverviewTravelerSchema = z.object({
   id: z.string(),
-  participantType: bookingParticipantTypeSchema,
+  participantType: publicBookingVisibleTravelerTypeSchema,
   firstName: z.string(),
   lastName: z.string(),
   isPrimary: z.boolean(),
@@ -281,7 +281,7 @@ export const publicBookingOverviewParticipantSchema = z.object({
 
 export const publicBookingOverviewDocumentSchema = z.object({
   id: z.string(),
-  participantId: z.string().nullable(),
+  travelerId: z.string().nullable(),
   type: bookingDocumentTypeSchema,
   fileName: z.string(),
   fileUrl: z.string(),
@@ -290,7 +290,7 @@ export const publicBookingOverviewDocumentSchema = z.object({
 export const publicBookingOverviewFulfillmentSchema = z.object({
   id: z.string(),
   bookingItemId: z.string().nullable(),
-  participantId: z.string().nullable(),
+  travelerId: z.string().nullable(),
   fulfillmentType: bookingFulfillmentTypeSchema,
   deliveryChannel: bookingFulfillmentDeliveryChannelSchema,
   status: bookingFulfillmentStatusSchema,
@@ -309,7 +309,7 @@ export const publicBookingOverviewSchema = z.object({
   confirmedAt: z.string().nullable(),
   cancelledAt: z.string().nullable(),
   completedAt: z.string().nullable(),
-  participants: z.array(publicBookingOverviewParticipantSchema),
+  travelers: z.array(publicBookingOverviewTravelerSchema),
   items: z.array(publicBookingSessionItemSchema),
   documents: z.array(publicBookingOverviewDocumentSchema),
   fulfillments: z.array(publicBookingOverviewFulfillmentSchema),

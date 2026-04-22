@@ -19,6 +19,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type {
@@ -38,16 +39,17 @@ import {
   toLocalDateTimeInput,
 } from "./resources-shared"
 
-const assignmentFormSchema = z.object({
-  slotId: z.string().min(1, "Slot is required"),
-  poolId: z.string().optional(),
-  resourceId: z.string().optional(),
-  bookingId: z.string().optional(),
-  status: z.enum(["reserved", "assigned", "released", "cancelled", "completed"]),
-  assignedBy: z.string().optional(),
-  releasedAt: z.string().optional(),
-  notes: z.string().optional(),
-})
+const getAssignmentFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    slotId: z.string().min(1, messages.resources.dialogs.assignment.validationSlotRequired),
+    poolId: z.string().optional(),
+    resourceId: z.string().optional(),
+    bookingId: z.string().optional(),
+    status: z.enum(["reserved", "assigned", "released", "cancelled", "completed"]),
+    assignedBy: z.string().optional(),
+    releasedAt: z.string().optional(),
+    notes: z.string().optional(),
+  })
 
 export function ResourceSlotAssignmentDialog({
   open,
@@ -68,6 +70,9 @@ export function ResourceSlotAssignmentDialog({
   bookings: BookingOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.resources.dialogs.assignment
+  const assignmentFormSchema = getAssignmentFormSchema(messages)
   const form = useForm({
     resolver: zodResolver(assignmentFormSchema),
     defaultValues: {
@@ -125,18 +130,21 @@ export function ResourceSlotAssignmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Assignment" : "New Assignment"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Slot</Label>
+              <Label>{dialogMessages.slotLabel}</Label>
               <Select
+                items={slots.map((slot) => ({ label: slotLabel(slot), value: slot.id }))}
                 value={form.watch("slotId")}
                 onValueChange={(value) => form.setValue("slotId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select slot" />
+                  <SelectValue placeholder={dialogMessages.selectSlotPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {slots.map((slot) => (
@@ -149,7 +157,7 @@ export function ResourceSlotAssignmentDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Pool</Label>
+                <Label>{dialogMessages.poolLabel}</Label>
                 <Select
                   value={form.watch("poolId")}
                   onValueChange={(value) => form.setValue("poolId", value ?? NONE_VALUE)}
@@ -158,7 +166,7 @@ export function ResourceSlotAssignmentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No pool</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{dialogMessages.noPool}</SelectItem>
                     {pools.map((pool) => (
                       <SelectItem key={pool.id} value={pool.id}>
                         {pool.name}
@@ -168,7 +176,7 @@ export function ResourceSlotAssignmentDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Resource</Label>
+                <Label>{dialogMessages.resourceLabel}</Label>
                 <Select
                   value={form.watch("resourceId")}
                   onValueChange={(value) => form.setValue("resourceId", value ?? NONE_VALUE)}
@@ -177,7 +185,7 @@ export function ResourceSlotAssignmentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No resource</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{dialogMessages.noResource}</SelectItem>
                     {resources.map((resource) => (
                       <SelectItem key={resource.id} value={resource.id}>
                         {resource.name}
@@ -187,7 +195,7 @@ export function ResourceSlotAssignmentDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Booking</Label>
+                <Label>{dialogMessages.bookingLabel}</Label>
                 <Select
                   value={form.watch("bookingId")}
                   onValueChange={(value) => form.setValue("bookingId", value ?? NONE_VALUE)}
@@ -196,7 +204,7 @@ export function ResourceSlotAssignmentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE_VALUE}>No booking</SelectItem>
+                    <SelectItem value={NONE_VALUE}>{dialogMessages.noBooking}</SelectItem>
                     {bookings.map((booking) => (
                       <SelectItem key={booking.id} value={booking.id}>
                         {booking.bookingNumber}
@@ -206,8 +214,9 @@ export function ResourceSlotAssignmentDialog({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label>{dialogMessages.statusLabel}</Label>
                 <Select
+                  items={assignmentStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ResourceSlotAssignmentRow["status"])
@@ -219,36 +228,36 @@ export function ResourceSlotAssignmentDialog({
                   <SelectContent>
                     {assignmentStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.resources.assignmentStatusLabels[option.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Assigned By</Label>
-                <Input {...form.register("assignedBy")} placeholder="ops-team@voyant.local" />
+                <Label>{dialogMessages.assignedByLabel}</Label>
+                <Input
+                  {...form.register("assignedBy")}
+                  placeholder={dialogMessages.assignedByPlaceholder}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Released At</Label>
+                <Label>{dialogMessages.releasedAtLabel}</Label>
                 <Input {...form.register("releasedAt")} type="datetime-local" />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Notes</Label>
-              <Textarea
-                {...form.register("notes")}
-                placeholder="Crew request, maintenance hold, pairing notes..."
-              />
+              <Label>{dialogMessages.notesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={dialogMessages.notesPlaceholder} />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Assignment" : "Create Assignment"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>
@@ -257,14 +266,15 @@ export function ResourceSlotAssignmentDialog({
   )
 }
 
-const closeoutFormSchema = z.object({
-  resourceId: z.string().min(1, "Resource is required"),
-  dateLocal: z.string().min(1, "Date is required"),
-  startsAt: z.string().optional(),
-  endsAt: z.string().optional(),
-  reason: z.string().optional(),
-  createdBy: z.string().optional(),
-})
+const getCloseoutFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    resourceId: z.string().min(1, messages.resources.dialogs.closeout.validationResourceRequired),
+    dateLocal: z.string().min(1, messages.resources.dialogs.closeout.validationDateRequired),
+    startsAt: z.string().optional(),
+    endsAt: z.string().optional(),
+    reason: z.string().optional(),
+    createdBy: z.string().optional(),
+  })
 
 export function ResourceCloseoutDialog({
   open,
@@ -279,6 +289,9 @@ export function ResourceCloseoutDialog({
   resources: ResourceRow[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.resources.dialogs.closeout
+  const closeoutFormSchema = getCloseoutFormSchema(messages)
   const form = useForm({
     resolver: zodResolver(closeoutFormSchema),
     defaultValues: {
@@ -330,18 +343,21 @@ export function ResourceCloseoutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Closeout" : "New Closeout"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Resource</Label>
+              <Label>{dialogMessages.resourceLabel}</Label>
               <Select
+                items={resources.map((resource) => ({ label: resource.name, value: resource.id }))}
                 value={form.watch("resourceId")}
                 onValueChange={(value) => form.setValue("resourceId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select resource" />
+                  <SelectValue placeholder={dialogMessages.selectResourcePlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {resources.map((resource) => (
@@ -354,37 +370,40 @@ export function ResourceCloseoutDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Date</Label>
+                <Label>{dialogMessages.dateLabel}</Label>
                 <Input {...form.register("dateLocal")} type="date" />
               </div>
               <div className="grid gap-2">
-                <Label>Starts At</Label>
+                <Label>{dialogMessages.startsAtLabel}</Label>
                 <Input {...form.register("startsAt")} type="datetime-local" />
               </div>
               <div className="grid gap-2">
-                <Label>Ends At</Label>
+                <Label>{dialogMessages.endsAtLabel}</Label>
                 <Input {...form.register("endsAt")} type="datetime-local" />
               </div>
               <div className="grid gap-2">
-                <Label>Created By</Label>
-                <Input {...form.register("createdBy")} placeholder="ops-team@voyant.local" />
+                <Label>{dialogMessages.createdByLabel}</Label>
+                <Input
+                  {...form.register("createdBy")}
+                  placeholder={dialogMessages.createdByPlaceholder}
+                />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Reason</Label>
+              <Label>{dialogMessages.reasonLabel}</Label>
               <Textarea
                 {...form.register("reason")}
-                placeholder="Maintenance, service blackout, private charter..."
+                placeholder={dialogMessages.reasonPlaceholder}
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Closeout" : "Create Closeout"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>

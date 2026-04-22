@@ -3,15 +3,17 @@ import { describe, expect, it } from "vitest"
 import {
   insertBookingItemParticipantSchema,
   insertBookingItemSchema,
-  insertParticipantSchema,
-  insertPassengerSchema,
+  insertBookingItemTravelerSchema,
+  insertBookingTravelerDocumentSchema,
+  insertTravelerRecordSchema,
+  upsertTravelerTravelDetailsSchema,
 } from "../../src/validation.js"
 
-describe("Participant schema", () => {
+describe("Traveler record schema", () => {
   const valid = { firstName: "John", lastName: "Doe" }
 
   it("accepts valid input with defaults", () => {
-    const result = insertParticipantSchema.parse(valid)
+    const result = insertTravelerRecordSchema.parse(valid)
     expect(result.firstName).toBe("John")
     expect(result.lastName).toBe("Doe")
     expect(result.participantType).toBe("traveler")
@@ -19,47 +21,40 @@ describe("Participant schema", () => {
   })
 
   it("rejects empty firstName", () => {
-    expect(() => insertParticipantSchema.parse({ ...valid, firstName: "" })).toThrow()
+    expect(() => insertTravelerRecordSchema.parse({ ...valid, firstName: "" })).toThrow()
   })
 
   it("rejects empty lastName", () => {
-    expect(() => insertParticipantSchema.parse({ ...valid, lastName: "" })).toThrow()
+    expect(() => insertTravelerRecordSchema.parse({ ...valid, lastName: "" })).toThrow()
   })
 
   it("validates email format", () => {
-    expect(() => insertParticipantSchema.parse({ ...valid, email: "not-an-email" })).toThrow()
-    expect(insertParticipantSchema.parse({ ...valid, email: "john@example.com" }).email).toBe(
+    expect(() => insertTravelerRecordSchema.parse({ ...valid, email: "not-an-email" })).toThrow()
+    expect(insertTravelerRecordSchema.parse({ ...valid, email: "john@example.com" }).email).toBe(
       "john@example.com",
     )
   })
 
   it("accepts valid participant types", () => {
-    for (const participantType of ["traveler", "booker", "contact", "occupant", "staff", "other"]) {
-      expect(insertParticipantSchema.parse({ ...valid, participantType }).participantType).toBe(
+    for (const participantType of ["traveler", "occupant", "other"]) {
+      expect(insertTravelerRecordSchema.parse({ ...valid, participantType }).participantType).toBe(
         participantType,
       )
     }
   })
 
-  it("accepts valid traveler categories", () => {
-    for (const travelerCategory of ["adult", "child", "infant", "senior", "other"]) {
-      expect(insertParticipantSchema.parse({ ...valid, travelerCategory }).travelerCategory).toBe(
-        travelerCategory,
-      )
+  it("rejects legacy non-traveler participant types", () => {
+    for (const participantType of ["booker", "contact", "staff"]) {
+      expect(() => insertTravelerRecordSchema.parse({ ...valid, participantType })).toThrow()
     }
   })
-})
 
-describe("Passenger schema (legacy)", () => {
-  const valid = { firstName: "Jane", lastName: "Smith" }
-
-  it("accepts valid input with defaults", () => {
-    const result = insertPassengerSchema.parse(valid)
-    expect(result.firstName).toBe("Jane")
-  })
-
-  it("rejects empty firstName", () => {
-    expect(() => insertPassengerSchema.parse({ ...valid, firstName: "" })).toThrow()
+  it("accepts valid traveler categories", () => {
+    for (const travelerCategory of ["adult", "child", "infant", "senior", "other"]) {
+      expect(
+        insertTravelerRecordSchema.parse({ ...valid, travelerCategory }).travelerCategory,
+      ).toBe(travelerCategory)
+    }
   })
 })
 
@@ -117,29 +112,71 @@ describe("Booking item schema", () => {
 })
 
 describe("Booking item participant schema", () => {
-  it("requires participantId with defaults", () => {
-    const result = insertBookingItemParticipantSchema.parse({ participantId: "bkpt_abc" })
-    expect(result.participantId).toBe("bkpt_abc")
+  it("requires travelerId with defaults", () => {
+    const result = insertBookingItemParticipantSchema.parse({ travelerId: "bkpt_abc" })
+    expect(result.travelerId).toBe("bkpt_abc")
     expect(result.role).toBe("traveler")
     expect(result.isPrimary).toBe(false)
   })
 
-  it("rejects empty participantId", () => {
-    expect(() => insertBookingItemParticipantSchema.parse({ participantId: "" })).toThrow()
+  it("rejects empty travelerId", () => {
+    expect(() => insertBookingItemParticipantSchema.parse({ travelerId: "" })).toThrow()
   })
 
   it("accepts valid roles", () => {
-    for (const role of [
-      "traveler",
-      "occupant",
-      "primary_contact",
-      "service_assignee",
-      "beneficiary",
-      "other",
-    ]) {
-      expect(
-        insertBookingItemParticipantSchema.parse({ participantId: "bkpt_abc", role }).role,
-      ).toBe(role)
+    for (const role of ["traveler", "occupant", "beneficiary", "other"]) {
+      expect(insertBookingItemParticipantSchema.parse({ travelerId: "bkpt_abc", role }).role).toBe(
+        role,
+      )
     }
+  })
+
+  it("rejects legacy contact/staff item-link roles", () => {
+    for (const role of ["primary_contact", "service_assignee"]) {
+      expect(() =>
+        insertBookingItemParticipantSchema.parse({ travelerId: "bkpt_abc", role }),
+      ).toThrow()
+    }
+  })
+
+  it("accepts travelerId through the traveler alias schema", () => {
+    const result = insertBookingItemTravelerSchema.parse({ travelerId: "bkpt_abc" })
+    expect(result.travelerId).toBe("bkpt_abc")
+    expect(result.role).toBe("traveler")
+    expect(result.isPrimary).toBe(false)
+  })
+})
+
+describe("Traveler travel detail schema alias", () => {
+  it("accepts traveler travel detail input", () => {
+    const result = upsertTravelerTravelDetailsSchema.parse({
+      nationality: "RO",
+      dateOfBirth: "1990-02-03",
+      isLeadTraveler: true,
+    })
+
+    expect(result).toEqual({
+      nationality: "RO",
+      passportNumber: undefined,
+      passportExpiry: undefined,
+      dateOfBirth: "1990-02-03",
+      dietaryRequirements: undefined,
+      isLeadTraveler: true,
+    })
+  })
+})
+
+describe("Traveler document schema alias", () => {
+  it("accepts travelerId", () => {
+    const result = insertBookingTravelerDocumentSchema.parse({
+      travelerId: "bkpt_abc",
+      type: "visa",
+      fileName: "visa.pdf",
+      fileUrl: "https://example.com/visa.pdf",
+    })
+
+    expect(result.travelerId).toBe("bkpt_abc")
+    expect(result.type).toBe("visa")
+    expect(result.fileName).toBe("visa.pdf")
   })
 })

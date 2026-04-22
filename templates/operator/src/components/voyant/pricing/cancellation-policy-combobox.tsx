@@ -14,6 +14,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Props = {
   value: string | null | undefined
@@ -24,12 +25,8 @@ type Props = {
 
 const PAGE_SIZE = 25
 
-export function CancellationPolicyCombobox({
-  value,
-  onChange,
-  placeholder = "Search cancellation fee policies…",
-  disabled,
-}: Props) {
+export function CancellationPolicyCombobox({ value, onChange, placeholder, disabled }: Props) {
+  const messages = useAdminMessages()
   const [search, setSearch] = React.useState("")
   const listQuery = useCancellationPolicies({ search: search || undefined, limit: PAGE_SIZE })
   const selectedQuery = useCancellationPolicy(value, { enabled: !!value })
@@ -75,12 +72,15 @@ export function CancellationPolicyCombobox({
         setInputValue(item ? `${item.name}${item.code ? ` · ${item.code}` : ""}` : "")
       }}
     >
-      <ComboboxInput placeholder={placeholder} showClear={!!value} />
+      <ComboboxInput
+        placeholder={placeholder ?? messages.pricing.cancellationPolicyCombobox.placeholder}
+        showClear={!!value}
+      />
       <ComboboxContent>
         <ComboboxEmpty>
           {listQuery.isPending || selectedQuery.isPending
-            ? "Loading…"
-            : "No cancellation fee policies found."}
+            ? messages.pricing.cancellationPolicyCombobox.loading
+            : messages.pricing.cancellationPolicyCombobox.empty}
         </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>

@@ -245,7 +245,6 @@ function TemplateRow({
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="p-2 text-left font-medium">Version</th>
-                    <th className="p-2 text-left font-medium">Format</th>
                     <th className="p-2 text-left font-medium">Changelog</th>
                     <th className="p-2 text-left font-medium">Created By</th>
                     <th className="p-2 text-left font-medium">Created At</th>
@@ -255,7 +254,6 @@ function TemplateRow({
                   {versions.map((version) => (
                     <tr key={version.id} className="border-b last:border-b-0">
                       <td className="p-2 font-mono">v{version.version}</td>
-                      <td className="p-2">{version.bodyFormat}</td>
                       <td className="p-2">{version.changelog ?? "-"}</td>
                       <td className="p-2">{version.createdBy ?? "-"}</td>
                       <td className="p-2">{new Date(version.createdAt).toLocaleDateString()}</td>

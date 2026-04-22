@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { ProductCategoryForm } from "./product-category-form"
 
@@ -25,17 +26,21 @@ export function ProductCategoryDialog({
   category,
   onSuccess,
 }: ProductCategoryDialogProps) {
+  const messages = useAdminMessages()
+  const categoryMessages = messages.products.taxonomy.categories
   const isEdit = Boolean(category)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="product-category-dialog" className="sm:max-w-[640px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit product category" : "New product category"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? categoryMessages.dialogEditTitle : categoryMessages.dialogNewTitle}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update category hierarchy, slug, and active state."
-              : "Create a category for organizing your product catalog."}
+              ? categoryMessages.dialogEditDescription
+              : categoryMessages.dialogNewDescription}
           </DialogDescription>
         </DialogHeader>
         <ProductCategoryForm

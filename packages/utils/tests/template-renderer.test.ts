@@ -16,13 +16,13 @@ describe("renderStructuredTemplate", () => {
 
   it("supports liquid control flow for html/markdown bodies", () => {
     const body =
-      "{% if passengers.size > 0 %}{% for passenger in passengers %}{{ passenger.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No passengers{% endif %}"
+      "{% if travelers.size > 0 %}{% for traveler in travelers %}{{ traveler.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}No travelers{% endif %}"
     expect(
       renderStructuredTemplate(body, "html", {
-        passengers: [{ name: "Ana" }, { name: "Bob" }],
+        travelers: [{ name: "Ana" }, { name: "Bob" }],
       }),
     ).toBe("Ana, Bob")
-    expect(renderStructuredTemplate(body, "markdown", { passengers: [] })).toBe("No passengers")
+    expect(renderStructuredTemplate(body, "markdown", { travelers: [] })).toBe("No travelers")
   })
 
   it("supports liquid filters inside lexical text nodes", () => {
@@ -32,18 +32,16 @@ describe("renderStructuredTemplate", () => {
         children: [
           {
             type: "paragraph",
-            children: [{ type: "text", text: "Passengers: {{ passengers | json }}" }],
+            children: [{ type: "text", text: "Travelers: {{ travelers | json }}" }],
           },
         ],
       },
     })
 
     const output = renderStructuredTemplate(body, "lexical_json", {
-      passengers: [{ name: "Ana" }],
+      travelers: [{ name: "Ana" }],
     })
 
-    expect(JSON.parse(output).root.children[0].children[0].text).toBe(
-      'Passengers: [{"name":"Ana"}]',
-    )
+    expect(JSON.parse(output).root.children[0].children[0].text).toBe('Travelers: [{"name":"Ana"}]')
   })
 })

@@ -13,18 +13,12 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
+  RichTextEditor,
 } from "@/components/ui"
 import { zodResolver } from "@/lib/zod-resolver"
 
 const versionFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  bodyFormat: z.enum(["markdown", "html", "plain"]),
   body: z.string().optional(),
 })
 
@@ -38,12 +32,6 @@ type PolicyVersionDialogProps = {
   version?: LegalPolicyVersionRecord
   onSuccess: () => void
 }
-
-const BODY_FORMATS = [
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "plain", label: "Plain Text" },
-] as const
 
 export function PolicyVersionDialog({
   open,
@@ -59,7 +47,6 @@ export function PolicyVersionDialog({
     resolver: zodResolver(versionFormSchema),
     defaultValues: {
       title: "",
-      bodyFormat: "markdown",
       body: "",
     },
   })
@@ -68,7 +55,6 @@ export function PolicyVersionDialog({
     if (open && version) {
       form.reset({
         title: version.title,
-        bodyFormat: version.bodyFormat as FormValues["bodyFormat"],
         body: version.body ?? "",
       })
     } else if (open) {
@@ -79,7 +65,6 @@ export function PolicyVersionDialog({
   const onSubmit = async (values: FormOutput) => {
     const payload = {
       title: values.title,
-      bodyFormat: values.bodyFormat,
       body: values.body || undefined,
     }
 
@@ -106,29 +91,19 @@ export function PolicyVersionDialog({
                 <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
               )}
             </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Body Format</Label>
-              <Select
-                value={form.watch("bodyFormat")}
-                onValueChange={(v) => form.setValue("bodyFormat", v as FormValues["bodyFormat"])}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BODY_FORMATS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex flex-col gap-2">
               <Label>Body</Label>
-              <Textarea {...form.register("body")} placeholder="Policy content..." rows={10} />
+              <RichTextEditor
+                value={form.watch("body") ?? ""}
+                onChange={(value) =>
+                  form.setValue("body", value, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Policy content..."
+              />
             </div>
           </DialogBody>
           <DialogFooter>

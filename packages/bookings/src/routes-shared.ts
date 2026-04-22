@@ -40,7 +40,7 @@ export type Env = {
       scopes?: string[] | null
       isInternalRequest?: boolean
       bookingId: string
-      participantId: string
+      travelerId: string
       action: "read" | "update" | "delete"
     }) => boolean | Promise<boolean>
   }

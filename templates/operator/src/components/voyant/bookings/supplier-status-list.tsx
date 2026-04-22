@@ -1,10 +1,12 @@
 "use client"
 
 import { type BookingSupplierStatusRecord, useSupplierStatuses } from "@voyantjs/bookings-react"
+import { useLocale } from "@voyantjs/voyant-admin"
 import { Pencil, Plus } from "lucide-react"
 import * as React from "react"
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { SupplierStatusDialog } from "./supplier-status-dialog"
 
@@ -19,7 +21,28 @@ const supplierStatusVariant: Record<string, "default" | "secondary" | "outline" 
   cancelled: "secondary",
 }
 
+function getSupplierStatusLabel(
+  status: string,
+  messages: ReturnType<typeof useAdminMessages>["bookings"]["detail"]["suppliers"],
+) {
+  switch (status) {
+    case "pending":
+      return messages.statusPending
+    case "confirmed":
+      return messages.statusConfirmed
+    case "rejected":
+      return messages.statusRejected
+    case "cancelled":
+      return messages.statusCancelled
+    default:
+      return status.replace(/_/g, " ")
+  }
+}
+
 export function SupplierStatusList({ bookingId }: SupplierStatusListProps) {
+  const supplierMessages = useAdminMessages().bookings.detail.suppliers
+  const noValue = useAdminMessages().bookings.detail.noValue
+  const { resolvedLocale } = useLocale()
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<BookingSupplierStatusRecord | undefined>(undefined)
   const { data } = useSupplierStatuses(bookingId)
@@ -29,7 +52,7 @@ export function SupplierStatusList({ bookingId }: SupplierStatusListProps) {
   return (
     <Card data-slot="supplier-status-list">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Supplier Confirmations</CardTitle>
+        <CardTitle>{supplierMessages.title}</CardTitle>
         <Button
           size="sm"
           onClick={() => {
@@ -38,24 +61,22 @@ export function SupplierStatusList({ bookingId }: SupplierStatusListProps) {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Supplier
+          {supplierMessages.addAction}
         </Button>
       </CardHeader>
       <CardContent>
         {statuses.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No supplier statuses yet.
-          </p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{supplierMessages.empty}</p>
         ) : (
           <div className="rounded border bg-background">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="p-2 text-left font-medium">Service</th>
-                  <th className="p-2 text-left font-medium">Status</th>
-                  <th className="p-2 text-left font-medium">Cost</th>
-                  <th className="p-2 text-left font-medium">Reference</th>
-                  <th className="p-2 text-left font-medium">Confirmed</th>
+                  <th className="p-2 text-left font-medium">{supplierMessages.tableService}</th>
+                  <th className="p-2 text-left font-medium">{supplierMessages.tableStatus}</th>
+                  <th className="p-2 text-left font-medium">{supplierMessages.tableCost}</th>
+                  <th className="p-2 text-left font-medium">{supplierMessages.tableReference}</th>
+                  <th className="p-2 text-left font-medium">{supplierMessages.tableConfirmed}</th>
                   <th className="w-12 p-2" />
                 </tr>
               </thead>
@@ -64,19 +85,18 @@ export function SupplierStatusList({ bookingId }: SupplierStatusListProps) {
                   <tr key={status.id} className="border-b last:border-b-0">
                     <td className="p-2">{status.serviceName}</td>
                     <td className="p-2">
-                      <Badge
-                        variant={supplierStatusVariant[status.status] ?? "secondary"}
-                        className="capitalize text-xs"
-                      >
-                        {status.status}
+                      <Badge variant={supplierStatusVariant[status.status] ?? "secondary"}>
+                        {getSupplierStatusLabel(status.status, supplierMessages)}
                       </Badge>
                     </td>
                     <td className="p-2 font-mono">
                       {(status.costAmountCents / 100).toFixed(2)} {status.costCurrency}
                     </td>
-                    <td className="p-2">{status.supplierReference ?? "-"}</td>
+                    <td className="p-2">{status.supplierReference ?? noValue}</td>
                     <td className="p-2">
-                      {status.confirmedAt ? new Date(status.confirmedAt).toLocaleDateString() : "-"}
+                      {status.confirmedAt
+                        ? new Date(status.confirmedAt).toLocaleDateString(resolvedLocale)
+                        : noValue}
                     </td>
                     <td className="p-2">
                       <button

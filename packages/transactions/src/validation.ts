@@ -10,23 +10,29 @@ const metadataRecordSchema = z.record(z.string(), z.unknown())
 
 export const storefrontOfferDiscountTypeSchema = z.enum(["percentage", "fixed_amount"])
 
-export const storefrontOfferMetadataSchema = z.object({
-  enabled: z.boolean().default(true),
-  locale: z.string().trim().min(2).optional().nullable(),
-  slug: z.string().trim().min(1).optional().nullable(),
-  description: z.string().trim().min(1).optional().nullable(),
-  discountType: storefrontOfferDiscountTypeSchema,
-  discountValue: z.string().trim().min(1),
-  currency: z.string().trim().length(3).optional().nullable(),
-  applicableProductIds: z.array(z.string()).default([]),
-  applicableDepartureIds: z.array(z.string()).default([]),
-  validFrom: z.string().optional().nullable(),
-  validTo: z.string().optional().nullable(),
-  minPassengers: z.number().int().min(1).optional().nullable(),
-  imageMobileUrl: z.string().trim().min(1).optional().nullable(),
-  imageDesktopUrl: z.string().trim().min(1).optional().nullable(),
-  stackable: z.boolean().default(false),
-})
+export const storefrontOfferMetadataSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    locale: z.string().trim().min(2).optional().nullable(),
+    slug: z.string().trim().min(1).optional().nullable(),
+    description: z.string().trim().min(1).optional().nullable(),
+    discountType: storefrontOfferDiscountTypeSchema,
+    discountValue: z.string().trim().min(1),
+    currency: z.string().trim().length(3).optional().nullable(),
+    applicableProductIds: z.array(z.string()).default([]),
+    applicableDepartureIds: z.array(z.string()).default([]),
+    validFrom: z.string().optional().nullable(),
+    validTo: z.string().optional().nullable(),
+    minTravelers: z.number().int().min(1).optional().nullable(),
+    minPassengers: z.number().int().min(1).optional().nullable(),
+    imageMobileUrl: z.string().trim().min(1).optional().nullable(),
+    imageDesktopUrl: z.string().trim().min(1).optional().nullable(),
+    stackable: z.boolean().default(false),
+  })
+  .transform(({ minPassengers, minTravelers, ...rest }) => ({
+    ...rest,
+    minTravelers: minTravelers ?? minPassengers ?? null,
+  }))
 
 export const offerMetadataSchema = z
   .object({
@@ -53,14 +59,7 @@ export const orderStatusSchema = z.enum([
   "expired",
 ])
 
-export const transactionParticipantTypeSchema = z.enum([
-  "traveler",
-  "booker",
-  "contact",
-  "occupant",
-  "staff",
-  "other",
-])
+export const transactionParticipantTypeSchema = z.enum(["traveler", "occupant", "staff", "other"])
 
 export const transactionTravelerCategorySchema = z.enum([
   "adult",
@@ -100,6 +99,10 @@ export const transactionItemParticipantRoleSchema = z.enum([
   "other",
 ])
 
+export const transactionContactAssignmentRoleSchema = z.enum(["primary_contact", "other"])
+
+export const transactionStaffAssignmentRoleSchema = z.enum(["service_assignee", "other"])
+
 export const orderTermTypeSchema = z.enum([
   "terms_and_conditions",
   "cancellation",
@@ -127,6 +130,16 @@ const offerCoreSchema = z.object({
   quoteId: z.string().nullable().optional(),
   marketId: z.string().nullable().optional(),
   sourceChannelId: z.string().nullable().optional(),
+  contactFirstName: z.string().max(255).nullable().optional(),
+  contactLastName: z.string().max(255).nullable().optional(),
+  contactEmail: z.string().email().nullable().optional(),
+  contactPhone: z.string().max(50).nullable().optional(),
+  contactPreferredLanguage: z.string().max(35).nullable().optional(),
+  contactCountry: z.string().max(100).nullable().optional(),
+  contactRegion: z.string().max(255).nullable().optional(),
+  contactCity: z.string().max(255).nullable().optional(),
+  contactAddressLine1: z.string().max(255).nullable().optional(),
+  contactPostalCode: z.string().max(50).nullable().optional(),
   currency: z.string().length(3),
   baseCurrency: z.string().length(3).nullable().optional(),
   fxRateSetId: z.string().nullable().optional(),
@@ -185,9 +198,35 @@ const itemCoreSchema = z.object({
 })
 
 const itemParticipantCoreSchema = z.object({
-  participantId: z.string(),
+  travelerId: z.string().optional(),
   role: transactionItemParticipantRoleSchema.default("traveler"),
   isPrimary: z.boolean().default(false),
+})
+
+const staffAssignmentCoreSchema = z.object({
+  personId: z.string().nullable().optional(),
+  role: transactionStaffAssignmentRoleSchema.default("service_assignee"),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  preferredLanguage: z.string().max(35).nullable().optional(),
+  isPrimary: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
+  metadata: metadataRecordSchema.nullable().optional(),
+})
+
+const contactAssignmentCoreSchema = z.object({
+  personId: z.string().nullable().optional(),
+  role: transactionContactAssignmentRoleSchema.default("primary_contact"),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  preferredLanguage: z.string().max(35).nullable().optional(),
+  isPrimary: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
+  metadata: metadataRecordSchema.nullable().optional(),
 })
 
 const orderCoreSchema = z.object({
@@ -201,6 +240,16 @@ const orderCoreSchema = z.object({
   quoteId: z.string().nullable().optional(),
   marketId: z.string().nullable().optional(),
   sourceChannelId: z.string().nullable().optional(),
+  contactFirstName: z.string().max(255).nullable().optional(),
+  contactLastName: z.string().max(255).nullable().optional(),
+  contactEmail: z.string().email().nullable().optional(),
+  contactPhone: z.string().max(50).nullable().optional(),
+  contactPreferredLanguage: z.string().max(35).nullable().optional(),
+  contactCountry: z.string().max(100).nullable().optional(),
+  contactRegion: z.string().max(255).nullable().optional(),
+  contactCity: z.string().max(255).nullable().optional(),
+  contactAddressLine1: z.string().max(255).nullable().optional(),
+  contactPostalCode: z.string().max(50).nullable().optional(),
   currency: z.string().length(3),
   baseCurrency: z.string().length(3).nullable().optional(),
   fxRateSetId: z.string().nullable().optional(),
@@ -256,13 +305,58 @@ export const offerListQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
 })
 
-export const insertOfferParticipantSchema = participantCoreSchema.extend({
-  offerId: z.string(),
-})
-export const updateOfferParticipantSchema = participantCoreSchema.partial()
-export const offerParticipantListQuerySchema = paginationSchema.extend({
+export const insertOfferTravelerSchema = participantCoreSchema
+  .extend({
+    offerId: z.string(),
+  })
+  .refine((value) => value.participantType !== "staff", {
+    message: "Use explicit staff assignments instead of traveler rows for staff participants",
+    path: ["participantType"],
+  })
+export const updateOfferTravelerSchema = participantCoreSchema
+  .partial()
+  .refine((value) => (value.participantType ?? "") !== "staff", {
+    message: "Use explicit staff assignments instead of traveler rows for staff participants",
+    path: ["participantType"],
+  })
+export const offerTravelerListQuerySchema = paginationSchema.extend({
   offerId: z.string().optional(),
   personId: z.string().optional(),
+})
+export const insertOfferParticipantSchema = insertOfferTravelerSchema
+export const updateOfferParticipantSchema = updateOfferTravelerSchema
+export const offerParticipantListQuerySchema = offerTravelerListQuerySchema
+
+export const insertOfferContactAssignmentSchema = contactAssignmentCoreSchema.extend({
+  offerId: z.string(),
+  offerItemId: z.string().nullable().optional(),
+})
+export const updateOfferContactAssignmentSchema = contactAssignmentCoreSchema
+  .extend({
+    offerItemId: z.string().nullable().optional(),
+  })
+  .partial()
+export const offerContactAssignmentListQuerySchema = paginationSchema.extend({
+  offerId: z.string().optional(),
+  offerItemId: z.string().optional(),
+  personId: z.string().optional(),
+  role: transactionContactAssignmentRoleSchema.optional(),
+})
+
+export const insertOfferStaffAssignmentSchema = staffAssignmentCoreSchema.extend({
+  offerId: z.string(),
+  offerItemId: z.string().nullable().optional(),
+})
+export const updateOfferStaffAssignmentSchema = staffAssignmentCoreSchema
+  .extend({
+    offerItemId: z.string().nullable().optional(),
+  })
+  .partial()
+export const offerStaffAssignmentListQuerySchema = paginationSchema.extend({
+  offerId: z.string().optional(),
+  offerItemId: z.string().optional(),
+  personId: z.string().optional(),
+  role: transactionStaffAssignmentRoleSchema.optional(),
 })
 
 export const insertOfferItemSchema = itemCoreSchema.extend({
@@ -278,14 +372,27 @@ export const offerItemListQuerySchema = paginationSchema.extend({
   status: transactionItemStatusSchema.optional(),
 })
 
-export const insertOfferItemParticipantSchema = itemParticipantCoreSchema.extend({
-  offerItemId: z.string(),
-})
-export const updateOfferItemParticipantSchema = itemParticipantCoreSchema.partial()
-export const offerItemParticipantListQuerySchema = paginationSchema.extend({
-  offerItemId: z.string().optional(),
-  participantId: z.string().optional(),
-})
+export const insertOfferItemTravelerSchema = itemParticipantCoreSchema
+  .extend({
+    offerItemId: z.string(),
+  })
+  .refine((value) => Boolean(value.travelerId), {
+    message: "travelerId is required",
+    path: ["travelerId"],
+  })
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId: travelerId! }))
+export const updateOfferItemTravelerSchema = itemParticipantCoreSchema
+  .partial()
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId }))
+export const offerItemTravelerListQuerySchema = paginationSchema
+  .extend({
+    offerItemId: z.string().optional(),
+    travelerId: z.string().optional(),
+  })
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId }))
+export const insertOfferItemParticipantSchema = insertOfferItemTravelerSchema
+export const updateOfferItemParticipantSchema = updateOfferItemTravelerSchema
+export const offerItemParticipantListQuerySchema = offerItemTravelerListQuerySchema
 
 export const insertOrderSchema = orderCoreSchema
 export const updateOrderSchema = orderCoreSchema.partial()
@@ -300,13 +407,58 @@ export const orderListQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
 })
 
-export const insertOrderParticipantSchema = participantCoreSchema.extend({
-  orderId: z.string(),
-})
-export const updateOrderParticipantSchema = participantCoreSchema.partial()
-export const orderParticipantListQuerySchema = paginationSchema.extend({
+export const insertOrderTravelerSchema = participantCoreSchema
+  .extend({
+    orderId: z.string(),
+  })
+  .refine((value) => value.participantType !== "staff", {
+    message: "Use explicit staff assignments instead of traveler rows for staff participants",
+    path: ["participantType"],
+  })
+export const updateOrderTravelerSchema = participantCoreSchema
+  .partial()
+  .refine((value) => (value.participantType ?? "") !== "staff", {
+    message: "Use explicit staff assignments instead of traveler rows for staff participants",
+    path: ["participantType"],
+  })
+export const orderTravelerListQuerySchema = paginationSchema.extend({
   orderId: z.string().optional(),
   personId: z.string().optional(),
+})
+export const insertOrderParticipantSchema = insertOrderTravelerSchema
+export const updateOrderParticipantSchema = updateOrderTravelerSchema
+export const orderParticipantListQuerySchema = orderTravelerListQuerySchema
+
+export const insertOrderContactAssignmentSchema = contactAssignmentCoreSchema.extend({
+  orderId: z.string(),
+  orderItemId: z.string().nullable().optional(),
+})
+export const updateOrderContactAssignmentSchema = contactAssignmentCoreSchema
+  .extend({
+    orderItemId: z.string().nullable().optional(),
+  })
+  .partial()
+export const orderContactAssignmentListQuerySchema = paginationSchema.extend({
+  orderId: z.string().optional(),
+  orderItemId: z.string().optional(),
+  personId: z.string().optional(),
+  role: transactionContactAssignmentRoleSchema.optional(),
+})
+
+export const insertOrderStaffAssignmentSchema = staffAssignmentCoreSchema.extend({
+  orderId: z.string(),
+  orderItemId: z.string().nullable().optional(),
+})
+export const updateOrderStaffAssignmentSchema = staffAssignmentCoreSchema
+  .extend({
+    orderItemId: z.string().nullable().optional(),
+  })
+  .partial()
+export const orderStaffAssignmentListQuerySchema = paginationSchema.extend({
+  orderId: z.string().optional(),
+  orderItemId: z.string().optional(),
+  personId: z.string().optional(),
+  role: transactionStaffAssignmentRoleSchema.optional(),
 })
 
 export const insertOrderItemSchema = orderItemCoreSchema.extend({
@@ -323,14 +475,27 @@ export const orderItemListQuerySchema = paginationSchema.extend({
   status: transactionItemStatusSchema.optional(),
 })
 
-export const insertOrderItemParticipantSchema = itemParticipantCoreSchema.extend({
-  orderItemId: z.string(),
-})
-export const updateOrderItemParticipantSchema = itemParticipantCoreSchema.partial()
-export const orderItemParticipantListQuerySchema = paginationSchema.extend({
-  orderItemId: z.string().optional(),
-  participantId: z.string().optional(),
-})
+export const insertOrderItemTravelerSchema = itemParticipantCoreSchema
+  .extend({
+    orderItemId: z.string(),
+  })
+  .refine((value) => Boolean(value.travelerId), {
+    message: "travelerId is required",
+    path: ["travelerId"],
+  })
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId: travelerId! }))
+export const updateOrderItemTravelerSchema = itemParticipantCoreSchema
+  .partial()
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId }))
+export const orderItemTravelerListQuerySchema = paginationSchema
+  .extend({
+    orderItemId: z.string().optional(),
+    travelerId: z.string().optional(),
+  })
+  .transform(({ travelerId, ...rest }) => ({ ...rest, travelerId }))
+export const insertOrderItemParticipantSchema = insertOrderItemTravelerSchema
+export const updateOrderItemParticipantSchema = updateOrderItemTravelerSchema
+export const orderItemParticipantListQuerySchema = orderItemTravelerListQuerySchema
 
 export const insertOrderTermSchema = orderTermRequiredParentSchema
 export const updateOrderTermSchema = orderTermCoreSchema.partial()

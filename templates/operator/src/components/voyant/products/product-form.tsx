@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { ProductTypeCombobox } from "./product-type-combobox"
 
 type Mode = { kind: "create" } | { kind: "edit"; product: ProductRecord }
@@ -42,22 +43,6 @@ interface FormState {
   costAmount: string
   tags: string[]
 }
-
-const PRODUCT_STATUSES = [
-  { value: "draft", label: "Draft" },
-  { value: "active", label: "Active" },
-  { value: "archived", label: "Archived" },
-] as const
-
-const BOOKING_MODES = [
-  { value: "date", label: "Date" },
-  { value: "date_time", label: "Date & Time" },
-  { value: "open", label: "Open" },
-  { value: "stay", label: "Stay" },
-  { value: "transfer", label: "Transfer" },
-  { value: "itinerary", label: "Itinerary" },
-  { value: "other", label: "Other" },
-] as const
 
 const CURRENCY_OPTIONS = Object.values(currencies).map((currency) => ({
   value: currency.code,
@@ -116,12 +101,36 @@ function toPayload(state: FormState): CreateProductInput {
 }
 
 export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [tagInput, setTagInput] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = useProductMutation()
 
   const isSubmitting = create.isPending || update.isPending
+  const productStatuses = React.useMemo(
+    () =>
+      [
+        { value: "draft", label: productMessages.statusDraft },
+        { value: "active", label: productMessages.statusActive },
+        { value: "archived", label: productMessages.statusArchived },
+      ] as const,
+    [productMessages],
+  )
+  const bookingModes = React.useMemo(
+    () =>
+      [
+        { value: "date", label: productMessages.bookingModeDate },
+        { value: "date_time", label: productMessages.bookingModeDateTime },
+        { value: "open", label: productMessages.bookingModeOpen },
+        { value: "stay", label: productMessages.bookingModeStay },
+        { value: "transfer", label: productMessages.bookingModeTransfer },
+        { value: "itinerary", label: productMessages.bookingModeItinerary },
+        { value: "other", label: productMessages.bookingModeOther },
+      ] as const,
+    [productMessages],
+  )
 
   const field =
     <K extends keyof FormState>(key: K) =>
@@ -134,12 +143,12 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
     setError(null)
 
     if (!state.name.trim()) {
-      setError("Product name is required.")
+      setError(productMessages.validationNameRequired)
       return
     }
 
     if (state.sellCurrency.trim().length !== 3) {
-      setError("Sell currency must be a 3-letter ISO code.")
+      setError(productMessages.validationSellCurrencyInvalid)
       return
     }
 
@@ -152,7 +161,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           : await update.mutateAsync({ id: mode.product.id, input: payload })
       onSuccess?.(product)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save product.")
+      setError(err instanceof Error ? err.message : productMessages.saveFailed)
     }
   }
 
@@ -160,29 +169,29 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
     <form data-slot="product-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="product-name">Name</Label>
+          <Label htmlFor="product-name">{productMessages.nameLabel}</Label>
           <Input
             id="product-name"
             required
             autoFocus
             value={state.name}
             onChange={(event) => field("name")(event.target.value)}
-            placeholder="Croatia Explorer 2026"
+            placeholder={productMessages.namePlaceholder}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="product-description">Description</Label>
+          <Label htmlFor="product-description">{productMessages.descriptionLabel}</Label>
           <Textarea
             id="product-description"
             value={state.description}
             onChange={(event) => field("description")(event.target.value)}
-            placeholder="Brief overview of the product..."
+            placeholder={productMessages.descriptionPlaceholder}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>Tags</Label>
+          <Label>{productMessages.tagsLabel}</Label>
           <div className="flex flex-wrap gap-1.5">
             {state.tags.map((tag) => (
               <Badge key={tag} variant="secondary" className="gap-1 text-xs">
@@ -210,19 +219,23 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
                 setTagInput("")
               }
             }}
-            placeholder="Type a tag and press Enter"
+            placeholder={productMessages.tagInputPlaceholder}
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label>Status</Label>
-            <Select value={state.status} onValueChange={(value) => value && field("status")(value)}>
+            <Label>{productMessages.statusLabel}</Label>
+            <Select
+              value={state.status}
+              onValueChange={(value) => value && field("status")(value)}
+              items={productStatuses}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PRODUCT_STATUSES.map((status) => (
+                {productStatuses.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
                   </SelectItem>
@@ -232,8 +245,9 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Booking Mode</Label>
+            <Label>{productMessages.bookingModeLabel}</Label>
             <Select
+              items={bookingModes}
               value={state.bookingMode}
               onValueChange={(value) => value && field("bookingMode")(value)}
             >
@@ -241,7 +255,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {BOOKING_MODES.map((modeOption) => (
+                {bookingModes.map((modeOption) => (
                   <SelectItem key={modeOption.value} value={modeOption.value}>
                     {modeOption.label}
                   </SelectItem>
@@ -251,17 +265,18 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Product Type</Label>
+            <Label>{productMessages.productTypeLabel}</Label>
             <ProductTypeCombobox
               value={state.productTypeId === "__none__" ? null : state.productTypeId}
               onChange={(value) => field("productTypeId")(value ?? "__none__")}
-              placeholder="Search product types…"
+              placeholder={productMessages.productTypeSearchPlaceholder}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Sell Currency</Label>
+            <Label>{productMessages.sellCurrencyLabel}</Label>
             <Select
+              items={CURRENCY_OPTIONS}
               value={state.sellCurrency}
               onValueChange={(value) => value && field("sellCurrency")(value)}
             >
@@ -279,7 +294,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="product-sell-amount">Sell Amount</Label>
+            <Label htmlFor="product-sell-amount">{productMessages.sellAmountLabel}</Label>
             <Input
               id="product-sell-amount"
               type="number"
@@ -287,12 +302,12 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
               step="0.01"
               value={state.sellAmount}
               onChange={(event) => field("sellAmount")(event.target.value)}
-              placeholder="0.00"
+              placeholder={productMessages.amountPlaceholder}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="product-cost-amount">Cost Amount</Label>
+            <Label htmlFor="product-cost-amount">{productMessages.costAmountLabel}</Label>
             <Input
               id="product-cost-amount"
               type="number"
@@ -300,7 +315,7 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
               step="0.01"
               value={state.costAmount}
               onChange={(event) => field("costAmount")(event.target.value)}
-              placeholder="0.00"
+              placeholder={productMessages.amountPlaceholder}
             />
           </div>
         </div>
@@ -315,19 +330,19 @@ export function ProductForm({ mode, onSuccess, onCancel }: ProductFormProps) {
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {productMessages.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-              Saving…
+              {productMessages.saving}
             </>
           ) : mode.kind === "create" ? (
-            "Create product"
+            productMessages.createProduct
           ) : (
-            "Save changes"
+            productMessages.saveChanges
           )}
         </Button>
       </div>

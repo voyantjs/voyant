@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { ResourcesPage } from "@/components/voyant/resources/resources-page"
+import { ResourcesPageSkeleton } from "@/components/voyant/resources/resources-page-skeleton"
 import {
   getResourceAllocationsQueryOptions,
   getResourceAssignmentsQueryOptions,
@@ -29,5 +30,6 @@ export const Route = createFileRoute("/_workspace/resources/")({
       context.queryClient.ensureQueryData(getResourceAssignmentsQueryOptions()),
       context.queryClient.ensureQueryData(getResourceCloseoutsQueryOptions()),
     ]),
+  pendingComponent: ResourcesPageSkeleton,
   component: ResourcesPage,
 })

@@ -1,7 +1,6 @@
 "use client"
 
 import type { OrganizationRecord } from "@voyantjs/crm-react"
-
 import {
   Dialog,
   DialogContent,
@@ -9,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { OrganizationForm } from "./organization-form"
 
@@ -26,16 +26,15 @@ export function OrganizationDialog({
   onSuccess,
 }: OrganizationDialogProps) {
   const isEdit = Boolean(organization)
+  const messages = useAdminMessages().crm.organizationDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-slot="organization-dialog" className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit organization" : "New organization"}</DialogTitle>
+          <DialogTitle>{isEdit ? messages.editTitle : messages.newTitle}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Update company details and account metadata."
-              : "Add a new company to your CRM."}
+            {isEdit ? messages.editDescription : messages.newDescription}
           </DialogDescription>
         </DialogHeader>
         <OrganizationForm

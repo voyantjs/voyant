@@ -49,9 +49,6 @@ export const personRecordSchema = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   website: z.string().nullable(),
-  address: z.string().nullable(),
-  city: z.string().nullable(),
-  country: z.string().nullable(),
 })
 
 export type PersonRecord = z.infer<typeof personRecordSchema>
@@ -192,7 +189,7 @@ export const personNoteRecordSchema = z.object({
 
 export type PersonNoteRecord = z.infer<typeof personNoteRecordSchema>
 
-export const personNoteListResponse = paginatedEnvelope(personNoteRecordSchema)
+export const personNoteListResponse = listEnvelope(personNoteRecordSchema)
 
 export const quoteRecordSchema = z.object({
   id: z.string(),

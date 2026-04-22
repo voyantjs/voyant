@@ -7,6 +7,7 @@ import {
   useRules,
   useSlots,
 } from "@voyantjs/availability-react"
+import { useProductItineraries } from "@voyantjs/products-react"
 import { CalendarClock, Loader2, Pencil, Plus, Repeat, Trash2 } from "lucide-react"
 import * as React from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
@@ -52,8 +53,13 @@ export function ProductAvailabilitySection({
     isPending: isRulesPending,
     isError: isRulesError,
   } = useRules({ productId, limit: pageSize })
+  const { data: itineraryData } = useProductItineraries(productId)
   const { remove: removeSlot } = useAvailabilitySlotMutation()
   const { remove: removeRule } = useAvailabilityRuleMutation()
+  const itineraryNameById = React.useMemo(
+    () => new Map((itineraryData?.data ?? []).map((itinerary) => [itinerary.id, itinerary.name])),
+    [itineraryData?.data],
+  )
 
   const slots = React.useMemo(
     () =>
@@ -113,6 +119,7 @@ export function ProductAvailabilitySection({
                   <TableRow>
                     <TableHead>Start</TableHead>
                     <TableHead>End</TableHead>
+                    <TableHead>Itinerary</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Capacity</TableHead>
@@ -140,6 +147,11 @@ export function ProductAvailabilitySection({
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {slot.itineraryId
+                          ? (itineraryNameById.get(slot.itineraryId) ?? "Custom override")
+                          : "Default"}
                       </TableCell>
                       <TableCell className="text-xs">{formatDuration(slot)}</TableCell>
                       <TableCell>

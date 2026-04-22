@@ -145,6 +145,10 @@ export function OperationScheduleDialog({
             <div className="flex flex-col gap-2">
               <Label>Day of week</Label>
               <Select
+                items={[
+                  { label: "Any day", value: "any" },
+                  ...DAYS_OF_WEEK.map((day) => ({ label: day, value: day })),
+                ]}
                 value={form.watch("dayOfWeek") || "any"}
                 onValueChange={(value) => form.setValue("dayOfWeek", value === "any" ? "" : value)}
               >

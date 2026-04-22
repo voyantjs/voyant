@@ -20,6 +20,7 @@ import {
   Switch,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type {
@@ -30,15 +31,16 @@ import type {
 } from "./resources-shared"
 import { NONE_VALUE, nullableNumber, nullableString, resourceKindOptions } from "./resources-shared"
 
-const resourceFormSchema = z.object({
-  supplierId: z.string().optional(),
-  kind: z.enum(["guide", "vehicle", "room", "boat", "equipment", "other"]),
-  name: z.string().min(1, "Name is required"),
-  code: z.string().optional(),
-  capacity: z.string().optional(),
-  active: z.boolean(),
-  notes: z.string().optional(),
-})
+const getResourceFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    supplierId: z.string().optional(),
+    kind: z.enum(["guide", "vehicle", "room", "boat", "equipment", "other"]),
+    name: z.string().min(1, messages.resources.dialogs.resource.validationNameRequired),
+    code: z.string().optional(),
+    capacity: z.string().optional(),
+    active: z.boolean(),
+    notes: z.string().optional(),
+  })
 
 export function ResourceDialog({
   open,
@@ -53,6 +55,9 @@ export function ResourceDialog({
   suppliers: SupplierOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.resources.dialogs.resource
+  const resourceFormSchema = getResourceFormSchema(messages)
   const form = useForm({
     resolver: zodResolver(resourceFormSchema),
     defaultValues: {
@@ -107,12 +112,14 @@ export function ResourceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Resource" : "New Resource"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Supplier</Label>
+              <Label>{dialogMessages.supplierLabel}</Label>
               <Select
                 value={form.watch("supplierId")}
                 onValueChange={(value) => form.setValue("supplierId", value ?? NONE_VALUE)}
@@ -121,7 +128,7 @@ export function ResourceDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_VALUE}>No supplier</SelectItem>
+                  <SelectItem value={NONE_VALUE}>{dialogMessages.noSupplier}</SelectItem>
                   {suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name}
@@ -132,8 +139,9 @@ export function ResourceDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Kind</Label>
+                <Label>{dialogMessages.kindLabel}</Label>
                 <Select
+                  items={resourceKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourceRow["kind"])}
                 >
@@ -143,38 +151,33 @@ export function ResourceDialog({
                   <SelectContent>
                     {resourceKindOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.resources.kindLabels[option.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Guide Anna" />
+                <Label>{dialogMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={dialogMessages.namePlaceholder} />
               </div>
               <div className="grid gap-2">
-                <Label>Code</Label>
-                <Input {...form.register("code")} placeholder="G-001" />
+                <Label>{dialogMessages.codeLabel}</Label>
+                <Input {...form.register("code")} placeholder={dialogMessages.codePlaceholder} />
               </div>
               <div className="grid gap-2">
-                <Label>Capacity</Label>
+                <Label>{dialogMessages.capacityLabel}</Label>
                 <Input {...form.register("capacity")} type="number" min={0} />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Notes</Label>
-              <Textarea
-                {...form.register("notes")}
-                placeholder="Languages, certifications, maintenance notes..."
-              />
+              <Label>{dialogMessages.notesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={dialogMessages.notesPlaceholder} />
             </div>
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
-                <p className="text-xs text-muted-foreground">
-                  Make this resource available for assignment.
-                </p>
+                <p className="text-sm font-medium">{dialogMessages.activeTitle}</p>
+                <p className="text-xs text-muted-foreground">{dialogMessages.activeDescription}</p>
               </div>
               <Switch
                 checked={form.watch("active")}
@@ -184,11 +187,11 @@ export function ResourceDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Resource" : "Create Resource"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>
@@ -197,14 +200,15 @@ export function ResourceDialog({
   )
 }
 
-const poolFormSchema = z.object({
-  productId: z.string().optional(),
-  kind: z.enum(["guide", "vehicle", "room", "boat", "equipment", "other"]),
-  name: z.string().min(1, "Name is required"),
-  sharedCapacity: z.string().optional(),
-  active: z.boolean(),
-  notes: z.string().optional(),
-})
+const getPoolFormSchema = (messages: ReturnType<typeof useAdminMessages>) =>
+  z.object({
+    productId: z.string().optional(),
+    kind: z.enum(["guide", "vehicle", "room", "boat", "equipment", "other"]),
+    name: z.string().min(1, messages.resources.dialogs.pool.validationNameRequired),
+    sharedCapacity: z.string().optional(),
+    active: z.boolean(),
+    notes: z.string().optional(),
+  })
 
 export function ResourcePoolDialog({
   open,
@@ -219,6 +223,9 @@ export function ResourcePoolDialog({
   products: ProductOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.resources.dialogs.pool
+  const poolFormSchema = getPoolFormSchema(messages)
   const form = useForm({
     resolver: zodResolver(poolFormSchema),
     defaultValues: {
@@ -270,12 +277,14 @@ export function ResourcePoolDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Pool" : "New Pool"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{dialogMessages.productLabel}</Label>
               <Select
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? NONE_VALUE)}
@@ -284,7 +293,7 @@ export function ResourcePoolDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_VALUE}>No product</SelectItem>
+                  <SelectItem value={NONE_VALUE}>{dialogMessages.noProduct}</SelectItem>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name}
@@ -295,8 +304,9 @@ export function ResourcePoolDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Kind</Label>
+                <Label>{dialogMessages.kindLabel}</Label>
                 <Select
+                  items={resourceKindOptions}
                   value={form.watch("kind")}
                   onValueChange={(value) => form.setValue("kind", value as ResourcePoolRow["kind"])}
                 >
@@ -306,34 +316,29 @@ export function ResourcePoolDialog({
                   <SelectContent>
                     {resourceKindOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.resources.kindLabels[option.value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Morning guide pool" />
+                <Label>{dialogMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={dialogMessages.namePlaceholder} />
               </div>
               <div className="grid gap-2">
-                <Label>Shared Capacity</Label>
+                <Label>{dialogMessages.sharedCapacityLabel}</Label>
                 <Input {...form.register("sharedCapacity")} type="number" min={0} />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Notes</Label>
-              <Textarea
-                {...form.register("notes")}
-                placeholder="Shared allocation assumptions or operating rules..."
-              />
+              <Label>{dialogMessages.notesLabel}</Label>
+              <Textarea {...form.register("notes")} placeholder={dialogMessages.notesPlaceholder} />
             </div>
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
-                <p className="text-xs text-muted-foreground">
-                  Allow new allocations against this pool.
-                </p>
+                <p className="text-sm font-medium">{dialogMessages.activeTitle}</p>
+                <p className="text-xs text-muted-foreground">{dialogMessages.activeDescription}</p>
               </div>
               <Switch
                 checked={form.watch("active")}
@@ -343,11 +348,11 @@ export function ResourcePoolDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Pool" : "Create Pool"}
+              {isEditing ? dialogMessages.save : dialogMessages.create}
             </Button>
           </DialogFooter>
         </form>

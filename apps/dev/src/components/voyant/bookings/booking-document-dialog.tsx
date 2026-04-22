@@ -1,6 +1,6 @@
 "use client"
 
-import { useBookingDocumentMutation, usePassengers } from "@voyantjs/bookings-react"
+import { useBookingTravelerDocumentMutation, useTravelers } from "@voyantjs/bookings-react"
 import { Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -35,7 +35,7 @@ const documentFormSchema = z.object({
   type: z.enum(documentTypes).default("other"),
   fileName: z.string().min(1, "File name is required").max(500),
   fileUrl: z.string().url("Must be a valid URL"),
-  participantId: z.string().optional().nullable(),
+  travelerId: z.string().optional().nullable(),
   expiresAt: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
@@ -56,9 +56,9 @@ export function BookingDocumentDialog({
   bookingId,
   onSuccess,
 }: BookingDocumentDialogProps) {
-  const { create } = useBookingDocumentMutation(bookingId)
-  const { data: passengersData } = usePassengers(bookingId)
-  const passengers = passengersData?.data ?? []
+  const { create } = useBookingTravelerDocumentMutation(bookingId)
+  const { data: travelersData } = useTravelers(bookingId)
+  const travelers = travelersData?.data ?? []
 
   const form = useForm<DocumentFormValues, unknown, DocumentFormOutput>({
     resolver: zodResolver(documentFormSchema),
@@ -66,7 +66,7 @@ export function BookingDocumentDialog({
       type: "other",
       fileName: "",
       fileUrl: "",
-      participantId: UNASSIGNED,
+      travelerId: UNASSIGNED,
       expiresAt: "",
       notes: "",
     },
@@ -83,8 +83,7 @@ export function BookingDocumentDialog({
       type: values.type,
       fileName: values.fileName,
       fileUrl: values.fileUrl,
-      participantId:
-        values.participantId && values.participantId !== UNASSIGNED ? values.participantId : null,
+      travelerId: values.travelerId && values.travelerId !== UNASSIGNED ? values.travelerId : null,
       expiresAt: values.expiresAt || null,
       notes: values.notes || null,
     })
@@ -108,6 +107,7 @@ export function BookingDocumentDialog({
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
+                  items={documentTypes.map((t) => ({ label: t.replace(/_/g, " "), value: t }))}
                   value={form.watch("type")}
                   onValueChange={(v) =>
                     form.setValue("type", (v ?? "other") as (typeof documentTypes)[number])
@@ -126,19 +126,26 @@ export function BookingDocumentDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Passenger (optional)</Label>
+                <Label>Traveler (optional)</Label>
                 <Select
-                  value={form.watch("participantId") ?? UNASSIGNED}
-                  onValueChange={(v) => form.setValue("participantId", v ?? UNASSIGNED)}
+                  items={[
+                    { label: "Booking-wide", value: UNASSIGNED },
+                    ...travelers.map((traveler) => ({
+                      label: `${traveler.firstName} ${traveler.lastName}`,
+                      value: traveler.id,
+                    })),
+                  ]}
+                  value={form.watch("travelerId") ?? UNASSIGNED}
+                  onValueChange={(v) => form.setValue("travelerId", v ?? UNASSIGNED)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={UNASSIGNED}>Booking-wide</SelectItem>
-                    {passengers.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.firstName} {p.lastName}
+                    {travelers.map((traveler) => (
+                      <SelectItem key={traveler.id} value={traveler.id}>
+                        {traveler.firstName} {traveler.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>

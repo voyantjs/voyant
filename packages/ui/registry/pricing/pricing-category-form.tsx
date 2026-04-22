@@ -173,6 +173,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
         <div className="flex flex-col gap-1.5">
           <Label>Type</Label>
           <Select
+            items={CATEGORY_TYPES}
             value={state.categoryType}
             onValueChange={(value) =>
               setState((prev) => ({

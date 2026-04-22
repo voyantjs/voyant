@@ -119,6 +119,7 @@ export function ChannelWebhookEventDialog({
             <div className="grid gap-2">
               <Label>Channel</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
@@ -146,6 +147,7 @@ export function ChannelWebhookEventDialog({
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={webhookStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ChannelWebhookEventRow["status"])

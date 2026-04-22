@@ -64,7 +64,6 @@ export const contractTemplates = pgTable(
     scope: contractScopeEnum("scope").notNull(),
     language: text("language").notNull().default("en"),
     description: text("description"),
-    bodyFormat: contractBodyFormatEnum("body_format").notNull().default("markdown"),
     body: text("body").notNull(),
     variableSchema: jsonb("variable_schema"),
     currentVersionId: typeIdRef("current_version_id"),
@@ -101,7 +100,6 @@ export const contractTemplateVersions = pgTable(
       .notNull()
       .references(() => contractTemplates.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
-    bodyFormat: contractBodyFormatEnum("body_format").notNull().default("markdown"),
     body: text("body").notNull(),
     variableSchema: jsonb("variable_schema"),
     changelog: text("changelog"),
@@ -126,7 +124,6 @@ export const contractNumberSeries = pgTable(
   "contract_number_series",
   {
     id: typeId("contract_number_series"),
-    code: text("code").notNull().unique(),
     name: text("name").notNull(),
     prefix: text("prefix").notNull().default(""),
     separator: text("separator").notNull().default(""),
@@ -140,7 +137,6 @@ export const contractNumberSeries = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("uq_contract_number_series_code").on(table.code),
     index("idx_contract_number_series_scope").on(table.scope),
     index("idx_contract_number_series_active").on(table.active),
     index("idx_contract_number_series_scope_updated").on(table.scope, table.updatedAt),
@@ -190,9 +186,7 @@ export const contracts = pgTable(
     voidedAt: timestamp("voided_at", { withTimezone: true }),
 
     language: text("language").notNull().default("en"),
-    renderedBodyFormat: contractBodyFormatEnum("rendered_body_format")
-      .notNull()
-      .default("markdown"),
+    renderedBodyFormat: contractBodyFormatEnum("rendered_body_format").notNull().default("html"),
     renderedBody: text("rendered_body"),
     variables: jsonb("variables"),
     metadata: jsonb("metadata"),

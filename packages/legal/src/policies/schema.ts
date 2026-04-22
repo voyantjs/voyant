@@ -55,8 +55,6 @@ export const policyAssignmentScopeEnum = pgEnum("policy_assignment_scope", [
   "global",
 ])
 
-export const policyBodyFormatEnum = pgEnum("policy_body_format", ["markdown", "html", "plain"])
-
 export const policyAcceptanceMethodEnum = pgEnum("policy_acceptance_method", [
   "implicit",
   "explicit_checkbox",
@@ -103,7 +101,6 @@ export const policyVersions = pgTable(
     version: integer("version").notNull(),
     status: policyVersionStatusEnum("status").notNull().default("draft"),
     title: text("title").notNull(),
-    bodyFormat: policyBodyFormatEnum("body_format").notNull().default("markdown"),
     body: text("body"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     publishedBy: text("published_by"),

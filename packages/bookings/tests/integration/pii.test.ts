@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { createBookingPiiService } from "../../src/pii.js"
-import { bookingParticipantTravelDetails } from "../../src/schema/travel-details.js"
-import { bookingParticipants, bookings } from "../../src/schema.js"
+import { bookingTravelerTravelDetails } from "../../src/schema/travel-details.js"
+import { bookings, bookingTravelers } from "../../src/schema.js"
 
 const DB_AVAILABLE = !!process.env.TEST_DATABASE_URL
 
@@ -21,10 +21,10 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
     db = createTestDb()
     await cleanupTestDb(db)
 
-    await db.execute(sql`DROP TABLE IF EXISTS booking_participant_travel_details CASCADE`)
+    await db.execute(sql`DROP TABLE IF EXISTS booking_traveler_travel_details CASCADE`)
     await db.execute(sql`
-      CREATE TABLE booking_participant_travel_details (
-        participant_id text PRIMARY KEY NOT NULL REFERENCES booking_participants(id) ON DELETE cascade,
+      CREATE TABLE booking_traveler_travel_details (
+        traveler_id text PRIMARY KEY NOT NULL REFERENCES booking_travelers(id) ON DELETE cascade,
         identity_encrypted jsonb,
         dietary_encrypted jsonb,
         is_lead_traveler boolean DEFAULT false NOT NULL,
@@ -33,7 +33,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
       )
     `)
     await db.execute(
-      sql`CREATE INDEX idx_bptd_lead_traveler ON booking_participant_travel_details (is_lead_traveler)`,
+      sql`CREATE INDEX idx_bttd_lead_traveler ON booking_traveler_travel_details (is_lead_traveler)`,
     )
   })
 
@@ -58,7 +58,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
       .returning()
 
     const [participant] = await db
-      .insert(bookingParticipants)
+      .insert(bookingTravelers)
       .values({
         bookingId: booking.id,
         participantType: "traveler",
@@ -78,7 +78,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
       kms: new EnvKmsProvider({ key: generateEnvKmsKey() }),
     })
 
-    const result = await pii.upsertParticipantTravelDetails(db, participant.id, {
+    const result = await pii.upsertTravelerTravelDetails(db, participant.id, {
       nationality: "RO",
       passportNumber: "123456789",
       passportExpiry: "2030-01-01",
@@ -94,16 +94,39 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
 
     const [stored] = await db
       .select()
-      .from(bookingParticipantTravelDetails)
-      .where(eq(bookingParticipantTravelDetails.participantId, participant.id))
+      .from(bookingTravelerTravelDetails)
+      .where(eq(bookingTravelerTravelDetails.travelerId, participant.id))
 
     expect(stored?.identityEncrypted?.enc).toMatch(/^env:v1:/)
     expect(stored?.identityEncrypted?.enc).not.toContain("123456789")
     expect(stored?.dietaryEncrypted?.enc).toMatch(/^env:v1:/)
     expect(stored?.dietaryEncrypted?.enc).not.toContain("vegetarian")
 
-    const readBack = await pii.getParticipantTravelDetails(db, participant.id)
+    const readBack = await pii.getTravelerTravelDetails(db, participant.id)
     expect(readBack).toEqual(result)
+  }, 20000)
+
+  it("supports traveler travel detail aliases", async () => {
+    const { generateEnvKmsKey, EnvKmsProvider } = await import("@voyantjs/utils")
+    const { participant } = await seedParticipant()
+
+    const pii = createBookingPiiService({
+      kms: new EnvKmsProvider({ key: generateEnvKmsKey() }),
+    })
+
+    const result = await pii.upsertTravelerTravelDetails(db, participant.id, {
+      nationality: "RO",
+      dateOfBirth: "1990-02-03",
+    })
+
+    expect(result?.travelerId).toBe(participant.id)
+    expect(result?.nationality).toBe("RO")
+
+    const readBack = await pii.getTravelerTravelDetails(db, participant.id)
+    expect(readBack).toEqual(result)
+
+    const deleted = await pii.deleteTravelerTravelDetails(db, participant.id)
+    expect(deleted?.travelerId).toBe(participant.id)
   }, 20000)
 
   it("deletes participant travel details", async () => {
@@ -114,14 +137,14 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
       kms: new EnvKmsProvider({ key: generateEnvKmsKey() }),
     })
 
-    await pii.upsertParticipantTravelDetails(db, participant.id, {
+    await pii.upsertTravelerTravelDetails(db, participant.id, {
       passportNumber: "ABC123",
     })
 
-    const deleted = await pii.deleteParticipantTravelDetails(db, participant.id)
-    expect(deleted?.participantId).toBe(participant.id)
+    const deleted = await pii.deleteTravelerTravelDetails(db, participant.id)
+    expect(deleted?.travelerId).toBe(participant.id)
 
-    const row = await pii.getParticipantTravelDetails(db, participant.id)
+    const row = await pii.getTravelerTravelDetails(db, participant.id)
     expect(row).toBeNull()
   }, 20000)
 })

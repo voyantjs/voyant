@@ -7,6 +7,7 @@ import {
   getPersonQueryOptions,
 } from "@/components/voyant/crm/crm-query-options"
 import { PersonDetailPage } from "@/components/voyant/crm/person-detail-page"
+import { PersonDetailSkeleton } from "@/components/voyant/crm/person-detail-skeleton"
 
 export const Route = createFileRoute("/_workspace/people/$id")({
   loader: async ({ context, params }) => {
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/_workspace/people/$id")({
       context.queryClient.ensureQueryData(getPersonOpportunitiesQueryOptions(params.id)),
     ])
   },
+  pendingComponent: PersonDetailSkeleton,
   component: PersonDetailRoute,
 })
 

@@ -33,12 +33,11 @@ import {
   extendBookingHoldSchema,
   insertBookingDocumentSchema,
   insertBookingFulfillmentSchema,
-  insertBookingItemParticipantSchema,
   insertBookingItemSchema,
+  insertBookingItemTravelerSchema,
   insertBookingNoteSchema,
-  insertParticipantSchema,
-  insertPassengerSchema,
   insertSupplierStatusSchema,
+  insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
@@ -47,10 +46,9 @@ import {
   updateBookingItemSchema,
   updateBookingSchema,
   updateBookingStatusSchema,
-  updateParticipantSchema,
-  updatePassengerSchema,
   updateSupplierStatusSchema,
-  upsertParticipantTravelDetailsSchema,
+  updateTravelerSchema,
+  upsertTravelerTravelDetailsSchema,
 } from "./validation.js"
 
 function hasPiiScope(scopes: string[] | null | undefined, action: "read" | "update" | "delete") {
@@ -69,7 +67,7 @@ async function logBookingPiiAccess(
   c: Context<Env>,
   input: {
     bookingId?: string
-    participantId?: string
+    travelerId?: string
     action: "read" | "update" | "delete"
     outcome: "allowed" | "denied"
     reason?: string
@@ -81,7 +79,7 @@ async function logBookingPiiAccess(
     .insert(bookingPiiAccessLog)
     .values({
       bookingId: input.bookingId ?? null,
-      participantId: input.participantId ?? null,
+      travelerId: input.travelerId ?? null,
       actorId: c.get("userId") ?? null,
       actorType: c.get("actor") ?? null,
       callerType: c.get("callerType") ?? null,
@@ -96,7 +94,7 @@ async function authorizeBookingPiiAccess(
   c: Context<Env>,
   input: {
     bookingId: string
-    participantId: string
+    travelerId: string
     action: "read" | "update" | "delete"
   },
 ) {
@@ -197,7 +195,7 @@ function createAuditedBookingPiiService(c: Context<Env>, bookingId: string) {
     onAudit: async (event) => {
       await logBookingPiiAccess(c, {
         bookingId,
-        participantId: event.participantId,
+        travelerId: event.travelerId,
         action:
           event.action === "encrypt"
             ? "update"
@@ -570,65 +568,59 @@ export const bookingRoutes = new Hono<Env>()
     return c.json({ error: "Unable to cancel booking" }, 400)
   })
 
-  // ==========================================================================
-  // Participants
-  // ==========================================================================
-
   // 12. GET /:id/allocations — List booking allocations
   .get("/:id/allocations", async (c) => {
     return c.json({ data: await bookingsService.listAllocations(c.get("db"), c.req.param("id")) })
   })
 
-  // 13. GET /:id/participants — List participants
-  .get("/:id/participants", async (c) => {
-    return c.json({ data: await bookingsService.listParticipants(c.get("db"), c.req.param("id")) })
+  // ==========================================================================
+  // Travelers
+  // ==========================================================================
+
+  .get("/:id/travelers", async (c) => {
+    return c.json({ data: await bookingsService.listTravelers(c.get("db"), c.req.param("id")) })
   })
 
-  // 13a. GET /:id/participants/:participantId/travel-details — Read encrypted travel details
-  .get("/:id/participants/:participantId/travel-details", async (c) => {
+  .get("/:id/travelers/:travelerId/travel-details", async (c) => {
     const auth = await authorizeBookingPiiAccess(c, {
       bookingId: c.req.param("id"),
-      participantId: c.req.param("participantId"),
+      travelerId: c.req.param("travelerId"),
       action: "read",
     })
     if (!auth.allowed) {
       return auth.response
     }
 
-    const participant = await bookingsService.getParticipantById(
+    const traveler = await bookingsService.getTravelerRecordById(
       c.get("db"),
       c.req.param("id"),
-      c.req.param("participantId"),
+      c.req.param("travelerId"),
     )
 
-    if (!participant) {
+    if (!traveler) {
       await logBookingPiiAccess(c, {
         bookingId: c.req.param("id"),
-        participantId: c.req.param("participantId"),
+        travelerId: c.req.param("travelerId"),
         action: "read",
         outcome: "denied",
         reason: "participant_not_found",
       })
-      return c.json({ error: "Participant not found" }, 404)
+      return c.json({ error: "Traveler not found" }, 404)
     }
 
     try {
-      const pii = createAuditedBookingPiiService(c, participant.bookingId)
-      const details = await pii.getParticipantTravelDetails(
-        c.get("db"),
-        participant.id,
-        c.get("userId"),
-      )
+      const pii = createAuditedBookingPiiService(c, traveler.bookingId)
+      const details = await pii.getTravelerTravelDetails(c.get("db"), traveler.id, c.get("userId"))
 
       if (!details) {
         await logBookingPiiAccess(c, {
-          bookingId: participant.bookingId,
-          participantId: participant.id,
+          bookingId: traveler.bookingId,
+          travelerId: traveler.id,
           action: "read",
           outcome: "denied",
           reason: "travel_details_not_found",
         })
-        return c.json({ error: "Participant travel details not found" }, 404)
+        return c.json({ error: "Traveler travel details not found" }, 404)
       }
 
       return c.json({ data: details })
@@ -637,12 +629,11 @@ export const bookingRoutes = new Hono<Env>()
     }
   })
 
-  // 9. POST /:id/participants — Add participant
-  .post("/:id/participants", async (c) => {
-    const row = await bookingsService.createParticipant(
+  .post("/:id/travelers", async (c) => {
+    const row = await bookingsService.createTraveler(
       c.get("db"),
       c.req.param("id"),
-      await parseJsonBody(c, insertParticipantSchema),
+      await parseJsonBody(c, insertTravelerSchema),
       c.get("userId"),
     )
 
@@ -653,45 +644,44 @@ export const bookingRoutes = new Hono<Env>()
     return c.json({ data: row }, 201)
   })
 
-  // 9a. PATCH /:id/participants/:participantId/travel-details — Upsert encrypted travel details
-  .patch("/:id/participants/:participantId/travel-details", async (c) => {
+  .patch("/:id/travelers/:travelerId/travel-details", async (c) => {
     const auth = await authorizeBookingPiiAccess(c, {
       bookingId: c.req.param("id"),
-      participantId: c.req.param("participantId"),
+      travelerId: c.req.param("travelerId"),
       action: "update",
     })
     if (!auth.allowed) {
       return auth.response
     }
 
-    const participant = await bookingsService.getParticipantById(
+    const traveler = await bookingsService.getTravelerRecordById(
       c.get("db"),
       c.req.param("id"),
-      c.req.param("participantId"),
+      c.req.param("travelerId"),
     )
 
-    if (!participant) {
+    if (!traveler) {
       await logBookingPiiAccess(c, {
         bookingId: c.req.param("id"),
-        participantId: c.req.param("participantId"),
+        travelerId: c.req.param("travelerId"),
         action: "update",
         outcome: "denied",
         reason: "participant_not_found",
       })
-      return c.json({ error: "Participant not found" }, 404)
+      return c.json({ error: "Traveler not found" }, 404)
     }
 
     try {
-      const pii = createAuditedBookingPiiService(c, participant.bookingId)
-      const row = await pii.upsertParticipantTravelDetails(
+      const pii = createAuditedBookingPiiService(c, traveler.bookingId)
+      const row = await pii.upsertTravelerTravelDetails(
         c.get("db"),
-        participant.id,
-        await parseJsonBody(c, upsertParticipantTravelDetailsSchema),
+        traveler.id,
+        await parseJsonBody(c, upsertTravelerTravelDetailsSchema),
         c.get("userId"),
       )
 
       if (!row) {
-        return c.json({ error: "Participant not found" }, 404)
+        return c.json({ error: "Traveler not found" }, 404)
       }
 
       return c.json({ data: row })
@@ -700,59 +690,53 @@ export const bookingRoutes = new Hono<Env>()
     }
   })
 
-  // 10. PATCH /:id/participants/:participantId — Update participant
-  .patch("/:id/participants/:participantId", async (c) => {
-    const row = await bookingsService.updateParticipant(
+  .patch("/:id/travelers/:travelerId", async (c) => {
+    const row = await bookingsService.updateTraveler(
       c.get("db"),
-      c.req.param("participantId"),
-      await parseJsonBody(c, updateParticipantSchema),
+      c.req.param("travelerId"),
+      await parseJsonBody(c, updateTravelerSchema),
     )
 
     if (!row) {
-      return c.json({ error: "Participant not found" }, 404)
+      return c.json({ error: "Traveler not found" }, 404)
     }
 
     return c.json({ data: row })
   })
 
-  // 10a. DELETE /:id/participants/:participantId/travel-details — Delete encrypted travel details
-  .delete("/:id/participants/:participantId/travel-details", async (c) => {
+  .delete("/:id/travelers/:travelerId/travel-details", async (c) => {
     const auth = await authorizeBookingPiiAccess(c, {
       bookingId: c.req.param("id"),
-      participantId: c.req.param("participantId"),
+      travelerId: c.req.param("travelerId"),
       action: "delete",
     })
     if (!auth.allowed) {
       return auth.response
     }
 
-    const participant = await bookingsService.getParticipantById(
+    const traveler = await bookingsService.getTravelerRecordById(
       c.get("db"),
       c.req.param("id"),
-      c.req.param("participantId"),
+      c.req.param("travelerId"),
     )
 
-    if (!participant) {
+    if (!traveler) {
       await logBookingPiiAccess(c, {
         bookingId: c.req.param("id"),
-        participantId: c.req.param("participantId"),
+        travelerId: c.req.param("travelerId"),
         action: "delete",
         outcome: "denied",
         reason: "participant_not_found",
       })
-      return c.json({ error: "Participant not found" }, 404)
+      return c.json({ error: "Traveler not found" }, 404)
     }
 
     try {
-      const pii = createAuditedBookingPiiService(c, participant.bookingId)
-      const row = await pii.deleteParticipantTravelDetails(
-        c.get("db"),
-        participant.id,
-        c.get("userId"),
-      )
+      const pii = createAuditedBookingPiiService(c, traveler.bookingId)
+      const row = await pii.deleteTravelerTravelDetails(c.get("db"), traveler.id, c.get("userId"))
 
       if (!row) {
-        return c.json({ error: "Participant travel details not found" }, 404)
+        return c.json({ error: "Traveler travel details not found" }, 404)
       }
 
       return c.json({ success: true }, 200)
@@ -761,63 +745,11 @@ export const bookingRoutes = new Hono<Env>()
     }
   })
 
-  // 11. DELETE /:id/participants/:participantId — Delete participant
-  .delete("/:id/participants/:participantId", async (c) => {
-    const row = await bookingsService.deleteParticipant(c.get("db"), c.req.param("participantId"))
+  .delete("/:id/travelers/:travelerId", async (c) => {
+    const row = await bookingsService.deleteTraveler(c.get("db"), c.req.param("travelerId"))
 
     if (!row) {
-      return c.json({ error: "Participant not found" }, 404)
-    }
-
-    return c.json({ success: true }, 200)
-  })
-
-  // ==========================================================================
-  // Passengers (legacy compatibility)
-  // ==========================================================================
-
-  // 12. GET /:id/passengers — List passengers
-  .get("/:id/passengers", async (c) => {
-    return c.json({ data: await bookingsService.listPassengers(c.get("db"), c.req.param("id")) })
-  })
-
-  // 13. POST /:id/passengers — Add passenger
-  .post("/:id/passengers", async (c) => {
-    const row = await bookingsService.createPassenger(
-      c.get("db"),
-      c.req.param("id"),
-      await parseJsonBody(c, insertPassengerSchema),
-      c.get("userId"),
-    )
-
-    if (!row) {
-      return c.json({ error: "Booking not found" }, 404)
-    }
-
-    return c.json({ data: row }, 201)
-  })
-
-  // 14. PATCH /:id/passengers/:passengerId — Update passenger
-  .patch("/:id/passengers/:passengerId", async (c) => {
-    const row = await bookingsService.updatePassenger(
-      c.get("db"),
-      c.req.param("passengerId"),
-      await parseJsonBody(c, updatePassengerSchema),
-    )
-
-    if (!row) {
-      return c.json({ error: "Passenger not found" }, 404)
-    }
-
-    return c.json({ data: row })
-  })
-
-  // 15. DELETE /:id/passengers/:passengerId — Delete passenger
-  .delete("/:id/passengers/:passengerId", async (c) => {
-    const row = await bookingsService.deletePassenger(c.get("db"), c.req.param("passengerId"))
-
-    if (!row) {
-      return c.json({ error: "Passenger not found" }, 404)
+      return c.json({ error: "Traveler not found" }, 404)
     }
 
     return c.json({ success: true }, 200)
@@ -874,34 +806,34 @@ export const bookingRoutes = new Hono<Env>()
     return c.json({ success: true }, 200)
   })
 
-  // 20. GET /:id/items/:itemId/participants — List item participants
-  .get("/:id/items/:itemId/participants", async (c) => {
+  // 20. GET /:id/items/:itemId/travelers — List item travelers
+  .get("/:id/items/:itemId/travelers", async (c) => {
     return c.json({
       data: await bookingsService.listItemParticipants(c.get("db"), c.req.param("itemId")),
     })
   })
 
-  // 21. POST /:id/items/:itemId/participants — Link participant to item
-  .post("/:id/items/:itemId/participants", async (c) => {
+  // 21. POST /:id/items/:itemId/travelers — Link traveler to item
+  .post("/:id/items/:itemId/travelers", async (c) => {
     const row = await bookingsService.addItemParticipant(
       c.get("db"),
       c.req.param("itemId"),
-      await parseJsonBody(c, insertBookingItemParticipantSchema),
+      await parseJsonBody(c, insertBookingItemTravelerSchema),
     )
 
     if (!row) {
-      return c.json({ error: "Booking item or participant not found" }, 404)
+      return c.json({ error: "Booking item or traveler not found" }, 404)
     }
 
     return c.json({ data: row }, 201)
   })
 
-  // 22. DELETE /:id/items/:itemId/participants/:linkId — Unlink participant from item
-  .delete("/:id/items/:itemId/participants/:linkId", async (c) => {
+  // 22. DELETE /:id/items/:itemId/travelers/:linkId — Unlink traveler from item
+  .delete("/:id/items/:itemId/travelers/:linkId", async (c) => {
     const row = await bookingsService.removeItemParticipant(c.get("db"), c.req.param("linkId"))
 
     if (!row) {
-      return c.json({ error: "Booking item participant link not found" }, 404)
+      return c.json({ error: "Booking item traveler link not found" }, 404)
     }
 
     return c.json({ success: true }, 200)
@@ -965,7 +897,7 @@ export const bookingRoutes = new Hono<Env>()
     )
 
     if (!row) {
-      return c.json({ error: "Booking, item, or participant not found" }, 404)
+      return c.json({ error: "Booking, item, or traveler not found" }, 404)
     }
 
     return c.json({ data: row }, 201)
@@ -981,7 +913,7 @@ export const bookingRoutes = new Hono<Env>()
     )
 
     if (!row) {
-      return c.json({ error: "Fulfillment, item, or participant not found" }, 404)
+      return c.json({ error: "Fulfillment, item, or traveler not found" }, 404)
     }
 
     return c.json({ data: row })
@@ -1006,7 +938,7 @@ export const bookingRoutes = new Hono<Env>()
     )
 
     if (!row) {
-      return c.json({ error: "Booking, item, or participant not found" }, 404)
+      return c.json({ error: "Booking, item, or traveler not found" }, 404)
     }
 
     return c.json({ data: row }, 201)
@@ -1054,6 +986,17 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     return c.json({ data: row }, 201)
+  })
+
+  // 28b. DELETE /:id/notes/:noteId — Delete note
+  .delete("/:id/notes/:noteId", async (c) => {
+    const row = await bookingsService.deleteNote(c.get("db"), c.req.param("noteId"))
+
+    if (!row) {
+      return c.json({ error: "Note not found" }, 404)
+    }
+
+    return c.json({ success: true }, 200)
   })
 
   // ==========================================================================

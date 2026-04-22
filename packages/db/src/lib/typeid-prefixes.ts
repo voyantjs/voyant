@@ -12,6 +12,7 @@
 export const PREFIXES = {
   // --- IAM ---
   user_profiles: "usrp",
+  user_invitations: "uinv",
   connection_secrets: "secr",
 
   // --- INFRA ---
@@ -47,17 +48,21 @@ export const PREFIXES = {
   product_translations: "prtr",
   product_option_translations: "potr",
   option_unit_translations: "outr",
+  product_itineraries: "piti",
   product_days: "pday",
   product_day_services: "pdse",
   product_versions: "pver",
   product_notes: "prnt",
   bookings: "book",
+  booking_travelers: "bkpt",
   booking_participants: "bkpt",
   booking_items: "bkit",
   booking_allocations: "bkac",
   booking_fulfillments: "bkfl",
   booking_redemption_events: "bkrd",
+  booking_item_travelers: "bkip",
   booking_item_participants: "bkip",
+  booking_staff_assignments: "bkstf",
   booking_passengers: "bkps",
   booking_supplier_statuses: "bkss",
   booking_activity_log: "bkal",
@@ -206,11 +211,15 @@ export const PREFIXES = {
   booking_answers: "bqan",
   storefront_verification_challenges: "svch",
   offers: "ofr",
+  offer_contact_assignments: "ofca",
   offer_participants: "ofpt",
+  offer_staff_assignments: "ofsa",
   offer_items: "ofit",
   offer_item_participants: "ofip",
   orders: "ord",
+  order_contact_assignments: "orca",
   order_participants: "orpt",
+  order_staff_assignments: "orsa",
   order_items: "orit",
   order_item_participants: "orip",
   order_terms: "ortm",
@@ -269,6 +278,7 @@ export const PREFIXES = {
   booking_crm_details: "bkcd",
   booking_transaction_details: "bktd",
   booking_distribution_details: "bkdd",
+  booking_traveler_travel_details: "bptd",
   booking_participant_travel_details: "bptd",
 } as const
 

@@ -1,9 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Loader2, Package, Trash2, Users, Wrench } from "lucide-react"
+import { useLocale } from "@voyantjs/voyant-admin"
+import { ArrowLeft, Package, Trash2, Users, Wrench } from "lucide-react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
+import { ResourceDetailSkeleton } from "./resource-detail-skeleton"
+import { getAssignmentStatusLabel, getResourceKindLabel } from "./resources-shared"
 
 type ResourceDetail = {
   id: string
@@ -107,8 +111,8 @@ export function getResourceCloseoutsQueryOptions(id: string) {
   })
 }
 
-function formatDateTime(value: string | null) {
-  return value ? value.replace("T", " ").slice(0, 16) : "-"
+function formatDateTime(value: string | null, noValue: string) {
+  return value ? value.replace("T", " ").slice(0, 16) : noValue
 }
 
 export async function ensureResourceDetailPageData(queryClient: QueryClient, id: string) {
@@ -130,6 +134,10 @@ export async function ensureResourceDetailPageData(queryClient: QueryClient, id:
 export function ResourceDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages()
+  const detailMessages = messages.resources.details
+  const noValue = detailMessages.noValue
 
   const { data: resourceData, isPending } = useQuery(getResourceDetailQueryOptions(id))
 
@@ -161,19 +169,15 @@ export function ResourceDetailPage({ id }: { id: string }) {
   })
 
   if (isPending) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <ResourceDetailSkeleton />
   }
 
   if (!resource) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Resource not found</p>
+        <p className="text-muted-foreground">{detailMessages.resource.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/resources" })}>
-          Back to Resources
+          {detailMessages.backToResources}
         </Button>
       </div>
     )
@@ -195,10 +199,10 @@ export function ResourceDetailPage({ id }: { id: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{resource.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="capitalize">
-              {resource.kind}
+              {getResourceKindLabel(resource.kind, messages)}
             </Badge>
             <Badge variant={resource.active ? "default" : "secondary"}>
-              {resource.active ? "Active" : "Inactive"}
+              {resource.active ? messages.resources.activeLabel : messages.resources.inactiveLabel}
             </Badge>
           </div>
         </div>
@@ -211,20 +215,20 @@ export function ResourceDetailPage({ id }: { id: string }) {
               }
             >
               <Users className="mr-2 h-4 w-4" />
-              Open Supplier
+              {detailMessages.openSupplier}
             </Button>
           ) : null}
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Delete this resource?")) {
+              if (confirm(detailMessages.resource.deleteConfirm)) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {detailMessages.delete}
           </Button>
         </div>
       </div>
@@ -232,28 +236,35 @@ export function ResourceDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Resource Details</CardTitle>
+            <CardTitle>{detailMessages.resource.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Supplier:</span>{" "}
-              <span>{supplierQuery.data?.data.name ?? resource.supplierId ?? "-"}</span>
+              <span className="text-muted-foreground">{messages.resources.supplierLabel}:</span>{" "}
+              <span>
+                {supplierQuery.data?.data.name ??
+                  (resource.supplierId
+                    ? resource.supplierId
+                    : detailMessages.resource.noSupplierAssigned)}
+              </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Code:</span>{" "}
-              <span>{resource.code ?? "-"}</span>
+              <span className="text-muted-foreground">
+                {messages.resources.dialogs.resource.codeLabel}:
+              </span>{" "}
+              <span>{resource.code ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Capacity:</span>{" "}
-              <span>{resource.capacity ?? "-"}</span>
+              <span className="text-muted-foreground">{messages.resources.capacityLabel}:</span>{" "}
+              <span>{resource.capacity ?? noValue}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Created:</span>{" "}
-              <span>{new Date(resource.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{messages.resources.createdLabel}:</span>{" "}
+              <span>{new Date(resource.createdAt).toLocaleString(resolvedLocale)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Updated:</span>{" "}
-              <span>{new Date(resource.updatedAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{messages.resources.updatedLabel}:</span>{" "}
+              <span>{new Date(resource.updatedAt).toLocaleString(resolvedLocale)}</span>
             </div>
           </CardContent>
         </Card>
@@ -261,7 +272,7 @@ export function ResourceDetailPage({ id }: { id: string }) {
         {resource.notes ? (
           <Card>
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle>{messages.resources.notesTitle}</CardTitle>
             </CardHeader>
             <CardContent className="text-sm whitespace-pre-wrap">{resource.notes}</CardContent>
           </Card>
@@ -271,11 +282,11 @@ export function ResourceDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Package className="h-4 w-4" />
-          <CardTitle>Pool Memberships</CardTitle>
+          <CardTitle>{detailMessages.resource.poolMembershipsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(poolMembersQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">This resource is not in any pools.</p>
+            <p className="text-muted-foreground">{detailMessages.resource.poolMembershipsEmpty}</p>
           ) : (
             poolMembersQuery.data?.data.map((member) => (
               <div key={member.id} className="rounded-md border p-3">
@@ -283,7 +294,8 @@ export function ResourceDetailPage({ id }: { id: string }) {
                   {poolsById.get(member.poolId)?.name ?? member.poolId}
                 </div>
                 <div className="text-muted-foreground">
-                  Product: {poolsById.get(member.poolId)?.productId ?? "-"}
+                  {messages.resources.productLabel}:{" "}
+                  {poolsById.get(member.poolId)?.productId ?? noValue}
                 </div>
               </div>
             ))
@@ -294,11 +306,11 @@ export function ResourceDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Wrench className="h-4 w-4" />
-          <CardTitle>Assignments</CardTitle>
+          <CardTitle>{detailMessages.resource.assignmentsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(assignmentsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No slot assignments for this resource.</p>
+            <p className="text-muted-foreground">{detailMessages.resource.assignmentsEmpty}</p>
           ) : (
             assignmentsQuery.data?.data.map((assignment) => {
               const slot = slotsById.get(assignment.slotId)
@@ -317,20 +329,22 @@ export function ResourceDetailPage({ id }: { id: string }) {
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="capitalize">
-                      {assignment.status}
+                      {getAssignmentStatusLabel(assignment.status, messages)}
                     </Badge>
                     <span>
                       {slot
-                        ? `${slot.dateLocal} · ${formatDateTime(slot.startsAt)}`
+                        ? `${slot.dateLocal} · ${formatDateTime(slot.startsAt, noValue)}`
                         : assignment.slotId}
                     </span>
                   </div>
                   <div className="mt-2 text-muted-foreground">
-                    Booking: {booking?.bookingNumber ?? assignment.bookingId ?? "-"}
+                    {messages.resources.bookingLabel}:{" "}
+                    {booking?.bookingNumber ?? assignment.bookingId ?? detailMessages.noBooking}
                   </div>
                   <div className="text-muted-foreground">
-                    Assigned by: {assignment.assignedBy ?? "-"} · Released:{" "}
-                    {formatDateTime(assignment.releasedAt)}
+                    {detailMessages.resource.assignedByLabel}: {assignment.assignedBy ?? noValue} ·{" "}
+                    {detailMessages.resource.releasedLabel}:{" "}
+                    {formatDateTime(assignment.releasedAt, noValue)}
                   </div>
                   {assignment.notes ? (
                     <div className="mt-2 whitespace-pre-wrap">{assignment.notes}</div>
@@ -344,19 +358,22 @@ export function ResourceDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Closeouts</CardTitle>
+          <CardTitle>{detailMessages.resource.closeoutsTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {(closeoutsQuery.data?.data.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground">No closeouts recorded for this resource.</p>
+            <p className="text-muted-foreground">{detailMessages.resource.closeoutsEmpty}</p>
           ) : (
             closeoutsQuery.data?.data.map((closeout) => (
               <div key={closeout.id} className="rounded-md border p-3">
                 <div className="font-medium">{closeout.dateLocal}</div>
                 <div className="text-muted-foreground">
-                  {formatDateTime(closeout.startsAt)} to {formatDateTime(closeout.endsAt)}
+                  {formatDateTime(closeout.startsAt, noValue)} to{" "}
+                  {formatDateTime(closeout.endsAt, noValue)}
                 </div>
-                <div className="text-muted-foreground">Created by: {closeout.createdBy ?? "-"}</div>
+                <div className="text-muted-foreground">
+                  {detailMessages.resource.createdByLabel}: {closeout.createdBy ?? noValue}
+                </div>
                 {closeout.reason ? (
                   <div className="mt-2 whitespace-pre-wrap">{closeout.reason}</div>
                 ) : null}

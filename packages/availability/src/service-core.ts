@@ -149,6 +149,7 @@ export async function deleteStartTime(db: PostgresJsDatabase, id: string) {
 export async function listSlots(db: PostgresJsDatabase, query: AvailabilitySlotListQuery) {
   const conditions = []
   if (query.productId) conditions.push(eq(availabilitySlots.productId, query.productId))
+  if (query.itineraryId) conditions.push(eq(availabilitySlots.itineraryId, query.itineraryId))
   if (query.optionId) conditions.push(eq(availabilitySlots.optionId, query.optionId))
   if (query.facilityId) conditions.push(eq(availabilitySlots.facilityId, query.facilityId))
   if (query.availabilityRuleId) {

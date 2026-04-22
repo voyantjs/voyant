@@ -2,21 +2,21 @@ import { type KmsEnvelope, kmsEnvelopeSchema } from "@voyantjs/db/schema/iam"
 import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { z } from "zod"
 
-import { bookingParticipants } from "../schema.js"
+import { bookingTravelers } from "../schema.js"
 
-export const bookingParticipantIdentitySchema = z.object({
+export const bookingTravelerIdentitySchema = z.object({
   nationality: z.string().optional().nullable(),
   passportNumber: z.string().optional().nullable(),
   passportExpiry: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
 })
 
-export const bookingParticipantDietarySchema = z.object({
+export const bookingTravelerDietarySchema = z.object({
   dietaryRequirements: z.string().optional().nullable(),
 })
 
-export const decryptedBookingParticipantTravelDetailSchema = z.object({
-  participantId: z.string(),
+const decryptedBookingTravelerTravelDetailRecordSchema = z.object({
+  travelerId: z.string(),
   nationality: z.string().nullable(),
   passportNumber: z.string().nullable(),
   passportExpiry: z.string().nullable(),
@@ -27,12 +27,15 @@ export const decryptedBookingParticipantTravelDetailSchema = z.object({
   updatedAt: z.date(),
 })
 
-export const bookingParticipantTravelDetails = pgTable(
-  "booking_participant_travel_details",
+export const decryptedBookingTravelerTravelDetailSchema =
+  decryptedBookingTravelerTravelDetailRecordSchema
+
+export const bookingTravelerTravelDetails = pgTable(
+  "booking_traveler_travel_details",
   {
-    participantId: text("participant_id")
+    travelerId: text("traveler_id")
       .primaryKey()
-      .references(() => bookingParticipants.id, { onDelete: "cascade" }),
+      .references(() => bookingTravelers.id, { onDelete: "cascade" }),
     identityEncrypted: jsonb("identity_encrypted").$type<KmsEnvelope>(),
     dietaryEncrypted: jsonb("dietary_encrypted").$type<KmsEnvelope>(),
     isLeadTraveler: boolean("is_lead_traveler").notNull().default(false),
@@ -42,27 +45,33 @@ export const bookingParticipantTravelDetails = pgTable(
   (t) => [index("idx_bptd_lead_traveler").on(t.isLeadTraveler)],
 )
 
-const bookingParticipantTravelDetailCoreSchema = z.object({
-  participantId: z.string().min(1),
+const bookingTravelerTravelDetailRecordCoreSchema = z.object({
+  travelerId: z.string().min(1),
   identityEncrypted: kmsEnvelopeSchema.optional().nullable(),
   dietaryEncrypted: kmsEnvelopeSchema.optional().nullable(),
   isLeadTraveler: z.boolean().default(false),
 })
 
-export const bookingParticipantTravelDetailInsertSchema = bookingParticipantTravelDetailCoreSchema
-export const bookingParticipantTravelDetailUpdateSchema = bookingParticipantTravelDetailCoreSchema
+export const bookingTravelerTravelDetailInsertSchema = bookingTravelerTravelDetailRecordCoreSchema
+  .omit({ travelerId: true })
+  .extend({
+    travelerId: z.string().min(1),
+  })
+
+export const bookingTravelerTravelDetailUpdateSchema = bookingTravelerTravelDetailRecordCoreSchema
   .partial()
-  .omit({ participantId: true })
-export const bookingParticipantTravelDetailSelectSchema =
-  bookingParticipantTravelDetailCoreSchema.extend({
+  .omit({ travelerId: true })
+
+export const bookingTravelerTravelDetailSelectSchema =
+  bookingTravelerTravelDetailRecordCoreSchema.extend({
     createdAt: z.date(),
     updatedAt: z.date(),
   })
 
-export type BookingParticipantIdentity = z.infer<typeof bookingParticipantIdentitySchema>
-export type BookingParticipantDietary = z.infer<typeof bookingParticipantDietarySchema>
-export type BookingParticipantTravelDetail = typeof bookingParticipantTravelDetails.$inferSelect
-export type NewBookingParticipantTravelDetail = typeof bookingParticipantTravelDetails.$inferInsert
-export type DecryptedBookingParticipantTravelDetail = z.infer<
-  typeof decryptedBookingParticipantTravelDetailSchema
+export type BookingTravelerIdentity = z.infer<typeof bookingTravelerIdentitySchema>
+export type BookingTravelerDietary = z.infer<typeof bookingTravelerDietarySchema>
+export type BookingTravelerTravelDetail = z.infer<typeof bookingTravelerTravelDetailSelectSchema>
+export type NewBookingTravelerTravelDetail = z.infer<typeof bookingTravelerTravelDetailInsertSchema>
+export type DecryptedBookingTravelerTravelDetail = z.infer<
+  typeof decryptedBookingTravelerTravelDetailSchema
 >

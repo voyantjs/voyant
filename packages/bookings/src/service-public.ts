@@ -12,11 +12,11 @@ import {
   bookingAllocations,
   bookingDocuments,
   bookingFulfillments,
-  bookingItemParticipants,
   bookingItems,
-  bookingParticipants,
+  bookingItemTravelers,
   bookingSessionStates,
   bookings,
+  bookingTravelers,
 } from "./schema.js"
 import { bookingsService } from "./service.js"
 import type {
@@ -83,6 +83,61 @@ function normalizeDateTime(value: Date | string | null | undefined) {
   }
 
   return value instanceof Date ? value.toISOString() : value
+}
+
+function getRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function getNestedRecord(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = getRecord(record?.[key])
+    if (value) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function getRecordString(record: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = record?.[key]
+    if (typeof value === "string" && value.length > 0) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function extractBookingContactFromStatePayload(
+  payload: Record<string, unknown> | null | undefined,
+) {
+  const root = getRecord(payload)
+  const stepData = getNestedRecord(root, ["stepData", "steps"])
+  const billingRecord =
+    getNestedRecord(root, ["billing", "billingContact", "contact"]) ??
+    getNestedRecord(stepData, ["billing", "billingContact", "contact"])
+  const billing = getNestedRecord(billingRecord, ["billing", "contact"]) ?? billingRecord
+
+  if (!billing) {
+    return null
+  }
+
+  return {
+    contactFirstName: getRecordString(billing, ["firstName"]),
+    contactLastName: getRecordString(billing, ["lastName"]),
+    contactEmail: getRecordString(billing, ["email"]),
+    contactPhone: getRecordString(billing, ["phone"]),
+    contactCountry: getRecordString(billing, ["country"]),
+    contactRegion: getRecordString(billing, ["state", "region"]),
+    contactCity: getRecordString(billing, ["city"]),
+    contactAddressLine1: getRecordString(billing, ["addressLine1", "address1", "line1"]),
+    contactPostalCode: getRecordString(billing, ["postalCode", "postal", "zip"]),
+  }
 }
 
 function countTravelerParticipants(participants: Array<{ participantType: string }>) {
@@ -285,9 +340,9 @@ async function buildOverviewSnapshot(
   const [participants, items, itemParticipantLinks, documents, fulfillments] = await Promise.all([
     db
       .select()
-      .from(bookingParticipants)
-      .where(eq(bookingParticipants.bookingId, booking.id))
-      .orderBy(asc(bookingParticipants.createdAt)),
+      .from(bookingTravelers)
+      .where(eq(bookingTravelers.bookingId, booking.id))
+      .orderBy(asc(bookingTravelers.createdAt)),
     db
       .select()
       .from(bookingItems)
@@ -295,16 +350,16 @@ async function buildOverviewSnapshot(
       .orderBy(asc(bookingItems.createdAt)),
     db
       .select({
-        id: bookingItemParticipants.id,
-        bookingItemId: bookingItemParticipants.bookingItemId,
-        participantId: bookingItemParticipants.participantId,
-        role: bookingItemParticipants.role,
-        isPrimary: bookingItemParticipants.isPrimary,
+        id: bookingItemTravelers.id,
+        bookingItemId: bookingItemTravelers.bookingItemId,
+        travelerId: bookingItemTravelers.travelerId,
+        role: bookingItemTravelers.role,
+        isPrimary: bookingItemTravelers.isPrimary,
       })
-      .from(bookingItemParticipants)
-      .innerJoin(bookingItems, eq(bookingItems.id, bookingItemParticipants.bookingItemId))
+      .from(bookingItemTravelers)
+      .innerJoin(bookingItems, eq(bookingItems.id, bookingItemTravelers.bookingItemId))
       .where(eq(bookingItems.bookingId, booking.id))
-      .orderBy(asc(bookingItemParticipants.createdAt)),
+      .orderBy(asc(bookingItemTravelers.createdAt)),
     db
       .select()
       .from(bookingDocuments)
@@ -331,7 +386,7 @@ async function buildOverviewSnapshot(
     string,
     Array<{
       id: string
-      participantId: string
+      travelerId: string
       role: string
       isPrimary: boolean
     }>
@@ -341,7 +396,7 @@ async function buildOverviewSnapshot(
     const existing = itemLinksByItemId.get(link.bookingItemId) ?? []
     existing.push({
       id: link.id,
-      participantId: link.participantId,
+      travelerId: link.travelerId,
       role: link.role,
       isPrimary: link.isPrimary,
     })
@@ -360,7 +415,7 @@ async function buildOverviewSnapshot(
     confirmedAt: normalizeDateTime(booking.confirmedAt),
     cancelledAt: normalizeDateTime(booking.cancelledAt),
     completedAt: normalizeDateTime(booking.completedAt),
-    participants: participants.map((participant) => ({
+    travelers: participants.map((participant) => ({
       id: participant.id,
       participantType: participant.participantType,
       firstName: participant.firstName,
@@ -388,11 +443,11 @@ async function buildOverviewSnapshot(
       optionId: item.optionId ?? null,
       optionUnitId: item.optionUnitId ?? null,
       pricingCategoryId: item.pricingCategoryId ?? null,
-      participantLinks: itemLinksByItemId.get(item.id) ?? [],
+      travelerLinks: itemLinksByItemId.get(item.id) ?? [],
     })),
     documents: documents.map((document) => ({
       id: document.id,
-      participantId: document.participantId ?? null,
+      travelerId: document.travelerId ?? null,
       type: document.type,
       fileName: document.fileName,
       fileUrl: document.fileUrl,
@@ -400,7 +455,7 @@ async function buildOverviewSnapshot(
     fulfillments: fulfillments.map((fulfillment) => ({
       id: fulfillment.id,
       bookingItemId: fulfillment.bookingItemId ?? null,
-      participantId: fulfillment.participantId ?? null,
+      travelerId: fulfillment.travelerId ?? null,
       fulfillmentType: fulfillment.fulfillmentType,
       deliveryChannel: fulfillment.deliveryChannel,
       status: fulfillment.status,
@@ -628,9 +683,9 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
       bookingsService.getBookingById(db, bookingId),
       db
         .select()
-        .from(bookingParticipants)
-        .where(eq(bookingParticipants.bookingId, bookingId))
-        .orderBy(asc(bookingParticipants.createdAt)),
+        .from(bookingTravelers)
+        .where(eq(bookingTravelers.bookingId, bookingId))
+        .orderBy(asc(bookingTravelers.createdAt)),
       db
         .select()
         .from(bookingItems)
@@ -643,16 +698,16 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
         .orderBy(asc(bookingAllocations.createdAt)),
       db
         .select({
-          id: bookingItemParticipants.id,
-          bookingItemId: bookingItemParticipants.bookingItemId,
-          participantId: bookingItemParticipants.participantId,
-          role: bookingItemParticipants.role,
-          isPrimary: bookingItemParticipants.isPrimary,
+          id: bookingItemTravelers.id,
+          bookingItemId: bookingItemTravelers.bookingItemId,
+          travelerId: bookingItemTravelers.travelerId,
+          role: bookingItemTravelers.role,
+          isPrimary: bookingItemTravelers.isPrimary,
         })
-        .from(bookingItemParticipants)
-        .innerJoin(bookingItems, eq(bookingItems.id, bookingItemParticipants.bookingItemId))
+        .from(bookingItemTravelers)
+        .innerJoin(bookingItems, eq(bookingItems.id, bookingItemTravelers.bookingItemId))
         .where(eq(bookingItems.bookingId, bookingId))
-        .orderBy(asc(bookingItemParticipants.createdAt)),
+        .orderBy(asc(bookingItemTravelers.createdAt)),
       getWizardSessionState(db, bookingId),
     ])
 
@@ -664,7 +719,7 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
     string,
     Array<{
       id: string
-      participantId: string
+      travelerId: string
       role: string
       isPrimary: boolean
     }>
@@ -674,16 +729,16 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
     const existing = itemLinksByItemId.get(link.bookingItemId) ?? []
     existing.push({
       id: link.id,
-      participantId: link.participantId,
+      travelerId: link.travelerId,
       role: link.role,
       isPrimary: link.isPrimary,
     })
     itemLinksByItemId.set(link.bookingItemId, existing)
   }
 
-  const hasParticipants = participants.length > 0
   const hasTraveler = countTravelerParticipants(participants) > 0
-  const hasPrimaryParticipant = participants.some((participant) => participant.isPrimary)
+  const hasTravelers = participants.length > 0
+  const hasPrimaryTraveler = participants.some((participant) => participant.isPrimary)
   const hasItems = items.length > 0
   const hasAllocations = allocations.length > 0
 
@@ -703,7 +758,7 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
     expiredAt: normalizeDateTime(booking.expiredAt),
     cancelledAt: normalizeDateTime(booking.cancelledAt),
     completedAt: normalizeDateTime(booking.completedAt),
-    participants: participants.map((participant) => ({
+    travelers: participants.map((participant) => ({
       id: participant.id,
       participantType: participant.participantType,
       travelerCategory: participant.travelerCategory ?? null,
@@ -738,7 +793,7 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
       optionId: item.optionId ?? null,
       optionUnitId: item.optionUnitId ?? null,
       pricingCategoryId: item.pricingCategoryId ?? null,
-      participantLinks: itemLinksByItemId.get(item.id) ?? [],
+      travelerLinks: itemLinksByItemId.get(item.id) ?? [],
     })),
     allocations: allocations.map((allocation) => ({
       id: allocation.id,
@@ -756,16 +811,15 @@ async function buildSessionSnapshot(db: PostgresJsDatabase, bookingId: string) {
       releasedAt: normalizeDateTime(allocation.releasedAt),
     })),
     checklist: {
-      hasParticipants,
-      hasTraveler,
-      hasPrimaryParticipant,
+      hasTravelers,
+      hasPrimaryTraveler,
       hasItems,
       hasAllocations,
       readyForConfirmation:
         booking.status === "on_hold" &&
-        hasParticipants &&
+        hasTravelers &&
         hasTraveler &&
-        hasPrimaryParticipant &&
+        hasPrimaryTraveler &&
         hasItems &&
         hasAllocations,
     },
@@ -779,7 +833,8 @@ export const publicBookingsService = {
     input: PublicCreateBookingSessionInput,
     userId?: string,
   ) {
-    const travelerCount = countTravelerParticipants(input.participants)
+    const travelers = input.travelers ?? []
+    const travelerCount = countTravelerParticipants(travelers)
     const bookingNumber = await generateBookingNumber(db)
     const result = await bookingsService.reserveBooking(
       db,
@@ -823,8 +878,8 @@ export const publicBookingsService = {
       return result
     }
 
-    for (const participant of input.participants) {
-      await bookingsService.createParticipant(
+    for (const participant of travelers) {
+      await bookingsService.createTravelerRecord(
         db,
         result.booking.id,
         {
@@ -873,6 +928,14 @@ export const publicBookingsService = {
     }
 
     const state = await upsertWizardSessionState(db, bookingId, input)
+    if (!state) {
+      return { status: "not_found" as const }
+    }
+
+    const bookingContact = extractBookingContactFromStatePayload(state.payload)
+    if (bookingContact) {
+      await bookingsService.updateBooking(db, bookingId, bookingContact)
+    }
     return { status: "ok" as const, state }
   },
 
@@ -899,22 +962,29 @@ export const publicBookingsService = {
       })
     }
 
-    for (const participantId of input.removedParticipantIds) {
-      const participant = await bookingsService.getParticipantById(db, bookingId, participantId)
+    const travelers = input.travelers
+    const removedTravelerIds = input.removedTravelerIds ?? []
+
+    for (const travelerId of removedTravelerIds) {
+      const participant = await bookingsService.getTravelerRecordById(db, bookingId, travelerId)
       if (participant) {
-        await bookingsService.deleteParticipant(db, participant.id)
+        await bookingsService.deleteTravelerRecord(db, participant.id)
       }
     }
 
-    if (input.participants) {
-      for (const participant of input.participants) {
+    if (travelers) {
+      for (const participant of travelers) {
         if (participant.id) {
-          const existing = await bookingsService.getParticipantById(db, bookingId, participant.id)
+          const existing = await bookingsService.getTravelerRecordById(
+            db,
+            bookingId,
+            participant.id,
+          )
           if (!existing) {
             return { status: "participant_not_found" as const }
           }
 
-          await bookingsService.updateParticipant(db, participant.id, {
+          await bookingsService.updateTravelerRecord(db, participant.id, {
             participantType: participant.participantType,
             travelerCategory: participant.travelerCategory ?? null,
             firstName: participant.firstName,
@@ -930,7 +1000,7 @@ export const publicBookingsService = {
           continue
         }
 
-        await bookingsService.createParticipant(
+        await bookingsService.createTravelerRecord(
           db,
           bookingId,
           {
@@ -968,11 +1038,11 @@ export const publicBookingsService = {
       }
     }
 
-    if (input.pax === undefined && (input.participants || input.removedParticipantIds.length > 0)) {
+    if (input.pax === undefined && (travelers || removedTravelerIds.length > 0)) {
       const participants = await db
-        .select({ participantType: bookingParticipants.participantType })
-        .from(bookingParticipants)
-        .where(eq(bookingParticipants.bookingId, bookingId))
+        .select({ participantType: bookingTravelers.participantType })
+        .from(bookingTravelers)
+        .where(eq(bookingTravelers.bookingId, bookingId))
       const travelerCount = countTravelerParticipants(participants)
       await bookingsService.updateBooking(db, bookingId, {
         pax: travelerCount > 0 ? travelerCount : null,

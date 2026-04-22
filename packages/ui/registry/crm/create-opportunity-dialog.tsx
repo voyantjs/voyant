@@ -85,7 +85,11 @@ export function CreateOpportunityDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="registry-opp-stage">Stage</Label>
-            <Select value={stageId} onValueChange={(value) => setStageId(value ?? "")}>
+            <Select
+              items={stages.map((stage) => ({ label: stage.name, value: stage.id }))}
+              value={stageId}
+              onValueChange={(value) => setStageId(value ?? "")}
+            >
               <SelectTrigger id="registry-opp-stage" className="w-full">
                 <SelectValue>
                   {(value) => stages.find((stage) => stage.id === value)?.name ?? "Select stage…"}

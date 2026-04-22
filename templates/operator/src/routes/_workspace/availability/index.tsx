@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { AvailabilityPage } from "@/components/voyant/availability/availability-page"
+import { AvailabilityPageSkeleton } from "@/components/voyant/availability/availability-page-skeleton"
 import {
   getAvailabilityCloseoutsQueryOptions,
   getAvailabilityPickupPointsQueryOptions,
@@ -19,5 +20,6 @@ export const Route = createFileRoute("/_workspace/availability/")({
       context.queryClient.ensureQueryData(getAvailabilityCloseoutsQueryOptions()),
       context.queryClient.ensureQueryData(getAvailabilityPickupPointsQueryOptions()),
     ]),
+  pendingComponent: AvailabilityPageSkeleton,
   component: AvailabilityPage,
 })

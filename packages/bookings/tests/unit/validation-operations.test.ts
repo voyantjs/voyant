@@ -98,6 +98,7 @@ describe("Reservation schemas", () => {
 describe("Booking fulfillment schema", () => {
   it("accepts valid fulfillment input", () => {
     const result = insertBookingFulfillmentSchema.parse({
+      travelerId: "bkpt_123",
       fulfillmentType: "voucher",
       deliveryChannel: "download",
       artifactUrl: "https://example.com/voucher.pdf",
@@ -106,6 +107,7 @@ describe("Booking fulfillment schema", () => {
     expect(result.fulfillmentType).toBe("voucher")
     expect(result.deliveryChannel).toBe("download")
     expect(result.status).toBe("issued")
+    expect(result.travelerId).toBe("bkpt_123")
   })
 
   it("rejects invalid artifact url", () => {
@@ -127,6 +129,7 @@ describe("Booking fulfillment schema", () => {
 describe("Booking redemption schema", () => {
   it("accepts valid redemption input", () => {
     const result = recordBookingRedemptionSchema.parse({
+      travelerId: "bkpt_123",
       method: "scan",
       redeemedAt: "2026-06-01T10:00:00.000Z",
       metadata: { gate: "north" },
@@ -134,6 +137,7 @@ describe("Booking redemption schema", () => {
 
     expect(result.method).toBe("scan")
     expect(result.redeemedAt).toBe("2026-06-01T10:00:00.000Z")
+    expect(result.travelerId).toBe("bkpt_123")
   })
 
   it("defaults redemption method to manual", () => {

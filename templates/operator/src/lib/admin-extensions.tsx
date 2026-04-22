@@ -1,10 +1,4 @@
-import {
-  type AdminExtension,
-  createAdminExtensionRegistry,
-  defineAdminExtension,
-} from "@voyantjs/voyant-admin"
-
-import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/dashboard-outstanding-invoices-widget"
+import { type AdminExtension, createAdminExtensionRegistry } from "@voyantjs/voyant-admin"
 
 /**
  * Operator admin contributions composed through the shared admin runtime.
@@ -21,16 +15,4 @@ import { DashboardOutstandingInvoicesWidget } from "@/components/admin/widgets/d
  * - `invoice.details.header`
  * - `invoice.details.after-summary`
  */
-export const adminExtensions: ReadonlyArray<AdminExtension> = createAdminExtensionRegistry(
-  defineAdminExtension({
-    id: "dashboard-outstanding-invoices",
-    widgets: [
-      {
-        id: "dashboard-outstanding-invoices.card",
-        slot: "dashboard.after-kpis",
-        order: 10,
-        component: DashboardOutstandingInvoicesWidget,
-      },
-    ],
-  }),
-)
+export const adminExtensions: ReadonlyArray<AdminExtension> = createAdminExtensionRegistry()

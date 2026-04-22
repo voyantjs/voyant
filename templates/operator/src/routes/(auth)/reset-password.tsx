@@ -13,7 +13,7 @@ import {
   Input,
   Label,
 } from "@/components/ui"
-
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { authClient } from "@/lib/auth"
 import { getCurrentUser } from "@/lib/current-user"
 
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/(auth)/reset-password")({
 function ResetPasswordPage() {
   const navigate = useNavigate()
   const { token } = Route.useSearch()
+  const messages = useAdminMessages().auth.resetPassword
 
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -47,12 +48,12 @@ function ResetPasswordPage() {
     setError(null)
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(messages.passwordsDoNotMatch)
       return
     }
 
     if (!token) {
-      setError("Missing reset token. Please use the link from your email.")
+      setError(messages.missingResetToken)
       return
     }
 
@@ -62,14 +63,14 @@ function ResetPasswordPage() {
       const result = await authClient.resetPassword({ newPassword: password, token })
 
       if (result.error) {
-        setError(result.error.message || "Could not reset password")
+        setError(result.error.message || messages.couldNotResetPassword)
         setLoading(false)
         return
       }
 
       void navigate({ to: "/sign-in", search: { reset: "success" } })
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError(messages.somethingWentWrong)
       setLoading(false)
     }
   }
@@ -77,8 +78,8 @@ function ResetPasswordPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>Enter your new password</CardDescription>
+        <CardTitle>{messages.title}</CardTitle>
+        <CardDescription>{messages.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +87,7 @@ function ResetPasswordPage() {
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="password">New password</Label>
+            <Label htmlFor="password">{messages.newPasswordLabel}</Label>
             <Input
               id="password"
               type="password"
@@ -99,7 +100,7 @@ function ResetPasswordPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm password</Label>
+            <Label htmlFor="confirm-password">{messages.confirmPasswordLabel}</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -112,13 +113,13 @@ function ResetPasswordPage() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Reset password
+            {messages.submit}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="justify-center">
         <Link to="/sign-in" className="text-sm text-muted-foreground hover:underline">
-          Back to sign in
+          {messages.backToSignIn}
         </Link>
       </CardFooter>
     </Card>

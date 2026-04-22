@@ -56,20 +56,25 @@ export const bookingRecordSchema = z.object({
 
 export type BookingRecord = z.infer<typeof bookingRecordSchema>
 
-export const bookingPassengerRecordSchema = z.object({
+export const bookingTravelerRecordSchema = z.object({
   id: z.string(),
   bookingId: z.string(),
+  participantType: z.string(),
+  travelerCategory: z.string().nullable().optional(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  preferredLanguage: z.string().nullable().optional(),
+  accessibilityNeeds: z.string().nullable().optional(),
   specialRequests: z.string().nullable(),
-  isLeadPassenger: z.boolean().nullable().optional(),
+  isPrimary: z.boolean(),
+  notes: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
 })
 
-export type BookingPassengerRecord = z.infer<typeof bookingPassengerRecordSchema>
+export type BookingTravelerRecord = z.infer<typeof bookingTravelerRecordSchema>
 
 export const bookingSupplierStatusRecordSchema = z.object({
   id: z.string(),
@@ -160,7 +165,7 @@ export const bookingItemRecordSchema = z.object({
 
 export type BookingItemRecord = z.infer<typeof bookingItemRecordSchema>
 
-export const bookingItemParticipantRoleSchema = z.enum([
+export const bookingItemTravelerRoleSchema = z.enum([
   "traveler",
   "occupant",
   "primary_contact",
@@ -169,16 +174,16 @@ export const bookingItemParticipantRoleSchema = z.enum([
   "other",
 ])
 
-export const bookingItemParticipantRecordSchema = z.object({
+export const bookingItemTravelerRecordSchema = z.object({
   id: z.string(),
   bookingItemId: z.string(),
-  participantId: z.string(),
-  role: bookingItemParticipantRoleSchema,
+  travelerId: z.string(),
+  role: bookingItemTravelerRoleSchema,
   isPrimary: z.boolean(),
   createdAt: z.string(),
 })
 
-export type BookingItemParticipantRecord = z.infer<typeof bookingItemParticipantRecordSchema>
+export type BookingItemTravelerRecord = z.infer<typeof bookingItemTravelerRecordSchema>
 
 export const bookingDocumentTypeSchema = z.enum([
   "visa",
@@ -188,10 +193,10 @@ export const bookingDocumentTypeSchema = z.enum([
   "other",
 ])
 
-export const bookingDocumentRecordSchema = z.object({
+export const bookingTravelerDocumentRecordSchema = z.object({
   id: z.string(),
   bookingId: z.string(),
-  participantId: z.string().nullable(),
+  travelerId: z.string().nullable(),
   type: bookingDocumentTypeSchema,
   fileName: z.string(),
   fileUrl: z.string(),
@@ -200,7 +205,7 @@ export const bookingDocumentRecordSchema = z.object({
   createdAt: z.string(),
 })
 
-export type BookingDocumentRecord = z.infer<typeof bookingDocumentRecordSchema>
+export type BookingTravelerDocumentRecord = z.infer<typeof bookingTravelerDocumentRecordSchema>
 
 export const bookingGroupKindSchema = z.enum(["shared_room", "other"])
 export const bookingGroupMemberRoleSchema = z.enum(["primary", "shared"])
@@ -246,8 +251,8 @@ export type BookingGroupDetailRecord = z.infer<typeof bookingGroupDetailSchema>
 export const bookingListResponse = paginatedEnvelope(bookingRecordSchema)
 export const bookingSingleResponse = singleEnvelope(bookingRecordSchema)
 export const bookingItemsResponse = arrayEnvelope(bookingItemRecordSchema)
-export const bookingItemParticipantsResponse = arrayEnvelope(bookingItemParticipantRecordSchema)
-export const bookingDocumentsResponse = arrayEnvelope(bookingDocumentRecordSchema)
+export const bookingItemTravelersResponse = arrayEnvelope(bookingItemTravelerRecordSchema)
+export const bookingTravelerDocumentsResponse = arrayEnvelope(bookingTravelerDocumentRecordSchema)
 export const bookingGroupListResponse = paginatedEnvelope(bookingGroupRecordSchema)
 export const bookingGroupSingleResponse = singleEnvelope(bookingGroupRecordSchema)
 export const bookingGroupDetailResponse = singleEnvelope(bookingGroupDetailSchema)
@@ -260,7 +265,9 @@ export const bookingGroupForBookingResponse = z.object({
   data: bookingGroupForBookingSchema.nullable(),
 })
 export type BookingGroupForBookingRecord = z.infer<typeof bookingGroupForBookingSchema>
-export const bookingPassengersResponse = arrayEnvelope(bookingPassengerRecordSchema)
+export const bookingTravelersResponse = arrayEnvelope(bookingTravelerRecordSchema)
+export const bookingPassengersResponse = bookingTravelersResponse
+export const bookingItemParticipantsResponse = bookingItemTravelersResponse
 export const bookingSupplierStatusesResponse = arrayEnvelope(bookingSupplierStatusRecordSchema)
 export const bookingActivityResponse = arrayEnvelope(bookingActivityRecordSchema)
 export const bookingNotesResponse = arrayEnvelope(bookingNoteRecordSchema)

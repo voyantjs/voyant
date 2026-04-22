@@ -107,9 +107,6 @@ export const peopleAccountsService = {
       email: data.email === undefined ? existing.email : data.email,
       phone: data.phone === undefined ? existing.phone : data.phone,
       website: data.website === undefined ? existing.website : data.website,
-      address: data.address === undefined ? existing.address : data.address,
-      city: data.city === undefined ? existing.city : data.city,
-      country: data.country === undefined ? existing.country : data.country,
     })
 
     return this.getPersonById(db, id)
@@ -346,9 +343,6 @@ export const peopleAccountsService = {
       "email",
       "phone",
       "website",
-      "address",
-      "city",
-      "country",
       "organizationId",
     ]
 
@@ -405,9 +399,6 @@ export const peopleAccountsService = {
         email: row.email || null,
         phone: row.phone || null,
         website: row.website || null,
-        address: row.address || null,
-        city: row.city || null,
-        country: row.country || null,
         organizationId: row.organizationId || null,
         tags: [],
       })

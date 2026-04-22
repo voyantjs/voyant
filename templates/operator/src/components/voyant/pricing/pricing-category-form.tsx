@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type Mode = { kind: "create" } | { kind: "edit"; category: PricingCategoryRecord }
 
@@ -48,18 +49,6 @@ interface FormState {
   active: boolean
   sortOrder: string
 }
-
-const CATEGORY_TYPES = [
-  { value: "adult", label: "Adult" },
-  { value: "child", label: "Child" },
-  { value: "infant", label: "Infant" },
-  { value: "senior", label: "Senior" },
-  { value: "group", label: "Group" },
-  { value: "room", label: "Room" },
-  { value: "vehicle", label: "Vehicle" },
-  { value: "service", label: "Service" },
-  { value: "other", label: "Other" },
-] as const
 
 function initialState(mode: Mode): FormState {
   if (mode.kind === "edit") {
@@ -112,9 +101,25 @@ function toPayload(state: FormState): CreatePricingCategoryInput {
 }
 
 export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCategoryFormProps) {
+  const messages = useAdminMessages()
   const [state, setState] = React.useState<FormState>(() => initialState(mode))
   const [error, setError] = React.useState<string | null>(null)
   const { create, update } = usePricingCategoryMutation()
+  const categoryTypes = React.useMemo(
+    () =>
+      [
+        { value: "adult", label: messages.pricing.categories.typeAdult },
+        { value: "child", label: messages.pricing.categories.typeChild },
+        { value: "infant", label: messages.pricing.categories.typeInfant },
+        { value: "senior", label: messages.pricing.categories.typeSenior },
+        { value: "group", label: messages.pricing.categories.typeGroup },
+        { value: "room", label: messages.pricing.categories.typeRoom },
+        { value: "vehicle", label: messages.pricing.categories.typeVehicle },
+        { value: "service", label: messages.pricing.categories.typeService },
+        { value: "other", label: messages.pricing.categories.typeOther },
+      ] as const,
+    [messages],
+  )
 
   React.useEffect(() => {
     setState(initialState(mode))
@@ -128,7 +133,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
     setError(null)
 
     if (!state.name.trim()) {
-      setError("Category name is required.")
+      setError(messages.pricing.categories.validationNameRequired)
       return
     }
 
@@ -139,7 +144,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
           : await update.mutateAsync({ id: mode.category.id, input: toPayload(state) })
       onSuccess?.(category)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save pricing category.")
+      setError(err instanceof Error ? err.message : messages.pricing.categories.saveFailed)
     }
   }
 
@@ -147,32 +152,33 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
     <form data-slot="pricing-category-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pricing-category-name">Name</Label>
+          <Label htmlFor="pricing-category-name">{messages.pricing.categories.nameLabel}</Label>
           <Input
             id="pricing-category-name"
             required
             autoFocus
             value={state.name}
             onChange={(event) => setState((prev) => ({ ...prev, name: event.target.value }))}
-            placeholder="Adult"
+            placeholder={messages.pricing.categories.namePlaceholder}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pricing-category-code">Code</Label>
+          <Label htmlFor="pricing-category-code">{messages.pricing.categories.codeLabel}</Label>
           <Input
             id="pricing-category-code"
             value={state.code}
             onChange={(event) => setState((prev) => ({ ...prev, code: event.target.value }))}
-            placeholder="adult"
+            placeholder={messages.pricing.categories.codePlaceholder}
           />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label>Type</Label>
+          <Label>{messages.pricing.categories.typeLabel}</Label>
           <Select
+            items={categoryTypes}
             value={state.categoryType}
             onValueChange={(value) =>
               setState((prev) => ({
@@ -185,7 +191,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORY_TYPES.map((type) => (
+              {categoryTypes.map((type) => (
                 <SelectItem key={type.value} value={type.value}>
                   {type.label}
                 </SelectItem>
@@ -195,7 +201,9 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pricing-category-seat-occupancy">Seat occupancy</Label>
+          <Label htmlFor="pricing-category-seat-occupancy">
+            {messages.pricing.categories.seatOccupancyLabel}
+          </Label>
           <Input
             id="pricing-category-seat-occupancy"
             type="number"
@@ -213,13 +221,15 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
           checked={state.isAgeQualified}
           onCheckedChange={(isAgeQualified) => setState((prev) => ({ ...prev, isAgeQualified }))}
         />
-        <Label>Age qualified</Label>
+        <Label>{messages.pricing.categories.ageQualifiedLabel}</Label>
       </div>
 
       {state.isAgeQualified ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pricing-category-min-age">Min age</Label>
+            <Label htmlFor="pricing-category-min-age">
+              {messages.pricing.categories.minAgeLabel}
+            </Label>
             <Input
               id="pricing-category-min-age"
               type="number"
@@ -230,7 +240,9 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pricing-category-max-age">Max age</Label>
+            <Label htmlFor="pricing-category-max-age">
+              {messages.pricing.categories.maxAgeLabel}
+            </Label>
             <Input
               id="pricing-category-max-age"
               type="number"
@@ -244,7 +256,9 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pricing-category-sort-order">Sort order</Label>
+          <Label htmlFor="pricing-category-sort-order">
+            {messages.pricing.categories.sortOrderLabel}
+          </Label>
           <Input
             id="pricing-category-sort-order"
             type="number"
@@ -258,7 +272,7 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
             checked={state.active}
             onCheckedChange={(active) => setState((prev) => ({ ...prev, active }))}
           />
-          <Label>Active</Label>
+          <Label>{messages.pricing.categories.activeLabel}</Label>
         </div>
       </div>
 
@@ -267,14 +281,16 @@ export function PricingCategoryForm({ mode, onSuccess, onCancel }: PricingCatego
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
+            {messages.pricing.categories.cancel}
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
           ) : null}
-          {mode.kind === "edit" ? "Save changes" : "Create category"}
+          {mode.kind === "edit"
+            ? messages.pricing.categories.saveChanges
+            : messages.pricing.categories.createCategory}
         </Button>
       </div>
     </form>

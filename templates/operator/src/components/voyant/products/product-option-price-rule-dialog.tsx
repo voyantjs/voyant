@@ -24,28 +24,33 @@ import {
 import { CancellationPolicyCombobox } from "@/components/voyant/pricing/cancellation-policy-combobox"
 import { PriceCatalogCombobox } from "@/components/voyant/pricing/price-catalog-combobox"
 import { PriceScheduleCombobox } from "@/components/voyant/pricing/price-schedule-combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const ruleFormSchema = z.object({
-  priceCatalogId: z.string().min(1, "Catalog is required"),
-  priceScheduleId: z.string().optional().nullable(),
-  cancellationPolicyId: z.string().optional().nullable(),
-  name: z.string().min(1, "Name is required").max(255),
-  code: z.string().max(100).optional().nullable(),
-  description: z.string().optional().nullable(),
-  pricingMode: z.enum(["per_person", "per_booking", "starting_from", "free", "on_request"]),
-  baseSell: z.coerce.number().min(0),
-  baseCost: z.coerce.number().min(0),
-  minPerBooking: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  maxPerBooking: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
-  allPricingCategories: z.boolean(),
-  isDefault: z.boolean(),
-  active: z.boolean(),
-  notes: z.string().optional().nullable(),
-})
+type PriceRuleMessages = ReturnType<typeof useAdminMessages>["products"]["operations"]["priceRules"]
 
-type RuleFormValues = z.input<typeof ruleFormSchema>
-type RuleFormOutput = z.output<typeof ruleFormSchema>
+const buildRuleFormSchema = (messages: PriceRuleMessages) =>
+  z.object({
+    priceCatalogId: z.string().min(1, messages.validationCatalogRequired),
+    priceScheduleId: z.string().optional().nullable(),
+    cancellationPolicyId: z.string().optional().nullable(),
+    name: z.string().min(1, messages.validationNameRequired).max(255),
+    code: z.string().max(100).optional().nullable(),
+    description: z.string().optional().nullable(),
+    pricingMode: z.enum(["per_person", "per_booking", "starting_from", "free", "on_request"]),
+    baseSell: z.coerce.number().min(0),
+    baseCost: z.coerce.number().min(0),
+    minPerBooking: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    maxPerBooking: z.coerce.number().int().min(0).optional().or(z.literal("")).nullable(),
+    allPricingCategories: z.boolean(),
+    isDefault: z.boolean(),
+    active: z.boolean(),
+    notes: z.string().optional().nullable(),
+  })
+
+type RuleFormSchema = ReturnType<typeof buildRuleFormSchema>
+type RuleFormValues = z.input<RuleFormSchema>
+type RuleFormOutput = z.output<RuleFormSchema>
 
 export type OptionPriceRuleData = {
   id: string
@@ -77,14 +82,6 @@ type OptionPriceRuleDialogProps = {
   onSuccess: () => void
 }
 
-const PRICING_MODES = [
-  { value: "per_person", label: "Per Person" },
-  { value: "per_booking", label: "Per Booking" },
-  { value: "starting_from", label: "Starting From" },
-  { value: "free", label: "Free" },
-  { value: "on_request", label: "On Request" },
-] as const
-
 export function OptionPriceRuleDialog({
   open,
   onOpenChange,
@@ -93,8 +90,19 @@ export function OptionPriceRuleDialog({
   rule,
   onSuccess,
 }: OptionPriceRuleDialogProps) {
+  const messages = useAdminMessages()
+  const productMessages = messages.products.core
+  const priceRuleMessages = messages.products.operations.priceRules
   const isEditing = !!rule
   const { create, update } = useOptionPriceRuleMutation()
+  const ruleFormSchema = buildRuleFormSchema(priceRuleMessages)
+  const pricingModes = [
+    { value: "per_person", label: priceRuleMessages.pricingModePerPerson },
+    { value: "per_booking", label: priceRuleMessages.pricingModePerBooking },
+    { value: "starting_from", label: priceRuleMessages.pricingModeStartingFrom },
+    { value: "free", label: priceRuleMessages.pricingModeFree },
+    { value: "on_request", label: priceRuleMessages.pricingModeOnRequest },
+  ] as const
 
   const form = useForm<RuleFormValues, unknown, RuleFormOutput>({
     resolver: zodResolver(ruleFormSchema),
@@ -175,7 +183,9 @@ export function OptionPriceRuleDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" size="lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Price Rule" : "New Price Rule"}</SheetTitle>
+          <SheetTitle>
+            {isEditing ? priceRuleMessages.editTitle : priceRuleMessages.newTitle}
+          </SheetTitle>
         </SheetHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -184,7 +194,7 @@ export function OptionPriceRuleDialog({
           <SheetBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Catalog</Label>
+                <Label>{priceRuleMessages.catalogLabel}</Label>
                 <PriceCatalogCombobox
                   value={form.watch("priceCatalogId")}
                   onChange={(value) => {
@@ -202,8 +212,8 @@ export function OptionPriceRuleDialog({
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Name</Label>
-                <Input {...form.register("name")} placeholder="Public Rate" />
+                <Label>{priceRuleMessages.nameLabel}</Label>
+                <Input {...form.register("name")} placeholder={priceRuleMessages.namePlaceholder} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                 )}
@@ -212,7 +222,7 @@ export function OptionPriceRuleDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Schedule (optional)</Label>
+                <Label>{priceRuleMessages.scheduleLabel}</Label>
                 <PriceScheduleCombobox
                   priceCatalogId={watchedCatalogId}
                   value={form.watch("priceScheduleId")}
@@ -222,7 +232,7 @@ export function OptionPriceRuleDialog({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Cancellation policy (optional)</Label>
+                <Label>{priceRuleMessages.cancellationPolicyLabel}</Label>
                 <CancellationPolicyCombobox
                   value={form.watch("cancellationPolicyId")}
                   onChange={(value) =>
@@ -234,19 +244,19 @@ export function OptionPriceRuleDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Pricing mode</Label>
+                <Label>{priceRuleMessages.pricingModeLabel}</Label>
                 <Select
                   value={form.watch("pricingMode")}
                   onValueChange={(v) =>
                     form.setValue("pricingMode", v as RuleFormValues["pricingMode"])
                   }
-                  items={PRICING_MODES}
+                  items={pricingModes}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRICING_MODES.map((m) => (
+                    {pricingModes.map((m) => (
                       <SelectItem key={m.value} value={m.value}>
                         {m.label}
                       </SelectItem>
@@ -255,33 +265,33 @@ export function OptionPriceRuleDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Base sell</Label>
+                <Label>{priceRuleMessages.baseSellInputLabel}</Label>
                 <Input {...form.register("baseSell")} type="number" step="0.01" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Base cost</Label>
+                <Label>{priceRuleMessages.baseCostInputLabel}</Label>
                 <Input {...form.register("baseCost")} type="number" step="0.01" min="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Code</Label>
-                <Input {...form.register("code")} placeholder="public-eur" />
+                <Label>{priceRuleMessages.codeLabel}</Label>
+                <Input {...form.register("code")} placeholder={priceRuleMessages.codePlaceholder} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Description</Label>
+                <Label>{priceRuleMessages.descriptionLabel}</Label>
                 <Input {...form.register("description")} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Min per booking</Label>
+                <Label>{priceRuleMessages.minPerBookingLabel}</Label>
                 <Input {...form.register("minPerBooking")} type="number" min="0" />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Max per booking</Label>
+                <Label>{priceRuleMessages.maxPerBookingLabel}</Label>
                 <Input {...form.register("maxPerBooking")} type="number" min="0" />
               </div>
             </div>
@@ -292,36 +302,36 @@ export function OptionPriceRuleDialog({
                   checked={form.watch("allPricingCategories")}
                   onCheckedChange={(v) => form.setValue("allPricingCategories", v)}
                 />
-                <Label>All categories</Label>
+                <Label>{priceRuleMessages.allCategoriesSwitchLabel}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("isDefault")}
                   onCheckedChange={(v) => form.setValue("isDefault", v)}
                 />
-                <Label>Default</Label>
+                <Label>{priceRuleMessages.defaultSwitchLabel}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={form.watch("active")}
                   onCheckedChange={(v) => form.setValue("active", v)}
                 />
-                <Label>Active</Label>
+                <Label>{priceRuleMessages.activeSwitchLabel}</Label>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
+              <Label>{priceRuleMessages.notesLabel}</Label>
               <Textarea {...form.register("notes")} />
             </div>
           </SheetBody>
           <SheetFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+              {productMessages.cancel}
             </Button>
             <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Rule"}
+              {isEditing ? productMessages.saveChanges : priceRuleMessages.create}
             </Button>
           </SheetFooter>
         </form>

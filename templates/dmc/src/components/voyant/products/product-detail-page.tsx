@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { formatMessage, useLocale } from "@voyantjs/voyant-admin"
 import {
   ArrowLeft,
   CalendarCheck,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { DayDialog } from "./product-day-dialog"
 import { DayRow } from "./product-detail-day-row"
@@ -33,6 +35,8 @@ import { VersionDialog } from "./product-version-dialog"
 export function ProductDetailPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { resolvedLocale } = useLocale()
+  const messages = useAdminMessages().products
   const [editOpen, setEditOpen] = useState(false)
   const [noteContent, setNoteContent] = useState("")
   const [dayDialogOpen, setDayDialogOpen] = useState(false)
@@ -49,6 +53,11 @@ export function ProductDetailPage({ id }: { id: string }) {
     getProductVersionsQueryOptions(id),
   )
   const { data: notesData, refetch: refetchNotes } = useQuery(getProductNotesQueryOptions(id))
+  const statusLabels: Record<"draft" | "active" | "archived", string> = {
+    draft: messages.statusDraft,
+    active: messages.statusActive,
+    archived: messages.statusArchived,
+  }
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete(`/v1/products/${id}`),
@@ -97,9 +106,9 @@ export function ProductDetailPage({ id }: { id: string }) {
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-muted-foreground">Product not found</p>
+        <p className="text-muted-foreground">{messages.notFound}</p>
         <Button variant="outline" onClick={() => void navigate({ to: "/products" })}>
-          Back to Products
+          {messages.backToProducts}
         </Button>
       </div>
     )
@@ -116,7 +125,7 @@ export function ProductDetailPage({ id }: { id: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant={statusVariant[product.status] ?? "secondary"} className="capitalize">
-              {product.status}
+              {statusLabels[product.status] ?? product.status}
             </Badge>
           </div>
         </div>
@@ -124,30 +133,30 @@ export function ProductDetailPage({ id }: { id: string }) {
           <Button
             variant="outline"
             onClick={() => {
-              if (confirm("Convert this product to a booking?")) convertToBookingMutation.mutate()
+              if (confirm(messages.convertToBookingConfirm)) convertToBookingMutation.mutate()
             }}
             disabled={convertToBookingMutation.isPending}
           >
             <CalendarCheck className="mr-2 h-4 w-4" />
-            Convert to Booking
+            {messages.convertToBooking}
           </Button>
           <Button variant="outline" onClick={() => setVersionDialogOpen(true)}>
             <History className="mr-2 h-4 w-4" />
-            Create Version
+            {messages.createVersionAction}
           </Button>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
-            Edit
+            {messages.editAction}
           </Button>
           <Button
             variant="destructive"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this product?")) deleteMutation.mutate()
+              if (confirm(messages.deleteConfirm)) deleteMutation.mutate()
             }}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {messages.deleteAction}
           </Button>
         </div>
       </div>
@@ -155,22 +164,22 @@ export function ProductDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Product Details</CardTitle>
+            <CardTitle>{messages.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             {product.description && (
               <div>
-                <span className="text-muted-foreground">Description:</span>{" "}
+                <span className="text-muted-foreground">{messages.descriptionDetailLabel}:</span>{" "}
                 <span>{product.description}</span>
               </div>
             )}
             <div>
-              <span className="text-muted-foreground">Sell Currency:</span>{" "}
+              <span className="text-muted-foreground">{messages.sellCurrencyLabel}:</span>{" "}
               <span>{product.sellCurrency}</span>
             </div>
             {product.sellAmountCents != null && (
               <div>
-                <span className="text-muted-foreground">Sell Amount:</span>{" "}
+                <span className="text-muted-foreground">{messages.columnSellAmount}:</span>{" "}
                 <span className="font-mono">
                   {formatAmount(product.sellAmountCents, product.sellCurrency)}
                 </span>
@@ -178,7 +187,7 @@ export function ProductDetailPage({ id }: { id: string }) {
             )}
             {product.costAmountCents != null && (
               <div>
-                <span className="text-muted-foreground">Cost Amount:</span>{" "}
+                <span className="text-muted-foreground">{messages.costAmountLabel}:</span>{" "}
                 <span className="font-mono">
                   {formatAmount(product.costAmountCents, product.sellCurrency)}
                 </span>
@@ -186,38 +195,39 @@ export function ProductDetailPage({ id }: { id: string }) {
             )}
             {product.marginPercent != null && (
               <div>
-                <span className="text-muted-foreground">Margin:</span>{" "}
+                <span className="text-muted-foreground">{messages.marginLabel}:</span>{" "}
                 <span className="font-mono">{formatMargin(product.marginPercent)}</span>
               </div>
             )}
             {product.pax && (
               <div>
-                <span className="text-muted-foreground">Travelers:</span> <span>{product.pax}</span>
+                <span className="text-muted-foreground">{messages.travelersLabel}:</span>{" "}
+                <span>{product.pax}</span>
               </div>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Trip Dates</CardTitle>
+            <CardTitle>{messages.tripDatesTitle}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Start Date:</span>{" "}
-              <span>{product.startDate ?? "TBD"}</span>
+              <span className="text-muted-foreground">{messages.startDateLabel}:</span>{" "}
+              <span>{product.startDate ?? messages.tbd}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">End Date:</span>{" "}
-              <span>{product.endDate ?? "TBD"}</span>
+              <span className="text-muted-foreground">{messages.endDateLabel}:</span>{" "}
+              <span>{product.endDate ?? messages.tbd}</span>
             </div>
             <div className="mt-2 border-t pt-3">
               <div>
-                <span className="text-muted-foreground">Created:</span>{" "}
-                <span>{new Date(product.createdAt).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">{messages.createdLabel}:</span>{" "}
+                <span>{new Date(product.createdAt).toLocaleDateString(resolvedLocale)}</span>
               </div>
               <div>
-                <span className="text-muted-foreground">Updated:</span>{" "}
-                <span>{new Date(product.updatedAt).toLocaleDateString()}</span>
+                <span className="text-muted-foreground">{messages.updatedLabel}:</span>{" "}
+                <span>{new Date(product.updatedAt).toLocaleDateString(resolvedLocale)}</span>
               </div>
             </div>
           </CardContent>
@@ -226,7 +236,7 @@ export function ProductDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Itinerary</CardTitle>
+          <CardTitle>{messages.itineraryTitle}</CardTitle>
           <Button
             size="sm"
             onClick={() => {
@@ -235,12 +245,12 @@ export function ProductDetailPage({ id }: { id: string }) {
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Day
+            {messages.addDayAction}
           </Button>
         </CardHeader>
         <CardContent>
           {(!daysData?.data || daysData.data.length === 0) && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No days yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{messages.noDays}</p>
           )}
           <div className="flex flex-col gap-2">
             {daysData?.data.map((day) => (
@@ -255,8 +265,7 @@ export function ProductDetailPage({ id }: { id: string }) {
                   setDayDialogOpen(true)
                 }}
                 onDelete={() => {
-                  if (confirm("Delete this day and all its services?"))
-                    deleteDayMutation.mutate(day.id)
+                  if (confirm(messages.dayDeleteConfirm)) deleteDayMutation.mutate(day.id)
                 }}
                 onAddService={() => {
                   setServiceDialogDayId(day.id)
@@ -269,7 +278,7 @@ export function ProductDetailPage({ id }: { id: string }) {
                   setServiceDialogOpen(true)
                 }}
                 onDeleteService={(serviceId) => {
-                  if (confirm("Delete this service?"))
+                  if (confirm(messages.serviceDeleteConfirm))
                     deleteServiceMutation.mutate(
                       { dayId: day.id, serviceId },
                       { onSuccess: () => void refetchDays() },
@@ -283,23 +292,25 @@ export function ProductDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Versions</CardTitle>
+          <CardTitle>{messages.versionsTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           {(!versionsData?.data || versionsData.data.length === 0) && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No versions yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{messages.noVersions}</p>
           )}
           {versionsData?.data.map((version) => (
             <div key={version.id} className="mb-2 flex items-center gap-4 rounded-md border p-3">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <div className="flex-1">
-                <span className="text-sm font-medium">Version {version.versionNumber}</span>
+                <span className="text-sm font-medium">
+                  {formatMessage(messages.versionLabel, { version: String(version.versionNumber) })}
+                </span>
                 {version.notes && (
                   <p className="mt-0.5 text-xs text-muted-foreground">{version.notes}</p>
                 )}
               </div>
               <span className="text-xs text-muted-foreground">
-                {new Date(version.createdAt).toLocaleString()}
+                {new Date(version.createdAt).toLocaleString(resolvedLocale)}
               </span>
             </div>
           ))}
@@ -308,12 +319,12 @@ export function ProductDetailPage({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>{messages.notesTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex gap-2">
             <Textarea
-              placeholder="Add a note..."
+              placeholder={messages.addNotePlaceholder}
               value={noteContent}
               onChange={(event) => setNoteContent(event.target.value)}
               className="min-h-[80px]"
@@ -323,17 +334,17 @@ export function ProductDetailPage({ id }: { id: string }) {
               disabled={!noteContent.trim() || addNoteMutation.isPending}
               onClick={() => addNoteMutation.mutate(noteContent.trim())}
             >
-              {addNoteMutation.isPending ? "Saving..." : "Add"}
+              {addNoteMutation.isPending ? messages.saving : messages.addNoteAction}
             </Button>
           </div>
           {notesData?.data.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No notes yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{messages.noNotes}</p>
           )}
           {notesData?.data.map((note) => (
             <div key={note.id} className="rounded-md border p-3">
               <p className="whitespace-pre-wrap text-sm">{note.content}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {new Date(note.createdAt).toLocaleString()}
+                {new Date(note.createdAt).toLocaleString(resolvedLocale)}
               </p>
             </div>
           ))}

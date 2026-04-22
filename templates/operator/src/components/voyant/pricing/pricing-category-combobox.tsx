@@ -1,6 +1,5 @@
 import { type PricingCategoryRecord, usePricingCategories } from "@voyantjs/pricing-react"
 import * as React from "react"
-
 import {
   Combobox,
   ComboboxCollection,
@@ -10,6 +9,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 type PricingCategoryComboboxProps = {
   value: string | null | undefined
@@ -23,9 +23,10 @@ const PAGE_SIZE = 25
 export function PricingCategoryCombobox({
   value,
   onChange,
-  placeholder = "Search pricing categories…",
+  placeholder,
   disabled,
 }: PricingCategoryComboboxProps) {
+  const messages = useAdminMessages()
   const [search, setSearch] = React.useState("")
   const { data, isPending } = usePricingCategories({
     search: search || undefined,
@@ -44,6 +45,7 @@ export function PricingCategoryCombobox({
     ? `${selected.name}${selected.code ? ` (${selected.code})` : ""}`
     : ""
   const [inputValue, setInputValue] = React.useState(selectedLabel)
+  const resolvedPlaceholder = placeholder ?? messages.pricing.categoryCombobox.placeholder
 
   React.useEffect(() => {
     if (selectedLabel) setInputValue(selectedLabel)
@@ -77,9 +79,13 @@ export function PricingCategoryCombobox({
         setInputValue(label)
       }}
     >
-      <ComboboxInput placeholder={placeholder} showClear={!!value} />
+      <ComboboxInput placeholder={resolvedPlaceholder} showClear={!!value} />
       <ComboboxContent>
-        <ComboboxEmpty>{isPending ? "Loading…" : "No pricing categories found."}</ComboboxEmpty>
+        <ComboboxEmpty>
+          {isPending
+            ? messages.pricing.categoryCombobox.loading
+            : messages.pricing.categoryCombobox.empty}
+        </ComboboxEmpty>
         <ComboboxList>
           <ComboboxCollection>
             {(id) => {

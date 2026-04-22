@@ -14,12 +14,12 @@ describe.skipIf(!DB_AVAILABLE)("Public booking requirement routes", () => {
 
     await createRequirement({
       fieldKey: "passport_number",
-      scope: "participant",
+      scope: "traveler",
       isRequired: true,
     })
     await createRequirement({
       fieldKey: "passport_expiry",
-      scope: "participant",
+      scope: "traveler",
       isRequired: true,
     })
     await createRequirement({
@@ -42,7 +42,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking requirement routes", () => {
     expect(body.data.requiresPassport).toBe(true)
     expect(body.data.requiresPassengerDocuments).toBe(true)
     expect(body.data.requiredFields).toEqual(["nationality", "passport_expiry", "passport_number"])
-    expect(body.data.fieldsByScope.participant).toEqual(["passport_expiry", "passport_number"])
+    expect(body.data.fieldsByScope.traveler).toEqual(["passport_expiry", "passport_number"])
     expect(body.data.fieldsByScope.lead_traveler).toEqual(["nationality"])
     expect(body.data.requirements).toHaveLength(3)
   })
@@ -53,7 +53,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking requirement routes", () => {
       ...json({
         productId: ctx.productId(),
         fieldKey: "date_of_birth",
-        scope: "participant",
+        scope: "traveler",
         isRequired: true,
       }),
     })
@@ -63,7 +63,7 @@ describe.skipIf(!DB_AVAILABLE)("Public booking requirement routes", () => {
         productId: ctx.productId(),
         optionId: ctx.optionId(),
         fieldKey: "passport_number",
-        scope: "participant",
+        scope: "traveler",
         isRequired: true,
       }),
     })

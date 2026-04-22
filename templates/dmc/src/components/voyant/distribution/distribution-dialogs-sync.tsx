@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
@@ -20,6 +20,7 @@ import {
   Switch,
 } from "@/components/ui"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type {
@@ -31,14 +32,20 @@ import type {
 } from "./distribution-shared"
 import { nullableString, toIsoDateTime, toLocalDateTimeInput } from "./distribution-shared"
 
-const mappingFormSchema = z.object({
-  channelId: z.string().min(1, "Channel is required"),
-  productId: z.string().min(1, "Product is required"),
-  externalProductId: z.string().min(1, "External product ID is required"),
-  externalRateId: z.string().optional(),
-  externalCategoryId: z.string().optional(),
-  active: z.boolean(),
-})
+function createMappingFormSchema(
+  channelRequired: string,
+  productRequired: string,
+  externalProductIdRequired: string,
+) {
+  return z.object({
+    channelId: z.string().min(1, channelRequired),
+    productId: z.string().min(1, productRequired),
+    externalProductId: z.string().min(1, externalProductIdRequired),
+    externalRateId: z.string().optional(),
+    externalCategoryId: z.string().optional(),
+    active: z.boolean(),
+  })
+}
 
 export function ChannelProductMappingDialog({
   open,
@@ -55,6 +62,21 @@ export function ChannelProductMappingDialog({
   products: ProductOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.distribution.dialogs.mapping
+  const mappingFormSchema = useMemo(
+    () =>
+      createMappingFormSchema(
+        dialogMessages.validation.channelRequired,
+        dialogMessages.validation.productRequired,
+        dialogMessages.validation.externalProductIdRequired,
+      ),
+    [
+      dialogMessages.validation.channelRequired,
+      dialogMessages.validation.productRequired,
+      dialogMessages.validation.externalProductIdRequired,
+    ],
+  )
   const form = useForm({
     resolver: zodResolver(mappingFormSchema),
     defaultValues: {
@@ -106,18 +128,21 @@ export function ChannelProductMappingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Product Mapping" : "New Product Mapping"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.createTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Channel</Label>
+              <Label>{dialogMessages.labels.channel}</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select channel" />
+                  <SelectValue placeholder={dialogMessages.placeholders.selectChannel} />
                 </SelectTrigger>
                 <SelectContent>
                   {channels.map((channel) => (
@@ -129,13 +154,14 @@ export function ChannelProductMappingDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>{dialogMessages.labels.product}</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
+                  <SelectValue placeholder={dialogMessages.placeholders.selectProduct} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
@@ -148,23 +174,32 @@ export function ChannelProductMappingDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>External Product ID</Label>
-                <Input {...form.register("externalProductId")} placeholder="fh_12345" />
+                <Label>{dialogMessages.labels.externalProductId}</Label>
+                <Input
+                  {...form.register("externalProductId")}
+                  placeholder={dialogMessages.placeholders.externalProductId}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>External Rate ID</Label>
-                <Input {...form.register("externalRateId")} placeholder="adult" />
+                <Label>{dialogMessages.labels.externalRateId}</Label>
+                <Input
+                  {...form.register("externalRateId")}
+                  placeholder={dialogMessages.placeholders.externalRateId}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>External Category ID</Label>
-                <Input {...form.register("externalCategoryId")} placeholder="high-season" />
+                <Label>{dialogMessages.labels.externalCategoryId}</Label>
+                <Input
+                  {...form.register("externalCategoryId")}
+                  placeholder={dialogMessages.placeholders.externalCategoryId}
+                />
               </div>
             </div>
             <div className="flex items-center justify-between rounded-md border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
+                <p className="text-sm font-medium">{dialogMessages.labels.active}</p>
                 <p className="text-xs text-muted-foreground">
-                  Include this mapping in outbound sync and reconciliation.
+                  {dialogMessages.labels.activeDescription}
                 </p>
               </div>
               <Switch
@@ -175,11 +210,11 @@ export function ChannelProductMappingDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.actions.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Mapping" : "Create Mapping"}
+              {isEditing ? dialogMessages.actions.save : dialogMessages.actions.create}
             </Button>
           </DialogFooter>
         </form>
@@ -188,15 +223,17 @@ export function ChannelProductMappingDialog({
   )
 }
 
-const bookingLinkFormSchema = z.object({
-  channelId: z.string().min(1, "Channel is required"),
-  bookingId: z.string().min(1, "Booking is required"),
-  externalBookingId: z.string().optional(),
-  externalReference: z.string().optional(),
-  externalStatus: z.string().optional(),
-  bookedAtExternal: z.string().optional(),
-  lastSyncedAt: z.string().optional(),
-})
+function createBookingLinkFormSchema(channelRequired: string, bookingRequired: string) {
+  return z.object({
+    channelId: z.string().min(1, channelRequired),
+    bookingId: z.string().min(1, bookingRequired),
+    externalBookingId: z.string().optional(),
+    externalReference: z.string().optional(),
+    externalStatus: z.string().optional(),
+    bookedAtExternal: z.string().optional(),
+    lastSyncedAt: z.string().optional(),
+  })
+}
 
 export function ChannelBookingLinkDialog({
   open,
@@ -213,6 +250,16 @@ export function ChannelBookingLinkDialog({
   bookings: BookingOption[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.distribution.dialogs.bookingLink
+  const bookingLinkFormSchema = useMemo(
+    () =>
+      createBookingLinkFormSchema(
+        dialogMessages.validation.channelRequired,
+        dialogMessages.validation.bookingRequired,
+      ),
+    [dialogMessages.validation.bookingRequired, dialogMessages.validation.channelRequired],
+  )
   const form = useForm({
     resolver: zodResolver(bookingLinkFormSchema),
     defaultValues: {
@@ -267,18 +314,21 @@ export function ChannelBookingLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Booking Link" : "New Booking Link"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.createTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Channel</Label>
+              <Label>{dialogMessages.labels.channel}</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select channel" />
+                  <SelectValue placeholder={dialogMessages.placeholders.selectChannel} />
                 </SelectTrigger>
                 <SelectContent>
                   {channels.map((channel) => (
@@ -290,13 +340,17 @@ export function ChannelBookingLinkDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Booking</Label>
+              <Label>{dialogMessages.labels.booking}</Label>
               <Select
+                items={bookings.map((booking) => ({
+                  label: booking.bookingNumber,
+                  value: booking.id,
+                }))}
                 value={form.watch("bookingId")}
                 onValueChange={(value) => form.setValue("bookingId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select booking" />
+                  <SelectValue placeholder={dialogMessages.placeholders.selectBooking} />
                 </SelectTrigger>
                 <SelectContent>
                   {bookings.map((booking) => (
@@ -309,19 +363,28 @@ export function ChannelBookingLinkDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>External Booking ID</Label>
-                <Input {...form.register("externalBookingId")} placeholder="123456" />
+                <Label>{dialogMessages.labels.externalBookingId}</Label>
+                <Input
+                  {...form.register("externalBookingId")}
+                  placeholder={dialogMessages.placeholders.externalBookingId}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>External Reference</Label>
-                <Input {...form.register("externalReference")} placeholder="OTA-REF-002" />
+                <Label>{dialogMessages.labels.externalReference}</Label>
+                <Input
+                  {...form.register("externalReference")}
+                  placeholder={dialogMessages.placeholders.externalReference}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>External Status</Label>
-                <Input {...form.register("externalStatus")} placeholder="confirmed" />
+                <Label>{dialogMessages.labels.externalStatus}</Label>
+                <Input
+                  {...form.register("externalStatus")}
+                  placeholder={dialogMessages.placeholders.externalStatus}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Booked At External</Label>
+                <Label>{dialogMessages.labels.bookedAtExternal}</Label>
                 <DateTimePicker
                   value={form.watch("bookedAtExternal") || null}
                   onChange={(next) =>
@@ -330,12 +393,12 @@ export function ChannelBookingLinkDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select booking date & time"
+                  placeholder={dialogMessages.placeholders.bookedAtExternal}
                   className="w-full"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Last Synced At</Label>
+                <Label>{dialogMessages.labels.lastSyncedAt}</Label>
                 <DateTimePicker
                   value={form.watch("lastSyncedAt") || null}
                   onChange={(next) =>
@@ -344,7 +407,7 @@ export function ChannelBookingLinkDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select last sync date & time"
+                  placeholder={dialogMessages.placeholders.lastSyncedAt}
                   className="w-full"
                 />
               </div>
@@ -352,11 +415,11 @@ export function ChannelBookingLinkDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.actions.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Booking Link" : "Create Booking Link"}
+              {isEditing ? dialogMessages.actions.save : dialogMessages.actions.create}
             </Button>
           </DialogFooter>
         </form>

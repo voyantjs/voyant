@@ -17,18 +17,27 @@ export function useProductDayMutation() {
   const queryClient = useQueryClient()
 
   const create = useMutation({
-    mutationFn: async ({ productId, ...input }: CreateProductDayInput & { productId: string }) => {
+    mutationFn: async ({
+      productId,
+      itineraryId,
+      ...input
+    }: CreateProductDayInput & { productId: string; itineraryId?: string }) => {
       const { data } = await fetchWithValidation(
-        `/v1/products/${productId}/days`,
+        itineraryId
+          ? `/v1/products/${productId}/itineraries/${itineraryId}/days`
+          : `/v1/products/${productId}/days`,
         productDayResponse,
         { baseUrl, fetcher },
         { method: "POST", body: JSON.stringify(input) },
       )
       return data
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       await queryClient.invalidateQueries({
-        queryKey: productsQueryKeys.productDays(data.productId),
+        queryKey: productsQueryKeys.productDays(variables.productId),
+      })
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.productItineraryDays(variables.productId, data.itineraryId),
       })
     },
   })
@@ -51,15 +60,25 @@ export function useProductDayMutation() {
       )
       return data
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       await queryClient.invalidateQueries({
-        queryKey: productsQueryKeys.productDays(data.productId),
+        queryKey: productsQueryKeys.productDays(variables.productId),
+      })
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.productItineraryDays(variables.productId, data.itineraryId),
       })
     },
   })
 
   const remove = useMutation({
-    mutationFn: async ({ productId, dayId }: { productId: string; dayId: string }) =>
+    mutationFn: async ({
+      productId,
+      dayId,
+    }: {
+      productId: string
+      dayId: string
+      itineraryId?: string
+    }) =>
       fetchWithValidation(
         `/v1/products/${productId}/days/${dayId}`,
         successEnvelope,
@@ -70,6 +89,14 @@ export function useProductDayMutation() {
       await queryClient.invalidateQueries({
         queryKey: productsQueryKeys.productDays(variables.productId),
       })
+      if (variables.itineraryId) {
+        await queryClient.invalidateQueries({
+          queryKey: productsQueryKeys.productItineraryDays(
+            variables.productId,
+            variables.itineraryId,
+          ),
+        })
+      }
     },
   })
 

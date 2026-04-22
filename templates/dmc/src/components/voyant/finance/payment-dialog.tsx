@@ -1,6 +1,6 @@
 import { useInvoicePaymentMutation } from "@voyantjs/finance-react"
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
@@ -21,20 +21,23 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { type AdminMessages, useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-const paymentFormSchema = z.object({
-  amountCents: z.coerce.number().int().min(1, "Amount must be at least 1"),
-  currency: z.string().min(3).max(3),
-  paymentMethod: z.enum(["bank_transfer", "credit_card", "cash", "cheque", "other"]),
-  status: z.enum(["pending", "completed", "failed", "refunded"]),
-  referenceNumber: z.string().optional().nullable(),
-  paymentDate: z.string().min(1, "Payment date is required"),
-  notes: z.string().optional().nullable(),
-})
+function getPaymentFormSchema(messages: AdminMessages) {
+  return z.object({
+    amountCents: z.coerce.number().int().min(1, messages.finance.paymentDialog.validationAmountMin),
+    currency: z.string().min(3).max(3),
+    paymentMethod: z.enum(["bank_transfer", "credit_card", "cash", "cheque", "other"]),
+    status: z.enum(["pending", "completed", "failed", "refunded"]),
+    referenceNumber: z.string().optional().nullable(),
+    paymentDate: z.string().min(1, messages.finance.paymentDialog.validationPaymentDateRequired),
+    notes: z.string().optional().nullable(),
+  })
+}
 
-type PaymentFormValues = z.input<typeof paymentFormSchema>
-type PaymentFormOutput = z.output<typeof paymentFormSchema>
+type PaymentFormValues = z.input<ReturnType<typeof getPaymentFormSchema>>
+type PaymentFormOutput = z.output<ReturnType<typeof getPaymentFormSchema>>
 
 export interface PaymentDialogProps {
   open: boolean
@@ -44,21 +47,6 @@ export interface PaymentDialogProps {
   onSuccess?: () => void
 }
 
-const PAYMENT_METHODS = [
-  { value: "bank_transfer", label: "Bank Transfer" },
-  { value: "credit_card", label: "Credit Card" },
-  { value: "cash", label: "Cash" },
-  { value: "cheque", label: "Cheque" },
-  { value: "other", label: "Other" },
-] as const
-
-const PAYMENT_STATUSES = [
-  { value: "pending", label: "Pending" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "refunded", label: "Refunded" },
-] as const
-
 export function PaymentDialog({
   open,
   onOpenChange,
@@ -66,7 +54,30 @@ export function PaymentDialog({
   invoiceCurrency,
   onSuccess,
 }: PaymentDialogProps) {
+  const messages = useAdminMessages()
   const createPayment = useInvoicePaymentMutation(invoiceId)
+  const paymentFormSchema = useMemo(() => getPaymentFormSchema(messages), [messages])
+  const paymentMethods = useMemo(
+    () =>
+      [
+        { value: "bank_transfer", label: messages.finance.paymentMethodBankTransfer },
+        { value: "credit_card", label: messages.finance.paymentMethodCreditCard },
+        { value: "cash", label: messages.finance.paymentMethodCash },
+        { value: "cheque", label: messages.finance.paymentMethodCheque },
+        { value: "other", label: messages.finance.paymentMethodOther },
+      ] as const,
+    [messages],
+  )
+  const paymentStatuses = useMemo(
+    () =>
+      [
+        { value: "pending", label: messages.finance.paymentStatusPending },
+        { value: "completed", label: messages.finance.paymentStatusCompleted },
+        { value: "failed", label: messages.finance.paymentStatusFailed },
+        { value: "refunded", label: messages.finance.paymentStatusRefunded },
+      ] as const,
+    [messages],
+  )
 
   const form = useForm<PaymentFormValues, unknown, PaymentFormOutput>({
     resolver: zodResolver(paymentFormSchema),
@@ -115,13 +126,13 @@ export function PaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Record Payment</DialogTitle>
+          <DialogTitle>{messages.finance.paymentDialog.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Amount (cents)</Label>
+                <Label>{messages.finance.paymentDialog.amountLabel}</Label>
                 <Input {...form.register("amountCents")} type="number" min="1" />
                 {form.formState.errors.amountCents ? (
                   <p className="text-xs text-destructive">
@@ -130,7 +141,7 @@ export function PaymentDialog({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Currency</Label>
+                <Label>{messages.finance.paymentDialog.currencyLabel}</Label>
                 <Input
                   {...form.register("currency")}
                   placeholder="EUR"
@@ -142,8 +153,9 @@ export function PaymentDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Payment Method</Label>
+                <Label>{messages.finance.paymentDialog.paymentMethodLabel}</Label>
                 <Select
+                  items={paymentMethods}
                   value={form.watch("paymentMethod")}
                   onValueChange={(value) =>
                     form.setValue("paymentMethod", value as PaymentFormValues["paymentMethod"])
@@ -153,7 +165,7 @@ export function PaymentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
+                    {paymentMethods.map((method) => (
                       <SelectItem key={method.value} value={method.value}>
                         {method.label}
                       </SelectItem>
@@ -162,8 +174,9 @@ export function PaymentDialog({
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Status</Label>
+                <Label>{messages.finance.paymentDialog.statusLabel}</Label>
                 <Select
+                  items={paymentStatuses}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as PaymentFormValues["status"])
@@ -173,7 +186,7 @@ export function PaymentDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_STATUSES.map((status) => (
+                    {paymentStatuses.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
                       </SelectItem>
@@ -185,7 +198,7 @@ export function PaymentDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Payment Date</Label>
+                <Label>{messages.finance.paymentDialog.paymentDateLabel}</Label>
                 <Input {...form.register("paymentDate")} type="date" />
                 {form.formState.errors.paymentDate ? (
                   <p className="text-xs text-destructive">
@@ -194,23 +207,29 @@ export function PaymentDialog({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Reference Number</Label>
-                <Input {...form.register("referenceNumber")} placeholder="TXN-12345" />
+                <Label>{messages.finance.paymentDialog.referenceNumberLabel}</Label>
+                <Input
+                  {...form.register("referenceNumber")}
+                  placeholder={messages.finance.paymentDialog.referenceNumberPlaceholder}
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes</Label>
-              <Textarea {...form.register("notes")} placeholder="Payment notes..." />
+              <Label>{messages.finance.paymentDialog.notesLabel}</Label>
+              <Textarea
+                {...form.register("notes")}
+                placeholder={messages.finance.paymentDialog.notesPlaceholder}
+              />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {messages.finance.paymentDialog.cancel}
             </Button>
             <Button type="submit" disabled={createPayment.isPending}>
               {createPayment.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Record Payment
+              {messages.finance.paymentDialog.submit}
             </Button>
           </DialogFooter>
         </form>

@@ -131,9 +131,10 @@ describe("sellabilityService.constructOffer", () => {
 
     const createOfferBundle = vi.spyOn(transactionsService, "createOfferBundle").mockResolvedValue({
       offer: { id: "offer_1", offerNumber: "OFF-1" } as never,
-      participants: [] as never[],
+      travelers: [] as never[],
+      contactAssignments: [] as never[],
       items: [] as never[],
-      itemParticipants: [] as never[],
+      itemTravelers: [] as never[],
     })
     const updateOffer = vi.spyOn(transactionsService, "updateOffer").mockResolvedValue({
       id: "offer_1",
@@ -185,10 +186,12 @@ describe("sellabilityService.constructOffer", () => {
           travelerCategory: "child",
           assignToAllItems: true,
         },
+      ],
+      contactAssignments: [
         {
           firstName: "Mihai",
           lastName: "Booker",
-          participantType: "booker",
+          role: "primary_contact",
           isPrimary: true,
           email: "mihai@example.com",
         },
@@ -243,11 +246,24 @@ describe("sellabilityService.constructOffer", () => {
       totalSellAmountCents: 2000,
     })
 
-    expect(payload.itemParticipants).toEqual([
+    expect(payload.itemTravelers).toEqual([
       { itemIndex: 0, participantIndex: 0, role: "traveler", isPrimary: false },
       { itemIndex: 0, participantIndex: 1, role: "traveler", isPrimary: false },
       { itemIndex: 1, participantIndex: 1, role: "traveler", isPrimary: false },
-      { itemIndex: 0, participantIndex: 2, role: "primary_contact", isPrimary: true },
+    ])
+    expect(payload.contactAssignments).toEqual([
+      {
+        itemIndex: 0,
+        role: "primary_contact",
+        personId: null,
+        firstName: "Mihai",
+        lastName: "Booker",
+        email: "mihai@example.com",
+        phone: null,
+        preferredLanguage: null,
+        isPrimary: true,
+        notes: null,
+      },
     ])
     expect(result?.snapshot.id).toBe("sell_snap_1")
   })

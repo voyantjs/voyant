@@ -11,6 +11,7 @@ import {
   optionUnits,
   productDayServices,
   productDays,
+  productItineraries,
   productLocations,
   productMedia,
   productOptions,
@@ -56,6 +57,15 @@ describe.skipIf(!DB_AVAILABLE)("Storefront public routes", () => {
         productId: product.id,
         name: "Standard Cabin",
         status: "active",
+        isDefault: true,
+      })
+      .returning()
+
+    const [_defaultItinerary] = await db
+      .insert(productItineraries)
+      .values({
+        productId: product.id,
+        name: "Main itinerary",
         isDefault: true,
       })
       .returning()
@@ -128,6 +138,7 @@ describe.skipIf(!DB_AVAILABLE)("Storefront public routes", () => {
       .insert(availabilitySlots)
       .values({
         productId: product.id,
+        itineraryId: defaultItinerary.id,
         optionId: option.id,
         startTimeId: startTime.id,
         dateLocal: "2026-08-01",
@@ -149,7 +160,7 @@ describe.skipIf(!DB_AVAILABLE)("Storefront public routes", () => {
         {
           id: slot.id,
           productId: product.id,
-          itineraryId: slot.id,
+          itineraryId: defaultItinerary.id,
           optionId: option.id,
           dateLocal: "2026-08-01",
           startAt: "2026-08-01T05:30:00.000Z",
@@ -221,6 +232,15 @@ describe.skipIf(!DB_AVAILABLE)("Storefront public routes", () => {
         productId: product.id,
         name: "Standard",
         status: "active",
+        isDefault: true,
+      })
+      .returning()
+
+    const [_defaultItinerary] = await db
+      .insert(productItineraries)
+      .values({
+        productId: product.id,
+        name: "Main itinerary",
         isDefault: true,
       })
       .returning()
@@ -421,7 +441,7 @@ describe.skipIf(!DB_AVAILABLE)("Storefront public routes", () => {
     const [dayOne] = await db
       .insert(productDays)
       .values({
-        productId: product.id,
+        itineraryId: defaultItinerary.id,
         dayNumber: 1,
         title: "Arrival",
         description: "Transfer and welcome dinner.",

@@ -6,6 +6,7 @@ import {
   getSupplierServicesQueryOptions,
 } from "@/components/voyant/suppliers/shared"
 import { SupplierDetailPage } from "@/components/voyant/suppliers/supplier-detail-page"
+import { SupplierDetailSkeleton } from "@/components/voyant/suppliers/supplier-detail-skeleton"
 
 export const Route = createFileRoute("/_workspace/suppliers/$id")({
   loader: async ({ context, params }) => {
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_workspace/suppliers/$id")({
       ),
     ])
   },
+  pendingComponent: SupplierDetailSkeleton,
   component: SupplierDetailRoute,
 })
 

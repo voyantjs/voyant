@@ -6,6 +6,7 @@ import {
   getDashboardProductsQueryOptions,
   getDashboardSuppliersQueryOptions,
 } from "@/components/voyant/dashboard/dashboard-shared"
+import { DashboardSkeleton } from "@/components/voyant/dashboard/dashboard-skeleton"
 
 export const Route = createFileRoute("/_workspace/")({
   loader: ({ context }) =>
@@ -15,5 +16,6 @@ export const Route = createFileRoute("/_workspace/")({
       context.queryClient.ensureQueryData(getDashboardSuppliersQueryOptions()),
       context.queryClient.ensureQueryData(getDashboardInvoicesQueryOptions()),
     ]),
+  pendingComponent: DashboardSkeleton,
   component: DashboardPage,
 })

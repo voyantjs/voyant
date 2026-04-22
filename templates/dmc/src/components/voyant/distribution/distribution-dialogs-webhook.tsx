@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import {
@@ -20,6 +20,7 @@ import {
   Textarea,
 } from "@/components/ui"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
 import { zodResolver } from "@/lib/zod-resolver"
 import type { ChannelRow, ChannelWebhookEventRow } from "./distribution-shared"
@@ -31,16 +32,22 @@ import {
   webhookStatusOptions,
 } from "./distribution-shared"
 
-const webhookFormSchema = z.object({
-  channelId: z.string().min(1, "Channel is required"),
-  eventType: z.string().min(1, "Event type is required"),
-  externalEventId: z.string().optional(),
-  payloadJson: z.string().min(2, "Payload JSON is required"),
-  receivedAt: z.string().optional(),
-  processedAt: z.string().optional(),
-  status: z.enum(["pending", "processed", "failed", "ignored"]),
-  errorMessage: z.string().optional(),
-})
+function createWebhookFormSchema(
+  channelRequired: string,
+  eventTypeRequired: string,
+  payloadJsonRequired: string,
+) {
+  return z.object({
+    channelId: z.string().min(1, channelRequired),
+    eventType: z.string().min(1, eventTypeRequired),
+    externalEventId: z.string().optional(),
+    payloadJson: z.string().min(2, payloadJsonRequired),
+    receivedAt: z.string().optional(),
+    processedAt: z.string().optional(),
+    status: z.enum(["pending", "processed", "failed", "ignored"]),
+    errorMessage: z.string().optional(),
+  })
+}
 
 export function ChannelWebhookEventDialog({
   open,
@@ -55,6 +62,21 @@ export function ChannelWebhookEventDialog({
   channels: ChannelRow[]
   onSuccess: () => void
 }) {
+  const messages = useAdminMessages()
+  const dialogMessages = messages.distribution.dialogs.webhook
+  const webhookFormSchema = useMemo(
+    () =>
+      createWebhookFormSchema(
+        dialogMessages.validation.channelRequired,
+        dialogMessages.validation.eventTypeRequired,
+        dialogMessages.validation.payloadJsonRequired,
+      ),
+    [
+      dialogMessages.validation.channelRequired,
+      dialogMessages.validation.eventTypeRequired,
+      dialogMessages.validation.payloadJsonRequired,
+    ],
+  )
   const form = useForm({
     resolver: zodResolver(webhookFormSchema),
     defaultValues: {
@@ -112,18 +134,21 @@ export function ChannelWebhookEventDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Webhook Event" : "New Webhook Event"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? dialogMessages.editTitle : dialogMessages.createTitle}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogBody className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Channel</Label>
+              <Label>{dialogMessages.labels.channel}</Label>
               <Select
+                items={channels.map((channel) => ({ label: channel.name, value: channel.id }))}
                 value={form.watch("channelId")}
                 onValueChange={(value) => form.setValue("channelId", value ?? "")}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select channel" />
+                  <SelectValue placeholder={dialogMessages.placeholders.selectChannel} />
                 </SelectTrigger>
                 <SelectContent>
                   {channels.map((channel) => (
@@ -136,16 +161,23 @@ export function ChannelWebhookEventDialog({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Event Type</Label>
-                <Input {...form.register("eventType")} placeholder="booking.updated" />
+                <Label>{dialogMessages.labels.eventType}</Label>
+                <Input
+                  {...form.register("eventType")}
+                  placeholder={dialogMessages.placeholders.eventType}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>External Event ID</Label>
-                <Input {...form.register("externalEventId")} placeholder="evt_123" />
+                <Label>{dialogMessages.labels.externalEventId}</Label>
+                <Input
+                  {...form.register("externalEventId")}
+                  placeholder={dialogMessages.placeholders.externalEventId}
+                />
               </div>
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label>{dialogMessages.labels.status}</Label>
                 <Select
+                  items={webhookStatusOptions}
                   value={form.watch("status")}
                   onValueChange={(value) =>
                     form.setValue("status", value as ChannelWebhookEventRow["status"])
@@ -157,14 +189,14 @@ export function ChannelWebhookEventDialog({
                   <SelectContent>
                     {webhookStatusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {messages.distribution.values.webhookStatus[option.value] ?? option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Received At</Label>
+                <Label>{dialogMessages.labels.receivedAt}</Label>
                 <DateTimePicker
                   value={form.watch("receivedAt") || null}
                   onChange={(next) =>
@@ -173,12 +205,12 @@ export function ChannelWebhookEventDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select received date & time"
+                  placeholder={dialogMessages.placeholders.receivedAt}
                   className="w-full"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Processed At</Label>
+                <Label>{dialogMessages.labels.processedAt}</Label>
                 <DateTimePicker
                   value={form.watch("processedAt") || null}
                   onChange={(next) =>
@@ -187,30 +219,30 @@ export function ChannelWebhookEventDialog({
                       shouldDirty: true,
                     })
                   }
-                  placeholder="Select processed date & time"
+                  placeholder={dialogMessages.placeholders.processedAt}
                   className="w-full"
                 />
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Payload JSON</Label>
+              <Label>{dialogMessages.labels.payloadJson}</Label>
               <Textarea {...form.register("payloadJson")} className="min-h-40 font-mono text-xs" />
             </div>
             <div className="grid gap-2">
-              <Label>Error Message</Label>
+              <Label>{dialogMessages.labels.errorMessage}</Label>
               <Textarea
                 {...form.register("errorMessage")}
-                placeholder="Optional processor failure details..."
+                placeholder={dialogMessages.placeholders.errorMessage}
               />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {dialogMessages.actions.cancel}
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Webhook Event" : "Create Webhook Event"}
+              {isEditing ? dialogMessages.actions.save : dialogMessages.actions.create}
             </Button>
           </DialogFooter>
         </form>

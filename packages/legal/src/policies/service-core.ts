@@ -120,7 +120,6 @@ export const policiesCoreService = {
           version: nextVersion,
           status: "draft",
           title: data.title,
-          bodyFormat: data.bodyFormat,
           body: data.body ?? null,
           publishedBy: data.publishedBy ?? null,
           metadata: data.metadata ?? null,

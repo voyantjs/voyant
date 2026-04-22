@@ -16,7 +16,7 @@ describe.skipIf(!DB_AVAILABLE)("Contact requirement routes", () => {
       expect(res.status).toBe(201)
       const body = await res.json()
       expect(body.data.fieldKey).toBe("email")
-      expect(body.data.scope).toBe("participant")
+      expect(body.data.scope).toBe("traveler")
       expect(body.data.active).toBe(true)
       expect(body.data.id).toBeTruthy()
     })

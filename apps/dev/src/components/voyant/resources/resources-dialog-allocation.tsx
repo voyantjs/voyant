@@ -125,6 +125,7 @@ export function ResourceAllocationDialog({
             <div className="grid gap-2">
               <Label>Pool</Label>
               <Select
+                items={pools.map((pool) => ({ label: pool.name, value: pool.id }))}
                 value={form.watch("poolId")}
                 onValueChange={(value) => form.setValue("poolId", value ?? "")}
               >
@@ -143,6 +144,7 @@ export function ResourceAllocationDialog({
             <div className="grid gap-2">
               <Label>Product</Label>
               <Select
+                items={products.map((product) => ({ label: product.name, value: product.id }))}
                 value={form.watch("productId")}
                 onValueChange={(value) => form.setValue("productId", value ?? "")}
               >
@@ -162,6 +164,13 @@ export function ResourceAllocationDialog({
               <div className="grid gap-2">
                 <Label>Rule</Label>
                 <Select
+                  items={[
+                    { label: "No rule", value: NONE_VALUE },
+                    ...filteredRules.map((rule) => ({
+                      label: rule.recurrenceRule,
+                      value: rule.id,
+                    })),
+                  ]}
                   value={form.watch("availabilityRuleId")}
                   onValueChange={(value) =>
                     form.setValue("availabilityRuleId", value ?? NONE_VALUE)
@@ -183,6 +192,13 @@ export function ResourceAllocationDialog({
               <div className="grid gap-2">
                 <Label>Start Time</Label>
                 <Select
+                  items={[
+                    { label: "No start time", value: NONE_VALUE },
+                    ...filteredStartTimes.map((startTime) => ({
+                      label: startTime.label ?? startTime.startTimeLocal,
+                      value: startTime.id,
+                    })),
+                  ]}
                   value={form.watch("startTimeId")}
                   onValueChange={(value) => form.setValue("startTimeId", value ?? NONE_VALUE)}
                 >
@@ -210,6 +226,7 @@ export function ResourceAllocationDialog({
               <div className="grid gap-2">
                 <Label>Allocation Mode</Label>
                 <Select
+                  items={allocationModeOptions}
                   value={form.watch("allocationMode")}
                   onValueChange={(value) =>
                     form.setValue(

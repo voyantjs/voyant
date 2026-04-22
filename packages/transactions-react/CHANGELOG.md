@@ -1,5 +1,13 @@
 # @voyantjs/transactions-react
 
+## 0.6.9
+
+### Patch Changes
+
+- Updated dependencies [7619ef0]
+  - @voyantjs/react@0.6.9
+  - @voyantjs/transactions@0.6.9
+
 ## 0.6.8
 
 ### Patch Changes

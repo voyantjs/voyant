@@ -1,7 +1,7 @@
 {
   "name": "@voyantjs/workflows",
-  "version": "0.6.8",
-  "description": "Authoring SDK for Voyant Workflows \u2014 durable, step-based orchestrations for Voyant Cloud.",
+  "version": "0.6.9",
+  "description": "Authoring SDK for Voyant Workflows — durable, step-based orchestrations for Voyant Cloud.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

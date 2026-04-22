@@ -1,7 +1,7 @@
 {
   "name": "@voyantjs/workflows-bindings",
-  "version": "0.6.8",
-  "description": "Binding shim for KV, R2, D1, Queues \u2014 native CF bindings on edge, HTTPS fallbacks on container.",
+  "version": "0.6.9",
+  "description": "Binding shim for KV, R2, D1, Queues — native CF bindings on edge, HTTPS fallbacks on container.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

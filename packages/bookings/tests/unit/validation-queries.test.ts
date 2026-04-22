@@ -33,7 +33,7 @@ describe("Booking document schema", () => {
     expect(result.type).toBe("visa")
     expect(result.fileName).toBe("visa.pdf")
     expect(result.fileUrl).toBe("https://example.com/visa.pdf")
-    expect(result.participantId).toBe("bkpt_123")
+    expect(result.travelerId).toBe("bkpt_123")
   })
 
   it("accepts valid document types", () => {

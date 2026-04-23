@@ -10,6 +10,7 @@ import {
   optionUnitsRef,
   productDayServicesRef,
   productDaysRef,
+  productItinerariesRef,
   productOptionsRef,
   productsRef,
   productTicketSettingsRef,
@@ -490,10 +491,15 @@ async function getConvertProductData(
     option = defaultOption ?? null
   }
 
+  // product_days is keyed by itinerary_id (products re-parented days onto
+  // product_itineraries); getConvertProductData joins through the itinerary
+  // ref so the per-product day lookup still works for converts that want to
+  // seed booking supplier statuses from the product's day services.
   const days = await db
-    .select()
+    .select({ id: productDaysRef.id, dayNumber: productDaysRef.dayNumber })
     .from(productDaysRef)
-    .where(eq(productDaysRef.productId, product.id))
+    .innerJoin(productItinerariesRef, eq(productDaysRef.itineraryId, productItinerariesRef.id))
+    .where(eq(productItinerariesRef.productId, product.id))
     .orderBy(asc(productDaysRef.dayNumber))
 
   const dayServices = days.length
@@ -509,7 +515,9 @@ async function getConvertProductData(
           sql`${productDayServicesRef.dayId} IN (
             SELECT ${productDaysRef.id}
             FROM ${productDaysRef}
-            WHERE ${productDaysRef.productId} = ${product.id}
+            INNER JOIN ${productItinerariesRef}
+              ON ${productDaysRef.itineraryId} = ${productItinerariesRef.id}
+            WHERE ${productItinerariesRef.productId} = ${product.id}
           )`,
         )
         .orderBy(asc(productDayServicesRef.sortOrder), asc(productDayServicesRef.id))

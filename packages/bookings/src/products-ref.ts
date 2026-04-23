@@ -46,9 +46,21 @@ export const optionUnitsRef = pgTable("option_units", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const productItinerariesRef = pgTable("product_itineraries", {
+  id: typeId("product_itineraries").primaryKey(),
+  productId: typeIdRef("product_id").notNull(),
+  name: text("name").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+})
+
+// product_days was re-parented to product_itineraries in products, so the
+// historical `product_days.product_id` column no longer exists. Bookings'
+// getConvertProductData joins through product_itineraries to keep the
+// per-product day lookup working.
 export const productDaysRef = pgTable("product_days", {
   id: typeId("product_days").primaryKey(),
-  productId: typeIdRef("product_id").notNull(),
+  itineraryId: typeIdRef("itinerary_id").notNull(),
   dayNumber: integer("day_number").notNull(),
 })
 

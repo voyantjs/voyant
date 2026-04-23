@@ -84,4 +84,17 @@ describe("Booking list query schema", () => {
     expect(result.status).toBe("confirmed")
     expect(result.search).toBe("hotel")
   })
+
+  it("accepts productId, optionId, personId, organizationId filters", () => {
+    const result = bookingListQuerySchema.parse({
+      productId: "prod_abc",
+      optionId: "opto_def",
+      personId: "pers_ghi",
+      organizationId: "org_jkl",
+    })
+    expect(result.productId).toBe("prod_abc")
+    expect(result.optionId).toBe("opto_def")
+    expect(result.personId).toBe("pers_ghi")
+    expect(result.organizationId).toBe("org_jkl")
+  })
 })

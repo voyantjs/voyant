@@ -99,6 +99,8 @@ export const PREFIXES = {
   custom_field_values: "cfvl",
   invoices: "inv",
   payment_instruments: "pmin",
+  vouchers: "vch",
+  voucher_redemptions: "vchr",
   payment_sessions: "pmss",
   payment_authorizations: "pmaz",
   payment_captures: "pmcp",

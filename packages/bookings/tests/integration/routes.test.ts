@@ -501,6 +501,48 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(body.total).toBeGreaterThanOrEqual(1)
     })
 
+    it("returns dashboard aggregates", async () => {
+      // Future-dated confirmed booking → counted in upcomingDepartures.
+      const future = new Date()
+      future.setUTCMonth(future.getUTCMonth() + 2)
+      await seedBooking({
+        status: "confirmed",
+        startDate: future.toISOString().slice(0, 10),
+        sellAmountCents: 15000,
+      })
+      // Past cancelled booking → must drop out of monthlyRevenue + upcoming.
+      await seedBooking({
+        status: "cancelled",
+        startDate: "2020-01-01",
+        sellAmountCents: 99999,
+      })
+
+      const res = await app.request("/aggregates", { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.total).toBeGreaterThanOrEqual(2)
+      // countsByStatus includes all 7 statuses with zeroes for unused ones.
+      const statuses = body.data.countsByStatus.map((row: { status: string }) => row.status)
+      expect(statuses).toEqual(
+        expect.arrayContaining([
+          "draft",
+          "on_hold",
+          "confirmed",
+          "in_progress",
+          "completed",
+          "expired",
+          "cancelled",
+        ]),
+      )
+      expect(body.data.upcomingDepartures).toBeGreaterThanOrEqual(1)
+      // Revenue only counts the confirmed booking (cancelled is excluded).
+      const revenueTotal = body.data.monthlyRevenue.reduce(
+        (sum: number, row: { sellAmountCents: number }) => sum + row.sellAmountCents,
+        0,
+      )
+      expect(revenueTotal).toBe(15000)
+    })
+
     it("gets a booking by id", async () => {
       const booking = await seedBooking()
       const res = await app.request(`/${booking.id}`, { method: "GET" })

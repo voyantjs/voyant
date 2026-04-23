@@ -84,6 +84,11 @@ export const bookingListQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 })
 
+export const bookingAggregatesQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})
+
 export const convertProductSchema = z.object({
   productId: z.string().min(1),
   optionId: z.string().optional().nullable(),

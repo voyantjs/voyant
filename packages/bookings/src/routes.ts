@@ -23,6 +23,7 @@ import { bookingsService } from "./service.js"
 import { bookingGroupsService } from "./service-groups.js"
 import { publicBookingsService, resolveSessionPricingSnapshot } from "./service-public.js"
 import {
+  bookingAggregatesQuerySchema,
   bookingListQuerySchema,
   cancelBookingSchema,
   confirmBookingSchema,
@@ -236,6 +237,12 @@ export const bookingRoutes = new Hono<Env>()
       return c.json({ error: "Pricing unavailable for this selection" }, 404)
     }
     return c.json({ data: snapshot })
+  })
+
+  // 1b. GET /aggregates — Pre-aggregated dashboard metrics
+  .get("/aggregates", async (c) => {
+    const query = parseQuery(c, bookingAggregatesQuerySchema)
+    return c.json({ data: await bookingsService.getBookingAggregates(c.get("db"), query) })
   })
 
   // 1b. GET /overview — Internal/admin booking overview lookup

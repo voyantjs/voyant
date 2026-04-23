@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  bookingAggregatesQuerySchema,
   bookingListQuerySchema,
   insertBookingDocumentSchema,
   insertBookingNoteSchema,
@@ -96,5 +97,27 @@ describe("Booking list query schema", () => {
     expect(result.optionId).toBe("opto_def")
     expect(result.personId).toBe("pers_ghi")
     expect(result.organizationId).toBe("org_jkl")
+  })
+})
+
+describe("Booking aggregates query schema", () => {
+  it("accepts an empty object", () => {
+    const result = bookingAggregatesQuerySchema.parse({})
+    expect(result.from).toBeUndefined()
+    expect(result.to).toBeUndefined()
+  })
+
+  it("accepts ISO datetime bounds", () => {
+    const result = bookingAggregatesQuerySchema.parse({
+      from: "2026-01-01T00:00:00.000Z",
+      to: "2026-04-01T00:00:00.000Z",
+    })
+    expect(result.from).toBe("2026-01-01T00:00:00.000Z")
+    expect(result.to).toBe("2026-04-01T00:00:00.000Z")
+  })
+
+  it("rejects non-datetime strings", () => {
+    expect(() => bookingAggregatesQuerySchema.parse({ from: "yesterday" })).toThrow()
+    expect(() => bookingAggregatesQuerySchema.parse({ from: "2026-01-01" })).toThrow()
   })
 })

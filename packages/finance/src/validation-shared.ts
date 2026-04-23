@@ -140,3 +140,8 @@ export const voucherSourceTypeSchema = z.enum([
   "manual",
   "promo",
 ])
+
+export const financeAggregatesQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})

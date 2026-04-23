@@ -863,16 +863,27 @@
       "name": "voyant-bookings-quick-book-dialog",
       "type": "registry:component",
       "title": "Quick Book Dialog",
-      "description": "Operator quick-book workflow: pick a product, select or create a person, and create a draft booking via the convert-from-product endpoint. Composes the standalone picker sections so apps that need a custom flow can swap individual steps.",
-      "dependencies": ["@voyantjs/bookings-react", "@voyantjs/crm-react", "lucide-react"],
+      "description": "Operator quick-book workflow composing every booking-create section (product, departure, rooms, person, shared-room, passengers, price breakdown, voucher, payment schedule) and submitting atomically via POST /v1/bookings/quick-create. Apps that need a custom flow can install the sections individually and assemble their own dialog.",
+      "dependencies": [
+        "@voyantjs/availability-react",
+        "@voyantjs/bookings-react",
+        "@voyantjs/crm-react",
+        "lucide-react"
+      ],
       "registryDependencies": [
         "button",
         "dialog",
         "label",
+        "select",
         "textarea",
         "voyant-bookings-product-picker-section",
         "voyant-bookings-person-picker-section",
-        "voyant-bookings-shared-room-section"
+        "voyant-bookings-shared-room-section",
+        "voyant-bookings-rooms-stepper-section",
+        "voyant-bookings-passengers-section",
+        "voyant-bookings-price-breakdown-section",
+        "voyant-bookings-voucher-picker-section",
+        "voyant-bookings-payment-schedule-section"
       ],
       "files": [
         {

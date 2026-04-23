@@ -815,6 +815,21 @@
       ]
     },
     {
+      "name": "voyant-bookings-passengers-section",
+      "type": "registry:component",
+      "title": "Booking Passengers Section",
+      "description": "Multi-row passenger list for booking-create: name + email + role (lead / adult / child / infant) + optional room assignment, with add/remove. Parent creates CRM people + booking_travelers rows at submit time.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["button", "input", "label", "select"],
+      "files": [
+        {
+          "path": "registry/bookings/passengers-section.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/passengers-section.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-quick-book-dialog",
       "type": "registry:component",
       "title": "Quick Book Dialog",

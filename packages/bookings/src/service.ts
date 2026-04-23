@@ -1307,7 +1307,139 @@ async function autoIssueFulfillmentsForBooking(
   })
 }
 
+/**
+ * Booking statuses that count as "active" for aggregate purposes (matches the
+ * slot-unit-availability counting rules — cancelled and expired drop out).
+ */
+const AGGREGATE_ACTIVE_STATUSES: readonly BookingStatus[] = [
+  "draft",
+  "on_hold",
+  "confirmed",
+  "in_progress",
+  "completed",
+]
+
+export interface BookingAggregates {
+  /** Total bookings across all statuses in range. */
+  total: number
+  /** One row per booking status (including zero counts for active statuses). */
+  countsByStatus: Array<{ status: BookingStatus; count: number }>
+  /** Booking counts bucketed by YYYY-MM (UTC), oldest first. */
+  monthlyCounts: Array<{ yearMonth: string; count: number }>
+  /**
+   * Sell revenue bucketed by YYYY-MM (UTC), grouped by currency. Null currency
+   * rows are dropped since a booking without a sell currency is malformed.
+   */
+  monthlyRevenue: Array<{ yearMonth: string; currency: string; sellAmountCents: number }>
+  /** Count of active bookings with `startDate >= today`. */
+  upcomingDepartures: number
+}
+
 export const bookingsService = {
+  /**
+   * Pre-aggregated dashboard numbers for the admin bookings surface. Replaces
+   * the pattern of fetching a large `listBookings` page and deriving KPIs
+   * client-side — which broke past the page limit and disagreed across apps
+   * on which statuses count.
+   *
+   * All ranges are UTC-based.
+   */
+  async getBookingAggregates(
+    db: PostgresJsDatabase,
+    options: { from?: string; to?: string } = {},
+  ): Promise<BookingAggregates> {
+    const fromDate = options.from ? new Date(options.from) : undefined
+    const toDate = options.to ? new Date(options.to) : undefined
+
+    const rangeConditions = []
+    if (fromDate) rangeConditions.push(sql`${bookings.createdAt} >= ${fromDate}`)
+    if (toDate) rangeConditions.push(sql`${bookings.createdAt} < ${toDate}`)
+    const rangeWhere = rangeConditions.length ? and(...rangeConditions) : undefined
+
+    const [totalRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(bookings)
+      .where(rangeWhere)
+
+    const statusRows = await db
+      .select({
+        status: bookings.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(bookings)
+      .where(rangeWhere)
+      .groupBy(bookings.status)
+
+    const countsByStatusMap = new Map<BookingStatus, number>(
+      statusRows.map((row) => [row.status, row.count]),
+    )
+
+    const monthlyCountsRows = await db
+      .select({
+        yearMonth: sql<string>`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(bookings)
+      .where(rangeWhere)
+      .groupBy(sql`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`)
+      .orderBy(sql`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`)
+
+    const monthlyRevenueRows = await db
+      .select({
+        yearMonth: sql<string>`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`,
+        currency: bookings.sellCurrency,
+        sellAmountCents: sql<number>`coalesce(sum(${bookings.sellAmountCents}), 0)::bigint`,
+      })
+      .from(bookings)
+      .where(
+        and(
+          ...(rangeConditions.length ? rangeConditions : []),
+          sql`${bookings.sellAmountCents} IS NOT NULL`,
+          inArray(bookings.status, [...AGGREGATE_ACTIVE_STATUSES]),
+        ),
+      )
+      .groupBy(
+        sql`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`,
+        bookings.sellCurrency,
+      )
+      .orderBy(
+        sql`to_char(${bookings.createdAt} at time zone 'UTC', 'YYYY-MM')`,
+        bookings.sellCurrency,
+      )
+
+    const todayUtc = new Date()
+    todayUtc.setUTCHours(0, 0, 0, 0)
+    const todayDateString = todayUtc.toISOString().slice(0, 10)
+
+    const [upcomingRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.status, [...AGGREGATE_ACTIVE_STATUSES]),
+          sql`${bookings.startDate} >= ${todayDateString}`,
+        ),
+      )
+
+    return {
+      total: totalRow?.count ?? 0,
+      countsByStatus: AGGREGATE_ACTIVE_STATUSES.concat(["expired", "cancelled"]).map((status) => ({
+        status,
+        count: countsByStatusMap.get(status) ?? 0,
+      })),
+      monthlyCounts: monthlyCountsRows.map((row) => ({
+        yearMonth: row.yearMonth,
+        count: row.count,
+      })),
+      monthlyRevenue: monthlyRevenueRows.map((row) => ({
+        yearMonth: row.yearMonth,
+        currency: row.currency,
+        sellAmountCents: Number(row.sellAmountCents),
+      })),
+      upcomingDepartures: upcomingRow?.count ?? 0,
+    }
+  },
+
   async listBookings(db: PostgresJsDatabase, query: BookingListQuery) {
     const conditions = []
 

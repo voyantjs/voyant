@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui"
 import { useAdminMessages } from "@/lib/admin-i18n"
 import { api } from "@/lib/api-client"
-import { QuickBookDialog } from "../bookings/quick-book-dialog"
+import { BookingDialog } from "../bookings/booking-dialog"
 import { DepartureDialog, type DepartureSlot } from "./product-departure-dialog"
 import { ProductDialog } from "./product-detail-dialog"
 import { ProductDetailHeader } from "./product-detail-header"
@@ -254,11 +254,11 @@ export function ProductDetailPage({ id }: { id: string }) {
       </div>
 
       {/* Dialogs */}
-      <QuickBookDialog
+      <BookingDialog
         open={quickBookOpen}
         onOpenChange={setQuickBookOpen}
         defaultProductId={id}
-        onCreated={(booking) => {
+        onSuccess={(booking) => {
           setQuickBookOpen(false)
           void navigate({ to: "/bookings/$id", params: { id: booking.id } })
         }}

@@ -64,6 +64,8 @@ export const availabilityQueryKeys = {
     [...availabilityQueryKeys.pickupPoints(), "list", filters] as const,
 
   slotDetail: (id: string) => [...availabilityQueryKeys.slots(), "detail", id] as const,
+  slotUnitAvailability: (id: string) =>
+    [...availabilityQueryKeys.slots(), "unit-availability", id] as const,
   slotPickupsList: (filters: AvailabilitySlotDetailFilters) =>
     [...availabilityQueryKeys.slots(), "pickups", "list", filters] as const,
   slotCloseoutsList: (filters: AvailabilitySlotDetailFilters) =>

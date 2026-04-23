@@ -21,6 +21,7 @@ type VoucherListQuery = z.infer<typeof voucherListQuerySchema>
  *  - `code_in_use`        — supplied code collides with an existing voucher
  *  - `voucher_not_found`  — id-not-found / code-not-found read path
  *  - `voucher_inactive`   — redeem attempted against non-active status
+ *  - `voucher_not_started`— validFrom is set and hasn't happened yet
  *  - `voucher_expired`    — expiresAt has passed
  *  - `insufficient_balance` — requested amount > remainingAmountCents
  */
@@ -30,6 +31,7 @@ export class VoucherServiceError extends Error {
       | "code_in_use"
       | "voucher_not_found"
       | "voucher_inactive"
+      | "voucher_not_started"
       | "voucher_expired"
       | "insufficient_balance",
     message?: string,
@@ -63,6 +65,7 @@ export const vouchersService = {
   async list(db: PostgresJsDatabase, query: VoucherListQuery) {
     const conditions = []
     if (query.status) conditions.push(eq(vouchers.status, query.status))
+    if (query.seriesCode) conditions.push(eq(vouchers.seriesCode, query.seriesCode))
     if (query.issuedToPersonId) {
       conditions.push(eq(vouchers.issuedToPersonId, query.issuedToPersonId))
     }
@@ -124,6 +127,7 @@ export const vouchersService = {
       .insert(vouchers)
       .values({
         code,
+        seriesCode: input.seriesCode ?? null,
         currency: input.currency,
         initialAmountCents: input.amountCents,
         remainingAmountCents: input.amountCents,
@@ -132,6 +136,7 @@ export const vouchersService = {
         sourceType: input.sourceType,
         sourceBookingId: input.sourceBookingId ?? null,
         sourcePaymentId: input.sourcePaymentId ?? null,
+        validFrom: input.validFrom ? new Date(input.validFrom) : null,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
         notes: input.notes ?? null,
         issuedByUserId: issuedByUserId ?? null,
@@ -145,6 +150,10 @@ export const vouchersService = {
       .update(vouchers)
       .set({
         ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.seriesCode !== undefined ? { seriesCode: input.seriesCode } : {}),
+        ...(input.validFrom !== undefined
+          ? { validFrom: input.validFrom ? new Date(input.validFrom) : null }
+          : {}),
         ...(input.expiresAt !== undefined
           ? { expiresAt: input.expiresAt ? new Date(input.expiresAt) : null }
           : {}),
@@ -180,6 +189,9 @@ export const vouchersService = {
 
       if (!voucher) throw new VoucherServiceError("voucher_not_found")
       if (voucher.status !== "active") throw new VoucherServiceError("voucher_inactive")
+      if (voucher.validFrom && voucher.validFrom.getTime() > Date.now()) {
+        throw new VoucherServiceError("voucher_not_started")
+      }
       if (voucher.expiresAt && voucher.expiresAt.getTime() < Date.now()) {
         throw new VoucherServiceError("voucher_expired")
       }

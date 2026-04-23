@@ -611,7 +611,7 @@ async function resolveVoucherFromNewTable(
     currency: row.currency,
     amountCents: row.initialAmountCents,
     remainingAmountCents: row.remainingAmountCents,
-    validFrom: null,
+    validFrom: row.validFrom ? row.validFrom.toISOString() : null,
     expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
     appliesToBookingIds: row.sourceBookingId ? [row.sourceBookingId] : [],
     status: row.status === "active" ? "active" : "inactive",

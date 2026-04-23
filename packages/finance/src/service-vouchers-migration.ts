@@ -130,6 +130,12 @@ export async function migrateVouchersFromPaymentInstruments(
     }
 
     const expiresAt = asDate(asString(metadata, "expiresAt"))
+    // OpenTravel uses `effectiveDate`; some legacy payloads also wrote
+    // `validFrom` directly. Check both so existing rows aren't silently
+    // dropped.
+    const validFrom =
+      asDate(asString(metadata, "validFrom")) ?? asDate(asString(metadata, "effectiveDate"))
+    const seriesCode = asString(metadata, "seriesCode")
     const bookingIds = asStringArray(metadata, "bookingIds")
     const sourceBookingId = asString(metadata, "bookingId") ?? bookingIds[0] ?? null
 
@@ -148,6 +154,7 @@ export async function migrateVouchersFromPaymentInstruments(
     try {
       await db.insert(vouchers).values({
         code,
+        seriesCode,
         status,
         currency: currency.toUpperCase(),
         initialAmountCents,
@@ -160,6 +167,7 @@ export async function migrateVouchersFromPaymentInstruments(
         sourceType: "manual",
         sourceBookingId,
         notes: instrument.notes ?? null,
+        validFrom,
         expiresAt,
         createdAt: instrument.createdAt,
         updatedAt: instrument.updatedAt,

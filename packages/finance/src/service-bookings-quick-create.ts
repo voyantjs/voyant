@@ -140,6 +140,7 @@ export type QuickCreateBookingOutcome =
   | { status: "product_not_found" }
   | { status: "voucher_not_found" }
   | { status: "voucher_inactive" }
+  | { status: "voucher_not_started" }
   | { status: "voucher_expired" }
   | { status: "voucher_insufficient_balance" }
   | { status: "group_not_found" }
@@ -202,6 +203,9 @@ export async function quickCreateBooking(
       .limit(1)
     if (!voucher) return { status: "voucher_not_found" }
     if (voucher.status !== "active") return { status: "voucher_inactive" }
+    if (voucher.validFrom && voucher.validFrom.getTime() > Date.now()) {
+      return { status: "voucher_not_started" }
+    }
     if (voucher.expiresAt && voucher.expiresAt.getTime() < Date.now()) {
       return { status: "voucher_expired" }
     }
@@ -360,6 +364,7 @@ export async function quickCreateBooking(
     if (error instanceof VoucherServiceError) {
       if (error.code === "voucher_not_found") return { status: "voucher_not_found" }
       if (error.code === "voucher_inactive") return { status: "voucher_inactive" }
+      if (error.code === "voucher_not_started") return { status: "voucher_not_started" }
       if (error.code === "voucher_expired") return { status: "voucher_expired" }
       if (error.code === "insufficient_balance") return { status: "voucher_insufficient_balance" }
     }

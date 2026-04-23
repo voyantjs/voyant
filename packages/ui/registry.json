@@ -872,6 +872,7 @@
       ],
       "registryDependencies": [
         "button",
+        "checkbox",
         "dialog",
         "label",
         "select",

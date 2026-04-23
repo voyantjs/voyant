@@ -73,7 +73,9 @@ export {
   useBookingQuickCreateMutation,
 } from "./use-booking-quick-create-mutation.js"
 export {
+  type UpdateBookingStatusByIdInput,
   type UpdateBookingStatusInput,
+  useBookingStatusByIdMutation,
   useBookingStatusMutation,
 } from "./use-booking-status-mutation.js"
 export { type UseBookingsOptions, useBookings } from "./use-bookings.js"

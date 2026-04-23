@@ -8,6 +8,7 @@ import {
   type QuickCreateTravelerInput,
   type QuickCreateVoucherRedemptionInput,
   useBookingQuickCreateMutation,
+  useBookingStatusByIdMutation,
 } from "@voyantjs/bookings-react"
 import { usePersonMutation } from "@voyantjs/crm-react"
 import { Loader2 } from "lucide-react"
@@ -15,6 +16,7 @@ import * as React from "react"
 
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogBody,
   DialogContent,
@@ -194,6 +196,14 @@ export function QuickBookDialog({
   const [paymentSchedule, setPaymentSchedule] =
     React.useState<PaymentScheduleValue>(emptyPaymentScheduleValue)
   const [notes, setNotes] = React.useState("")
+  /**
+   * Optional post-create transition: set status to `confirmed` right after
+   * create succeeds. When the parent app has the notifications module's
+   * `autoConfirmAndDispatch` enabled, this fires the doc bundle + traveler
+   * email via the `booking.confirmed` subscriber. When it isn't, the
+   * booking simply lands in `confirmed` instead of `draft`.
+   */
+  const [confirmAfterCreate, setConfirmAfterCreate] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
@@ -207,6 +217,7 @@ export function QuickBookDialog({
       setVoucher(emptyVoucherPickerValue)
       setPaymentSchedule(emptyPaymentScheduleValue)
       setNotes("")
+      setConfirmAfterCreate(false)
       setError(null)
     } else if (defaultProductId) {
       setProduct((prev) =>
@@ -282,6 +293,7 @@ export function QuickBookDialog({
 
   const { create: createPerson } = usePersonMutation()
   const quickCreateMutation = useBookingQuickCreateMutation()
+  const statusMutation = useBookingStatusByIdMutation()
 
   const handleSubmit = async () => {
     setError(null)
@@ -360,14 +372,38 @@ export function QuickBookDialog({
         groupMembership,
       })
 
+      // Optional post-create confirm. If the app has autoConfirmAndDispatch
+      // wired on the notifications module, the status transition triggers
+      // the doc bundle + traveler email subscriber. A failed status change
+      // doesn't roll back the booking — it exists, operator can confirm
+      // manually later.
+      let finalBooking = booking
+      if (confirmAfterCreate) {
+        try {
+          finalBooking = await statusMutation.mutateAsync({
+            bookingId: booking.id,
+            status: "confirmed",
+          })
+        } catch (statusErr) {
+          setError(
+            statusErr instanceof Error
+              ? `Booking created but confirm failed: ${statusErr.message}`
+              : "Booking created but confirm failed",
+          )
+          onCreated?.(booking)
+          return
+        }
+      }
+
       onOpenChange(false)
-      onCreated?.(booking)
+      onCreated?.(finalBooking)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create booking")
     }
   }
 
-  const isSubmitting = quickCreateMutation.isPending || createPerson.isPending
+  const isSubmitting =
+    quickCreateMutation.isPending || createPerson.isPending || statusMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -455,6 +491,25 @@ export function QuickBookDialog({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Quick context for this booking..."
             />
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border p-3">
+            <Checkbox
+              id="quickbook-confirm-after-create"
+              checked={confirmAfterCreate}
+              onCheckedChange={(v) => setConfirmAfterCreate(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="quickbook-confirm-after-create" className="cursor-pointer text-sm">
+                Confirm & notify traveler after creating
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Transitions to confirmed after create. When the notifications module's auto-dispatch
+                is on, this fires the doc bundle + traveler email via the booking.confirmed
+                subscriber.
+              </p>
+            </div>
           </div>
 
           {error && <p className="text-xs text-destructive">{error}</p>}

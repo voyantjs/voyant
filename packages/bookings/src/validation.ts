@@ -87,6 +87,7 @@ export const bookingListQuerySchema = z.object({
 export const convertProductSchema = z.object({
   productId: z.string().min(1),
   optionId: z.string().optional().nullable(),
+  slotId: z.string().optional().nullable(),
   bookingNumber: z.string().min(1).max(50),
   personId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),

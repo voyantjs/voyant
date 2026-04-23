@@ -8,6 +8,8 @@ import type { BookingDocumentAttachmentResolver } from "./service-booking-docume
 import type { NotificationProvider } from "./types.js"
 import {
   bookingDocumentBundleSchema,
+  confirmAndDispatchBookingResultSchema,
+  confirmAndDispatchBookingSchema,
   insertNotificationReminderRuleSchema,
   insertNotificationTemplateSchema,
   notificationDeliveryListQuerySchema,
@@ -211,6 +213,62 @@ export function createNotificationsRoutes(options?: NotificationsRoutesOptions) 
       )
       if (!bundle) return c.json({ error: "Booking not found" }, 404)
       return c.json({ data: bookingDocumentBundleSchema.parse(bundle) })
+    })
+    .post("/bookings/:id/confirm-and-dispatch", async (c) => {
+      try {
+        const runtime = getRuntime(c.env, options, (key) => c.var.container.resolve(key))
+        const dispatcher = createNotificationService(runtime.providers)
+        const result = await notificationsService.confirmAndDispatchBooking(
+          c.get("db"),
+          dispatcher,
+          c.req.param("id"),
+          await parseOptionalJsonBody(c, confirmAndDispatchBookingSchema),
+          {
+            attachmentResolver: runtime.documentAttachmentResolver,
+            eventBus: runtime.eventBus,
+          },
+        )
+        if (result.status === "not_found") return c.json({ error: "Booking not found" }, 404)
+        if (result.status === "preview") {
+          return c.json({
+            data: confirmAndDispatchBookingResultSchema.parse({
+              bookingId: result.bookingId,
+              documents: result.documents,
+              notification: null,
+              skipReason: "preview_only",
+            }),
+          })
+        }
+        if (result.status === "skipped") {
+          return c.json({
+            data: confirmAndDispatchBookingResultSchema.parse({
+              bookingId: result.bookingId,
+              documents: result.documents,
+              notification: null,
+              skipReason: result.skipReason,
+            }),
+          })
+        }
+        return c.json(
+          {
+            data: confirmAndDispatchBookingResultSchema.parse({
+              bookingId: result.bookingId,
+              documents: result.documents,
+              notification: {
+                recipient: result.recipient,
+                deliveryId: result.delivery.id,
+                provider: result.delivery.provider,
+                status: result.delivery.status,
+              },
+              skipReason: null,
+            }),
+          },
+          201,
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Confirm-and-dispatch failed"
+        return c.json({ error: message }, 400)
+      }
     })
     .post("/bookings/:id/send-documents", async (c) => {
       try {

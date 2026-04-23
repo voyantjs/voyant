@@ -26,6 +26,7 @@ import {
   supplierPayments,
   taxRegimes,
 } from "./schema.js"
+import { getFinanceAggregates } from "./service-aggregates.js"
 import { vouchersService } from "./service-vouchers.js"
 import type {
   agingReportQuerySchema,
@@ -279,6 +280,8 @@ async function paginate<T extends object>(
 
 export const financeService = {
   vouchers: vouchersService,
+  getFinanceAggregates,
+
   async listPaymentInstruments(db: PostgresJsDatabase, query: PaymentInstrumentListQuery) {
     const conditions = []
     if (query.ownerType) conditions.push(eq(paymentInstruments.ownerType, query.ownerType))

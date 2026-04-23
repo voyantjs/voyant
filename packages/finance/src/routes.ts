@@ -15,6 +15,7 @@ import {
   createPaymentSessionFromScheduleSchema,
   expirePaymentSessionSchema,
   failPaymentSessionSchema,
+  financeAggregatesQuerySchema,
   insertBookingGuaranteeSchema,
   insertBookingItemCommissionSchema,
   insertBookingItemTaxLineSchema,
@@ -74,6 +75,15 @@ import {
 // ==========================================================================
 
 export const financeRoutes = new Hono<Env>()
+
+  // ========================================================================
+  // Dashboard aggregates
+  // ========================================================================
+
+  .get("/aggregates", async (c) => {
+    const query = parseQuery(c, financeAggregatesQuerySchema)
+    return c.json({ data: await financeService.getFinanceAggregates(c.get("db"), query) })
+  })
 
   // ========================================================================
   // Payment Sessions

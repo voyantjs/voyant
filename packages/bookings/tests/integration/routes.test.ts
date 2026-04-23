@@ -847,6 +847,113 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       expect(updatedSlot?.remainingPax).toBe(3)
     })
 
+    it("emits booking.cancelled with previousStatus after cancel", async () => {
+      const slot = await seedSlot({ initialPax: 3, remainingPax: 3 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+      await app.request(`/${booking.id}/confirm`, { method: "POST", ...json({}) })
+
+      const received: Array<{
+        bookingId: string
+        bookingNumber: string
+        previousStatus: string
+        actorId: string | null
+      }> = []
+      const sub = eventBus.subscribe("booking.cancelled", (event) => {
+        received.push(event.data as (typeof received)[number])
+      })
+
+      try {
+        const res = await app.request(`/${booking.id}/cancel`, {
+          method: "POST",
+          ...json({}),
+        })
+        expect(res.status).toBe(200)
+      } finally {
+        sub.unsubscribe()
+      }
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber,
+        previousStatus: "confirmed",
+        actorId: "test-user-id",
+      })
+    })
+
+    it("emits booking.expired with cause=route when /:id/expire fires", async () => {
+      const slot = await seedSlot({ initialPax: 2, remainingPax: 2 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const received: Array<{ bookingId: string; cause: string; actorId: string | null }> = []
+      const sub = eventBus.subscribe("booking.expired", (event) => {
+        received.push(event.data as (typeof received)[number])
+      })
+
+      try {
+        const res = await app.request(`/${booking.id}/expire`, {
+          method: "POST",
+          ...json({}),
+        })
+        expect(res.status).toBe(200)
+      } finally {
+        sub.unsubscribe()
+      }
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({ bookingId: booking.id, cause: "route" })
+    })
+
+    it("emits booking.expired with cause=sweep from expireStaleBookings", async () => {
+      const slot = await seedSlot({ initialPax: 4, remainingPax: 4 })
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+      await app.request(`/${booking.id}/extend-hold`, {
+        method: "POST",
+        ...json({ holdExpiresAt: "2020-01-01T00:00:00.000Z" }),
+      })
+
+      const received: Array<{ bookingId: string; cause: string }> = []
+      const sub = eventBus.subscribe("booking.expired", (event) => {
+        received.push(event.data as (typeof received)[number])
+      })
+
+      try {
+        const res = await app.request("/expire-stale", {
+          method: "POST",
+          ...json({ before: "2026-12-31T00:00:00.000Z" }),
+        })
+        expect(res.status).toBe(200)
+      } finally {
+        sub.unsubscribe()
+      }
+
+      expect(received.some((r) => r.bookingId === booking.id && r.cause === "sweep")).toBe(true)
+    })
+
     it("expires stale on-hold bookings in batch", async () => {
       const slot = await seedSlot({ initialPax: 4, remainingPax: 4 })
       const reserveRes = await app.request("/reserve", {

@@ -160,6 +160,31 @@ export interface BookingConfirmedEvent {
   actorId: string | null
 }
 
+/**
+ * Payload for `booking.cancelled`. `previousStatus` is the state the booking
+ * transitioned *out of* — useful for subscribers that care about cancelling a
+ * confirmed booking (refund flow) vs cancelling a draft/hold (no side effects).
+ */
+export interface BookingCancelledEvent {
+  bookingId: string
+  bookingNumber: string
+  previousStatus: "draft" | "on_hold" | "confirmed" | "in_progress"
+  actorId: string | null
+}
+
+/**
+ * Payload for `booking.expired`. Fires when an on-hold booking's timer runs
+ * out. `cause` flags whether it was the explicit route call or the sweep job —
+ * subscribers that want to email the customer should probably skip
+ * sweep-originated events to avoid pager noise during backfills.
+ */
+export interface BookingExpiredEvent {
+  bookingId: string
+  bookingNumber: string
+  cause: "route" | "sweep"
+  actorId: string | null
+}
+
 const travelerParticipantTypes = ["traveler", "occupant"] as const
 
 class BookingServiceError extends Error {
@@ -1990,11 +2015,11 @@ export const bookingsService = {
     }
 
     if (current.status === "on_hold" && data.status === "expired") {
-      return bookingsService.expireBooking(db, id, { note: data.note }, userId)
+      return bookingsService.expireBooking(db, id, { note: data.note }, userId, runtime)
     }
 
     if (data.status === "cancelled") {
-      return bookingsService.cancelBooking(db, id, { note: data.note }, userId)
+      return bookingsService.cancelBooking(db, id, { note: data.note }, userId, runtime)
     }
 
     if (data.status === "on_hold") {
@@ -2216,9 +2241,10 @@ export const bookingsService = {
     id: string,
     data: ExpireBookingInput,
     userId?: string,
+    runtime: BookingServiceRuntime & { cause?: "route" | "sweep" } = {},
   ) {
     try {
-      return await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const rows = await tx.execute(
           sql`SELECT id, status, hold_expires_at
               FROM ${bookings}
@@ -2293,6 +2319,21 @@ export const bookingsService = {
 
         return { status: "ok" as const, booking: row ?? null }
       })
+
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.expired",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            cause: runtime.cause ?? "route",
+            actorId: userId ?? null,
+          } satisfies BookingExpiredEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return result
     } catch (error) {
       if (error instanceof BookingServiceError) {
         return { status: error.code as Exclude<string, "ok"> }
@@ -2305,6 +2346,7 @@ export const bookingsService = {
     db: PostgresJsDatabase,
     data: ExpireStaleBookingsInput,
     userId?: string,
+    runtime: BookingServiceRuntime = {},
   ) {
     const cutoff = data.before ? new Date(data.before) : new Date()
     const staleBookings = await db
@@ -2327,6 +2369,7 @@ export const bookingsService = {
         booking.id,
         { note: data.note ?? "Hold expired by sweep" },
         userId,
+        { ...runtime, cause: "sweep" },
       )
 
       if ("booking" in result && result.booking) {
@@ -2346,9 +2389,10 @@ export const bookingsService = {
     id: string,
     data: CancelBookingInput,
     userId?: string,
+    runtime: BookingServiceRuntime = {},
   ) {
     try {
-      return await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const rows = await tx.execute(
           sql`SELECT id, status
               FROM ${bookings}
@@ -2363,6 +2407,8 @@ export const bookingsService = {
         if (!["draft", "on_hold", "confirmed", "in_progress"].includes(booking.status)) {
           throw new BookingServiceError("invalid_transition")
         }
+
+        const previousStatus = booking.status as BookingCancelledEvent["previousStatus"]
 
         const allocations = await tx
           .select()
@@ -2436,8 +2482,23 @@ export const bookingsService = {
         // Clean up any booking-group membership (dissolve if ≤1 active members remain).
         await cleanupGroupOnBookingCancelled(tx as PostgresJsDatabase, id)
 
-        return { status: "ok" as const, booking: row ?? null }
+        return { status: "ok" as const, booking: row ?? null, previousStatus }
       })
+
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.cancelled",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            previousStatus: result.previousStatus,
+            actorId: userId ?? null,
+          } satisfies BookingCancelledEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return { status: result.status, booking: result.booking }
     } catch (error) {
       if (error instanceof BookingServiceError) {
         return { status: error.code as Exclude<string, "ok"> }

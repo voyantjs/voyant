@@ -63,14 +63,29 @@ export function createApp<TBindings extends VoyantBindings>(
       bootstrapPromise = (async () => {
         const ctx = { bindings, container, eventBus }
 
+        // Run each bootstrap in isolation — a single failing plugin/module/extension
+        // must not poison the cached promise and kill the whole app's request pipeline.
+        const runIsolated = async (label: string, fn?: (c: typeof ctx) => unknown) => {
+          if (!fn) return
+          try {
+            await fn(ctx)
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            console.error(`[voyant] bootstrap failed for ${label}: ${message}`)
+          }
+        }
+
         for (const plugin of config.plugins ?? []) {
-          await plugin.bootstrap?.(ctx)
+          await runIsolated(`plugin:${plugin.name}`, plugin.bootstrap)
         }
         for (const mod of allModules) {
-          await mod.module.bootstrap?.(ctx)
+          await runIsolated(`module:${mod.module.name}`, mod.module.bootstrap)
         }
         for (const ext of allExtensions) {
-          await ext.extension.bootstrap?.(ctx)
+          await runIsolated(
+            `extension:${ext.extension.module}/${ext.extension.name}`,
+            ext.extension.bootstrap,
+          )
         }
       })()
     }

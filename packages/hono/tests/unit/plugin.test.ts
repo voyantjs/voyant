@@ -217,6 +217,48 @@ describe("createApp with plugins", () => {
     expect(calls).toEqual(["plugin", "module", "extension"])
   })
 
+  it("isolates bootstrap failures — a throwing plugin must not break unrelated routes", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    const goodModule: HonoModule = {
+      module: {
+        name: "good",
+        bootstrap: ({ container }) => {
+          container.register("good.runtime", { ok: true })
+        },
+      },
+      adminRoutes: new Hono().get("/ping", (c) => {
+        const runtime = c.var.container.resolve<{ ok: boolean }>("good.runtime")
+        return c.json(runtime)
+      }),
+    }
+    const throwingPlugin = defineHonoPlugin({
+      name: "throwing",
+      bootstrap: () => {
+        throw new Error("missing env NETOPIA_URL")
+      },
+    })
+
+    const app = createApp({
+      // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db
+      db: () => ({}) as any,
+      plugins: [throwingPlugin],
+      modules: [goodModule],
+      auth: { resolve: () => ({ userId: "u1", actor: "staff" as Actor }) },
+    })
+
+    // First request: bootstrap runs; throwing plugin is logged but does not block pipeline.
+    const r1 = await app.request("/v1/admin/good/ping", {}, TEST_ENV, TEST_CTX)
+    expect(r1.status).toBe(200)
+    await expect(r1.json()).resolves.toEqual({ ok: true })
+
+    // Second request: cached bootstrap promise must resolve (not reject), so this still succeeds.
+    const r2 = await app.request("/v1/admin/good/ping", {}, TEST_ENV, TEST_CTX)
+    expect(r2.status).toBe(200)
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringMatching(/plugin:throwing/))
+    errorSpy.mockRestore()
+  })
+
   it("exposes bootstrap-registered runtime services through the shared container", async () => {
     const app = createApp({
       // biome-ignore lint/suspicious/noExplicitAny: test doesn't use db

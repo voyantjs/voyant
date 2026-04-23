@@ -1,5 +1,6 @@
 "use client"
 
+import { useSlots } from "@voyantjs/availability-react"
 import {
   type BookingRecord,
   useBookingConvertMutation,
@@ -19,6 +20,11 @@ import {
   DialogHeader,
   DialogTitle,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/components/ui"
 import { useAdminMessages } from "@/lib/admin-i18n"
@@ -62,6 +68,7 @@ export function QuickBookDialog({
     productId: defaultProductId ?? "",
     optionId: null,
   })
+  const [slotId, setSlotId] = React.useState<string | null>(null)
   const [person, setPerson] = React.useState<PersonPickerValue>(emptyPersonPickerValue)
   const [sharedRoom, setSharedRoom] = React.useState<SharedRoomValue>(emptySharedRoomValue)
   const [notes, setNotes] = React.useState("")
@@ -70,6 +77,7 @@ export function QuickBookDialog({
   React.useEffect(() => {
     if (!open) {
       setProduct({ productId: defaultProductId ?? "", optionId: null })
+      setSlotId(null)
       setPerson(emptyPersonPickerValue)
       setSharedRoom(emptySharedRoomValue)
       setNotes("")
@@ -82,6 +90,39 @@ export function QuickBookDialog({
       )
     }
   }, [open, defaultProductId])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally only resets when product/option changes
+  React.useEffect(() => {
+    setSlotId(null)
+  }, [product.productId, product.optionId])
+
+  const { data: slotsData } = useSlots({
+    productId: product.productId || undefined,
+    status: "open",
+    limit: 100,
+    enabled: open && Boolean(product.productId),
+  })
+  const slots = React.useMemo(() => {
+    const nowIso = new Date().toISOString()
+    return (slotsData?.data ?? [])
+      .filter((slot) => slot.startsAt >= nowIso)
+      .filter((slot) => {
+        if (!product.optionId) return true
+        return slot.optionId === null || slot.optionId === product.optionId
+      })
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+  }, [slotsData, product.optionId])
+
+  const formatSlotLabel = React.useCallback((slot: (typeof slots)[number]) => {
+    const date = new Date(slot.startsAt).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+    const remaining =
+      !slot.unlimited && typeof slot.remainingPax === "number" ? ` · ${slot.remainingPax} left` : ""
+    return `${date}${remaining}`
+  }, [])
 
   const { create: createPerson } = usePersonMutation()
   const convertMutation = useBookingConvertMutation()
@@ -165,6 +206,7 @@ export function QuickBookDialog({
         productId: product.productId,
         bookingNumber: generateBookingNumber(),
         optionId: product.optionId,
+        slotId,
         personId: resolvedPersonId,
         organizationId: person.organizationId,
         internalNotes: notes.trim() || null,
@@ -220,6 +262,34 @@ export function QuickBookDialog({
             lockProduct={Boolean(defaultProductId)}
             labels={productLabels}
           />
+
+          {product.productId ? (
+            <div className="flex flex-col gap-1">
+              <Label>{messages.departureLabel}</Label>
+              <Select
+                value={slotId ?? "__none__"}
+                onValueChange={(v) => setSlotId(v === "__none__" ? null : (v ?? null))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={messages.departureSelectPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{messages.departureNone}</SelectItem>
+                  {slots.length === 0 ? (
+                    <SelectItem value="__empty__" disabled>
+                      {messages.departureEmpty}
+                    </SelectItem>
+                  ) : (
+                    slots.map((slot) => (
+                      <SelectItem key={slot.id} value={slot.id}>
+                        {formatSlotLabel(slot)}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <PersonPickerSection
             value={person}

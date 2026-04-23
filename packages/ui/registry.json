@@ -830,6 +830,21 @@
       ]
     },
     {
+      "name": "voyant-bookings-rooms-stepper-section",
+      "type": "registry:component",
+      "title": "Booking Rooms Stepper Section",
+      "description": "Per-option-unit quantity stepper for booking-create, driven by GET /v1/availability/slots/:id/unit-availability. Shows live 'N left' counters; min/max enforced against the server's remaining count so the UI can't queue up a 409.",
+      "dependencies": ["@voyantjs/availability-react", "lucide-react"],
+      "registryDependencies": ["button", "label"],
+      "files": [
+        {
+          "path": "registry/bookings/rooms-stepper-section.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/bookings/rooms-stepper-section.tsx"
+        }
+      ]
+    },
+    {
       "name": "voyant-bookings-quick-book-dialog",
       "type": "registry:component",
       "title": "Quick Book Dialog",

@@ -186,6 +186,19 @@ export const availabilitySlotAssignmentListResponse = paginatedEnvelope(
 export const bookingSummaryListResponse = paginatedEnvelope(bookingSummarySchema)
 export const resourceSummaryListResponse = paginatedEnvelope(resourceSummarySchema)
 
+export const slotUnitAvailabilityRecordSchema = z.object({
+  optionUnitId: z.string(),
+  unitName: z.string(),
+  occupancyMax: z.number().int().nullable(),
+  initial: z.number().int().nullable(),
+  reserved: z.number().int(),
+  remaining: z.number().int().nullable(),
+})
+export type SlotUnitAvailabilityRecord = z.infer<typeof slotUnitAvailabilityRecordSchema>
+export const slotUnitAvailabilityListResponse = z.object({
+  data: z.array(slotUnitAvailabilityRecordSchema),
+})
+
 export {
   insertAvailabilityRuleSchema,
   insertAvailabilitySlotSchema,

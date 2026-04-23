@@ -23,6 +23,7 @@ import {
   productListResponse,
   productSingleResponse,
   resourceSummaryListResponse,
+  slotUnitAvailabilityListResponse,
 } from "./schemas.js"
 
 function appendPagination(params: URLSearchParams, filters: { limit?: number; offset?: number }) {
@@ -167,6 +168,23 @@ export function getSlotQueryOptions(
       return fetchWithValidation(
         `/v1/availability/slots/${id}`,
         availabilitySlotSingleResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getSlotUnitAvailabilityQueryOptions(
+  client: FetchWithValidationOptions,
+  slotId: string | null | undefined,
+) {
+  return queryOptions({
+    queryKey: availabilityQueryKeys.slotUnitAvailability(slotId ?? ""),
+    queryFn: async () => {
+      if (!slotId) throw new Error("getSlotUnitAvailabilityQueryOptions requires a slotId")
+      return fetchWithValidation(
+        `/v1/availability/slots/${slotId}/unit-availability`,
+        slotUnitAvailabilityListResponse,
         client,
       )
     },

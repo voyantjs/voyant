@@ -1,6 +1,7 @@
 import { newId } from "@voyantjs/db/lib/typeid"
 import { cleanupTestDb, createTestDb } from "@voyantjs/db/test-utils"
-import { products } from "@voyantjs/products/schema"
+import { optionUnits, productOptions, products } from "@voyantjs/products/schema"
+import { sql } from "drizzle-orm"
 import { Hono } from "hono"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
@@ -206,6 +207,101 @@ describe.skipIf(!DB_AVAILABLE)("Availability routes", () => {
 
     it("returns 404 for non-existent slot", async () => {
       const res = await app.request("/slots/avsl_00000000000000000000000000", { method: "GET" })
+      expect(res.status).toBe(404)
+    })
+
+    it("returns per-option-unit availability for a slot", async () => {
+      // Seed a product option + two units (single cap=2, double cap=3).
+      const optionId = newId("product_options")
+      await db.insert(productOptions).values({
+        id: optionId,
+        productId,
+        name: "Standard",
+      })
+
+      const singleUnitId = newId("option_units")
+      const doubleUnitId = newId("option_units")
+      await db.insert(optionUnits).values([
+        {
+          id: singleUnitId,
+          optionId,
+          name: "Single",
+          unitType: "person",
+          maxQuantity: 2,
+          occupancyMax: 1,
+          sortOrder: 0,
+        },
+        {
+          id: doubleUnitId,
+          optionId,
+          name: "Double",
+          unitType: "person",
+          maxQuantity: 3,
+          occupancyMax: 2,
+          sortOrder: 1,
+        },
+      ])
+
+      // Create a slot pinned to the option.
+      const slotRes = await app.request("/slots", {
+        method: "POST",
+        ...json({
+          productId,
+          optionId,
+          dateLocal: "2025-07-01",
+          startsAt: "2025-07-01T09:00:00Z",
+          timezone: "Europe/London",
+        }),
+      })
+      const { data: slot } = await slotRes.json()
+
+      // Seed two bookings: confirmed (2 singles) + cancelled (1 double, must be
+      // ignored). Raw SQL so availability's integration test doesn't take a
+      // compile-time dep on the bookings package.
+      const bookingConfirmedId = newId("bookings")
+      const bookingCancelledId = newId("bookings")
+      await db.execute(
+        sql`INSERT INTO bookings (id, booking_number, status, sell_currency)
+            VALUES
+              (${bookingConfirmedId}, 'BK-UA-CONFIRM', 'confirmed', 'USD'),
+              (${bookingCancelledId}, 'BK-UA-CANCEL', 'cancelled', 'USD')`,
+      )
+      await db.execute(
+        sql`INSERT INTO booking_items
+              (id, booking_id, title, sell_currency, quantity, option_unit_id, metadata)
+            VALUES
+              (${newId("booking_items")}, ${bookingConfirmedId}, 'Single x2', 'USD', 2,
+                ${singleUnitId}, ${JSON.stringify({ availabilitySlotId: slot.id })}::jsonb),
+              (${newId("booking_items")}, ${bookingCancelledId}, 'Double x1', 'USD', 1,
+                ${doubleUnitId}, ${JSON.stringify({ availabilitySlotId: slot.id })}::jsonb)`,
+      )
+
+      const res = await app.request(`/slots/${slot.id}/unit-availability`, { method: "GET" })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data).toHaveLength(2)
+
+      const single = body.data.find((row: { unitName: string }) => row.unitName === "Single")
+      const double = body.data.find((row: { unitName: string }) => row.unitName === "Double")
+      expect(single).toMatchObject({
+        optionUnitId: singleUnitId,
+        initial: 2,
+        reserved: 2,
+        remaining: 0,
+      })
+      // Cancelled booking must not count — capacity stays full.
+      expect(double).toMatchObject({
+        optionUnitId: doubleUnitId,
+        initial: 3,
+        reserved: 0,
+        remaining: 3,
+      })
+    })
+
+    it("returns 404 unit-availability for a non-existent slot", async () => {
+      const res = await app.request("/slots/avsl_00000000000000000000000000/unit-availability", {
+        method: "GET",
+      })
       expect(res.status).toBe(404)
     })
   })

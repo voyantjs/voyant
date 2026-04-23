@@ -178,6 +178,10 @@ export const availabilityCoreRoutes = new Hono<Env>()
     const row = await availabilityService.getSlotById(c.get("db"), c.req.param("id"))
     return row ? c.json({ data: row }) : notFound(c, "Availability slot not found")
   })
+  .get("/slots/:id/unit-availability", async (c) => {
+    const rows = await availabilityService.getSlotUnitAvailability(c.get("db"), c.req.param("id"))
+    return rows ? c.json({ data: rows }) : notFound(c, "Availability slot not found")
+  })
   .patch("/slots/:id", async (c) => {
     const row = await availabilityService.updateSlot(
       c.get("db"),

@@ -26,6 +26,7 @@ export {
   getSlotQueryOptions,
   getSlotResourcesQueryOptions,
   getSlotsQueryOptions,
+  getSlotUnitAvailabilityQueryOptions,
   getStartTimesQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

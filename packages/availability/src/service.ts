@@ -57,8 +57,10 @@ import {
   updatePickupPoint,
   updateSlotPickup,
 } from "./service-pickups.js"
+import { getSlotUnitAvailability } from "./service-unit-availability.js"
 
 export const availabilityService = {
+  getSlotUnitAvailability,
   listRules,
   getRuleById,
   createRule,

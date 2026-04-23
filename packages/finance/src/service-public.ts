@@ -9,6 +9,7 @@ import {
   invoices,
   paymentInstruments,
   payments,
+  vouchers,
 } from "./schema.js"
 import { financeService } from "./service.js"
 import type {
@@ -495,13 +496,25 @@ export const publicFinanceService = {
   },
 
   async validateVoucher(db: PostgresJsDatabase, input: PublicValidateVoucherInput) {
-    const normalizedCode = input.code.trim().toLowerCase()
+    const normalizedCode = input.code.trim()
+    const normalizedCodeLower = normalizedCode.toLowerCase()
+
+    // New path: first-class `vouchers` table. Covers any voucher issued via
+    // POST /v1/finance/vouchers.
+    const resolvedFromNewTable = await resolveVoucherFromNewTable(db, normalizedCode)
+    if (resolvedFromNewTable) {
+      return evaluateVoucherValidity(resolvedFromNewTable, input)
+    }
+
+    // Fallback path: legacy payment_instruments rows with instrumentType =
+    // 'voucher' and balance carried in metadata JSONB. Kept working until the
+    // migration script flips remaining rows over to the new table.
     const voucherConditions = [
       eq(paymentInstruments.instrumentType, "voucher"),
       or(
-        sql`lower(coalesce(${paymentInstruments.externalToken}, '')) = ${normalizedCode}`,
-        sql`lower(coalesce(${paymentInstruments.directBillReference}, '')) = ${normalizedCode}`,
-        sql`lower(coalesce(${paymentInstruments.metadata} ->> 'code', '')) = ${normalizedCode}`,
+        sql`lower(coalesce(${paymentInstruments.externalToken}, '')) = ${normalizedCodeLower}`,
+        sql`lower(coalesce(${paymentInstruments.directBillReference}, '')) = ${normalizedCodeLower}`,
+        sql`lower(coalesce(${paymentInstruments.metadata} ->> 'code', '')) = ${normalizedCodeLower}`,
       ),
     ]
 
@@ -535,57 +548,123 @@ export const publicFinanceService = {
     const bookingId = getMetadataString(metadata, "bookingId")
     const appliesToBookingIds = bookingId ? [bookingId, ...bookingIds] : bookingIds
 
-    const publicVoucher = {
-      id: voucher.id,
-      code: voucherCode,
-      label: voucher.label,
-      provider: voucher.provider ?? null,
-      currency,
-      amountCents,
-      remainingAmountCents,
-      expiresAt,
-    }
-
-    if (voucher.status !== "active") {
-      return { valid: false as const, reason: "inactive" as const, voucher: publicVoucher }
-    }
-
-    if (validFrom && new Date(validFrom) > new Date()) {
-      return { valid: false as const, reason: "not_started" as const, voucher: publicVoucher }
-    }
-
-    if (expiresAt && new Date(expiresAt) < new Date()) {
-      return { valid: false as const, reason: "expired" as const, voucher: publicVoucher }
-    }
-
-    if (
-      input.bookingId &&
-      appliesToBookingIds.length > 0 &&
-      !appliesToBookingIds.includes(input.bookingId)
-    ) {
-      return { valid: false as const, reason: "booking_mismatch" as const, voucher: publicVoucher }
-    }
-
-    if (input.currency && currency && input.currency !== currency) {
-      return {
-        valid: false as const,
-        reason: "currency_mismatch" as const,
-        voucher: publicVoucher,
-      }
-    }
-
-    if (
-      input.amountCents &&
-      remainingAmountCents !== null &&
-      input.amountCents > remainingAmountCents
-    ) {
-      return {
-        valid: false as const,
-        reason: "insufficient_balance" as const,
-        voucher: publicVoucher,
-      }
-    }
-
-    return { valid: true as const, reason: null, voucher: publicVoucher }
+    return evaluateVoucherValidity(
+      {
+        id: voucher.id,
+        code: voucherCode,
+        label: voucher.label,
+        provider: voucher.provider ?? null,
+        currency,
+        amountCents,
+        remainingAmountCents,
+        validFrom,
+        expiresAt,
+        appliesToBookingIds,
+        status: voucher.status === "active" ? "active" : "inactive",
+      },
+      input,
+    )
   },
+}
+
+/**
+ * Normalized shape passed into the validity evaluator. Both the new `vouchers`
+ * table and the legacy `payment_instruments` path map onto it so the
+ * checks (status/expiry/currency/amount/booking) only need to live in one place.
+ */
+interface ResolvedVoucher {
+  id: string
+  code: string
+  label: string | null
+  provider: string | null
+  currency: string | null
+  amountCents: number | null
+  remainingAmountCents: number | null
+  validFrom: string | null
+  expiresAt: string | null
+  appliesToBookingIds: string[]
+  /**
+   * Collapsed to `active | inactive`. The service's enum has more variants
+   * (redeemed / expired / void) but from a validate-for-spend perspective
+   * anything non-active should 409 the same way.
+   */
+  status: "active" | "inactive"
+}
+
+async function resolveVoucherFromNewTable(
+  db: PostgresJsDatabase,
+  code: string,
+): Promise<ResolvedVoucher | null> {
+  const [row] = await db
+    .select()
+    .from(vouchers)
+    .where(sql`lower(${vouchers.code}) = ${code.toLowerCase()}`)
+    .limit(1)
+
+  if (!row) return null
+
+  return {
+    id: row.id,
+    code: row.code,
+    label: null,
+    provider: null,
+    currency: row.currency,
+    amountCents: row.initialAmountCents,
+    remainingAmountCents: row.remainingAmountCents,
+    validFrom: null,
+    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+    appliesToBookingIds: row.sourceBookingId ? [row.sourceBookingId] : [],
+    status: row.status === "active" ? "active" : "inactive",
+  }
+}
+
+function evaluateVoucherValidity(voucher: ResolvedVoucher, input: PublicValidateVoucherInput) {
+  const publicVoucher = {
+    id: voucher.id,
+    code: voucher.code,
+    label: voucher.label,
+    provider: voucher.provider,
+    currency: voucher.currency,
+    amountCents: voucher.amountCents,
+    remainingAmountCents: voucher.remainingAmountCents,
+    expiresAt: voucher.expiresAt,
+  }
+
+  if (voucher.status !== "active") {
+    return { valid: false as const, reason: "inactive" as const, voucher: publicVoucher }
+  }
+
+  if (voucher.validFrom && new Date(voucher.validFrom) > new Date()) {
+    return { valid: false as const, reason: "not_started" as const, voucher: publicVoucher }
+  }
+
+  if (voucher.expiresAt && new Date(voucher.expiresAt) < new Date()) {
+    return { valid: false as const, reason: "expired" as const, voucher: publicVoucher }
+  }
+
+  if (
+    input.bookingId &&
+    voucher.appliesToBookingIds.length > 0 &&
+    !voucher.appliesToBookingIds.includes(input.bookingId)
+  ) {
+    return { valid: false as const, reason: "booking_mismatch" as const, voucher: publicVoucher }
+  }
+
+  if (input.currency && voucher.currency && input.currency !== voucher.currency) {
+    return { valid: false as const, reason: "currency_mismatch" as const, voucher: publicVoucher }
+  }
+
+  if (
+    input.amountCents &&
+    voucher.remainingAmountCents !== null &&
+    input.amountCents > voucher.remainingAmountCents
+  ) {
+    return {
+      valid: false as const,
+      reason: "insufficient_balance" as const,
+      voucher: publicVoucher,
+    }
+  }
+
+  return { valid: true as const, reason: null, voucher: publicVoucher }
 }

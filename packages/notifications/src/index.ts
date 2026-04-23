@@ -1,5 +1,6 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import {
   buildNotificationsRouteRuntime,
@@ -8,6 +9,8 @@ import {
   type NotificationsRoutesOptions,
 } from "./routes.js"
 import { notificationsModule } from "./schema.js"
+import { createNotificationService } from "./service.js"
+import { bookingDocumentNotificationsService } from "./service-booking-documents.js"
 
 export {
   notificationLiquidEngine,
@@ -136,16 +139,84 @@ export {
   updateNotificationTemplateSchema,
 } from "./validation.js"
 
-export function createNotificationsHonoModule(options?: NotificationsRoutesOptions): HonoModule {
+/**
+ * Auto-dispatch policy for the `booking.confirmed` subscriber. Set `enabled:
+ * false` (or leave the option off entirely) to opt out.
+ */
+export interface NotificationsAutoConfirmAndDispatchOptions {
+  enabled?: boolean
+  /** Notification template slug used when the handler fires. */
+  templateSlug?: string
+  /** Optional allowlist of document types to attach; defaults to all. */
+  documentTypes?: Array<"contract" | "invoice" | "proforma">
+}
+
+export interface CreateNotificationsHonoModuleOptions extends NotificationsRoutesOptions {
+  /**
+   * Resolves a database from runtime bindings. Required for
+   * `autoConfirmAndDispatch` — the `booking.confirmed` subscriber fires
+   * outside a request scope and needs its own db handle.
+   */
+  resolveDb?: (bindings: Record<string, unknown>) => PostgresJsDatabase
+  autoConfirmAndDispatch?: NotificationsAutoConfirmAndDispatchOptions
+}
+
+export function createNotificationsHonoModule(
+  options?: CreateNotificationsHonoModuleOptions,
+): HonoModule {
   const routes = createNotificationsRoutes(options)
 
   const module: Module = {
     ...notificationsModule,
-    bootstrap: ({ bindings, container }) => {
+    bootstrap: ({ bindings, container, eventBus }) => {
       container.register(
         NOTIFICATIONS_ROUTE_RUNTIME_CONTAINER_KEY,
         buildNotificationsRouteRuntime(bindings as Record<string, unknown>, options),
       )
+
+      // Auto-dispatch wiring — opt-in. When enabled, every `booking.confirmed`
+      // event triggers a `confirmAndDispatchBooking` call so the operator
+      // doesn't have to click a second button. The handler runs in the same
+      // process as the emitter (the in-process event bus) but outside the
+      // request scope, so we resolve our own db handle from bindings.
+      if (options?.autoConfirmAndDispatch?.enabled && options.resolveDb) {
+        const resolveDb = options.resolveDb
+        const autoOptions = options.autoConfirmAndDispatch
+        const runtime = buildNotificationsRouteRuntime(bindings as Record<string, unknown>, options)
+        const dispatcher = createNotificationService(runtime.providers)
+
+        eventBus.subscribe(
+          "booking.confirmed",
+          async (event: {
+            data: { bookingId: string; bookingNumber: string; actorId: string | null }
+          }) => {
+            try {
+              const db = resolveDb(bindings as Record<string, unknown>)
+              await bookingDocumentNotificationsService.confirmAndDispatchBooking(
+                db,
+                dispatcher,
+                event.data.bookingId,
+                {
+                  templateSlug: autoOptions.templateSlug ?? null,
+                  documentTypes: autoOptions.documentTypes ?? null,
+                },
+                {
+                  attachmentResolver: runtime.documentAttachmentResolver,
+                  eventBus,
+                },
+              )
+            } catch (error) {
+              // Per the EventBus contract, handler failures are logged, not
+              // rethrown. We surface the context so ops can diagnose without
+              // digging through stack traces.
+              const message = error instanceof Error ? error.message : String(error)
+              console.error(
+                `[notifications] auto-dispatch failed for booking ${event.data.bookingId}: ${message}`,
+              )
+            }
+          },
+        )
+      }
     },
   }
 

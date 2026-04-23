@@ -55,6 +55,11 @@ export const productListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
+
+export const productAggregatesQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})
 export type InsertProduct = z.infer<typeof insertProductSchema>
 export type UpdateProduct = z.infer<typeof updateProductSchema>
 export type SelectProduct = z.infer<typeof selectProductSchema>

@@ -10,6 +10,7 @@ import {
 } from "./routes-shared.js"
 import { availabilityService } from "./service.js"
 import {
+  availabilityAggregatesQuerySchema,
   availabilityCloseoutListQuerySchema,
   availabilityRuleListQuerySchema,
   availabilitySlotListQuerySchema,
@@ -34,6 +35,12 @@ const batchUpdateAvailabilityCloseoutSchema = createBatchUpdateSchema(
 )
 
 export const availabilityCoreRoutes = new Hono<Env>()
+  .get("/aggregates", async (c) => {
+    const query = await parseQuery(c, availabilityAggregatesQuerySchema)
+    return c.json({
+      data: await availabilityService.getAvailabilityAggregates(c.get("db"), query),
+    })
+  })
   .get("/rules", async (c) => {
     const query = await parseQuery(c, availabilityRuleListQuerySchema)
     return c.json(await availabilityService.listRules(c.get("db"), query))

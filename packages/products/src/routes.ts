@@ -37,6 +37,7 @@ import {
   optionUnitListQuerySchema,
   optionUnitTranslationListQuerySchema,
   productActivationSettingListQuerySchema,
+  productAggregatesQuerySchema,
   productCapabilityListQuerySchema,
   productCategoryListQuerySchema,
   productDeliveryFormatListQuerySchema,
@@ -92,6 +93,12 @@ type Env = {
 // ==========================================================================
 
 export const productRoutes = new Hono<Env>()
+
+  // GET /aggregates — dashboard KPIs (before /:id so the matcher doesn't swallow it)
+  .get("/aggregates", async (c) => {
+    const query = parseQuery(c, productAggregatesQuerySchema)
+    return c.json({ data: await productsService.getProductAggregates(c.get("db"), query) })
+  })
 
   // GET / — List products
   .get("/", async (c) => {

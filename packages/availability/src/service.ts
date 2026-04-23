@@ -1,3 +1,4 @@
+import { getAvailabilityAggregates } from "./service-aggregates.js"
 import {
   createCloseout,
   createRule,
@@ -61,6 +62,7 @@ import { getSlotUnitAvailability } from "./service-unit-availability.js"
 
 export const availabilityService = {
   getSlotUnitAvailability,
+  getAvailabilityAggregates,
   listRules,
   getRuleById,
   createRule,

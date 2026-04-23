@@ -20,6 +20,7 @@ import {
   insertServiceSchema,
   insertSupplierNoteSchema,
   insertSupplierSchema,
+  supplierAggregatesQuerySchema,
   supplierListQuerySchema,
   updateContractSchema,
   updateRateSchema,
@@ -39,6 +40,16 @@ type Env = {
 // ==========================================================================
 
 export const supplierRoutes = new Hono<Env>()
+
+  // ========================================================================
+  // Dashboard aggregates
+  // ========================================================================
+
+  // GET /aggregates — dashboard KPIs (before /:id so the matcher doesn't swallow it)
+  .get("/aggregates", async (c) => {
+    const query = parseQuery(c, supplierAggregatesQuerySchema)
+    return c.json({ data: await suppliersService.getSupplierAggregates(c.get("db"), query) })
+  })
 
   // ========================================================================
   // Suppliers CRUD

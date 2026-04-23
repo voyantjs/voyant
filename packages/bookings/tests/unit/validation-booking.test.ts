@@ -166,4 +166,21 @@ describe("Convert product schema", () => {
   it("rejects missing bookingNumber", () => {
     expect(() => convertProductSchema.parse({ productId: "prod_abc" })).toThrow()
   })
+
+  it("accepts an optional slotId", () => {
+    const result = convertProductSchema.parse({
+      productId: "prod_abc",
+      bookingNumber: "BK-001",
+      slotId: "slot_dep_2026_06_01",
+    })
+    expect(result.slotId).toBe("slot_dep_2026_06_01")
+  })
+
+  it("allows omitting slotId (single-date products)", () => {
+    const result = convertProductSchema.parse({
+      productId: "prod_abc",
+      bookingNumber: "BK-001",
+    })
+    expect(result.slotId).toBeUndefined()
+  })
 })

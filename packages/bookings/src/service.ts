@@ -108,6 +108,18 @@ export interface ConvertProductData {
     pax: number | null
   }
   option: { id: string; name: string } | null
+  /**
+   * Availability slot the caller chose, if any. When set, the resulting booking
+   * pins its startDate/endDate to the slot so recurring/scheduled products don't
+   * land with null dates.
+   */
+  slot?: {
+    id: string
+    dateLocal: string
+    startsAt: Date
+    endsAt: Date | null
+    timezone: string
+  } | null
   dayServices: Array<{
     supplierServiceId: string | null
     name: string
@@ -467,6 +479,36 @@ async function getConvertProductData(
           .where(eq(optionUnitsRef.optionId, option.id))
           .orderBy(asc(optionUnitsRef.sortOrder), asc(optionUnitsRef.createdAt))
 
+  let slot: ConvertProductData["slot"] = null
+  if (data.slotId) {
+    const [selectedSlot] = await db
+      .select()
+      .from(availabilitySlotsRef)
+      .where(
+        and(
+          eq(availabilitySlotsRef.id, data.slotId),
+          eq(availabilitySlotsRef.productId, product.id),
+        ),
+      )
+      .limit(1)
+
+    if (!selectedSlot) {
+      return null
+    }
+
+    if (option && selectedSlot.optionId && selectedSlot.optionId !== option.id) {
+      return null
+    }
+
+    slot = {
+      id: selectedSlot.id,
+      dateLocal: selectedSlot.dateLocal,
+      startsAt: selectedSlot.startsAt,
+      endsAt: selectedSlot.endsAt,
+      timezone: selectedSlot.timezone,
+    }
+  }
+
   return {
     product: {
       id: product.id,
@@ -481,6 +523,7 @@ async function getConvertProductData(
       pax: product.pax,
     },
     option: option ? { id: option.id, name: option.name } : null,
+    slot,
     dayServices,
     units: units.map((unit) => ({
       id: unit.id,
@@ -1259,7 +1302,17 @@ export const bookingsService = {
     productData: ConvertProductData,
     userId?: string,
   ) {
-    const { product, option, dayServices, units } = productData
+    const { product, option, slot, dayServices, units } = productData
+
+    // Slot dates win over product dates so scheduled/recurring products don't
+    // land with null dates. endsAt is a timestamp; fall back to the slot's
+    // dateLocal when the slot has no explicit end timestamp.
+    const startDate = slot?.dateLocal ?? product.startDate
+    const endDate = slot
+      ? slot.endsAt
+        ? slot.endsAt.toISOString().slice(0, 10)
+        : slot.dateLocal
+      : product.endDate
 
     const [booking] = await db
       .insert(bookings)
@@ -1272,8 +1325,8 @@ export const bookingsService = {
         sellAmountCents: product.sellAmountCents,
         costAmountCents: product.costAmountCents,
         marginPercent: product.marginPercent,
-        startDate: product.startDate,
-        endDate: product.endDate,
+        startDate,
+        endDate,
         pax: product.pax,
         internalNotes: data.internalNotes ?? null,
       })
@@ -1304,6 +1357,15 @@ export const bookingsService = {
         : selectedUnits.length === 1
           ? selectedUnits
           : []
+
+    const slotFields = slot
+      ? {
+          serviceDate: slot.dateLocal,
+          startsAt: slot.startsAt,
+          endsAt: slot.endsAt,
+          metadata: { availabilitySlotId: slot.id } as Record<string, unknown>,
+        }
+      : { metadata: null as Record<string, unknown> | null }
 
     const itemRows =
       unitsToSeed.length > 0
@@ -1341,6 +1403,7 @@ export const bookingsService = {
               productId: product.id,
               optionId: option?.id ?? null,
               optionUnitId: unit.id,
+              ...slotFields,
             }
           })
         : [
@@ -1360,6 +1423,7 @@ export const bookingsService = {
               productId: product.id,
               optionId: option?.id ?? null,
               optionUnitId: null,
+              ...slotFields,
             },
           ]
 
@@ -1398,7 +1462,12 @@ export const bookingsService = {
       actorId: userId ?? "system",
       activityType: "booking_converted",
       description: `Booking converted from product "${product.name}"`,
-      metadata: { productId: product.id, productName: product.name, optionId: option?.id ?? null },
+      metadata: {
+        productId: product.id,
+        productName: product.name,
+        optionId: option?.id ?? null,
+        slotId: slot?.id ?? null,
+      },
     })
 
     return booking

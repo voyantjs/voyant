@@ -17,6 +17,8 @@ import type { UsePublicBookingPaymentsOptions } from "./hooks/use-public-booking
 import type { UsePublicFinanceDocumentByReferenceOptions } from "./hooks/use-public-finance-document-by-reference.js"
 import type { UsePublicPaymentSessionOptions } from "./hooks/use-public-payment-session.js"
 import type { UseSupplierPaymentsOptions } from "./hooks/use-supplier-payments.js"
+import type { UseVoucherOptions } from "./hooks/use-voucher.js"
+import type { UseVouchersOptions } from "./hooks/use-vouchers.js"
 import {
   getPublicBookingDocuments,
   getPublicBookingPaymentOptions,
@@ -35,6 +37,8 @@ import {
   invoicePaymentsResponse,
   invoiceSingleResponse,
   supplierPaymentListResponse,
+  voucherDetailResponse,
+  voucherListResponse,
 } from "./schemas.js"
 
 export function getBookingPaymentSchedulesQueryOptions(
@@ -307,6 +311,52 @@ export function getPublicPaymentSessionQueryOptions(
       }
 
       return getPublicPaymentSession(client, sessionId)
+    },
+  })
+}
+
+export function getVouchersQueryOptions(
+  client: FetchWithValidationOptions,
+  options: UseVouchersOptions = {},
+) {
+  const { enabled: _enabled = true, ...filters } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.vouchersList(filters),
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filters.status) params.set("status", filters.status)
+      if (filters.issuedToPersonId) params.set("issuedToPersonId", filters.issuedToPersonId)
+      if (filters.issuedToOrganizationId) {
+        params.set("issuedToOrganizationId", filters.issuedToOrganizationId)
+      }
+      if (filters.search) params.set("search", filters.search)
+      if (filters.hasBalance !== undefined) params.set("hasBalance", String(filters.hasBalance))
+      if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+      if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+      const qs = params.toString()
+
+      return fetchWithValidation(
+        `/v1/finance/vouchers${qs ? `?${qs}` : ""}`,
+        voucherListResponse,
+        client,
+      )
+    },
+  })
+}
+
+export function getVoucherQueryOptions(
+  client: FetchWithValidationOptions,
+  id: string | null | undefined,
+  options: UseVoucherOptions = {},
+) {
+  const { enabled: _enabled = true } = options
+
+  return queryOptions({
+    queryKey: financeQueryKeys.voucher(id ?? ""),
+    queryFn: async () => {
+      if (!id) throw new Error("getVoucherQueryOptions requires an id")
+      return fetchWithValidation(`/v1/finance/vouchers/${id}`, voucherDetailResponse, client)
     },
   })
 }

@@ -9,6 +9,16 @@ export interface FinanceSupplierPaymentListFilters {
   offset?: number | undefined
 }
 
+export interface FinanceVoucherListFilters {
+  status?: string | undefined
+  issuedToPersonId?: string | undefined
+  issuedToOrganizationId?: string | undefined
+  search?: string | undefined
+  hasBalance?: boolean | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
+
 export interface PublicBookingPaymentOptionsFilters {
   personId?: string | undefined
   organizationId?: string | undefined
@@ -56,4 +66,9 @@ export const financeQueryKeys = {
     [...financeQueryKeys.publicCheckout(), "payment-session", sessionId] as const,
   publicVoucherValidation: () =>
     [...financeQueryKeys.publicCheckout(), "voucher-validation"] as const,
+
+  vouchers: () => [...financeQueryKeys.all, "vouchers"] as const,
+  vouchersList: (filters: FinanceVoucherListFilters) =>
+    [...financeQueryKeys.vouchers(), "list", filters] as const,
+  voucher: (id: string) => [...financeQueryKeys.vouchers(), "detail", id] as const,
 } as const

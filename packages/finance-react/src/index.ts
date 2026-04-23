@@ -38,5 +38,7 @@ export {
   getPublicFinanceDocumentByReferenceQueryOptions,
   getPublicPaymentSessionQueryOptions,
   getSupplierPaymentsQueryOptions,
+  getVoucherQueryOptions,
+  getVouchersQueryOptions,
 } from "./query-options.js"
 export * from "./schemas.js"

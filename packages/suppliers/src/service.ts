@@ -1,3 +1,4 @@
+import { getSupplierAggregates } from "./service-aggregates.js"
 import {
   createSupplier,
   deleteSupplier,
@@ -39,6 +40,7 @@ import {
 } from "./service-operations.js"
 
 export const suppliersService = {
+  getSupplierAggregates,
   listSuppliers,
   getSupplierById,
   createSupplier,

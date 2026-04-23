@@ -95,6 +95,11 @@ export const availabilitySlotListQuerySchema = paginationSchema.extend({
   status: availabilitySlotStatusSchema.optional(),
 })
 
+export const availabilityAggregatesQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})
+
 export const availabilityCloseoutCoreSchema = z.object({
   productId: z.string(),
   slotId: z.string().nullable().optional(),

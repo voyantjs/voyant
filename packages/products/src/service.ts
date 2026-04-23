@@ -32,6 +32,7 @@ import {
   productVersions,
   productVisibilitySettings,
 } from "./schema.js"
+import { getProductAggregates } from "./service-aggregates.js"
 import type {
   destinationListQuerySchema,
   destinationTranslationListQuerySchema,
@@ -312,6 +313,8 @@ async function promoteFallbackItinerary(db: PostgresJsDatabase, productId: strin
 }
 
 export const productsService = {
+  getProductAggregates,
+
   async listProducts(db: PostgresJsDatabase, query: ProductListQuery) {
     const conditions = []
 

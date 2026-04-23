@@ -63,6 +63,11 @@ export const supplierListQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 })
 
+export const supplierAggregatesQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+})
+
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>
 export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 export type SelectSupplier = z.infer<typeof selectSupplierSchema>

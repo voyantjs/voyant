@@ -1,5 +1,6 @@
 "use client"
 
+import { useSlots } from "@voyantjs/availability-react"
 import {
   type BookingRecord,
   useBookingConvertMutation,
@@ -61,6 +62,7 @@ export function QuickBookDialog({
   const [productId, setProductId] = React.useState(defaultProductId ?? "")
   const [productSearch, setProductSearch] = React.useState("")
   const [optionId, setOptionId] = React.useState<string>(NONE)
+  const [slotId, setSlotId] = React.useState<string>(NONE)
   const [organizationId, setOrganizationId] = React.useState<string>(NONE)
   const [orgSearch, setOrgSearch] = React.useState("")
   const [notes, setNotes] = React.useState("")
@@ -87,6 +89,7 @@ export function QuickBookDialog({
       setProductId(defaultProductId ?? "")
       setProductSearch("")
       setOptionId(NONE)
+      setSlotId(NONE)
       setOrganizationId(NONE)
       setOrgSearch("")
       setNotes("")
@@ -116,6 +119,39 @@ export function QuickBookDialog({
     enabled: open && Boolean(productId),
   })
   const options = optionsData?.data ?? []
+
+  // Departures: fetch open slots for the chosen product, then filter by option
+  // client-side (the availability list endpoint doesn't accept an optionId param).
+  // Slot status is one of open/closed/sold_out/cancelled — only offer "open" for pick.
+  const { data: slotsData } = useSlots({
+    productId: productId || undefined,
+    status: "open",
+    limit: 100,
+    enabled: open && Boolean(productId),
+  })
+  const allSlots = slotsData?.data ?? []
+  const slots = React.useMemo(() => {
+    const nowIso = new Date().toISOString()
+    return allSlots
+      .filter((slot) => slot.startsAt >= nowIso)
+      .filter((slot) => {
+        if (optionId === NONE) return true
+        // A slot with no optionId applies to every option; otherwise it must match.
+        return slot.optionId === null || slot.optionId === optionId
+      })
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+  }, [allSlots, optionId])
+
+  const formatSlotLabel = React.useCallback((slot: (typeof slots)[number]) => {
+    const date = new Date(slot.startsAt).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+    const remaining =
+      !slot.unlimited && typeof slot.remainingPax === "number" ? ` · ${slot.remainingPax} left` : ""
+    return `${date}${remaining}`
+  }, [])
 
   const { data: peopleData } = usePeople({
     search: personSearch || undefined,
@@ -185,6 +221,7 @@ export function QuickBookDialog({
         productId,
         bookingNumber: generateBookingNumber(),
         optionId: optionId === NONE ? null : optionId,
+        slotId: slotId === NONE ? null : slotId,
         personId: resolvedPersonId,
         organizationId: organizationId === NONE ? null : organizationId,
         internalNotes: notes.trim() || null,
@@ -251,6 +288,7 @@ export function QuickBookDialog({
                 onValueChange={(v) => {
                   setProductId(v ?? "")
                   setOptionId(NONE)
+                  setSlotId(NONE)
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -271,7 +309,13 @@ export function QuickBookDialog({
           {productId && options.length > 0 && (
             <div className="flex flex-col gap-2">
               <Label>{quickBookMessages.optionLabel}</Label>
-              <Select value={optionId} onValueChange={(v) => setOptionId(v ?? NONE)}>
+              <Select
+                value={optionId}
+                onValueChange={(v) => {
+                  setOptionId(v ?? NONE)
+                  setSlotId(NONE)
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -282,6 +326,32 @@ export function QuickBookDialog({
                       {o.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Departure / slot — cascades from product + option */}
+          {productId && (
+            <div className="flex flex-col gap-2">
+              <Label>{quickBookMessages.departureLabel}</Label>
+              <Select value={slotId} onValueChange={(v) => setSlotId(v ?? NONE)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={quickBookMessages.departureSelectPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{quickBookMessages.departureNone}</SelectItem>
+                  {slots.length === 0 ? (
+                    <SelectItem value="__empty__" disabled>
+                      {quickBookMessages.departureEmpty}
+                    </SelectItem>
+                  ) : (
+                    slots.map((slot) => (
+                      <SelectItem key={slot.id} value={slot.id}>
+                        {formatSlotLabel(slot)}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

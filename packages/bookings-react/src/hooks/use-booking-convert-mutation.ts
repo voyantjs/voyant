@@ -11,6 +11,12 @@ export interface ConvertProductToBookingInput {
   productId: string
   bookingNumber: string
   optionId?: string | null
+  /**
+   * Availability slot the operator picked. When set, the booking's start/end
+   * dates are pinned to the slot instead of defaulting to the (typically null)
+   * product dates. Server-side validation rejects mismatched product/option.
+   */
+  slotId?: string | null
   personId?: string | null
   organizationId?: string | null
   internalNotes?: string | null

@@ -203,7 +203,10 @@ export const publicVoucherValidationSchema = z.object({
     .object({
       id: z.string(),
       code: z.string(),
-      label: z.string(),
+      // Nullable: the new vouchers table (#239) doesn't carry a separate
+      // label column — display falls back to `code`. Legacy
+      // payment_instruments rows still populate this.
+      label: z.string().nullable(),
       provider: z.string().nullable(),
       currency: z.string().nullable(),
       amountCents: z.number().int().nullable(),

@@ -175,6 +175,17 @@ export {
 export type { InvoiceFromBookingData } from "./service.js"
 export { financeService, renderInvoiceBody } from "./service.js"
 export type {
+  BookingDualCreatedEvent,
+  DualCreateBookingInput,
+  DualCreateBookingOutcome,
+  DualCreateBookingResult,
+  DualCreateBookingRuntime,
+} from "./service-bookings-dual-create.js"
+export {
+  dualCreateBooking,
+  dualCreateBookingSchema,
+} from "./service-bookings-dual-create.js"
+export type {
   BookingQuickCreatedEvent,
   BookingQuickCreateRuntime,
   QuickCreateBookingInput,

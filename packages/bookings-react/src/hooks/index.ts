@@ -14,6 +14,13 @@ export {
   useBookingTravelerDocumentMutation,
   useBookingTravelerDocuments,
 } from "./use-booking-documents.js"
+export {
+  type DualCreateBookingInput,
+  type DualCreateBookingResult,
+  type DualCreateGroupInput,
+  type DualCreateSubBookingInput,
+  useBookingDualCreateMutation,
+} from "./use-booking-dual-create-mutation.js"
 export { type UseBookingGroupOptions, useBookingGroup } from "./use-booking-group.js"
 export {
   type UseBookingGroupForBookingOptions,

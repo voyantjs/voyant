@@ -49,6 +49,23 @@ const notificationsHonoModule = createNotificationsHonoModule({
 
     return createDefaultBookingDocumentAttachment(document)
   },
+  // Auto-dispatch the booking-confirmation bundle when a booking flips to
+  // `confirmed`. The subscriber runs in the same process as the emitter via
+  // the in-process event bus; errors are logged, not rethrown, so a flaky
+  // mailer can't block the confirm request.
+  //
+  // `getDbFromHyperdrive` returns a union of PostgresJsDatabase and
+  // NeonHttpDatabase depending on env (hyperdrive vs plain DATABASE_URL).
+  // The notifications service only calls drizzle operations that both
+  // flavors support, so we narrow through `unknown`.
+  resolveDb: (bindings) =>
+    getDbFromHyperdrive(
+      bindings as unknown as CloudflareBindings,
+    ) as unknown as import("drizzle-orm/postgres-js").PostgresJsDatabase,
+  autoConfirmAndDispatch: {
+    enabled: true,
+    templateSlug: "booking-confirmation",
+  },
 })
 const storefrontVerificationHonoModule = createStorefrontVerificationHonoModule({
   resolveProviders: resolveNotificationProviders,

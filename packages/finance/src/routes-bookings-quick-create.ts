@@ -46,6 +46,8 @@ const quickCreateRoutes = new Hono<{
         return c.json({ error: "Voucher not found" }, 404)
       case "voucher_inactive":
         return c.json({ error: "Voucher is not active" }, 409)
+      case "voucher_not_started":
+        return c.json({ error: "Voucher is not yet valid" }, 409)
       case "voucher_expired":
         return c.json({ error: "Voucher has expired" }, 409)
       case "voucher_insufficient_balance":
@@ -88,6 +90,8 @@ const quickCreateRoutes = new Hono<{
         return c.json({ ...body, error: `${which}: voucher not found` }, 404)
       case "voucher_inactive":
         return c.json({ ...body, error: `${which}: voucher is not active` }, 409)
+      case "voucher_not_started":
+        return c.json({ ...body, error: `${which}: voucher is not yet valid` }, 409)
       case "voucher_expired":
         return c.json({ ...body, error: `${which}: voucher has expired` }, 409)
       case "voucher_insufficient_balance":

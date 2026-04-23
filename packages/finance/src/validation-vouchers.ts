@@ -5,6 +5,7 @@ import { voucherSourceTypeSchema, voucherStatusSchema } from "./validation-share
 /** Issue a new voucher. Code is generated server-side when not supplied. */
 export const insertVoucherSchema = z.object({
   code: z.string().min(1).max(64).optional().nullable(),
+  seriesCode: z.string().max(64).optional().nullable(),
   currency: z.string().min(3).max(3),
   amountCents: z.number().int().positive(),
   issuedToPersonId: z.string().optional().nullable(),
@@ -12,6 +13,7 @@ export const insertVoucherSchema = z.object({
   sourceType: voucherSourceTypeSchema,
   sourceBookingId: z.string().optional().nullable(),
   sourcePaymentId: z.string().optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
@@ -22,6 +24,8 @@ export const insertVoucherSchema = z.object({
  */
 export const updateVoucherSchema = z.object({
   status: voucherStatusSchema.optional(),
+  seriesCode: z.string().max(64).optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
   notes: z.string().optional().nullable(),
   issuedToPersonId: z.string().optional().nullable(),
@@ -37,6 +41,7 @@ export const redeemVoucherSchema = z.object({
 
 export const voucherListQuerySchema = z.object({
   status: voucherStatusSchema.optional(),
+  seriesCode: z.string().optional(),
   issuedToPersonId: z.string().optional(),
   issuedToOrganizationId: z.string().optional(),
   search: z.string().optional(),

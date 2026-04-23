@@ -239,6 +239,15 @@ export const vouchers = pgTable(
   {
     id: typeId("vouchers"),
     code: text("code").notNull(),
+    /**
+     * Batch / campaign identifier. Optional grouping used when a supplier or
+     * promo issues many vouchers at once ("GIFT-2026-Q1") and wants to
+     * aggregate/revoke them by series. Not indexed uniquely — multiple rows
+     * can share the same seriesCode.
+     *
+     * Aligned with OpenTravel 2019A Finance.Voucher.seriesCode.
+     */
+    seriesCode: text("series_code"),
     status: voucherStatusEnum("status").notNull().default("active"),
     currency: text("currency").notNull(),
     initialAmountCents: integer("initial_amount_cents").notNull(),
@@ -248,6 +257,15 @@ export const vouchers = pgTable(
     sourceType: voucherSourceTypeEnum("source_type").notNull(),
     sourceBookingId: text("source_booking_id"),
     sourcePaymentId: text("source_payment_id"),
+    /**
+     * Start-of-validity. Nullable — when set, a redemption attempt before
+     * this timestamp returns `voucher_not_started`. Needed for gift
+     * vouchers that are issued immediately but shouldn't be redeemable
+     * until the recipient's birthday, new year, etc.
+     *
+     * Aligned with OpenTravel 2019A Finance.Voucher.effectiveDate.
+     */
+    validFrom: timestamp("valid_from", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     notes: text("notes"),
     issuedByUserId: text("issued_by_user_id"),
@@ -256,10 +274,12 @@ export const vouchers = pgTable(
   },
   (table) => [
     uniqueIndex("uidx_vouchers_code").on(table.code),
+    index("idx_vouchers_series").on(table.seriesCode),
     index("idx_vouchers_status").on(table.status),
     index("idx_vouchers_person").on(table.issuedToPersonId),
     index("idx_vouchers_organization").on(table.issuedToOrganizationId),
     index("idx_vouchers_source_booking").on(table.sourceBookingId),
+    index("idx_vouchers_valid_from").on(table.validFrom),
     index("idx_vouchers_expires_at").on(table.expiresAt),
     index("idx_vouchers_remaining").on(table.remainingAmountCents),
   ],

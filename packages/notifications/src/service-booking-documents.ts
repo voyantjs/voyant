@@ -394,6 +394,68 @@ export const bookingDocumentNotificationsService = {
       delivery,
     }
   },
+
+  /**
+   * Confirm-and-dispatch — single orchestrated call for the operator flow
+   * that wants "list the booking's documents, then send them to the client"
+   * to be one action instead of two round-trips.
+   *
+   * With `sendNotification: false`, the caller gets the bundle back without
+   * attempting a send — useful for rendering a preview/checkbox list before
+   * the operator confirms. With `sendNotification: true`, the same send
+   * guards as `sendBookingDocumentsNotification` apply (no_documents,
+   * no_recipient, no_attachments, send_failed); the result keeps the bundle
+   * regardless so the UI always has something to show.
+   */
+  async confirmAndDispatchBooking(
+    db: PostgresJsDatabase,
+    dispatcher: NotificationService,
+    bookingId: string,
+    input: { sendNotification?: boolean } & SendBookingDocumentsNotificationInput,
+    runtime: SendBookingDocumentsRuntimeOptions = {},
+  ) {
+    const bundle = await this.listBookingDocumentBundle(db, bookingId)
+    if (!bundle) return { status: "not_found" as const }
+
+    const documents = bundle.documents
+    const sendNotification = input.sendNotification ?? true
+    if (!sendNotification) {
+      return {
+        status: "preview" as const,
+        bookingId,
+        documents,
+      }
+    }
+
+    const result = await this.sendBookingDocumentsNotification(
+      db,
+      dispatcher,
+      bookingId,
+      input,
+      runtime,
+    )
+
+    if (result.status === "not_found") {
+      return { status: "not_found" as const }
+    }
+
+    if (result.status !== "sent") {
+      return {
+        status: "skipped" as const,
+        bookingId,
+        documents,
+        skipReason: result.status,
+      }
+    }
+
+    return {
+      status: "dispatched" as const,
+      bookingId: result.bookingId,
+      documents: result.documents,
+      recipient: result.recipient,
+      delivery: result.delivery,
+    }
+  },
 }
 
 export { createDefaultAttachmentFromDocument as createDefaultBookingDocumentAttachment }

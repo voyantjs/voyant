@@ -57,5 +57,6 @@ export const notificationsService = {
   listBookingDocumentBundle: bookingDocumentNotificationsService.listBookingDocumentBundle,
   sendBookingDocumentsNotification:
     bookingDocumentNotificationsService.sendBookingDocumentsNotification,
+  confirmAndDispatchBooking: bookingDocumentNotificationsService.confirmAndDispatchBooking,
   createDefaultBookingDocumentAttachment,
 }

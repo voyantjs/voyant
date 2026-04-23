@@ -331,3 +331,41 @@ export const sendBookingDocumentsNotificationResultSchema = z.object({
   provider: z.string().optional().nullable(),
   status: notificationDeliveryStatusSchema,
 })
+
+/**
+ * Confirm-and-dispatch — single orchestrated request that lists the booking's
+ * document bundle and (optionally) sends it to the client in one round-trip.
+ *
+ * `sendNotification: false` turns the call into a preview: the bundle comes
+ * back but no delivery is attempted. Templates use the preview to render the
+ * "here's what's ready" checkbox list before the operator confirms.
+ */
+export const confirmAndDispatchBookingSchema = sendBookingDocumentsNotificationSchema.extend({
+  sendNotification: z.boolean().default(true),
+})
+
+export const confirmAndDispatchBookingResultSchema = z.object({
+  bookingId: z.string().min(1),
+  documents: z.array(bookingDocumentBundleItemSchema),
+  /**
+   * Non-null when `sendNotification` was true and a delivery actually went
+   * out. Null when either the operator asked for a preview only, or the send
+   * couldn't proceed (no recipient / no attachments / no matching documents).
+   */
+  notification: z
+    .object({
+      recipient: z.string().min(1),
+      deliveryId: z.string().min(1),
+      provider: z.string().optional().nullable(),
+      status: notificationDeliveryStatusSchema,
+    })
+    .nullable(),
+  /**
+   * When `sendNotification` was true but the dispatcher declined to send,
+   * this captures which guard tripped so the UI can explain it — e.g.
+   * "No recipient on file, add an email to the lead traveler and retry".
+   */
+  skipReason: z
+    .enum(["preview_only", "no_documents", "no_recipient", "no_attachments", "send_failed"])
+    .nullable(),
+})

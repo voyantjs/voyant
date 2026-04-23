@@ -222,6 +222,75 @@ export const taxRegimeCodeEnum = pgEnum("tax_regime_code", [
   "other",
 ])
 
+// ---------- vouchers ----------
+
+export const voucherStatusEnum = pgEnum("voucher_status", ["active", "redeemed", "expired", "void"])
+
+export const voucherSourceTypeEnum = pgEnum("voucher_source_type", [
+  "refund",
+  "cancellation_credit",
+  "gift",
+  "manual",
+  "promo",
+])
+
+export const vouchers = pgTable(
+  "vouchers",
+  {
+    id: typeId("vouchers"),
+    code: text("code").notNull(),
+    status: voucherStatusEnum("status").notNull().default("active"),
+    currency: text("currency").notNull(),
+    initialAmountCents: integer("initial_amount_cents").notNull(),
+    remainingAmountCents: integer("remaining_amount_cents").notNull(),
+    issuedToPersonId: text("issued_to_person_id"),
+    issuedToOrganizationId: text("issued_to_organization_id"),
+    sourceType: voucherSourceTypeEnum("source_type").notNull(),
+    sourceBookingId: text("source_booking_id"),
+    sourcePaymentId: text("source_payment_id"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    notes: text("notes"),
+    issuedByUserId: text("issued_by_user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uidx_vouchers_code").on(table.code),
+    index("idx_vouchers_status").on(table.status),
+    index("idx_vouchers_person").on(table.issuedToPersonId),
+    index("idx_vouchers_organization").on(table.issuedToOrganizationId),
+    index("idx_vouchers_source_booking").on(table.sourceBookingId),
+    index("idx_vouchers_expires_at").on(table.expiresAt),
+    index("idx_vouchers_remaining").on(table.remainingAmountCents),
+  ],
+)
+
+export type Voucher = typeof vouchers.$inferSelect
+export type NewVoucher = typeof vouchers.$inferInsert
+
+export const voucherRedemptions = pgTable(
+  "voucher_redemptions",
+  {
+    id: typeId("voucher_redemptions"),
+    voucherId: typeIdRef("voucher_id")
+      .notNull()
+      .references(() => vouchers.id, { onDelete: "cascade" }),
+    bookingId: text("booking_id").notNull(),
+    paymentId: text("payment_id"),
+    amountCents: integer("amount_cents").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByUserId: text("created_by_user_id"),
+  },
+  (table) => [
+    index("idx_voucher_redemptions_voucher").on(table.voucherId),
+    index("idx_voucher_redemptions_booking").on(table.bookingId),
+    index("idx_voucher_redemptions_voucher_created").on(table.voucherId, table.createdAt),
+  ],
+)
+
+export type VoucherRedemption = typeof voucherRedemptions.$inferSelect
+export type NewVoucherRedemption = typeof voucherRedemptions.$inferInsert
+
 // ---------- payment_instruments ----------
 
 export const paymentInstruments = pgTable(
@@ -1168,6 +1237,17 @@ export const invoiceExternalRefsRelations = relations(invoiceExternalRefs, ({ on
   invoice: one(invoices, {
     fields: [invoiceExternalRefs.invoiceId],
     references: [invoices.id],
+  }),
+}))
+
+export const vouchersRelations = relations(vouchers, ({ many }) => ({
+  redemptions: many(voucherRedemptions),
+}))
+
+export const voucherRedemptionsRelations = relations(voucherRedemptions, ({ one }) => ({
+  voucher: one(vouchers, {
+    fields: [voucherRedemptions.voucherId],
+    references: [vouchers.id],
   }),
 }))
 

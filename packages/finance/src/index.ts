@@ -133,6 +133,8 @@ export type {
   NewPaymentSession,
   NewSupplierPayment,
   NewTaxRegime,
+  NewVoucher,
+  NewVoucherRedemption,
   Payment,
   PaymentAuthorization,
   PaymentCapture,
@@ -140,6 +142,8 @@ export type {
   PaymentSession,
   SupplierPayment,
   TaxRegime,
+  Voucher,
+  VoucherRedemption,
 } from "./schema.js"
 export {
   bookingGuarantees,
@@ -162,6 +166,10 @@ export {
   payments,
   supplierPayments,
   taxRegimes,
+  voucherRedemptions,
+  voucherSourceTypeEnum,
+  voucherStatusEnum,
+  vouchers,
 } from "./schema.js"
 export type { InvoiceFromBookingData } from "./service.js"
 export { financeService, renderInvoiceBody } from "./service.js"
@@ -189,6 +197,7 @@ export type {
   InvoiceSettlementPollerResult,
 } from "./service-settlement.js"
 export { financeSettlementService } from "./service-settlement.js"
+export { VoucherServiceError, vouchersService } from "./service-vouchers.js"
 export type {
   GeneratedInvoiceDocumentResult,
   GenerateInvoiceDocumentInput,

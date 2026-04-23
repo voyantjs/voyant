@@ -1,5 +1,17 @@
 # @voyantjs/legal
 
+## 0.7.0
+
+### Patch Changes
+
+- @voyantjs/core@0.7.0
+- @voyantjs/crm@0.7.0
+- @voyantjs/db@0.7.0
+- @voyantjs/hono@0.7.0
+- @voyantjs/voyant-storage@0.7.0
+- @voyantjs/suppliers@0.7.0
+- @voyantjs/utils@0.7.0
+
 ## 0.6.9
 
 ### Patch Changes

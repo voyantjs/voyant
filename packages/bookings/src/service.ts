@@ -1,3 +1,4 @@
+import type { EventBus } from "@voyantjs/core"
 import { and, asc, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
@@ -127,6 +128,25 @@ export interface ConvertProductData {
 
 type ProductOptionReference = typeof productOptionsRef.$inferSelect
 type OptionUnitReference = typeof optionUnitsRef.$inferSelect
+
+/**
+ * Optional runtime hooks for status-transition flows. Keeps the service
+ * decoupled from delivery concerns — bookings only has to emit, never know
+ * what listens.
+ */
+export interface BookingServiceRuntime {
+  eventBus?: EventBus
+}
+
+/**
+ * Payload shape for `booking.confirmed`. Subscribers should treat unknown
+ * fields as forward-compatible additions.
+ */
+export interface BookingConfirmedEvent {
+  bookingId: string
+  bookingNumber: string
+  actorId: string | null
+}
 
 const travelerParticipantTypes = ["traveler", "occupant"] as const
 
@@ -1858,6 +1878,7 @@ export const bookingsService = {
     id: string,
     data: UpdateBookingStatusInput,
     userId?: string,
+    runtime: BookingServiceRuntime = {},
   ) {
     const [current] = await db
       .select({ id: bookings.id, status: bookings.status })
@@ -1870,7 +1891,7 @@ export const bookingsService = {
     }
 
     if (current.status === "on_hold" && data.status === "confirmed") {
-      return bookingsService.confirmBooking(db, id, { note: data.note }, userId)
+      return bookingsService.confirmBooking(db, id, { note: data.note }, userId, runtime)
     }
 
     if (current.status === "on_hold" && data.status === "expired") {
@@ -1927,9 +1948,10 @@ export const bookingsService = {
     id: string,
     data: ConfirmBookingInput,
     userId?: string,
+    runtime: BookingServiceRuntime = {},
   ) {
     try {
-      return await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const rows = await tx.execute(
           sql`SELECT id, booking_number, status, hold_expires_at
               FROM ${bookings}
@@ -2000,6 +2022,23 @@ export const bookingsService = {
 
         return { status: "ok" as const, booking: row ?? null }
       })
+
+      // Emit AFTER the transaction commits so subscribers can't observe a
+      // confirmed state that might still roll back. `emit` is fire-and-forget
+      // per the EventBus contract — subscriber errors are logged, not rethrown.
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.confirmed",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            actorId: userId ?? null,
+          } satisfies BookingConfirmedEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return result
     } catch (error) {
       if (error instanceof BookingServiceError) {
         return { status: error.code as Exclude<string, "ok"> }

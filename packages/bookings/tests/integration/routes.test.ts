@@ -54,6 +54,7 @@ const originalKmsEnvKey = process.env.KMS_ENV_KEY
 describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
   let app: Hono
   let db: ReturnType<typeof import("@voyantjs/db/test-utils").createTestDb>
+  let eventBus: ReturnType<typeof import("@voyantjs/core").createEventBus>
 
   beforeAll(async () => {
     const { createTestDb, cleanupTestDb } = await import("@voyantjs/db/test-utils")
@@ -107,9 +108,13 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
     process.env.KMS_PROVIDER = "env"
     process.env.KMS_ENV_KEY = generateEnvKmsKey()
 
+    const { createEventBus } = await import("@voyantjs/core")
+    eventBus = createEventBus()
+
     app = new Hono()
     app.use("*", async (c, next) => {
       c.set("db" as never, db)
+      c.set("eventBus" as never, eventBus)
       c.set("userId" as never, "test-user-id")
       c.set("actor" as never, "staff")
       await next()
@@ -697,6 +702,70 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
 
       expect(res.status).toBe(200)
       expect((await res.json()).data.status).toBe("confirmed")
+    })
+
+    it("emits booking.confirmed with id + number + actor after confirm", async () => {
+      const slot = await seedSlot()
+      const reserveRes = await app.request("/reserve", {
+        method: "POST",
+        ...json({
+          bookingNumber: nextBookingNumber(),
+          sellCurrency: "USD",
+          items: [{ title: "Adult ticket", availabilitySlotId: slot.id, quantity: 1 }],
+        }),
+      })
+      const { data: booking } = await reserveRes.json()
+
+      const received: Array<{
+        bookingId: string
+        bookingNumber: string
+        actorId: string | null
+      }> = []
+      const sub = eventBus.subscribe("booking.confirmed", (event) => {
+        received.push(
+          event.data as { bookingId: string; bookingNumber: string; actorId: string | null },
+        )
+      })
+
+      try {
+        const res = await app.request(`/${booking.id}/confirm`, {
+          method: "POST",
+          ...json({}),
+        })
+        expect(res.status).toBe(200)
+      } finally {
+        sub.unsubscribe()
+      }
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber,
+        actorId: "test-user-id",
+      })
+    })
+
+    it("does not emit booking.confirmed when the transition fails", async () => {
+      // Booking starts in "draft" from POST / — the confirm route rejects it
+      // with invalid_transition, and no event should fire.
+      const draft = await seedBooking()
+
+      const received: unknown[] = []
+      const sub = eventBus.subscribe("booking.confirmed", (event) => {
+        received.push(event.data)
+      })
+
+      try {
+        const res = await app.request(`/${draft.id}/confirm`, {
+          method: "POST",
+          ...json({}),
+        })
+        expect(res.status).toBe(409)
+      } finally {
+        sub.unsubscribe()
+      }
+
+      expect(received).toHaveLength(0)
     })
 
     it("extends an on-hold booking", async () => {

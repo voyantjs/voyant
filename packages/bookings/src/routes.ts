@@ -436,6 +436,7 @@ export const bookingRoutes = new Hono<Env>()
       c.req.param("id"),
       await parseJsonBody(c, updateBookingStatusSchema),
       c.get("userId"),
+      { eventBus: c.get("eventBus") },
     )
 
     if (result.status === "not_found") {
@@ -460,6 +461,7 @@ export const bookingRoutes = new Hono<Env>()
       c.req.param("id"),
       await parseJsonBody(c, confirmBookingSchema),
       c.get("userId"),
+      { eventBus: c.get("eventBus") },
     )
 
     if (result.status === "not_found") {

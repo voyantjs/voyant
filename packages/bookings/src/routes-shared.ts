@@ -1,4 +1,4 @@
-import type { ModuleContainer } from "@voyantjs/core"
+import type { EventBus, ModuleContainer } from "@voyantjs/core"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { Context } from "hono"
 
@@ -27,6 +27,7 @@ export type Env = {
   Variables: {
     container?: ModuleContainer
     db: PostgresJsDatabase
+    eventBus?: EventBus
     userId?: string
     actor?: "staff" | "customer" | "partner" | "supplier"
     callerType?: "session" | "api_key" | "internal"

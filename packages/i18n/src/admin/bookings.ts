@@ -90,6 +90,9 @@ export const adminBookingsMessages = {
           "A new group will be created with this booking as the primary member.",
         notesLabel: "Internal Notes",
         notesPlaceholder: "Quick context for this booking...",
+        confirmAfterCreateLabel: "Confirm & notify traveler after creating",
+        confirmAfterCreateHint:
+          "Transitions the booking to confirmed and — when the notifications module's auto-dispatch is on — sends the booking docs to the lead traveler. Leave off to keep the booking in draft.",
         errorSelectProduct: "Select a product",
         errorSelectPerson: "Select a person or switch to create mode",
         errorNameRequired: "First and last name are required",
@@ -622,6 +625,9 @@ export const adminBookingsMessages = {
         sharedRoomCreateHint: "Va fi creat un grup nou cu aceasta rezervare ca membru principal.",
         notesLabel: "Note interne",
         notesPlaceholder: "Context rapid pentru aceasta rezervare...",
+        confirmAfterCreateLabel: "Confirma & notifica calatorul dupa creare",
+        confirmAfterCreateHint:
+          "Trece rezervarea in confirmata si, cand modulul de notificari are auto-dispatch activ, trimite documentele rezervarii catre calatorul principal. Lasa nebifat pentru a ramane in draft.",
         errorSelectProduct: "Selecteaza un produs",
         errorSelectPerson: "Selecteaza o persoana sau treci pe modul creare",
         errorNameRequired: "Prenumele si numele sunt obligatorii",

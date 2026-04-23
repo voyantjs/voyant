@@ -89,6 +89,7 @@ export {
   type FinanceRouteRuntime,
   type FinanceRuntimeOptions,
 } from "./route-runtime.js"
+export { bookingsQuickCreateExtension } from "./routes-bookings-quick-create.js"
 export {
   createFinanceAdminDocumentRoutes,
   type FinanceDocumentRouteOptions,
@@ -173,6 +174,18 @@ export {
 } from "./schema.js"
 export type { InvoiceFromBookingData } from "./service.js"
 export { financeService, renderInvoiceBody } from "./service.js"
+export type {
+  BookingQuickCreatedEvent,
+  BookingQuickCreateRuntime,
+  QuickCreateBookingInput,
+  QuickCreateBookingOutcome,
+  QuickCreateBookingResult,
+  QuickCreateTravelerInput,
+} from "./service-bookings-quick-create.js"
+export {
+  quickCreateBooking,
+  quickCreateBookingSchema,
+} from "./service-bookings-quick-create.js"
 export type {
   GeneratedInvoiceDocumentRecord,
   GeneratedInvoiceRenditionArtifact,

@@ -9,6 +9,7 @@ import {
   optionUnitsRef,
   productDayServicesRef,
   productDaysRef,
+  productItinerariesRef,
   productOptionsRef,
   productsRef,
   productTicketSettingsRef,
@@ -326,10 +327,15 @@ describe.skipIf(!DB_AVAILABLE)("Booking routes", () => {
       })
       .returning()
 
+    const [itinerary] = await db
+      .insert(productItinerariesRef)
+      .values({ productId: product.id, name: "Default itinerary", isDefault: true })
+      .returning()
+
     const [day] = await db
       .insert(productDaysRef)
       .values({
-        productId: product.id,
+        itineraryId: itinerary.id,
         dayNumber: 1,
       })
       .returning()

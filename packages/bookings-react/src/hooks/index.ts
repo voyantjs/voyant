@@ -61,6 +61,7 @@ export {
   useBookingStatusMutation,
 } from "./use-booking-status-mutation.js"
 export { type UseBookingsOptions, useBookings } from "./use-bookings.js"
+export { type UsePricingPreviewOptions, usePricingPreview } from "./use-pricing-preview.js"
 export {
   type UsePublicBookingSessionOptions,
   usePublicBookingSession,

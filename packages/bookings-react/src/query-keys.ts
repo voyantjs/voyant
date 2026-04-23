@@ -13,6 +13,12 @@ export interface BookingGroupsListFilters {
   offset?: number | undefined
 }
 
+export interface PricingPreviewFilters {
+  productId: string
+  optionId?: string | null | undefined
+  catalogId?: string | null | undefined
+}
+
 export const bookingsQueryKeys = {
   all: ["voyant", "bookings"] as const,
 
@@ -47,4 +53,7 @@ export const bookingsQueryKeys = {
   groupMembers: (id: string) => [...bookingsQueryKeys.group(id), "members"] as const,
   groupForBooking: (bookingId: string) =>
     [...bookingsQueryKeys.booking(bookingId), "group"] as const,
+
+  pricingPreview: (filters: PricingPreviewFilters) =>
+    [...bookingsQueryKeys.all, "pricing-preview", filters] as const,
 } as const

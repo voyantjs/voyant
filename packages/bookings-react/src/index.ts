@@ -23,6 +23,7 @@ export {
   getBookingQueryOptions,
   getBookingsQueryOptions,
   getBookingTravelerDocumentsQueryOptions,
+  getPricingPreviewQueryOptions,
   getPublicBookingSessionQueryOptions,
   getPublicBookingSessionStateQueryOptions,
   getSupplierStatusesQueryOptions,

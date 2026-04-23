@@ -504,7 +504,19 @@ function buildUnitWarnings(
   return warnings
 }
 
-async function resolveSessionPricingSnapshot(
+/**
+ * Resolves the catalog-scoped pricing snapshot for a product (options → option
+ * price rules → per-unit price rules → tiers). The snapshot is the same data
+ * the storefront booking session uses to compute a total — exposing it as a
+ * standalone admin preview lets operator dialogs, tour-sheet exports, and
+ * reconciliation flows see the same numbers the customer would see, without
+ * creating a throwaway session.
+ *
+ * Returns `null` when the product isn't publicly visible or there's no active
+ * catalog / matching option (caller can decide whether to 404 or surface a
+ * "pricing unavailable for this selection" message).
+ */
+export async function resolveSessionPricingSnapshot(
   db: PostgresJsDatabase,
   productId: string,
   input: { catalogId?: string | undefined; optionId?: string | undefined },

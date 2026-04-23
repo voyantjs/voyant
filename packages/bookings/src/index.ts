@@ -145,7 +145,7 @@ export {
   bookings,
   bookingTravelers,
 } from "./schema.js"
-export { publicBookingsService } from "./service-public.js"
+export { publicBookingsService, resolveSessionPricingSnapshot } from "./service-public.js"
 export {
   addBookingGroupMemberSchema,
   bookingGroupKindSchema,
@@ -171,6 +171,7 @@ export {
   insertSupplierStatusSchema,
   insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
+  pricingPreviewSchema,
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
   publicBookingSessionRepriceItemSchema,

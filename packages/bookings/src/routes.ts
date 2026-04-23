@@ -21,7 +21,7 @@ import type { Env } from "./routes-shared.js"
 import { bookingPiiAccessLog } from "./schema.js"
 import { bookingsService } from "./service.js"
 import { bookingGroupsService } from "./service-groups.js"
-import { publicBookingsService } from "./service-public.js"
+import { publicBookingsService, resolveSessionPricingSnapshot } from "./service-public.js"
 import {
   bookingListQuerySchema,
   cancelBookingSchema,
@@ -39,6 +39,7 @@ import {
   insertSupplierStatusSchema,
   insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
+  pricingPreviewSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
@@ -224,7 +225,20 @@ export const bookingRoutes = new Hono<Env>()
     return c.json(await bookingsService.listBookings(c.get("db"), query))
   })
 
-  // 1a. GET /overview — Internal/admin booking overview lookup
+  // 1a. POST /pricing-preview — Resolve a pricing snapshot without creating a session.
+  .post("/pricing-preview", async (c) => {
+    const body = await parseJsonBody(c, pricingPreviewSchema)
+    const snapshot = await resolveSessionPricingSnapshot(c.get("db"), body.productId, {
+      optionId: body.optionId ?? undefined,
+      catalogId: body.catalogId ?? undefined,
+    })
+    if (!snapshot) {
+      return c.json({ error: "Pricing unavailable for this selection" }, 404)
+    }
+    return c.json({ data: snapshot })
+  })
+
+  // 1b. GET /overview — Internal/admin booking overview lookup
   .get("/overview", async (c) => {
     const overview = await publicBookingsService.getOverviewByLookup(
       c.get("db"),

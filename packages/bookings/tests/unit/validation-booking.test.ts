@@ -4,6 +4,7 @@ import {
   convertProductSchema,
   createBookingSchema,
   insertBookingSchema,
+  pricingPreviewSchema,
   updateBookingSchema,
   updateBookingStatusSchema,
 } from "../../src/validation.js"
@@ -165,5 +166,29 @@ describe("Convert product schema", () => {
 
   it("rejects missing bookingNumber", () => {
     expect(() => convertProductSchema.parse({ productId: "prod_abc" })).toThrow()
+  })
+})
+
+describe("Pricing preview schema", () => {
+  it("requires a productId", () => {
+    expect(() => pricingPreviewSchema.parse({})).toThrow()
+    expect(() => pricingPreviewSchema.parse({ productId: "" })).toThrow()
+  })
+
+  it("accepts optional option + catalog ids", () => {
+    const result = pricingPreviewSchema.parse({
+      productId: "prod_abc",
+      optionId: "opt_def",
+      catalogId: "ctlg_ghi",
+    })
+    expect(result.productId).toBe("prod_abc")
+    expect(result.optionId).toBe("opt_def")
+    expect(result.catalogId).toBe("ctlg_ghi")
+  })
+
+  it("allows option + catalog to be omitted (catalog defaults to public)", () => {
+    const result = pricingPreviewSchema.parse({ productId: "prod_abc" })
+    expect(result.optionId).toBeUndefined()
+    expect(result.catalogId).toBeUndefined()
   })
 })

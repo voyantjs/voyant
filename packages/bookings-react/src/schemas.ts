@@ -276,3 +276,49 @@ export const publicBookingSessionStateResponse = singleEnvelope(publicBookingSes
 export const publicBookingSessionRepriceResponse = singleEnvelope(
   publicBookingSessionRepriceResultSchema,
 )
+
+// Pricing preview — the catalog-resolved snapshot the storefront engine uses
+// to compute totals. Consumers match it against their passenger/unit selection
+// to render a breakdown; see @voyantjs/bookings/validation for the request.
+const pricingPreviewCatalogSchema = z.object({
+  id: z.string(),
+  currencyCode: z.string(),
+})
+const pricingPreviewOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  isDefault: z.boolean(),
+})
+const pricingPreviewRuleSchema = z.object({
+  id: z.string(),
+  optionId: z.string(),
+  pricingMode: z.string(),
+  baseSellAmountCents: z.number().int().nullable(),
+  isDefault: z.boolean(),
+})
+const pricingPreviewUnitTierSchema = z.object({
+  minQuantity: z.number().int(),
+  maxQuantity: z.number().int().nullable(),
+  sellAmountCents: z.number().int().nullable(),
+})
+const pricingPreviewUnitPriceSchema = z.object({
+  id: z.string(),
+  optionPriceRuleId: z.string(),
+  unitId: z.string(),
+  unitName: z.string(),
+  unitType: z.string(),
+  pricingCategoryId: z.string().nullable(),
+  pricingMode: z.string(),
+  sellAmountCents: z.number().int().nullable(),
+  minQuantity: z.number().int().nullable(),
+  maxQuantity: z.number().int().nullable(),
+  tiers: z.array(pricingPreviewUnitTierSchema),
+})
+export const pricingPreviewSnapshotSchema = z.object({
+  catalog: pricingPreviewCatalogSchema,
+  options: z.array(pricingPreviewOptionSchema),
+  rules: z.array(pricingPreviewRuleSchema),
+  unitPrices: z.array(pricingPreviewUnitPriceSchema),
+})
+export type PricingPreviewSnapshot = z.infer<typeof pricingPreviewSnapshotSchema>
+export const pricingPreviewResponse = singleEnvelope(pricingPreviewSnapshotSchema)

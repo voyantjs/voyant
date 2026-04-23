@@ -15,7 +15,7 @@ import type { UseBookingNotesOptions } from "./hooks/use-booking-notes.js"
 import type { UseBookingsOptions } from "./hooks/use-bookings.js"
 import type { UseSupplierStatusesOptions } from "./hooks/use-supplier-statuses.js"
 import type { UseTravelersOptions } from "./hooks/use-travelers.js"
-import { bookingsQueryKeys } from "./query-keys.js"
+import { bookingsQueryKeys, type PricingPreviewFilters } from "./query-keys.js"
 import {
   bookingActivityResponse,
   bookingGroupDetailResponse,
@@ -29,6 +29,7 @@ import {
   bookingSupplierStatusesResponse,
   bookingTravelerDocumentsResponse,
   bookingTravelersResponse,
+  pricingPreviewResponse,
   publicBookingSessionResponse,
   publicBookingSessionStateResponse,
 } from "./schemas.js"
@@ -263,5 +264,29 @@ export function getBookingGroupForBookingQueryOptions(
         bookingGroupForBookingResponse,
         client,
       ),
+  })
+}
+
+/**
+ * Pricing preview — resolves the storefront pricing snapshot for a product
+ * without creating a booking session. Use it for operator create dialogs,
+ * tour-sheet quotes, and reconciliation where the question is "what would the
+ * customer see?"
+ */
+export function getPricingPreviewQueryOptions(
+  client: FetchWithValidationOptions,
+  filters: PricingPreviewFilters,
+) {
+  return queryOptions({
+    queryKey: bookingsQueryKeys.pricingPreview(filters),
+    queryFn: () =>
+      fetchWithValidation("/v1/bookings/pricing-preview", pricingPreviewResponse, client, {
+        method: "POST",
+        body: JSON.stringify({
+          productId: filters.productId,
+          optionId: filters.optionId ?? null,
+          catalogId: filters.catalogId ?? null,
+        }),
+      }),
   })
 }

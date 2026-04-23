@@ -89,6 +89,17 @@ export const convertProductSchema = z.object({
   internalNotes: z.string().optional().nullable(),
 })
 
+/**
+ * Admin pricing-preview request. Mirrors the storefront pricing session
+ * resolver input so the operator dialog sees the same numbers the customer
+ * would see for the same product + option + catalog.
+ */
+export const pricingPreviewSchema = z.object({
+  productId: z.string().min(1),
+  optionId: z.string().optional().nullable(),
+  catalogId: z.string().optional().nullable(),
+})
+
 export const updateBookingStatusSchema = z.object({
   status: bookingStatusSchema,
   note: z.string().optional().nullable(),

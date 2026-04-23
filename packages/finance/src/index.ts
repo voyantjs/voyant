@@ -198,6 +198,12 @@ export type {
 } from "./service-settlement.js"
 export { financeSettlementService } from "./service-settlement.js"
 export { VoucherServiceError, vouchersService } from "./service-vouchers.js"
+export {
+  migrateVouchersFromPaymentInstruments,
+  type VoucherMigrationOptions,
+  type VoucherMigrationResult,
+  type VoucherMigrationSkip,
+} from "./service-vouchers-migration.js"
 export type {
   GeneratedInvoiceDocumentResult,
   GenerateInvoiceDocumentInput,

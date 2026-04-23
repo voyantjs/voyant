@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, exists, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
@@ -1230,6 +1230,32 @@ export const bookingsService = {
     if (query.search) {
       const term = `%${query.search}%`
       conditions.push(or(ilike(bookings.bookingNumber, term), ilike(bookings.internalNotes, term)))
+    }
+
+    if (query.personId) {
+      conditions.push(eq(bookings.personId, query.personId))
+    }
+
+    if (query.organizationId) {
+      conditions.push(eq(bookings.organizationId, query.organizationId))
+    }
+
+    if (query.productId || query.optionId) {
+      const itemConditions = [eq(bookingItems.bookingId, bookings.id)]
+      if (query.productId) {
+        itemConditions.push(eq(bookingItems.productId, query.productId))
+      }
+      if (query.optionId) {
+        itemConditions.push(eq(bookingItems.optionId, query.optionId))
+      }
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(bookingItems)
+            .where(and(...itemConditions)),
+        ),
+      )
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined

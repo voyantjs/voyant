@@ -208,10 +208,18 @@ export function netopiaHonoBundle(options: NetopiaRuntimeOptions = {}): HonoBund
     name: "netopia",
     version: "0.1.0",
     bootstrap: ({ bindings, container }) => {
-      container.register(
-        NETOPIA_RUNTIME_CONTAINER_KEY,
-        resolveNetopiaRuntimeOptions(bindings as Record<string, unknown> | undefined, options),
-      )
+      try {
+        container.register(
+          NETOPIA_RUNTIME_CONTAINER_KEY,
+          resolveNetopiaRuntimeOptions(bindings as Record<string, unknown> | undefined, options),
+        )
+      } catch (error) {
+        // Defer resolution to per-request handlers. Missing env should only fail
+        // Netopia-owned routes, not the whole app — `getNetopiaRuntime` will retry
+        // from bindings on each request and surface the same error on Netopia calls.
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn(`[netopia] Runtime bootstrap skipped: ${message}`)
+      }
     },
     extensions: [createNetopiaFinanceExtension(options)],
   })

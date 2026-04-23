@@ -1,6 +1,7 @@
 import { createContainer, createEventBus } from "@voyantjs/core"
 import { financeService, type PaymentSession } from "@voyantjs/finance"
 import { notificationsService } from "@voyantjs/notifications"
+import { Hono } from "hono"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { NetopiaClientApi } from "../../src/client.js"
 import {
@@ -115,16 +116,45 @@ describe("netopiaHonoPlugin.bootstrap", () => {
     })
   })
 
-  it("fails fast when required runtime config is missing", async () => {
+  it("defers resolution and logs a warning when runtime config is missing", async () => {
     const plugin = netopiaHonoPlugin()
+    const container = createContainer()
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
 
-    expect(() =>
-      plugin.bootstrap?.({
-        bindings: {},
-        container: createContainer(),
-        eventBus: createEventBus(),
-      }),
-    ).toThrow(/NETOPIA_URL/)
+    await plugin.bootstrap?.({
+      bindings: {},
+      container,
+      eventBus: createEventBus(),
+    })
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/NETOPIA_URL/))
+    expect(() => container.resolve(NETOPIA_RUNTIME_CONTAINER_KEY)).toThrow()
+  })
+
+  it("still fails Netopia-owned routes when runtime config is missing", async () => {
+    const bundle = netopiaHonoPlugin()
+    const container = createContainer()
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    await bundle.bootstrap?.({
+      bindings: {},
+      container,
+      eventBus: createEventBus(),
+    })
+
+    const [extension] = bundle.extensions ?? []
+    expect(extension).toBeDefined()
+
+    // The config route resolves runtime per-request; without config, it returns 500.
+    const app = new Hono().use("*", async (c, next) => {
+      c.set("container", container)
+      await next()
+    })
+    app.route("/", extension!.routes)
+
+    const res = await app.request("/providers/netopia/config", { method: "GET" })
+    expect(res.status).toBe(500)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toMatch(/NETOPIA_URL/)
   })
 })
 

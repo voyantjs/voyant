@@ -38,7 +38,7 @@ export function ProductDetailPage({ id }: { id: string }) {
   const queryClient = useQueryClient()
 
   const [editOpen, setEditOpen] = useState(false)
-  const [quickBookOpen, setQuickBookOpen] = useState(false)
+  const [bookingCreateOpen, setBookingCreateOpen] = useState(false)
   const [departureDialogOpen, setDepartureDialogOpen] = useState(false)
   const [editingDeparture, setEditingDeparture] = useState<DepartureSlot | undefined>()
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
@@ -165,7 +165,7 @@ export function ProductDetailPage({ id }: { id: string }) {
         product={product}
         isDeleting={deleteMutation.isPending}
         onEdit={() => setEditOpen(true)}
-        onAddBooking={() => setQuickBookOpen(true)}
+        onAddBooking={() => setBookingCreateOpen(true)}
         onDelete={() => {
           if (confirm(productMessages.deleteConfirm)) {
             deleteMutation.mutate()
@@ -255,11 +255,11 @@ export function ProductDetailPage({ id }: { id: string }) {
 
       {/* Dialogs */}
       <BookingDialog
-        open={quickBookOpen}
-        onOpenChange={setQuickBookOpen}
+        open={bookingCreateOpen}
+        onOpenChange={setBookingCreateOpen}
         defaultProductId={id}
         onSuccess={(booking) => {
-          setQuickBookOpen(false)
+          setBookingCreateOpen(false)
           void navigate({ to: "/bookings/$id", params: { id: booking.id } })
         }}
       />

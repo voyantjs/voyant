@@ -28,7 +28,7 @@ import { DateRangePicker } from "@/components/ui/date-picker"
 import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
-import { QuickBookDialog } from "./quick-book-dialog"
+import { BookingCreateDialog } from "./booking-create-dialog"
 
 type BookingDialogMessages = ReturnType<typeof useAdminMessages>["bookings"]["dialog"]
 
@@ -64,13 +64,13 @@ export interface BookingDialogProps {
 /**
  * Single booking dialog that handles both create and edit:
  * - Create (no `booking` prop): renders the rich product → option → person
- *   picker flow via `QuickBookDialog`, so the draft booking inherits pricing,
+ *   picker flow via `BookingCreateDialog`, so the draft booking inherits pricing,
  *   dates, and currency from the catalogue instead of being hand-entered.
  * - Edit (with `booking` prop): renders the flat form that patches the
  *   existing row's metadata (status, amounts, dates, notes).
  *
  * The two modes used to live in separate `BookingDialog` and
- * `QuickBookDialog` CTAs. Once a real catalogue was loaded, the flat create
+ * `BookingCreateDialog` CTAs. Once a real catalogue was loaded, the flat create
  * form orphaned bookings from the catalog and always lost to Quick Book —
  * #222 collapses them so the template ships a single create entry point.
  */
@@ -83,7 +83,7 @@ export function BookingDialog({
 }: BookingDialogProps) {
   if (!booking) {
     return (
-      <QuickBookDialog
+      <BookingCreateDialog
         open={open}
         onOpenChange={onOpenChange}
         defaultProductId={defaultProductId}

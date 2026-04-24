@@ -686,9 +686,16 @@
       "name": "voyant-bookings-booking-dialog",
       "type": "registry:component",
       "title": "Booking Dialog",
-      "description": "Modal wrapper around the core booking create/edit form.",
+      "description": "Single booking dialog for both create and edit: delegates to BookingCreateDialog (composed picker sections) when no booking prop is supplied, renders a flat edit form when one is. Use this from booking list/detail pages rather than BookingCreateDialog directly — the wrapper keeps state handling identical for both modes.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
-      "registryDependencies": ["dialog", "input", "label", "select", "textarea"],
+      "registryDependencies": [
+        "dialog",
+        "input",
+        "label",
+        "select",
+        "textarea",
+        "voyant-bookings-booking-create-dialog"
+      ],
       "files": [
         {
           "path": "registry/bookings/booking-dialog.tsx",
@@ -701,15 +708,14 @@
       "name": "voyant-bookings-booking-list",
       "type": "registry:component",
       "title": "Booking List",
-      "description": "Searchable booking table with create/edit dialog and operator quick-book CTA.",
+      "description": "Searchable booking table with create/edit dialog.",
       "dependencies": ["@voyantjs/bookings-react", "lucide-react"],
       "registryDependencies": [
         "badge",
         "button",
         "input",
         "table",
-        "voyant-bookings-booking-dialog",
-        "voyant-bookings-quick-book-dialog"
+        "voyant-bookings-booking-dialog"
       ],
       "files": [
         {
@@ -860,10 +866,10 @@
       ]
     },
     {
-      "name": "voyant-bookings-quick-book-dialog",
+      "name": "voyant-bookings-booking-create-dialog",
       "type": "registry:component",
-      "title": "Quick Book Dialog",
-      "description": "Operator quick-book workflow composing every booking-create section (product, departure, rooms, person, shared-room, passengers, price breakdown, voucher, payment schedule) and submitting atomically via POST /v1/bookings/quick-create. Apps that need a custom flow can install the sections individually and assemble their own dialog.",
+      "title": "Booking Create Dialog",
+      "description": "Operator booking-create workflow composing every picker section (product, departure, rooms, person, shared-room, passengers, price breakdown, voucher, payment schedule) and submitting atomically via POST /v1/bookings/quick-create. Consumed by BookingDialog for the create branch; apps that need a bespoke flow can install the sections individually and assemble their own dialog.",
       "dependencies": [
         "@voyantjs/availability-react",
         "@voyantjs/bookings-react",
@@ -888,9 +894,9 @@
       ],
       "files": [
         {
-          "path": "registry/bookings/quick-book-dialog.tsx",
+          "path": "registry/bookings/booking-create-dialog.tsx",
           "type": "registry:component",
-          "target": "components/voyant/bookings/quick-book-dialog.tsx"
+          "target": "components/voyant/bookings/booking-create-dialog.tsx"
         }
       ]
     },

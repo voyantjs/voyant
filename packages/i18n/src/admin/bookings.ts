@@ -7,7 +7,6 @@ export const adminBookingsMessages = {
         pageTitle: "Bookings",
         pageDescription: "Manage bookings, confirmations, and travelers.",
         searchPlaceholder: "Search bookings…",
-        quickBook: "Quick Book",
         newBooking: "New booking",
         tableBookingNumber: "Booking #",
         tableStatus: "Status",
@@ -53,7 +52,7 @@ export const adminBookingsMessages = {
         saveChanges: "Save Changes",
         create: "Create Booking",
       },
-      quickBook: {
+      create: {
         title: "Quick Book",
         productLabel: "Product",
         productSearchPlaceholder: "Search products...",
@@ -543,7 +542,6 @@ export const adminBookingsMessages = {
         pageTitle: "Rezervari",
         pageDescription: "Administreaza rezervarile, confirmarile si calatorii.",
         searchPlaceholder: "Cauta rezervari…",
-        quickBook: "Rezervare rapida",
         newBooking: "Rezervare noua",
         tableBookingNumber: "Nr. rezervare",
         tableStatus: "Status",
@@ -589,7 +587,7 @@ export const adminBookingsMessages = {
         saveChanges: "Salveaza modificarile",
         create: "Creeaza rezervarea",
       },
-      quickBook: {
+      create: {
         title: "Rezervare rapida",
         productLabel: "Produs",
         productSearchPlaceholder: "Cauta produse...",

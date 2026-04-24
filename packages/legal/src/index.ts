@@ -1,5 +1,6 @@
 import type { Module } from "@voyantjs/core"
 import type { HonoModule } from "@voyantjs/hono/module"
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { contractsLinkable } from "./contracts/index.js"
 import {
@@ -11,6 +12,10 @@ import {
   createContractsAdminRoutes,
   createContractsPublicRoutes,
 } from "./contracts/routes.js"
+import {
+  type AutoGenerateContractOptions,
+  autoGenerateContractForBooking,
+} from "./contracts/service-auto-generate.js"
 import { policiesLinkable } from "./policies/index.js"
 import { policiesAdminRoutes, policiesPublicRoutes } from "./policies/routes.js"
 
@@ -24,7 +29,24 @@ export const legalModule: Module = {
   linkable: legalLinkable,
 }
 
-export function createLegalHonoModule(options: ContractsRouteOptions = {}): HonoModule {
+export interface CreateLegalHonoModuleOptions extends ContractsRouteOptions {
+  /**
+   * Required when `autoGenerateContractOnConfirmed.enabled` is true. The
+   * `booking.confirmed` subscriber fires outside request scope, so it
+   * needs its own db handle from runtime bindings.
+   */
+  resolveDb?: (bindings: Record<string, unknown>) => PostgresJsDatabase
+  /**
+   * Opt-in auto-generate on `booking.confirmed`. When enabled + a
+   * `templateSlug` is supplied + a `documentGenerator` is resolvable, every
+   * booking.confirmed event creates a contract against the template's
+   * current version and generates its attachment via the configured
+   * generator (R2-backed PDF, etc.).
+   */
+  autoGenerateContractOnConfirmed?: AutoGenerateContractOptions
+}
+
+export function createLegalHonoModule(options: CreateLegalHonoModuleOptions = {}): HonoModule {
   const legalAdminRoutes = new Hono()
     .route("/contracts", createContractsAdminRoutes(options))
     .route("/policies", policiesAdminRoutes)
@@ -35,11 +57,57 @@ export function createLegalHonoModule(options: ContractsRouteOptions = {}): Hono
 
   const module: Module = {
     ...legalModule,
-    bootstrap: ({ bindings, container }) => {
+    bootstrap: ({ bindings, container, eventBus }) => {
       container.register(
         CONTRACTS_ROUTE_RUNTIME_CONTAINER_KEY,
         buildContractsRouteRuntime(bindings as Record<string, unknown>, options),
       )
+
+      // Auto-generate wiring — opt-in. Mirrors the notifications
+      // autoConfirmAndDispatch subscriber pattern. Both fire on the same
+      // booking.confirmed event; legal's handler just needs to run first
+      // so the contract attachment exists before notifications looks it
+      // up via listLegalBookingDocuments. Module-registration order in the
+      // template controls this.
+      const auto = options.autoGenerateContractOnConfirmed
+      if (auto?.enabled && options.resolveDb) {
+        const resolveDb = options.resolveDb
+        const runtime = buildContractsRouteRuntime(bindings as Record<string, unknown>, options)
+        if (!runtime.documentGenerator) {
+          // Mis-configuration — don't silently drop contracts. Log and
+          // skip; the template operator will notice on the first confirm.
+          console.error(
+            "[legal] autoGenerateContractOnConfirmed.enabled=true but no documentGenerator resolved; skipping subscriber.",
+          )
+          return
+        }
+        const generator = runtime.documentGenerator
+
+        eventBus.subscribe(
+          "booking.confirmed",
+          async (event: {
+            data: { bookingId: string; bookingNumber: string; actorId: string | null }
+          }) => {
+            try {
+              const db = resolveDb(bindings as Record<string, unknown>)
+              const result = await autoGenerateContractForBooking(db, event.data, auto, {
+                generator,
+                eventBus,
+              })
+              if (result.status !== "ok") {
+                console.error(
+                  `[legal] auto-generate contract skipped for booking ${event.data.bookingId}: ${result.status}`,
+                )
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error)
+              console.error(
+                `[legal] auto-generate contract failed for booking ${event.data.bookingId}: ${message}`,
+              )
+            }
+          },
+        )
+      }
     },
   }
 
@@ -59,4 +127,12 @@ export {
   type ContractsRouteRuntime,
 } from "./contracts/route-runtime.js"
 export type { ContractsRouteOptions } from "./contracts/routes.js"
+export {
+  type AutoGenerateContractOptions,
+  type AutoGenerateContractRuntime,
+  autoGenerateContractForBooking,
+  type BookingConfirmedLikeEvent,
+  type DefaultContractVariables,
+  type ResolveContractVariablesFn,
+} from "./contracts/service-auto-generate.js"
 export * from "./policies/index.js"

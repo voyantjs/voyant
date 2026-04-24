@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 
 import { contractNumberSeries } from "./schema.js"
@@ -16,6 +16,21 @@ export const contractSeriesService = {
       .select()
       .from(contractNumberSeries)
       .where(eq(contractNumberSeries.id, id))
+      .limit(1)
+    return row ?? null
+  },
+  /**
+   * Find the most-recently-updated active series matching a name. Used by
+   * the auto-generate subscriber so consumers can pin a named series
+   * (`"2026 Customer"`) in config and let operators rename the row via
+   * the admin UI without breaking the wiring.
+   */
+  async findSeriesByName(db: PostgresJsDatabase, name: string) {
+    const [row] = await db
+      .select()
+      .from(contractNumberSeries)
+      .where(and(eq(contractNumberSeries.name, name), eq(contractNumberSeries.active, true)))
+      .orderBy(desc(contractNumberSeries.updatedAt))
       .limit(1)
     return row ?? null
   },

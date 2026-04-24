@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type {
+  generateContractDocumentInputSchema,
   insertContractSchema,
   updateContractSchema,
 } from "@voyantjs/legal/contracts/validation"
@@ -10,10 +11,15 @@ import type { z } from "zod"
 import { fetchWithValidation } from "../client.js"
 import { useVoyantLegalContext } from "../provider.js"
 import { legalQueryKeys } from "../query-keys.js"
-import { legalContractSingleResponse, successEnvelope } from "../schemas.js"
+import {
+  legalContractGenerateDocumentResponse,
+  legalContractSingleResponse,
+  successEnvelope,
+} from "../schemas.js"
 
 export type CreateLegalContractInput = z.input<typeof insertContractSchema>
 export type UpdateLegalContractInput = z.input<typeof updateContractSchema>
+export type GenerateLegalContractDocumentInput = z.input<typeof generateContractDocumentInputSchema>
 
 export function useLegalContractMutation() {
   const { baseUrl, fetcher } = useVoyantLegalContext()
@@ -133,5 +139,75 @@ export function useLegalContractMutation() {
     },
   })
 
-  return { create, update, remove, issue, send, execute, voidContract }
+  /**
+   * Trigger a fresh document render for a contract. First call issues the
+   * draft + generates via the server's configured generator; subsequent
+   * calls (see `regenerate`) replace the attachment.
+   */
+  const generateDocument = useMutation({
+    mutationFn: async ({
+      id,
+      input = {},
+    }: {
+      id: string
+      input?: GenerateLegalContractDocumentInput
+    }) => {
+      const { data } = await fetchWithValidation(
+        `/v1/admin/legal/contracts/${id}/generate-document`,
+        legalContractGenerateDocumentResponse,
+        { baseUrl, fetcher },
+        { method: "POST", body: JSON.stringify(input) },
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: legalQueryKeys.contract(variables.id) })
+      void queryClient.invalidateQueries({
+        queryKey: legalQueryKeys.contractAttachments(variables.id),
+      })
+      void queryClient.invalidateQueries({ queryKey: legalQueryKeys.contracts() })
+    },
+  })
+
+  /**
+   * Same as `generateDocument` but explicit about replacing an existing
+   * attachment of the same kind. Use this for the operator's "Regenerate"
+   * button so stale PDFs don't accumulate.
+   */
+  const regenerateDocument = useMutation({
+    mutationFn: async ({
+      id,
+      input = {},
+    }: {
+      id: string
+      input?: GenerateLegalContractDocumentInput
+    }) => {
+      const { data } = await fetchWithValidation(
+        `/v1/admin/legal/contracts/${id}/regenerate-document`,
+        legalContractGenerateDocumentResponse,
+        { baseUrl, fetcher },
+        { method: "POST", body: JSON.stringify(input) },
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: legalQueryKeys.contract(variables.id) })
+      void queryClient.invalidateQueries({
+        queryKey: legalQueryKeys.contractAttachments(variables.id),
+      })
+      void queryClient.invalidateQueries({ queryKey: legalQueryKeys.contracts() })
+    },
+  })
+
+  return {
+    create,
+    update,
+    remove,
+    issue,
+    send,
+    execute,
+    voidContract,
+    generateDocument,
+    regenerateDocument,
+  }
 }

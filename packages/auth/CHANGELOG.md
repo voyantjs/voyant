@@ -1,5 +1,13 @@
 # @voyantjs/auth
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [24dc253]
+  - @voyantjs/db@0.8.0
+  - @voyantjs/utils@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes

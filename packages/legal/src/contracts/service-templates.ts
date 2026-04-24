@@ -50,6 +50,18 @@ export const contractTemplatesService = {
       .limit(1)
     return row ?? null
   },
+  /**
+   * Slug lookup, used by the auto-generate subscriber. Slug is unique so the
+   * result is either the row or null — no disambiguation needed.
+   */
+  async findTemplateBySlug(db: PostgresJsDatabase, slug: string) {
+    const [row] = await db
+      .select()
+      .from(contractTemplates)
+      .where(eq(contractTemplates.slug, slug))
+      .limit(1)
+    return row ?? null
+  },
   async getDefaultTemplate(
     db: PostgresJsDatabase,
     query: {

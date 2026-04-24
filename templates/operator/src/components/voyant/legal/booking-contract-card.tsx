@@ -215,7 +215,7 @@ function AttachmentDownloadRow({
       className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-xs hover:bg-muted"
     >
       <span className="flex min-w-0 items-center gap-1.5">
-        <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+        <FileText className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{attachment.name}</span>
         {sizeKb ? <span className="text-muted-foreground">· {sizeKb}</span> : null}
       </span>

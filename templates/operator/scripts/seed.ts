@@ -76,7 +76,11 @@ import {
   identityContactPoints,
   identityNamedContacts,
 } from "@voyantjs/identity/schema"
-import { contracts, contractTemplates } from "@voyantjs/legal/contracts/schema"
+import {
+  contracts,
+  contractTemplates,
+  contractTemplateVersions,
+} from "@voyantjs/legal/contracts/schema"
 import {
   policies,
   policyAcceptances,
@@ -1774,6 +1778,7 @@ async function seedAvailability() {
 
 const CANCEL_POLICY = { id: newId("policies"), versionId: newId("policy_versions") }
 const CONTRACT_TMPL = newId("contract_templates")
+const CONTRACT_TMPL_VERSION = newId("contract_template_versions")
 const SALES_CONTRACT = newId("contracts")
 
 async function seedLegal() {
@@ -1834,15 +1839,59 @@ async function seedLegal() {
     },
   ])
 
+  // Template body uses Liquid so auto-generated contracts can iterate over
+  // travelers, format dates/currency via the built-in filters, and gate
+  // optional sections. The utils template renderer auto-detects `{% %}` or
+  // filter syntax and switches from mustache to Liquid.
+  const contractBody = `<h1>Sales Agreement — Booking {{ booking.number }}</h1>
+
+<p>Issued on <strong>{{ contract.date | format_date: "long" }}</strong>.</p>
+
+<h2>Lead traveler</h2>
+{% if leadTraveler %}
+<p>{{ leadTraveler.firstName }} {{ leadTraveler.lastName }}{% if leadTraveler.email %} &lt;{{ leadTraveler.email }}&gt;{% endif %}</p>
+{% else %}
+<p><em>No lead traveler on file.</em></p>
+{% endif %}
+
+<h2>Travelers ({{ travelers.size }})</h2>
+<ol>
+{% for t in travelers %}
+  <li>{{ t.firstName }} {{ t.lastName }}{% if t.participantType != "traveler" %} — {{ t.participantType }}{% endif %}</li>
+{% endfor %}
+</ol>
+
+<h2>Trip</h2>
+<ul>
+  <li>Start: {% if booking.startDate %}{{ booking.startDate | format_date: "long" }}{% else %}TBD{% endif %}</li>
+  <li>End: {% if booking.endDate %}{{ booking.endDate | format_date: "long" }}{% else %}TBD{% endif %}</li>
+  <li>Pax: {{ booking.pax | default: "TBD" }}</li>
+</ul>
+
+<h2>Total</h2>
+<p><strong>{{ booking.totalAmountCents | cents: booking.currency }}</strong></p>
+
+<p>Our standard cancellation policy applies per the attached terms.</p>`
+
   await db.insert(contractTemplates).values({
     id: CONTRACT_TMPL,
     name: "Customer Sales Agreement",
     slug: "customer-sales-agreement",
     scope: "customer",
-    body: "<h1>Sales Agreement</h1><p>This agreement is between {{operator.name}} and {{customer.name}}.</p><p>Booking: {{booking.number}}.</p><p>Total amount: {{booking.total}}.</p><p>Cancellation policy applies per attached terms.</p>",
-    description: "Default customer sales contract.",
+    body: contractBody,
+    description: "Default customer sales contract (Liquid-templated).",
     language: "en",
     active: true,
+    currentVersionId: CONTRACT_TMPL_VERSION,
+  })
+
+  await db.insert(contractTemplateVersions).values({
+    id: CONTRACT_TMPL_VERSION,
+    templateId: CONTRACT_TMPL,
+    version: 1,
+    body: contractBody,
+    changelog: "Initial seed",
+    createdBy: USERS[1]!.id,
   })
 
   await db.insert(contracts).values({

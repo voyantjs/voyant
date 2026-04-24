@@ -17,6 +17,66 @@ const liquid = new Liquid({
 
 liquid.registerFilter("json", (value: unknown) => JSON.stringify(value ?? null))
 
+function parseNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number.parseFloat(value)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
+/**
+ * `currency` — Intl.NumberFormat currency style. Expects a decimal amount
+ * (`123.45`). Example: `{{ amount | currency: "EUR", "en-US" }}` →
+ * `"€123.45"`. Falls back to `String(value)` when the value isn't a number.
+ */
+liquid.registerFilter("currency", (value: unknown, currency = "EUR", locale = "en-US") => {
+  const num = parseNumber(value)
+  if (num === null) return String(value ?? "")
+  return new Intl.NumberFormat(String(locale), {
+    style: "currency",
+    currency: String(currency || "EUR"),
+  }).format(num)
+})
+
+/**
+ * `cents` — Shortcut for formatting integer cents (`12345` → `"€123.45"`).
+ * Saves every template from `{{ (amountCents | divided_by: 100) | currency: ... }}`.
+ */
+liquid.registerFilter("cents", (value: unknown, currency = "EUR", locale = "en-US") => {
+  const num = parseNumber(value)
+  if (num === null) return String(value ?? "")
+  return new Intl.NumberFormat(String(locale), {
+    style: "currency",
+    currency: String(currency || "EUR"),
+  }).format(num / 100)
+})
+
+/**
+ * `format_date` — ISO/string/Date → locale-formatted date. Second arg chooses
+ * the preset: `"short"` (`01/15/2026`), `"medium"` (default, `Jan 15, 2026`),
+ * `"long"` (`January 15, 2026`), or `"iso"` (`2026-01-15`). Pair with a
+ * locale for Romanian/etc.: `{{ startsAt | format_date: "medium", "ro-RO" }}`.
+ */
+liquid.registerFilter(
+  "format_date",
+  (value: unknown, preset: unknown = "medium", locale = "en-US") => {
+    if (value === null || value === undefined || value === "") return ""
+    const date = value instanceof Date ? value : new Date(String(value))
+    if (Number.isNaN(date.getTime())) return String(value)
+    const p = String(preset ?? "medium").toLowerCase()
+    if (p === "iso") return date.toISOString().slice(0, 10)
+    const options: Intl.DateTimeFormatOptions =
+      p === "short"
+        ? { year: "numeric", month: "2-digit", day: "2-digit" }
+        : p === "long"
+          ? { year: "numeric", month: "long", day: "numeric" }
+          : { year: "numeric", month: "short", day: "numeric" }
+    return date.toLocaleDateString(String(locale), options)
+  },
+)
+
 function resolvePath(obj: unknown, path: string): unknown {
   if (obj === null || obj === undefined) return undefined
   const segments: Array<string | number> = []

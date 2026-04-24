@@ -10,7 +10,7 @@ import { extrasHonoModule } from "@voyantjs/extras"
 import { bookingsQuickCreateExtension, createFinanceHonoModule } from "@voyantjs/finance"
 import { createApp } from "@voyantjs/hono"
 import { identityHonoModule } from "@voyantjs/identity"
-import { createLegalHonoModule } from "@voyantjs/legal"
+import { createLegalHonoModule, createPdfContractDocumentGenerator } from "@voyantjs/legal"
 import { marketsHonoModule } from "@voyantjs/markets"
 import {
   createDefaultBookingDocumentAttachment,
@@ -28,7 +28,12 @@ import { resolveNotificationProviders } from "../lib/notifications"
 import authHandler, { hasAuthPermission, resolveAuthRequest } from "./auth/handler"
 import { createInvitationsRoutes } from "./invitations"
 import { getDbFromHyperdrive } from "./lib/db"
-import { createMediaStorage, guessMimeType, resolveDocumentDownloadUrl } from "./lib/storage"
+import {
+  createDocumentStorage,
+  createMediaStorage,
+  guessMimeType,
+  resolveDocumentDownloadUrl,
+} from "./lib/storage"
 
 const notificationsHonoModule = createNotificationsHonoModule({
   resolveProviders: resolveNotificationProviders,
@@ -87,8 +92,38 @@ const financeModule = createFinanceHonoModule({
     resolveDocumentDownloadUrl(bindings as unknown as CloudflareBindings, storageKey),
 })
 const legalModule = createLegalHonoModule({
+  // Same union-narrowing trick notifications uses — see the comment on
+  // notificationsHonoModule's resolveDb. Contract operations are all
+  // compatible across the hyperdrive/neon-http drizzle flavors.
+  resolveDb: (bindings) =>
+    getDbFromHyperdrive(
+      bindings as unknown as CloudflareBindings,
+    ) as unknown as import("drizzle-orm/postgres-js").PostgresJsDatabase,
   resolveDocumentDownloadUrl: (bindings: unknown, storageKey: string) =>
     resolveDocumentDownloadUrl(bindings as unknown as CloudflareBindings, storageKey),
+  // Wire a PDF document generator against the private DOCUMENTS_BUCKET so
+  // auto-generated contracts + manual regeneration land in R2. Returning
+  // `undefined` when no bucket is configured keeps the module wired but
+  // inert — the generate-document endpoint falls back to a 501.
+  resolveDocumentGenerator: (bindings) => {
+    const storage = createDocumentStorage(bindings as CloudflareBindings)
+    if (!storage) return undefined
+    return createPdfContractDocumentGenerator({ storage })
+  },
+  // Opt into the booking.confirmed subscriber. Template slug must match a
+  // row in `contract_templates`; seed one named "customer-services" via
+  // the admin UI (see the template README) or via a DB migration.
+  // Opt into the booking.confirmed subscriber. `templateSlug` must match a
+  // row in `contract_templates` that has a `currentVersionId` pointing at a
+  // template version with Liquid body. The operator seed script creates
+  // `customer-sales-agreement` with a Liquid body + published version; any
+  // other slug is fine as long as it exists before the first confirm.
+  autoGenerateContractOnConfirmed: {
+    enabled: true,
+    templateSlug: "customer-sales-agreement",
+    scope: "customer",
+    language: "en",
+  },
 })
 
 export const app = createApp<CloudflareBindings>({

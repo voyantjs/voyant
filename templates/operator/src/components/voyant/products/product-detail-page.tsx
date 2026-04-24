@@ -1,12 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { productsQueryKeys, useProduct, useProductItineraries } from "@voyantjs/products-react"
-import { useState } from "react"
+
 import { Button } from "@/components/ui"
 import { useAdminMessages } from "@/lib/admin-i18n"
-import { api } from "@/lib/api-client"
+
 import { BookingDialog } from "../bookings/booking-dialog"
-import { DepartureDialog, type DepartureSlot } from "./product-departure-dialog"
+import { DepartureDialog } from "./product-departure-dialog"
 import { ProductDialog } from "./product-detail-dialog"
 import { ProductDetailHeader } from "./product-detail-header"
 import { ProductDetailItinerarySection } from "./product-detail-itinerary-section"
@@ -18,126 +16,22 @@ import {
   ProductOrganizeSection,
   ProductSchedulesSection,
 } from "./product-detail-sections"
-import {
-  getChannelsQueryOptions,
-  getProductChannelMappingsQueryOptions,
-  getProductMediaQueryOptions,
-  getProductRulesQueryOptions,
-  getProductSlotsQueryOptions,
-} from "./product-detail-shared"
 import { ProductDetailSkeleton } from "./product-detail-skeleton"
 import { OptionsSection } from "./product-options-section"
-import { type AvailabilityRule, ScheduleDialog } from "./product-schedule-dialog"
-
-// ---------- Main page ----------
+import { ScheduleDialog } from "./product-schedule-dialog"
+import { useProductDetailData } from "./use-product-detail-data"
+import { useProductDetailDialogs } from "./use-product-detail-dialogs"
 
 export function ProductDetailPage({ id }: { id: string }) {
   const messages = useAdminMessages()
   const productMessages = messages.products.core
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
-  const [editOpen, setEditOpen] = useState(false)
-  const [bookingCreateOpen, setBookingCreateOpen] = useState(false)
-  const [departureDialogOpen, setDepartureDialogOpen] = useState(false)
-  const [editingDeparture, setEditingDeparture] = useState<DepartureSlot | undefined>()
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
-  const [editingSchedule, setEditingSchedule] = useState<AvailabilityRule | undefined>()
+  const data = useProductDetailData(id)
+  const dialogs = useProductDetailDialogs()
 
-  const { data: product, isPending } = useProduct(id)
-  const itineraryQuery = useProductItineraries(id)
-
-  const { data: slotsData, refetch: refetchSlots } = useQuery(getProductSlotsQueryOptions(id))
-
-  const { data: rulesData, refetch: refetchRules } = useQuery(getProductRulesQueryOptions(id))
-
-  const { data: allChannelsData } = useQuery(getChannelsQueryOptions())
-
-  const { data: productMappingsData, refetch: refetchMappings } = useQuery(
-    getProductChannelMappingsQueryOptions(id),
-  )
-
-  const { data: mediaData, refetch: refetchMedia } = useQuery(getProductMediaQueryOptions(id))
-
-  const addChannelMappingMutation = useMutation({
-    mutationFn: (channelId: string) =>
-      api.post("/v1/distribution/product-mappings", {
-        channelId,
-        productId: id,
-        active: true,
-      }),
-    onSuccess: () => void refetchMappings(),
-  })
-
-  const removeChannelMappingMutation = useMutation({
-    mutationFn: (mappingId: string) => api.delete(`/v1/distribution/product-mappings/${mappingId}`),
-    onSuccess: () => void refetchMappings(),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: () => api.delete(`/v1/products/${id}`),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["products"] })
-      void navigate({ to: "/products" })
-    },
-  })
-
-  const deleteSlotMutation = useMutation({
-    mutationFn: (slotId: string) => api.delete(`/v1/availability/slots/${slotId}`),
-    onSuccess: () => void refetchSlots(),
-  })
-
-  const deleteRuleMutation = useMutation({
-    mutationFn: (ruleId: string) => api.delete(`/v1/availability/rules/${ruleId}`),
-    onSuccess: () => void refetchRules(),
-  })
-
-  const uploadMediaMutation = useMutation({
-    mutationFn: async ({ file, dayId }: { file: File; dayId?: string }) => {
-      const formData = new FormData()
-      formData.append("file", file)
-      const uploadRes = await fetch("/api/v1/uploads", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      })
-      if (!uploadRes.ok) throw new Error(productMessages.uploadFailed)
-      const upload = (await uploadRes.json()) as {
-        key: string
-        url: string
-        mimeType: string
-        size: number
-      }
-
-      const mediaType = upload.mimeType.startsWith("video/")
-        ? "video"
-        : upload.mimeType.startsWith("image/")
-          ? "image"
-          : "document"
-
-      const endpoint = dayId ? `/v1/products/${id}/days/${dayId}/media` : `/v1/products/${id}/media`
-
-      return api.post(endpoint, {
-        mediaType,
-        name: file.name,
-        url: upload.url,
-        storageKey: upload.key,
-        mimeType: upload.mimeType,
-        fileSize: upload.size,
-      })
-    },
-    onSuccess: () => void refetchMedia(),
-  })
-
-  const deleteMediaMutation = useMutation({
-    mutationFn: (mediaId: string) => api.delete(`/v1/products/media/${mediaId}`),
-    onSuccess: () => void refetchMedia(),
-  })
-
-  const setCoverMutation = useMutation({
-    mutationFn: (mediaId: string) => api.patch(`/v1/products/media/${mediaId}/set-cover`, {}),
-    onSuccess: () => void refetchMedia(),
-  })
+  const { product, isPending, slots, rules, channels, mappings, media, itineraryNameById } = data
+  const { mutations, refetch, invalidateProduct } = data
 
   if (isPending) {
     return <ProductDetailSkeleton />
@@ -154,21 +48,18 @@ export function ProductDetailPage({ id }: { id: string }) {
     )
   }
 
-  const slots = slotsData?.data ?? []
-  const rules = rulesData?.data ?? []
-  const itineraryNameById = new Map(
-    (itineraryQuery.data?.data ?? []).map((itinerary) => [itinerary.id, itinerary.name] as const),
-  )
   return (
     <div className="flex flex-col gap-6 p-6">
       <ProductDetailHeader
         product={product}
-        isDeleting={deleteMutation.isPending}
-        onEdit={() => setEditOpen(true)}
-        onAddBooking={() => setBookingCreateOpen(true)}
+        isDeleting={mutations.deleteProduct.isPending}
+        onEdit={dialogs.edit.openNow}
+        onAddBooking={dialogs.bookingCreate.openNow}
         onDelete={() => {
           if (confirm(productMessages.deleteConfirm)) {
-            deleteMutation.mutate()
+            mutations.deleteProduct.mutate(undefined, {
+              onSuccess: () => void navigate({ to: "/products" }),
+            })
           }
         }}
       />
@@ -177,125 +68,102 @@ export function ProductDetailPage({ id }: { id: string }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* ── Left column (main) ── */}
         <div className="flex min-w-0 flex-col gap-6">
-          {/* Product Details */}
-          <ProductDetailsSection product={product} onEdit={() => setEditOpen(true)} />
+          <ProductDetailsSection product={product} onEdit={dialogs.edit.openNow} />
 
-          {/* Media */}
           <ProductMediaSection
             productId={id}
-            media={mediaData?.data ?? []}
-            isUploading={uploadMediaMutation.isPending}
-            onUpload={(file) => uploadMediaMutation.mutate({ file })}
-            onSetCover={(mediaId) => setCoverMutation.mutate(mediaId)}
+            media={media}
+            isUploading={mutations.uploadMedia.isPending}
+            onUpload={(file) => mutations.uploadMedia.mutate({ file })}
+            onSetCover={(mediaId) => mutations.setCover.mutate(mediaId)}
             onDelete={(mediaId) => {
               if (confirm(productMessages.deleteMediaConfirm)) {
-                deleteMediaMutation.mutate(mediaId)
+                mutations.deleteMedia.mutate(mediaId)
               }
             }}
           />
 
-          {/* Departures */}
           <ProductDeparturesSection
             slots={slots}
             itineraryNameById={itineraryNameById}
-            onCreate={() => {
-              setEditingDeparture(undefined)
-              setDepartureDialogOpen(true)
-            }}
-            onEdit={(slot) => {
-              setEditingDeparture(slot)
-              setDepartureDialogOpen(true)
-            }}
+            onCreate={dialogs.departure.openNew}
+            onEdit={dialogs.departure.openEdit}
             onDelete={(slotId) => {
               if (confirm(productMessages.deleteDepartureConfirm)) {
-                deleteSlotMutation.mutate(slotId)
+                mutations.deleteSlot.mutate(slotId)
               }
             }}
           />
 
-          {/* Recurring Schedules */}
           <ProductSchedulesSection
             rules={rules}
-            onCreate={() => {
-              setEditingSchedule(undefined)
-              setScheduleDialogOpen(true)
-            }}
-            onEdit={(rule) => {
-              setEditingSchedule(rule)
-              setScheduleDialogOpen(true)
-            }}
+            onCreate={dialogs.schedule.openNew}
+            onEdit={dialogs.schedule.openEdit}
             onDelete={(ruleId) => {
               if (confirm(productMessages.deleteScheduleConfirm)) {
-                deleteRuleMutation.mutate(ruleId)
+                mutations.deleteRule.mutate(ruleId)
               }
             }}
           />
 
-          {/* Itinerary */}
           <ProductDetailItinerarySection productId={id} />
 
-          {/* Options */}
           <OptionsSection productId={id} />
         </div>
 
         {/* ── Right column (sidebar) ── */}
         <div className="flex flex-col gap-6">
-          {/* Sales Channels */}
           <ProductChannelsSection
-            allChannels={allChannelsData?.data ?? []}
-            mappings={productMappingsData?.data ?? []}
-            onAddChannel={(channelId) => addChannelMappingMutation.mutate(channelId)}
-            onRemoveChannel={(mappingId) => removeChannelMappingMutation.mutate(mappingId)}
+            allChannels={channels}
+            mappings={mappings}
+            onAddChannel={(channelId) => mutations.addChannelMapping.mutate(channelId)}
+            onRemoveChannel={(mappingId) => mutations.removeChannelMapping.mutate(mappingId)}
           />
 
-          {/* Organize */}
-          <ProductOrganizeSection product={product} onEdit={() => setEditOpen(true)} />
+          <ProductOrganizeSection product={product} onEdit={dialogs.edit.openNow} />
         </div>
       </div>
 
       {/* Dialogs */}
       <BookingDialog
-        open={bookingCreateOpen}
-        onOpenChange={setBookingCreateOpen}
+        open={dialogs.bookingCreate.open}
+        onOpenChange={dialogs.bookingCreate.setOpen}
         defaultProductId={id}
         onSuccess={(booking) => {
-          setBookingCreateOpen(false)
+          dialogs.bookingCreate.close()
           void navigate({ to: "/bookings/$id", params: { id: booking.id } })
         }}
       />
 
       <ProductDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
+        open={dialogs.edit.open}
+        onOpenChange={dialogs.edit.setOpen}
         product={product}
         onSuccess={() => {
-          setEditOpen(false)
-          void queryClient.invalidateQueries({ queryKey: productsQueryKeys.product(id) })
-          void queryClient.invalidateQueries({ queryKey: productsQueryKeys.products() })
+          dialogs.edit.close()
+          invalidateProduct()
         }}
       />
 
       <DepartureDialog
-        open={departureDialogOpen}
-        onOpenChange={setDepartureDialogOpen}
+        open={dialogs.departure.open}
+        onOpenChange={dialogs.departure.setOpen}
         productId={id}
-        slot={editingDeparture}
+        slot={dialogs.departure.editing}
         onSuccess={() => {
-          setDepartureDialogOpen(false)
-          setEditingDeparture(undefined)
-          void refetchSlots()
+          dialogs.departure.close()
+          refetch.slots()
         }}
       />
 
       <ScheduleDialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
+        open={dialogs.schedule.open}
+        onOpenChange={dialogs.schedule.setOpen}
         productId={id}
-        rule={editingSchedule}
+        rule={dialogs.schedule.editing}
         onSuccess={() => {
-          setScheduleDialogOpen(false)
-          setEditingSchedule(undefined)
-          void refetchRules()
+          dialogs.schedule.close()
+          refetch.rules()
         }}
       />
     </div>

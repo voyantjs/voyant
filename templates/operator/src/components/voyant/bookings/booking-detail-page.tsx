@@ -28,6 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAdminMessages } from "@/lib/admin-i18n"
 
+import { BookingContractCard } from "../legal/booking-contract-card"
 import { BookingActivityTimeline } from "./booking-activity-timeline"
 import { BookingCancellationDialog } from "./booking-cancellation-dialog"
 import { BookingDetailSkeleton } from "./booking-detail-skeleton"
@@ -279,7 +280,8 @@ export function BookingDetailPage({ id }: { id: string }) {
           <SupplierStatusList bookingId={id} />
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-4">
+        <TabsContent value="documents" className="mt-4 flex flex-col gap-4">
+          <BookingContractCard bookingId={id} />
           <BookingDocumentList bookingId={id} />
         </TabsContent>
 

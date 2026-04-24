@@ -2,6 +2,10 @@ export interface LegalContractsListFilters {
   search?: string | undefined
   scope?: string | undefined
   status?: string | undefined
+  /** Restrict to contracts linked to this booking. */
+  bookingId?: string | undefined
+  personId?: string | undefined
+  organizationId?: string | undefined
   limit?: number | undefined
   offset?: number | undefined
 }

@@ -205,6 +205,20 @@ export const legalContractSignatureListResponse = singleEnvelope(
 export const legalContractAttachmentListResponse = singleEnvelope(
   z.array(legalContractAttachmentRecordSchema),
 )
+/**
+ * Response envelope for POST /contracts/:id/(re)generate-document. The
+ * server returns the rendered body + the attachment that now holds the
+ * generated PDF/HTML bytes.
+ */
+export const legalContractGenerateDocumentResponse = singleEnvelope(
+  z.object({
+    contractId: z.string(),
+    contractStatus: z.string(),
+    renderedBodyFormat: z.string(),
+    renderedBody: z.string(),
+    attachment: legalContractAttachmentRecordSchema,
+  }),
+)
 export const legalContractTemplateListResponse = paginatedEnvelope(
   legalContractTemplateRecordSchema,
 )

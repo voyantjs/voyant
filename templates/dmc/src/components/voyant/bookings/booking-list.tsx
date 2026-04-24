@@ -6,7 +6,7 @@ import {
   useBookings,
 } from "@voyantjs/bookings-react"
 import { formatMessage } from "@voyantjs/voyant-admin"
-import { Plus, Search, Zap } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +24,6 @@ import {
 import { useAdminMessages } from "@/lib/admin-i18n"
 
 import { BookingDialog } from "./booking-dialog"
-import { QuickBookDialog } from "./quick-book-dialog"
 
 export interface BookingListProps {
   pageSize?: number
@@ -61,7 +60,6 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
   const [search, setSearch] = React.useState("")
   const [offset, setOffset] = React.useState(0)
   const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [quickBookOpen, setQuickBookOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<BookingRecord | undefined>(undefined)
 
   const { data, isPending, isError } = useBookings({
@@ -100,10 +98,6 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setQuickBookOpen(true)}>
-            <Zap className="mr-2 size-4" />
-            {bookingMessages.quickBook}
-          </Button>
           <Button
             onClick={() => {
               setEditing(undefined)
@@ -212,14 +206,6 @@ export function BookingList({ pageSize = 25, onSelectBooking }: BookingListProps
         onOpenChange={setDialogOpen}
         booking={editing}
         onSuccess={(booking) => {
-          onSelectBooking?.(booking)
-        }}
-      />
-
-      <QuickBookDialog
-        open={quickBookOpen}
-        onOpenChange={setQuickBookOpen}
-        onCreated={(booking) => {
           onSelectBooking?.(booking)
         }}
       />

@@ -27,6 +27,8 @@ import { CurrencyCombobox } from "@/components/ui/currency-combobox"
 import { DateRangePicker } from "@/components/ui/date-picker"
 import { zodResolver } from "@/lib/zod-resolver"
 
+import { BookingCreateDialog } from "./booking-create-dialog"
+
 const bookingFormSchema = z.object({
   bookingNumber: z.string().min(1, "Booking number is required"),
   status: z.enum(["draft", "confirmed", "in_progress", "completed", "cancelled"]),
@@ -47,6 +49,11 @@ export interface BookingDialogProps {
   onOpenChange: (open: boolean) => void
   booking?: BookingRecord
   onSuccess?: (booking: BookingRecord) => void
+  /**
+   * Pre-seeds the product picker in create mode. Useful when opened from
+   * a product detail page. Ignored when editing an existing booking.
+   */
+  defaultProductId?: string
 }
 
 const BOOKING_STATUSES = [
@@ -57,17 +64,52 @@ const BOOKING_STATUSES = [
   { value: "cancelled", label: "Cancelled" },
 ] as const
 
-function generateBookingNumber(): string {
-  const now = new Date()
-  const y = now.getFullYear().toString().slice(-2)
-  const m = String(now.getMonth() + 1).padStart(2, "0")
-  const seq = String(Math.floor(Math.random() * 9000) + 1000)
-  return `BK-${y}${m}-${seq}`
+/**
+ * Single booking dialog that handles both create and edit:
+ * - Create (no `booking` prop): renders the rich product → option → person
+ *   picker flow via `BookingCreateDialog`, so the draft booking inherits
+ *   pricing, dates, and currency from the catalogue instead of being
+ *   hand-entered.
+ * - Edit (with `booking` prop): renders the flat form below that patches
+ *   the existing row's metadata (status, amounts, dates, notes).
+ */
+export function BookingDialog({
+  open,
+  onOpenChange,
+  booking,
+  onSuccess,
+  defaultProductId,
+}: BookingDialogProps) {
+  if (!booking) {
+    return (
+      <BookingCreateDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        defaultProductId={defaultProductId}
+        onCreated={onSuccess}
+      />
+    )
+  }
+
+  return (
+    <BookingEditDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      booking={booking}
+      onSuccess={onSuccess}
+    />
+  )
 }
 
-export function BookingDialog({ open, onOpenChange, booking, onSuccess }: BookingDialogProps) {
-  const isEditing = Boolean(booking)
-  const { create, update } = useBookingMutation()
+interface BookingEditDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  booking: BookingRecord
+  onSuccess?: (booking: BookingRecord) => void
+}
+
+function BookingEditDialog({ open, onOpenChange, booking, onSuccess }: BookingEditDialogProps) {
+  const { update } = useBookingMutation()
 
   const form = useForm<BookingFormValues, unknown, BookingFormOutput>({
     resolver: zodResolver(bookingFormSchema),
@@ -85,32 +127,19 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
   })
 
   useEffect(() => {
-    if (open && booking) {
-      form.reset({
-        bookingNumber: booking.bookingNumber,
-        status:
-          booking.status === "on_hold" || booking.status === "expired" ? "draft" : booking.status,
-        sellCurrency: booking.sellCurrency,
-        sellAmountCents: booking.sellAmountCents ?? "",
-        costAmountCents: booking.costAmountCents ?? "",
-        startDate: booking.startDate ?? "",
-        endDate: booking.endDate ?? "",
-        pax: booking.pax ?? "",
-        internalNotes: booking.internalNotes ?? "",
-      })
-    } else if (open) {
-      form.reset({
-        bookingNumber: generateBookingNumber(),
-        status: "draft",
-        sellCurrency: "EUR",
-        sellAmountCents: "",
-        costAmountCents: "",
-        startDate: "",
-        endDate: "",
-        pax: "",
-        internalNotes: "",
-      })
-    }
+    if (!open) return
+    form.reset({
+      bookingNumber: booking.bookingNumber,
+      status:
+        booking.status === "on_hold" || booking.status === "expired" ? "draft" : booking.status,
+      sellCurrency: booking.sellCurrency,
+      sellAmountCents: booking.sellAmountCents ?? "",
+      costAmountCents: booking.costAmountCents ?? "",
+      startDate: booking.startDate ?? "",
+      endDate: booking.endDate ?? "",
+      pax: booking.pax ?? "",
+      internalNotes: booking.internalNotes ?? "",
+    })
   }, [booking, form, open])
 
   const onSubmit = async (values: BookingFormOutput) => {
@@ -132,21 +161,19 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
       internalNotes: values.internalNotes || null,
     }
 
-    const saved = isEditing
-      ? await update.mutateAsync({ id: booking!.id, input: payload })
-      : await create.mutateAsync(payload)
+    const saved = await update.mutateAsync({ id: booking.id, input: payload })
 
     onOpenChange(false)
     onSuccess?.(saved)
   }
 
-  const isSubmitting = create.isPending || update.isPending
+  const isSubmitting = update.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Booking" : "New Booking"}</DialogTitle>
+          <DialogTitle>Edit Booking</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -171,7 +198,6 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
                   onValueChange={(value) =>
                     form.setValue("status", value as BookingFormValues["status"])
                   }
-                  items={BOOKING_STATUSES}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -246,7 +272,7 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
             </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Booking"}
+              Save Changes
             </Button>
           </DialogFooter>
         </form>

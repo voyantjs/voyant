@@ -28,6 +28,8 @@ import { DateRangePicker } from "@/components/ui/date-picker"
 import { useAdminMessages } from "@/lib/admin-i18n"
 import { zodResolver } from "@/lib/zod-resolver"
 
+import { BookingCreateDialog } from "./booking-create-dialog"
+
 type BookingDialogMessages = ReturnType<typeof useAdminMessages>["bookings"]["dialog"]
 
 const buildBookingFormSchema = (messages: BookingDialogMessages) =>
@@ -52,20 +54,59 @@ export interface BookingDialogProps {
   onOpenChange: (open: boolean) => void
   booking?: BookingRecord
   onSuccess?: (booking: BookingRecord) => void
+  /**
+   * Pre-seeds the product picker in create mode. Useful when opened from
+   * a product detail page. Ignored when editing an existing booking.
+   */
+  defaultProductId?: string
 }
 
-function generateBookingNumber(): string {
-  const now = new Date()
-  const y = now.getFullYear().toString().slice(-2)
-  const m = String(now.getMonth() + 1).padStart(2, "0")
-  const seq = String(Math.floor(Math.random() * 9000) + 1000)
-  return `BK-${y}${m}-${seq}`
+/**
+ * Single booking dialog for both create and edit:
+ * - Create (no `booking` prop) → delegates to `BookingCreateDialog`, the
+ *   composed product/option/person/shared-room picker flow that submits
+ *   via POST /v1/admin/bookings/quick-create.
+ * - Edit (with `booking` prop) → renders the flat form below that patches
+ *   status/amounts/dates/notes on the existing row.
+ */
+export function BookingDialog({
+  open,
+  onOpenChange,
+  booking,
+  onSuccess,
+  defaultProductId,
+}: BookingDialogProps) {
+  if (!booking) {
+    return (
+      <BookingCreateDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        defaultProductId={defaultProductId}
+        onCreated={onSuccess}
+      />
+    )
+  }
+
+  return (
+    <BookingEditDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      booking={booking}
+      onSuccess={onSuccess}
+    />
+  )
 }
 
-export function BookingDialog({ open, onOpenChange, booking, onSuccess }: BookingDialogProps) {
+interface BookingEditDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  booking: BookingRecord
+  onSuccess?: (booking: BookingRecord) => void
+}
+
+function BookingEditDialog({ open, onOpenChange, booking, onSuccess }: BookingEditDialogProps) {
   const dialogMessages = useAdminMessages().bookings.dialog
-  const isEditing = Boolean(booking)
-  const { create, update } = useBookingMutation()
+  const { update } = useBookingMutation()
   const bookingFormSchema = buildBookingFormSchema(dialogMessages)
   const bookingStatuses = [
     { value: "draft", label: dialogMessages.statusDraft },
@@ -91,32 +132,19 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
   })
 
   useEffect(() => {
-    if (open && booking) {
-      form.reset({
-        bookingNumber: booking.bookingNumber,
-        status:
-          booking.status === "on_hold" || booking.status === "expired" ? "draft" : booking.status,
-        sellCurrency: booking.sellCurrency,
-        sellAmountCents: booking.sellAmountCents ?? "",
-        costAmountCents: booking.costAmountCents ?? "",
-        startDate: booking.startDate ?? "",
-        endDate: booking.endDate ?? "",
-        pax: booking.pax ?? "",
-        internalNotes: booking.internalNotes ?? "",
-      })
-    } else if (open) {
-      form.reset({
-        bookingNumber: generateBookingNumber(),
-        status: "draft",
-        sellCurrency: "EUR",
-        sellAmountCents: "",
-        costAmountCents: "",
-        startDate: "",
-        endDate: "",
-        pax: "",
-        internalNotes: "",
-      })
-    }
+    if (!open) return
+    form.reset({
+      bookingNumber: booking.bookingNumber,
+      status:
+        booking.status === "on_hold" || booking.status === "expired" ? "draft" : booking.status,
+      sellCurrency: booking.sellCurrency,
+      sellAmountCents: booking.sellAmountCents ?? "",
+      costAmountCents: booking.costAmountCents ?? "",
+      startDate: booking.startDate ?? "",
+      endDate: booking.endDate ?? "",
+      pax: booking.pax ?? "",
+      internalNotes: booking.internalNotes ?? "",
+    })
   }, [booking, form, open])
 
   const onSubmit = async (values: BookingFormOutput) => {
@@ -138,23 +166,19 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
       internalNotes: values.internalNotes || null,
     }
 
-    const saved = isEditing
-      ? await update.mutateAsync({ id: booking!.id, input: payload })
-      : await create.mutateAsync(payload)
+    const saved = await update.mutateAsync({ id: booking.id, input: payload })
 
     onOpenChange(false)
     onSuccess?.(saved)
   }
 
-  const isSubmitting = create.isPending || update.isPending
+  const isSubmitting = update.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? dialogMessages.editTitle : dialogMessages.newTitle}
-          </DialogTitle>
+          <DialogTitle>{dialogMessages.editTitle}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -262,7 +286,7 @@ export function BookingDialog({ open, onOpenChange, booking, onSuccess }: Bookin
             </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? dialogMessages.saveChanges : dialogMessages.create}
+              {dialogMessages.saveChanges}
             </Button>
           </DialogFooter>
         </form>

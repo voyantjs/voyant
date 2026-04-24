@@ -41,7 +41,7 @@ function generateBookingNumber(): string {
 
 const NONE = "__none__"
 
-export interface QuickBookDialogProps {
+export interface BookingCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated?: (booking: BookingRecord) => void
@@ -51,13 +51,13 @@ export interface QuickBookDialogProps {
 
 type PersonMode = "existing" | "new"
 
-export function QuickBookDialog({
+export function BookingCreateDialog({
   open,
   onOpenChange,
   onCreated,
   defaultProductId,
-}: QuickBookDialogProps) {
-  const quickBookMessages = useAdminMessages().bookings.quickBook
+}: BookingCreateDialogProps) {
+  const messages = useAdminMessages().bookings.create
   const [productId, setProductId] = React.useState(defaultProductId ?? "")
   const [productSearch, setProductSearch] = React.useState("")
   const [optionId, setOptionId] = React.useState<string>(NONE)
@@ -148,7 +148,7 @@ export function QuickBookDialog({
     setError(null)
 
     if (!productId) {
-      setError(quickBookMessages.errorSelectProduct)
+      setError(messages.errorSelectProduct)
       return
     }
 
@@ -156,13 +156,13 @@ export function QuickBookDialog({
     try {
       if (personMode === "existing") {
         if (!personId) {
-          setError(quickBookMessages.errorSelectPerson)
+          setError(messages.errorSelectPerson)
           return
         }
         resolvedPersonId = personId
       } else {
         if (!newPerson.firstName.trim() || !newPerson.lastName.trim()) {
-          setError(quickBookMessages.errorNameRequired)
+          setError(messages.errorNameRequired)
           return
         }
         const person = await createPerson.mutateAsync({
@@ -177,7 +177,7 @@ export function QuickBookDialog({
       // Validate shared-room selection before creating the booking so we don't
       // create an orphan booking if the user picked "join" without a group.
       if (sharedRoomEnabled && sharedRoomMode === "join" && !sharedRoomGroupId) {
-        setError(quickBookMessages.errorSelectSharedRoom)
+        setError(messages.errorSelectSharedRoom)
         return
       }
 
@@ -217,7 +217,7 @@ export function QuickBookDialog({
       onOpenChange(false)
       onCreated?.(booking)
     } catch (err) {
-      setError(err instanceof Error ? err.message : quickBookMessages.errorCreateFailed)
+      setError(err instanceof Error ? err.message : messages.errorCreateFailed)
     }
   }
 
@@ -231,17 +231,17 @@ export function QuickBookDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{quickBookMessages.title}</DialogTitle>
+          <DialogTitle>{messages.title}</DialogTitle>
         </DialogHeader>
         <DialogBody className="grid gap-4">
           {/* Product — hidden when pre-selected from a product page */}
           {!defaultProductId ? (
             <div className="flex flex-col gap-2">
               <Label>
-                {quickBookMessages.productLabel} <span className="text-destructive">*</span>
+                {messages.productLabel} <span className="text-destructive">*</span>
               </Label>
               <Input
-                placeholder={quickBookMessages.productSearchPlaceholder}
+                placeholder={messages.productSearchPlaceholder}
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
               />
@@ -254,7 +254,7 @@ export function QuickBookDialog({
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={quickBookMessages.productSelectPlaceholder} />
+                  <SelectValue placeholder={messages.productSelectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((p) => (
@@ -270,10 +270,10 @@ export function QuickBookDialog({
           {/* Option (if product has options) */}
           {productId && options.length > 0 && (
             <div className="flex flex-col gap-2">
-              <Label>{quickBookMessages.optionLabel}</Label>
+              <Label>{messages.optionLabel}</Label>
               <Select
                 items={[
-                  { label: quickBookMessages.optionNone, value: NONE },
+                  { label: messages.optionNone, value: NONE },
                   ...options.map((o) => ({ label: o.name, value: o.id })),
                 ]}
                 value={optionId}
@@ -283,7 +283,7 @@ export function QuickBookDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>{quickBookMessages.optionNone}</SelectItem>
+                  <SelectItem value={NONE}>{messages.optionNone}</SelectItem>
                   {options.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
                       {o.name}
@@ -298,7 +298,7 @@ export function QuickBookDialog({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label>
-                {quickBookMessages.personLabel} <span className="text-destructive">*</span>
+                {messages.personLabel} <span className="text-destructive">*</span>
               </Label>
               <Button
                 type="button"
@@ -310,10 +310,10 @@ export function QuickBookDialog({
                 {personMode === "existing" ? (
                   <>
                     <UserPlus className="mr-1 h-3.5 w-3.5" />
-                    {quickBookMessages.createNewPerson}
+                    {messages.createNewPerson}
                   </>
                 ) : (
-                  quickBookMessages.selectExistingPerson
+                  messages.selectExistingPerson
                 )}
               </Button>
             </div>
@@ -321,7 +321,7 @@ export function QuickBookDialog({
             {personMode === "existing" ? (
               <>
                 <Input
-                  placeholder={quickBookMessages.personSearchPlaceholder}
+                  placeholder={messages.personSearchPlaceholder}
                   value={personSearch}
                   onChange={(e) => setPersonSearch(e.target.value)}
                 />
@@ -334,7 +334,7 @@ export function QuickBookDialog({
                   }))}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={quickBookMessages.personSelectPlaceholder} />
+                    <SelectValue placeholder={messages.personSelectPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {people.map((p) => (
@@ -349,36 +349,36 @@ export function QuickBookDialog({
             ) : (
               <div className="grid grid-cols-2 gap-2 rounded-md border p-3">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">{quickBookMessages.firstNameLabel}</Label>
+                  <Label className="text-xs">{messages.firstNameLabel}</Label>
                   <Input
                     value={newPerson.firstName}
                     onChange={(e) => setNewPerson({ ...newPerson, firstName: e.target.value })}
-                    placeholder={quickBookMessages.firstNamePlaceholder}
+                    placeholder={messages.firstNamePlaceholder}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">{quickBookMessages.lastNameLabel}</Label>
+                  <Label className="text-xs">{messages.lastNameLabel}</Label>
                   <Input
                     value={newPerson.lastName}
                     onChange={(e) => setNewPerson({ ...newPerson, lastName: e.target.value })}
-                    placeholder={quickBookMessages.lastNamePlaceholder}
+                    placeholder={messages.lastNamePlaceholder}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">{quickBookMessages.emailLabel}</Label>
+                  <Label className="text-xs">{messages.emailLabel}</Label>
                   <Input
                     type="email"
                     value={newPerson.email}
                     onChange={(e) => setNewPerson({ ...newPerson, email: e.target.value })}
-                    placeholder={quickBookMessages.emailPlaceholder}
+                    placeholder={messages.emailPlaceholder}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">{quickBookMessages.phoneLabel}</Label>
+                  <Label className="text-xs">{messages.phoneLabel}</Label>
                   <Input
                     value={newPerson.phone}
                     onChange={(e) => setNewPerson({ ...newPerson, phone: e.target.value })}
-                    placeholder={quickBookMessages.phonePlaceholder}
+                    placeholder={messages.phonePlaceholder}
                   />
                 </div>
               </div>
@@ -387,25 +387,25 @@ export function QuickBookDialog({
 
           {/* Organization (optional) */}
           <div className="flex flex-col gap-2">
-            <Label>{quickBookMessages.organizationLabel}</Label>
+            <Label>{messages.organizationLabel}</Label>
             <Input
-              placeholder={quickBookMessages.organizationSearchPlaceholder}
+              placeholder={messages.organizationSearchPlaceholder}
               value={orgSearch}
               onChange={(e) => setOrgSearch(e.target.value)}
             />
             <Select
               items={[
-                { label: quickBookMessages.organizationNone, value: NONE },
+                { label: messages.organizationNone, value: NONE },
                 ...orgs.map((o) => ({ label: o.name, value: o.id })),
               ]}
               value={organizationId}
               onValueChange={(v) => setOrganizationId(v ?? NONE)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={quickBookMessages.organizationNone} />
+                <SelectValue placeholder={messages.organizationNone} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{quickBookMessages.organizationNone}</SelectItem>
+                <SelectItem value={NONE}>{messages.organizationNone}</SelectItem>
                 {orgs.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
@@ -419,13 +419,13 @@ export function QuickBookDialog({
           <div className="flex flex-col gap-2 rounded-md border p-3">
             <div className="flex items-center gap-2">
               <input
-                id="quick-book-shared-room"
+                id="booking-create-shared-room"
                 type="checkbox"
                 checked={sharedRoomEnabled}
                 onChange={(e) => setSharedRoomEnabled(e.target.checked)}
               />
-              <Label htmlFor="quick-book-shared-room" className="text-sm">
-                {quickBookMessages.sharedRoomLabel}
+              <Label htmlFor="booking-create-shared-room" className="text-sm">
+                {messages.sharedRoomLabel}
               </Label>
             </div>
 
@@ -438,7 +438,7 @@ export function QuickBookDialog({
                     variant={sharedRoomMode === "create" ? "default" : "ghost"}
                     onClick={() => setSharedRoomMode("create")}
                   >
-                    {quickBookMessages.sharedRoomCreate}
+                    {messages.sharedRoomCreate}
                   </Button>
                   <Button
                     type="button"
@@ -446,7 +446,7 @@ export function QuickBookDialog({
                     variant={sharedRoomMode === "join" ? "default" : "ghost"}
                     onClick={() => setSharedRoomMode("join")}
                   >
-                    {quickBookMessages.sharedRoomJoin}
+                    {messages.sharedRoomJoin}
                   </Button>
                 </div>
 
@@ -454,19 +454,19 @@ export function QuickBookDialog({
                   <Select
                     items={
                       existingGroups.length === 0
-                        ? [{ label: quickBookMessages.sharedRoomNoGroups, value: NONE }]
+                        ? [{ label: messages.sharedRoomNoGroups, value: NONE }]
                         : existingGroups.map((g) => ({ label: g.label, value: g.id }))
                     }
                     value={sharedRoomGroupId || NONE}
                     onValueChange={(v) => setSharedRoomGroupId(v === NONE ? "" : (v ?? ""))}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder={quickBookMessages.sharedRoomSelectPlaceholder} />
+                      <SelectValue placeholder={messages.sharedRoomSelectPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {existingGroups.length === 0 ? (
                         <SelectItem value={NONE} disabled>
-                          {quickBookMessages.sharedRoomNoGroups}
+                          {messages.sharedRoomNoGroups}
                         </SelectItem>
                       ) : (
                         existingGroups.map((g) => (
@@ -479,9 +479,7 @@ export function QuickBookDialog({
                   </Select>
                 )}
                 {sharedRoomMode === "create" && (
-                  <p className="text-xs text-muted-foreground">
-                    {quickBookMessages.sharedRoomCreateHint}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{messages.sharedRoomCreateHint}</p>
                 )}
               </div>
             )}
@@ -489,11 +487,11 @@ export function QuickBookDialog({
 
           {/* Notes */}
           <div className="flex flex-col gap-2">
-            <Label>{quickBookMessages.notesLabel}</Label>
+            <Label>{messages.notesLabel}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={quickBookMessages.notesPlaceholder}
+              placeholder={messages.notesPlaceholder}
             />
           </div>
 
@@ -507,7 +505,7 @@ export function QuickBookDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            {quickBookMessages.cancel}
+            {messages.cancel}
           </Button>
           <Button
             type="button"
@@ -516,7 +514,7 @@ export function QuickBookDialog({
             disabled={isSubmitting || !productId}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {quickBookMessages.create}
+            {messages.create}
           </Button>
         </DialogFooter>
       </DialogContent>

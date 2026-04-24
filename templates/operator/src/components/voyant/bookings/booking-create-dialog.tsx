@@ -31,6 +31,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/components/ui"
+import { useAdminMessages } from "@/lib/admin-i18n"
 
 import {
   emptyPassengerListValue,
@@ -74,6 +75,12 @@ function generateBookingNumber(): string {
   return `BK-${y}${m}-${seq}`
 }
 
+/**
+ * Convert a PaymentScheduleValue (section's UI shape) to the rows the
+ * `/quick-create` endpoint expects. Returns an empty array for `unpaid` —
+ * the orchestrator treats a zero-length paymentSchedules as "operator will
+ * invoice manually."
+ */
 function paymentScheduleToRows(
   value: PaymentScheduleValue,
   currency: string,
@@ -145,7 +152,7 @@ function passengersToRows(value: PassengerListValue): QuickCreateTravelerInput[]
     firstName: p.firstName.trim(),
     lastName: p.lastName.trim(),
     email: p.email.trim() || null,
-    participantType: "traveler",
+    participantType: p.role === "lead" || p.role === "adult" ? "traveler" : "traveler",
     travelerCategory:
       p.role === "child"
         ? "child"
@@ -159,7 +166,7 @@ function passengersToRows(value: PassengerListValue): QuickCreateTravelerInput[]
   }))
 }
 
-export interface QuickBookDialogProps {
+export interface BookingCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated?: (booking: BookingRecord) => void
@@ -167,22 +174,13 @@ export interface QuickBookDialogProps {
   defaultProductId?: string
 }
 
-/**
- * Default operator quick-book dialog. Composes the booking-create picker
- * sections — product, departure, rooms, person, shared-room, passengers,
- * price breakdown, voucher, payment schedule — and submits via the atomic
- * `POST /v1/bookings/quick-create` endpoint so partial failures can't leave
- * orphan state.
- *
- * Apps that need a custom flow can install the sections individually and
- * assemble their own dialog instead of forking this file.
- */
-export function QuickBookDialog({
+export function BookingCreateDialog({
   open,
   onOpenChange,
   onCreated,
   defaultProductId,
-}: QuickBookDialogProps) {
+}: BookingCreateDialogProps) {
+  const messages = useAdminMessages().bookings.create
   const [product, setProduct] = React.useState<ProductPickerValue>({
     productId: defaultProductId ?? "",
     optionId: null,
@@ -196,13 +194,9 @@ export function QuickBookDialog({
   const [paymentSchedule, setPaymentSchedule] =
     React.useState<PaymentScheduleValue>(emptyPaymentScheduleValue)
   const [notes, setNotes] = React.useState("")
-  /**
-   * Optional post-create transition: set status to `confirmed` right after
-   * create succeeds. When the parent app has the notifications module's
-   * `autoConfirmAndDispatch` enabled, this fires the doc bundle + traveler
-   * email via the `booking.confirmed` subscriber. When it isn't, the
-   * booking simply lands in `confirmed` instead of `draft`.
-   */
+  // Post-create: confirm + fire auto-dispatch. The operator template wires
+  // `autoConfirmAndDispatch` on the notifications module so a booking.confirmed
+  // transition auto-sends the doc bundle — no separate notify call needed.
   const [confirmAfterCreate, setConfirmAfterCreate] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -262,6 +256,11 @@ export function QuickBookDialog({
     return `${date}${remaining}`
   }, [])
 
+  // Passenger room-assignment options. The capacity ceiling is
+  // `rooms[unit] × occupancyMax` seats; we subtract the count of passengers
+  // already assigned to each unit so the per-unit selector in the passenger
+  // row can disable full rooms. occupancyMax defaults to 1 when the unit
+  // definition doesn't carry it.
   const slotUnitAvailability = useSlotUnitAvailability({
     slotId: slotId ?? undefined,
     enabled: open && Boolean(slotId),
@@ -286,9 +285,9 @@ export function QuickBookDialog({
       })
   }, [slotUnitAvailability.data, rooms.quantities, passengers.passengers])
 
-  // Currency placeholder — used for voucher + payment schedule display.
-  // Consumers hooking in real product data should override this by wrapping
-  // the component or swapping in their own currency-aware hook.
+  // Currency for voucher + payment schedule display. Defaults to EUR for the
+  // first-cut composition; follow-up wires it from the product's sell
+  // currency (usePricingPreview snapshot already carries catalog.currencyCode).
   const currency = "EUR"
 
   const { create: createPerson } = usePersonMutation()
@@ -299,7 +298,7 @@ export function QuickBookDialog({
     setError(null)
 
     if (!product.productId) {
-      setError("Select a product")
+      setError(messages.errorSelectProduct)
       return
     }
 
@@ -307,13 +306,13 @@ export function QuickBookDialog({
     try {
       if (person.mode === "existing") {
         if (!person.personId) {
-          setError("Select a person or switch to create mode")
+          setError(messages.errorSelectPerson)
           return
         }
         resolvedPersonId = person.personId
       } else {
         if (!person.newPerson.firstName.trim() || !person.newPerson.lastName.trim()) {
-          setError("First and last name are required")
+          setError(messages.errorNameRequired)
           return
         }
         const created = await createPerson.mutateAsync({
@@ -325,13 +324,19 @@ export function QuickBookDialog({
         resolvedPersonId = created.id
       }
 
+      // Validate shared-room selection before creating the booking so we don't
+      // leave an orphan booking if the user picked "join" without a group.
       if (sharedRoom.enabled && sharedRoom.mode === "join" && !sharedRoom.groupId) {
-        setError("Select a shared-room group to join")
+        setError(messages.errorSelectSharedRoom)
         return
       }
 
       const bookingNumber = generateBookingNumber()
 
+      // Total is unknown client-side for now — the price breakdown section
+      // computes it but doesn't bubble it up. We pass null to paymentSchedule
+      // rows so "full" and "advance+balance" only emit when the operator
+      // typed amounts explicitly.
       const paymentSchedules = paymentScheduleToRows(paymentSchedule, currency, null)
 
       const travelers = passengersToRows(passengers)
@@ -372,11 +377,11 @@ export function QuickBookDialog({
         groupMembership,
       })
 
-      // Optional post-create confirm. If the app has autoConfirmAndDispatch
-      // wired on the notifications module, the status transition triggers
-      // the doc bundle + traveler email subscriber. A failed status change
-      // doesn't roll back the booking — it exists, operator can confirm
-      // manually later.
+      // Optional post-create: transition to confirmed. In operator's app.ts
+      // the notifications module has autoConfirmAndDispatch enabled, so this
+      // status change automatically triggers the doc bundle + traveler email
+      // via the booking.confirmed subscriber. If the status call fails we
+      // don't roll back — the booking exists, the operator can confirm later.
       let finalBooking = booking
       if (confirmAfterCreate) {
         try {
@@ -388,8 +393,10 @@ export function QuickBookDialog({
           setError(
             statusErr instanceof Error
               ? `Booking created but confirm failed: ${statusErr.message}`
-              : "Booking created but confirm failed",
+              : messages.errorCreateFailed,
           )
+          // Still fire onCreated so the parent closes & refreshes — the
+          // booking did land, only the confirm step tripped.
           onCreated?.(booking)
           return
         }
@@ -398,18 +405,54 @@ export function QuickBookDialog({
       onOpenChange(false)
       onCreated?.(finalBooking)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create booking")
+      setError(err instanceof Error ? err.message : messages.errorCreateFailed)
     }
   }
 
   const isSubmitting =
     quickCreateMutation.isPending || createPerson.isPending || statusMutation.isPending
 
+  const productLabels = {
+    product: messages.productLabel,
+    productSearchPlaceholder: messages.productSearchPlaceholder,
+    productSelectPlaceholder: messages.productSelectPlaceholder,
+    option: messages.optionLabel,
+    optionNone: messages.optionNone,
+  }
+
+  const personLabels = {
+    person: messages.personLabel,
+    createNewPerson: messages.createNewPerson,
+    selectExistingPerson: messages.selectExistingPerson,
+    personSearchPlaceholder: messages.personSearchPlaceholder,
+    personSelectPlaceholder: messages.personSelectPlaceholder,
+    firstName: messages.firstNameLabel,
+    firstNamePlaceholder: messages.firstNamePlaceholder,
+    lastName: messages.lastNameLabel,
+    lastNamePlaceholder: messages.lastNamePlaceholder,
+    email: messages.emailLabel,
+    emailPlaceholder: messages.emailPlaceholder,
+    phone: messages.phoneLabel,
+    phonePlaceholder: messages.phonePlaceholder,
+    organization: messages.organizationLabel,
+    organizationSearchPlaceholder: messages.organizationSearchPlaceholder,
+    organizationNone: messages.organizationNone,
+  }
+
+  const sharedRoomLabels = {
+    toggle: messages.sharedRoomLabel,
+    createMode: messages.sharedRoomCreate,
+    joinMode: messages.sharedRoomJoin,
+    selectPlaceholder: messages.sharedRoomSelectPlaceholder,
+    noGroups: messages.sharedRoomNoGroups,
+    createHint: messages.sharedRoomCreateHint,
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Quick Book</DialogTitle>
+          <DialogTitle>{messages.title}</DialogTitle>
         </DialogHeader>
         <DialogBody className="grid gap-4">
           <ProductPickerSection
@@ -417,23 +460,24 @@ export function QuickBookDialog({
             onChange={setProduct}
             enabled={open}
             lockProduct={Boolean(defaultProductId)}
+            labels={productLabels}
           />
 
           {product.productId ? (
             <div className="flex flex-col gap-1">
-              <Label>Departure</Label>
+              <Label>{messages.departureLabel}</Label>
               <Select
                 value={slotId ?? "__none__"}
                 onValueChange={(v) => setSlotId(v === "__none__" ? null : (v ?? null))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a departure..." />
+                  <SelectValue placeholder={messages.departureSelectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">No specific departure</SelectItem>
+                  <SelectItem value="__none__">{messages.departureNone}</SelectItem>
                   {slots.length === 0 ? (
                     <SelectItem value="__empty__" disabled>
-                      No open departures for this product
+                      {messages.departureEmpty}
                     </SelectItem>
                   ) : (
                     slots.map((slot) => (
@@ -451,13 +495,19 @@ export function QuickBookDialog({
             <RoomsStepperSection value={rooms} onChange={setRooms} slotId={slotId} enabled={open} />
           ) : null}
 
-          <PersonPickerSection value={person} onChange={setPerson} enabled={open} />
+          <PersonPickerSection
+            value={person}
+            onChange={setPerson}
+            enabled={open}
+            labels={personLabels}
+          />
 
           <SharedRoomSection
             value={sharedRoom}
             onChange={setSharedRoom}
             productId={product.productId || undefined}
             enabled={open}
+            labels={sharedRoomLabels}
           />
 
           {product.productId ? (
@@ -485,11 +535,11 @@ export function QuickBookDialog({
           />
 
           <div className="flex flex-col gap-2">
-            <Label>Internal Notes</Label>
+            <Label>{messages.notesLabel}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Quick context for this booking..."
+              placeholder={messages.notesPlaceholder}
             />
           </div>
 
@@ -502,13 +552,9 @@ export function QuickBookDialog({
             />
             <div className="flex flex-col gap-1">
               <Label htmlFor="quickbook-confirm-after-create" className="cursor-pointer text-sm">
-                Confirm & notify traveler after creating
+                {messages.confirmAfterCreateLabel}
               </Label>
-              <p className="text-xs text-muted-foreground">
-                Transitions to confirmed after create. When the notifications module's auto-dispatch
-                is on, this fires the doc bundle + traveler email via the booking.confirmed
-                subscriber.
-              </p>
+              <p className="text-xs text-muted-foreground">{messages.confirmAfterCreateHint}</p>
             </div>
           </div>
 
@@ -522,7 +568,7 @@ export function QuickBookDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Cancel
+            {messages.cancel}
           </Button>
           <Button
             type="button"
@@ -531,7 +577,7 @@ export function QuickBookDialog({
             disabled={isSubmitting || !product.productId}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Draft Booking
+            {messages.create}
           </Button>
         </DialogFooter>
       </DialogContent>

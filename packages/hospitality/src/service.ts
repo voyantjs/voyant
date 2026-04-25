@@ -229,7 +229,145 @@ export type ReserveStayResult =
   | { status: "inventory_missing"; date: string }
   | { status: "rate_count_mismatch"; expected: number; received: number }
 
+/**
+ * Per-night rate row produced by {@link resolveStayDailyRates}. Shape
+ * matches the input expected by {@link reserveStay}'s `dailyRates`.
+ */
+export interface ResolvedDailyRate {
+  date: string
+  sellCurrency: string
+  sellAmountCents: number | null
+  extraAdultAmountCents: number | null
+  extraChildAmountCents: number | null
+  extraInfantAmountCents: number | null
+}
+
+export type ResolveStayDailyRatesResult =
+  | { status: "ok"; rates: ResolvedDailyRate[] }
+  | { status: "rate_not_found"; ratePlanId: string; roomTypeId: string }
+  | { status: "stop_sell"; date: string }
+  | { status: "closed_to_arrival"; date: string }
+  | { status: "closed_to_departure"; date: string }
+
+export interface ResolveStayDailyRatesInput {
+  ratePlanId: string
+  roomTypeId: string
+  /** Inclusive ISO YYYY-MM-DD. */
+  startDate: string
+  /** Exclusive ISO YYYY-MM-DD (hotel checkout convention). */
+  endDate: string
+}
+
 export const hospitalityService = {
+  /**
+   * Resolve the per-night rate card for a (rate plan, room type, date
+   * range) tuple — produces the array shape that
+   * {@link reserveStay}'s `dailyRates` consumes.
+   *
+   * **Resolution rules:**
+   *
+   * 1. The base rate comes from `room_type_rates.baseAmountCents` for
+   *    the (ratePlanId, roomTypeId) pair. Currently flat — every night
+   *    in the range gets the same base amount.
+   * 2. `rate_plan_inventory_overrides` is consulted for restrictions
+   *    only:
+   *    - `stop_sell` on any night → typed `stop_sell` failure
+   *    - `closed_to_arrival` on the FIRST night → `closed_to_arrival`
+   *    - `closed_to_departure` on the night BEFORE the checkout date
+   *      → `closed_to_departure`
+   * 3. Currency is taken from `room_type_rates.currencyCode`.
+   *
+   * **What this resolver does NOT (yet) do:**
+   *
+   * - Date-scoped rate variation (weekend bumps, seasonal pricing).
+   *   The schema's `room_type_rates` is flat per (rate plan, room
+   *   type); date-scoped variation lives on the linked
+   *   `priceScheduleId` in the pricing module, which this resolver
+   *   does not yet consult. Wiring price-schedule resolution is a
+   *   follow-up.
+   * - Length-of-stay discounts.
+   * - Promo codes.
+   *
+   * Pass the result directly to `reserveStay`'s `dailyRates`.
+   */
+  async resolveStayDailyRates(
+    db: PostgresJsDatabase,
+    input: ResolveStayDailyRatesInput,
+  ): Promise<ResolveStayDailyRatesResult> {
+    const nights = eachNight(input.startDate, input.endDate)
+    if (nights.length === 0) {
+      return { status: "ok", rates: [] }
+    }
+
+    const [rate] = await db
+      .select()
+      .from(roomTypeRates)
+      .where(
+        and(
+          eq(roomTypeRates.ratePlanId, input.ratePlanId),
+          eq(roomTypeRates.roomTypeId, input.roomTypeId),
+          eq(roomTypeRates.active, true),
+        ),
+      )
+      .limit(1)
+
+    if (!rate) {
+      return {
+        status: "rate_not_found",
+        ratePlanId: input.ratePlanId,
+        roomTypeId: input.roomTypeId,
+      }
+    }
+
+    const overrides = await db
+      .select()
+      .from(ratePlanInventoryOverrides)
+      .where(
+        and(
+          eq(ratePlanInventoryOverrides.ratePlanId, input.ratePlanId),
+          eq(ratePlanInventoryOverrides.roomTypeId, input.roomTypeId),
+          gte(ratePlanInventoryOverrides.date, nights[0]!),
+          lte(ratePlanInventoryOverrides.date, nights[nights.length - 1]!),
+        ),
+      )
+    const overridesByDate = new Map<string, (typeof overrides)[number]>()
+    for (const ov of overrides) {
+      overridesByDate.set(ov.date, ov)
+    }
+
+    // Stop-sell on any night → reject the whole range
+    for (const date of nights) {
+      const ov = overridesByDate.get(date)
+      if (ov?.stopSell) {
+        return { status: "stop_sell", date }
+      }
+    }
+    // Closed-to-arrival on the first night → reject
+    const firstNight = nights[0]!
+    if (overridesByDate.get(firstNight)?.closedToArrival) {
+      return { status: "closed_to_arrival", date: firstNight }
+    }
+    // Closed-to-departure on the last night before checkout → reject.
+    // The "last night" is the night before endDate; eachNight() returned
+    // the inclusive list, so it's the array's tail.
+    const lastNight = nights[nights.length - 1]!
+    if (overridesByDate.get(lastNight)?.closedToDeparture) {
+      return { status: "closed_to_departure", date: lastNight }
+    }
+
+    return {
+      status: "ok",
+      rates: nights.map((date) => ({
+        date,
+        sellCurrency: rate.currencyCode,
+        sellAmountCents: rate.baseAmountCents,
+        extraAdultAmountCents: rate.extraAdultAmountCents,
+        extraChildAmountCents: rate.extraChildAmountCents,
+        extraInfantAmountCents: rate.extraInfantAmountCents,
+      })),
+    }
+  },
+
   /**
    * Atomically reserve a stay against the property's pooled inventory.
    *

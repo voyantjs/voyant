@@ -1,6 +1,8 @@
-import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
+
+import { priceSchedulesRef } from "./pricing-ref.js"
 
 import {
   housekeepingTasks,
@@ -169,6 +171,79 @@ function toDateOrNull(value: string | null | undefined) {
   return value ? new Date(value) : null
 }
 
+const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+
+/**
+ * Returns true when the given ISO date matches the schedule's
+ * weekdays + validFrom/validTo window.
+ *
+ * Schedule matching is intentionally simple: the
+ * `recurrenceRule` (an iCal RRULE string) is NOT parsed. Production
+ * uses set the `weekdays` JSON array (e.g. `["fri", "sat"]`) and
+ * `validFrom` / `validTo` for the date window. Anything beyond
+ * that — exception dates, monthly recurrences — needs RRULE parsing
+ * which is a follow-up.
+ */
+function scheduleMatchesDate(
+  schedule: {
+    validFrom: string | null
+    validTo: string | null
+    weekdays: string[] | null
+  },
+  isoDate: string,
+): boolean {
+  if (schedule.validFrom && isoDate < schedule.validFrom) return false
+  if (schedule.validTo && isoDate > schedule.validTo) return false
+  if (schedule.weekdays && schedule.weekdays.length > 0) {
+    const dayCode = WEEKDAY_CODES[new Date(`${isoDate}T00:00:00Z`).getUTCDay()]!
+    const normalized = schedule.weekdays.map((d) => d.toLowerCase().slice(0, 3))
+    if (!normalized.includes(dayCode)) return false
+  }
+  return true
+}
+
+/**
+ * Pick the winning rate row for a given date from a set of candidate
+ * rate rows. Rules with a higher-priority matching schedule beat
+ * lower-priority ones; if no schedule matches, the default
+ * (null-schedule) rule is returned.
+ */
+function pickRateForDate<
+  TRate extends {
+    priceScheduleId: string | null
+    currencyCode: string
+    baseAmountCents: number | null
+    extraAdultAmountCents: number | null
+    extraChildAmountCents: number | null
+    extraInfantAmountCents: number | null
+  },
+  TSchedule extends {
+    validFrom: string | null
+    validTo: string | null
+    weekdays: string[] | null
+    priority: number
+  },
+>(
+  date: string,
+  rateRows: TRate[],
+  schedulesById: Map<string, TSchedule>,
+  defaultRate: TRate,
+): TRate {
+  let winner = defaultRate
+  let winnerPriority = Number.NEGATIVE_INFINITY
+  for (const row of rateRows) {
+    if (!row.priceScheduleId) continue
+    const schedule = schedulesById.get(row.priceScheduleId)
+    if (!schedule) continue
+    if (!scheduleMatchesDate(schedule, date)) continue
+    if (schedule.priority > winnerPriority) {
+      winner = row
+      winnerPriority = schedule.priority
+    }
+  }
+  return winner
+}
+
 /**
  * Iterate the dates from `start` (inclusive) to `end` (exclusive) as
  * ISO YYYY-MM-DD strings. Hotel "nights" — checking out on the
@@ -301,7 +376,12 @@ export const hospitalityService = {
       return { status: "ok", rates: [] }
     }
 
-    const [rate] = await db
+    // Pull every active rate row for the (ratePlanId, roomTypeId) pair.
+    // Multiple rows are allowed when each carries a different
+    // priceScheduleId (uidx_room_type_rates_plan_room_schedule); the
+    // null-schedule row is the default that applies when no schedule
+    // matches a given night.
+    const rateRows = await db
       .select()
       .from(roomTypeRates)
       .where(
@@ -311,15 +391,32 @@ export const hospitalityService = {
           eq(roomTypeRates.active, true),
         ),
       )
-      .limit(1)
 
-    if (!rate) {
+    if (rateRows.length === 0) {
       return {
         status: "rate_not_found",
         ratePlanId: input.ratePlanId,
         roomTypeId: input.roomTypeId,
       }
     }
+
+    const defaultRate = rateRows.find((r) => r.priceScheduleId === null) ?? rateRows[0]!
+
+    // Load schedules referenced by any non-default rate row. Cross-domain
+    // read via the local pricing-ref column mirror.
+    const scheduleIds = rateRows
+      .map((r) => r.priceScheduleId)
+      .filter((id): id is string => Boolean(id))
+    const schedules =
+      scheduleIds.length === 0
+        ? []
+        : await db
+            .select()
+            .from(priceSchedulesRef)
+            .where(
+              and(inArray(priceSchedulesRef.id, scheduleIds), eq(priceSchedulesRef.active, true)),
+            )
+    const schedulesById = new Map(schedules.map((s) => [s.id, s]))
 
     const overrides = await db
       .select()
@@ -350,24 +447,27 @@ export const hospitalityService = {
       return { status: "closed_to_arrival", date: firstNight }
     }
     // Closed-to-departure on the last night before checkout → reject.
-    // The "last night" is the night before endDate; eachNight() returned
-    // the inclusive list, so it's the array's tail.
     const lastNight = nights[nights.length - 1]!
     if (overridesByDate.get(lastNight)?.closedToDeparture) {
       return { status: "closed_to_departure", date: lastNight }
     }
 
-    return {
-      status: "ok",
-      rates: nights.map((date) => ({
+    // For each night, pick the rate row whose linked schedule matches.
+    // Higher priority wins; if no schedule matches, fall back to the
+    // default (null-schedule) row.
+    const rates = nights.map((date) => {
+      const winner = pickRateForDate(date, rateRows, schedulesById, defaultRate)
+      return {
         date,
-        sellCurrency: rate.currencyCode,
-        sellAmountCents: rate.baseAmountCents,
-        extraAdultAmountCents: rate.extraAdultAmountCents,
-        extraChildAmountCents: rate.extraChildAmountCents,
-        extraInfantAmountCents: rate.extraInfantAmountCents,
-      })),
-    }
+        sellCurrency: winner.currencyCode,
+        sellAmountCents: winner.baseAmountCents,
+        extraAdultAmountCents: winner.extraAdultAmountCents,
+        extraChildAmountCents: winner.extraChildAmountCents,
+        extraInfantAmountCents: winner.extraInfantAmountCents,
+      }
+    })
+
+    return { status: "ok", rates }
   },
 
   /**

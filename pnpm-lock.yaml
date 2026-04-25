@@ -951,6 +951,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@voyantjs/markets':
+        specifier: workspace:*
+        version: link:../markets
       '@voyantjs/products':
         specifier: workspace:*
         version: link:../products
@@ -1759,6 +1762,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@voyantjs/pricing':
+        specifier: workspace:*
+        version: link:../pricing
       '@voyantjs/voyant-typescript-config':
         specifier: workspace:*
         version: link:../typescript-config

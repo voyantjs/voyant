@@ -42,26 +42,42 @@ describe("requireActor", () => {
     expect(body.error).toMatch(/Forbidden/)
   })
 
-  it("treats a request with no actor as 'staff'", async () => {
+  it("returns 401 when no actor is set on a staff-only surface", async () => {
     const app = makeApp(() => {
-      // do not set actor
+      // do not set actor — auth middleware was missing or misordered
     })
     app.use("*", requireActor("staff"))
     app.get("/", (c) => c.json({ ok: true }))
 
     const res = await app.request("/")
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(401)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toMatch(/Unauthorized/)
   })
 
-  it("rejects a request with no actor on a public-only surface", async () => {
+  it("returns 401 when no actor is set on a public-only surface", async () => {
     const app = makeApp(() => {
-      // do not set actor → defaults to "staff"
+      // do not set actor
     })
     app.use("*", requireActor("customer", "partner"))
     app.get("/", (c) => c.json({ ok: true }))
 
     const res = await app.request("/")
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
+  })
+
+  it("differentiates 401 (no actor) from 403 (wrong actor)", async () => {
+    const wrongActor = makeApp((c) => c.set("actor", "customer"))
+    wrongActor.use("*", requireActor("staff"))
+    wrongActor.get("/", (c) => c.json({ ok: true }))
+    const wrong = await wrongActor.request("/")
+    expect(wrong.status).toBe(403)
+
+    const noActor = makeApp(() => {})
+    noActor.use("*", requireActor("staff"))
+    noActor.get("/", (c) => c.json({ ok: true }))
+    const none = await noActor.request("/")
+    expect(none.status).toBe(401)
   })
 
   it("bypasses the check for internal requests", async () => {

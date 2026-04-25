@@ -14,9 +14,11 @@ import type { VoyantBindings, VoyantVariables } from "../types.js"
  * custom `auth.resolve` integration. Internal requests
  * (`isInternalRequest === true`) bypass the check.
  *
- * When the caller has no explicit actor, this middleware treats them as
- * `"staff"` to preserve backwards compatibility with existing deployments
- * that predate the actor concept.
+ * When the caller has no resolved actor, this middleware returns `401
+ * Unauthorized`. Earlier versions defaulted unset callers to `"staff"` for
+ * backwards compatibility, but that meant a misordered or missing auth
+ * middleware silently granted operator privileges to anonymous traffic.
+ * The default is now fail-closed.
  *
  * @example
  * app.use("/v1/admin/*", requireActor("staff"))
@@ -40,7 +42,10 @@ export function requireActor<TBindings extends VoyantBindings = VoyantBindings>(
       return next()
     }
 
-    const actor: Actor = c.get("actor") ?? "staff"
+    const actor = c.get("actor") as Actor | undefined
+    if (!actor) {
+      return c.json({ error: "Unauthorized: actor not resolved" }, 401)
+    }
     if (!allowSet.has(actor)) {
       return c.json({ error: "Forbidden: actor not permitted on this surface" }, 403)
     }

@@ -16,14 +16,10 @@ export interface JobOptions {
  * Abstract durable job runner interface. Implementations live in templates
  * or adapter packages; core never reaches for a specific runtime.
  *
- * Voyant uses Hatchet (`@hatchet-dev/typescript-sdk`) as the durable job
- * engine. This interface remains for the in-process `createWorkflow` async
- * step delegation — a Hatchet adapter can bridge enqueue/schedule calls to
- * the Hatchet API.
- *
- * Templates wire their chosen adapter into the shared app/runtime container as
- * `"jobs"`. Framework code that needs to kick off async work does so via
- * explicit runtime resolution such as
+ * Voyant Cloud chooses an edge or node runner per workflow step at deploy
+ * time. Templates wire their chosen adapter into the shared app/runtime
+ * container as `"jobs"`. Framework code that needs to kick off async work
+ * does so via explicit runtime resolution such as
  * `container.resolve<JobRunner>("jobs").enqueue(...)`.
  */
 export interface JobRunner {

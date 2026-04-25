@@ -16,7 +16,7 @@ import { createDbClient } from "@voyantjs/db"
 // Edge/Serverless (Cloudflare Workers) — Neon HTTP adapter
 const db = createDbClient(url)
 
-// Node.js (Hatchet worker, scripts) — Postgres.js adapter
+// Node.js (workers, scripts) — Postgres.js adapter
 const db = createDbClient(url, { adapter: "node" })
 ```
 

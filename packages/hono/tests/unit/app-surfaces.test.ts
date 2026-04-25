@@ -115,10 +115,10 @@ describe("createApp surface mounting", () => {
     expect(res.status).toBe(200)
   })
 
-  it("treats missing actor as staff on admin surface", async () => {
+  it("returns 401 on /v1/admin/* when actor is unresolved", async () => {
     const app = build(undefined, [makeModule({ name: "things", admin: true })])
     const res = await app.request("/v1/admin/things/ping", {}, TEST_ENV, TEST_CTX)
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(401)
   })
 
   it("supports a module exposing both admin and public routes", async () => {

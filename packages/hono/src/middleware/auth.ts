@@ -145,6 +145,10 @@ export function requireAuth<TBindings extends VoyantBindings>(
           scopes,
           callerType: "api_key",
           apiKeyId: row.id,
+          // Core-owned API keys (`voy_` prefix) are server-to-server credentials
+          // issued to operator staff. The actor stays explicit here so that
+          // `requireActor` doesn't have to default unset callers to "staff".
+          actor: "staff",
         })
 
         return next()

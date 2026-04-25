@@ -223,11 +223,13 @@ export interface ReserveStayInput {
 }
 
 export type ReserveStayResult =
-  | { status: "ok"; stayBookingItemId: string; nightCount: number }
+  | { status: "ok"; stayBookingItemId: string; nightCount: number; roomUnitId?: string | null }
   | { status: "insufficient_capacity"; date: string; available: number; needed: number }
   | { status: "stop_sell"; date: string }
   | { status: "inventory_missing"; date: string }
   | { status: "rate_count_mismatch"; expected: number; received: number }
+  | { status: "no_unit_available" }
+  | { status: "room_type_not_found" }
 
 /**
  * Per-night rate row produced by {@link resolveStayDailyRates}. Shape
@@ -369,28 +371,31 @@ export const hospitalityService = {
   },
 
   /**
-   * Atomically reserve a stay against the property's pooled inventory.
+   * Atomically reserve a stay. Dispatches based on the room type's
+   * `inventoryMode`:
    *
-   * Steps inside one `db.transaction`:
-   * 1. Compute the per-night date range
-   * 2. For each night, lock the `room_inventory` row for
-   *    `(roomTypeId, date)` with `SELECT ... FOR UPDATE`
-   * 3. Reject if any night has `stopSell = true`, missing inventory, or
-   *    `availableUnits < roomCount`
-   * 4. Decrement `availableUnits`, increment `heldUnits` per night
-   * 5. Insert the `stay_booking_items` row
-   * 6. Insert the `stay_daily_rates` rows
+   * - **pooled** (default): the property tracks "rooms-of-type-X
+   *   available for date Y" in `room_inventory`. Multiple physical
+   *   rooms are interchangeable; the desk picks one at check-in.
+   *   Reserve decrements `available_units` per night via per-night
+   *   `SELECT ... FOR UPDATE` row locks.
+   * - **serialized**: each `room_unit` is a specific physical room
+   *   ("an instance"); the booking is bound to that unit at reserve
+   *   time. Reserve picks the first available unit (sortOrder +
+   *   room_number deterministic), `SELECT ... FOR UPDATE`s the
+   *   chosen row, and persists the `roomUnitId` on
+   *   `stay_booking_items`. Skips units covered by `room_blocks` /
+   *   `maintenance_blocks` or already in an overlapping
+   *   reserved/checked-in stay.
+   * - **virtual**: not yet supported by `reserveStay`. Falls through
+   *   to pooled-mode logic, which will fail with
+   *   `inventory_missing` if no `room_inventory` row exists.
    *
-   * Concurrency: two callers reserving the last available room of a type
-   * for an overlapping date range serialize through the per-night
-   * `room_inventory` row lock; the loser receives
-   * `{ status: "insufficient_capacity" }` and never mutates inventory.
-   *
-   * **Scope:** pooled-mode room types only. Instance-mode (one
-   * `room_unit` per actual physical room, with check-in assignment) is
-   * out of scope here — instance reservation needs to also lock the
-   * specific room_unit and check `room_blocks` / maintenance overlap.
-   * Tracked separately.
+   * Concurrency: pooled-mode reserves serialize through per-night
+   * `room_inventory` locks; serialized-mode reserves serialize through
+   * per-unit `room_units` locks. Both produce typed
+   * `insufficient_capacity` / `no_unit_available` failures without
+   * mutating state.
    */
   async reserveStay(db: PostgresJsDatabase, input: ReserveStayInput): Promise<ReserveStayResult> {
     const nights = eachNight(input.checkInDate, input.checkOutDate)
@@ -403,6 +408,20 @@ export const hospitalityService = {
         expected: nights.length,
         received: input.dailyRates.length,
       }
+    }
+
+    // Look up the room type to dispatch by inventory mode.
+    const [roomType] = await db
+      .select({ id: roomTypes.id, inventoryMode: roomTypes.inventoryMode })
+      .from(roomTypes)
+      .where(eq(roomTypes.id, input.roomTypeId))
+      .limit(1)
+    if (!roomType) {
+      return { status: "room_type_not_found" }
+    }
+
+    if (roomType.inventoryMode === "serialized") {
+      return this._reserveStaySerialized(db, input, nights)
     }
 
     const roomCount = input.roomCount ?? 1
@@ -498,6 +517,126 @@ export const hospitalityService = {
       )
 
       return { status: "ok" as const, stayBookingItemId: stayRow.id, nightCount: nights.length }
+    })
+  },
+
+  /**
+   * Internal: serialized-mode (per-physical-room) reserve.
+   * Pooled-mode is in `reserveStay`.
+   *
+   * Picks the first available `room_unit` of the requested type by:
+   * - Excluding units in non-active status
+   * - Excluding units covered by an active `room_blocks` entry whose
+   *   range overlaps the requested stay (per-unit OR property-wide
+   *   roomType block)
+   * - Excluding units covered by an active `maintenance_blocks` entry
+   *   on the same logic
+   * - Excluding units already occupied by a reserved or checked-in
+   *   `stay_booking_items` whose date range overlaps
+   *
+   * The chosen unit is `SELECT ... FOR UPDATE`d so concurrent reserves
+   * on the same physical room serialize. The loser sees the unit
+   * already locked + occupied (after the first commits) and falls
+   * through to the next candidate, or `no_unit_available` if none
+   * remain.
+   */
+  async _reserveStaySerialized(
+    db: PostgresJsDatabase,
+    input: ReserveStayInput,
+    nights: string[],
+  ): Promise<ReserveStayResult> {
+    return db.transaction(async (tx) => {
+      // Find + lock the first available unit. The query mirrors the
+      // logic enumerated in the docstring above. We use FOR UPDATE so
+      // concurrent reserves serialize on the chosen unit.
+      const candidates = await tx.execute(sql`
+        SELECT u.id
+        FROM ${roomUnits} u
+        WHERE u.room_type_id = ${input.roomTypeId}
+          AND u.status = 'active'
+          AND NOT EXISTS (
+            SELECT 1 FROM ${roomBlocks} b
+            WHERE (
+                b.room_unit_id = u.id
+                OR (b.room_type_id = u.room_type_id AND b.room_unit_id IS NULL)
+              )
+              AND b.status IN ('held', 'confirmed')
+              AND b.starts_on < ${input.checkOutDate}
+              AND b.ends_on > ${input.checkInDate}
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM ${maintenanceBlocks} m
+            WHERE (
+                m.room_unit_id = u.id
+                OR (m.room_type_id = u.room_type_id AND m.room_unit_id IS NULL)
+              )
+              AND m.status IN ('open', 'in_progress')
+              AND m.starts_on < ${input.checkOutDate}
+              AND m.ends_on > ${input.checkInDate}
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM ${stayBookingItems} s
+            WHERE s.room_unit_id = u.id
+              AND s.status IN ('reserved', 'checked_in')
+              AND s.check_in_date < ${input.checkOutDate}
+              AND s.check_out_date > ${input.checkInDate}
+          )
+        ORDER BY u.code NULLS LAST, u.room_number NULLS LAST, u.id
+        LIMIT 1
+        FOR UPDATE
+      `)
+      const candidate = (candidates as unknown as Array<{ id: string }>)[0]
+      if (!candidate) {
+        return { status: "no_unit_available" as const }
+      }
+
+      const [stayRow] = await tx
+        .insert(stayBookingItems)
+        .values({
+          bookingItemId: input.bookingItemId,
+          propertyId: input.propertyId,
+          roomTypeId: input.roomTypeId,
+          roomUnitId: candidate.id,
+          ratePlanId: input.ratePlanId,
+          mealPlanId: input.mealPlanId ?? null,
+          checkInDate: input.checkInDate,
+          checkOutDate: input.checkOutDate,
+          nightCount: nights.length,
+          roomCount: input.roomCount ?? 1,
+          adults: input.adults ?? 1,
+          children: input.children ?? 0,
+          infants: input.infants ?? 0,
+          status: "reserved",
+        })
+        .returning()
+
+      if (!stayRow) {
+        throw new Error("_reserveStayInstance: stay_booking_items insert returned no rows")
+      }
+
+      await tx.insert(stayDailyRates).values(
+        nights.map((date, idx) => {
+          const rate = input.dailyRates[idx]!
+          return {
+            stayBookingItemId: stayRow.id,
+            date,
+            sellCurrency: rate.sellCurrency,
+            sellAmountCents: rate.sellAmountCents ?? null,
+            costCurrency: rate.costCurrency ?? null,
+            costAmountCents: rate.costAmountCents ?? null,
+            taxAmountCents: rate.taxAmountCents ?? null,
+            feeAmountCents: rate.feeAmountCents ?? null,
+            commissionAmountCents: rate.commissionAmountCents ?? null,
+          }
+        }),
+      )
+
+      return {
+        status: "ok" as const,
+        stayBookingItemId: stayRow.id,
+        nightCount: nights.length,
+        roomUnitId: candidate.id,
+      }
     })
   },
 

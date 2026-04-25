@@ -13,6 +13,15 @@ export {
   createBookingPiiService,
   type UpsertBookingTravelerTravelDetailInput,
 } from "./pii.js"
+export {
+  type PiiAccessContext,
+  redactBookingContact,
+  redactEmail,
+  redactPhone,
+  redactString,
+  redactTravelerIdentity,
+  shouldRevealBookingPii,
+} from "./pii-redaction.js"
 export type { ConvertProductData } from "./service.js"
 export { bookingsService } from "./service.js"
 export {

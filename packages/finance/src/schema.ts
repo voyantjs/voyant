@@ -1,7 +1,8 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import { relations } from "drizzle-orm"
+import { relations, sql } from "drizzle-orm"
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -627,6 +628,10 @@ export const bookingGuarantees = pgTable(
     index("idx_booking_guarantees_instrument").on(table.paymentInstrumentId),
     index("idx_booking_guarantees_authorization").on(table.paymentAuthorizationId),
     index("idx_booking_guarantees_status").on(table.status),
+    check(
+      "ck_booking_guarantees_currency_amount",
+      sql`(${table.currency} IS NULL) = (${table.amountCents} IS NULL)`,
+    ),
   ],
 )
 
@@ -692,6 +697,10 @@ export const bookingItemCommissions = pgTable(
     index("idx_booking_item_commissions_item_created").on(table.bookingItemId, table.createdAt),
     index("idx_booking_item_commissions_channel").on(table.channelId),
     index("idx_booking_item_commissions_status").on(table.status),
+    check(
+      "ck_booking_item_commissions_currency_amount",
+      sql`(${table.currency} IS NULL) = (${table.amountCents} IS NULL)`,
+    ),
   ],
 )
 
@@ -750,6 +759,18 @@ export const invoices = pgTable(
     index("idx_invoices_fx_rate_set").on(table.fxRateSetId),
     index("idx_invoices_number").on(table.invoiceNumber),
     index("idx_invoices_due_date").on(table.dueDate),
+    // base_currency covers every base_*_cents column. If any base amount is
+    // present, base_currency must be set so reporting can interpret it.
+    check(
+      "ck_invoices_base_currency_amounts",
+      sql`(
+        ${table.baseSubtotalCents} IS NULL
+        AND ${table.baseTaxCents} IS NULL
+        AND ${table.baseTotalCents} IS NULL
+        AND ${table.basePaidCents} IS NULL
+        AND ${table.baseBalanceDueCents} IS NULL
+      ) OR ${table.baseCurrency} IS NOT NULL`,
+    ),
   ],
 )
 
@@ -832,6 +853,10 @@ export const payments = pgTable(
     index("idx_payments_capture").on(table.paymentCaptureId),
     index("idx_payments_status").on(table.status),
     index("idx_payments_date").on(table.paymentDate),
+    check(
+      "ck_payments_base_currency_amount",
+      sql`(${table.baseCurrency} IS NULL) = (${table.baseAmountCents} IS NULL)`,
+    ),
   ],
 )
 

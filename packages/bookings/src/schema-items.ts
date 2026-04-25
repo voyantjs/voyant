@@ -1,5 +1,16 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import { boolean, date, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
+import {
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
 import { bookings, bookingTravelers } from "./schema-core"
@@ -51,6 +62,13 @@ export const bookingItems = pgTable(
     index("idx_booking_items_booking").on(table.bookingId),
     index("idx_booking_items_booking_created").on(table.bookingId, table.createdAt),
     index("idx_booking_items_status").on(table.status),
+    // cost_currency is optional on items (not every line has cost data) but
+    // if any cost amount is set, the currency MUST be set so reporting can
+    // interpret it.
+    check(
+      "ck_booking_items_cost_currency_amounts",
+      sql`(${table.unitCostAmountCents} IS NULL AND ${table.totalCostAmountCents} IS NULL) OR ${table.costCurrency} IS NOT NULL`,
+    ),
   ],
 )
 

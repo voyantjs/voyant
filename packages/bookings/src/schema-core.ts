@@ -1,5 +1,16 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
-import { boolean, date, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
+import {
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core"
 
 import {
   bookingParticipantTypeEnum,
@@ -58,6 +69,14 @@ export const bookings = pgTable(
     index("idx_bookings_organization").on(table.organizationId),
     index("idx_bookings_source_type").on(table.sourceType),
     index("idx_bookings_number").on(table.bookingNumber),
+    // base_currency covers the base_*_amount_cents columns. If any base
+    // amount is set, base_currency must be set so downstream FX/reporting
+    // code can interpret it. Both null is fine (FX deferred until quote
+    // becomes a confirmed booking).
+    check(
+      "ck_bookings_base_currency_amounts",
+      sql`(${table.baseSellAmountCents} IS NULL AND ${table.baseCostAmountCents} IS NULL) OR ${table.baseCurrency} IS NOT NULL`,
+    ),
   ],
 )
 

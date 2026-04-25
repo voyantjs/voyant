@@ -22,7 +22,6 @@ const travelerInputSchema = z.object({
   participantType: z.enum(["traveler", "occupant", "other"]).default("traveler"),
   travelerCategory: z.enum(["adult", "child", "infant", "senior", "other"]).optional().nullable(),
   preferredLanguage: z.string().max(35).optional().nullable(),
-  accessibilityNeeds: z.string().optional().nullable(),
   specialRequests: z.string().optional().nullable(),
   /**
    * option_unit_id the passenger is assigned to. Accepted by the input
@@ -249,7 +248,6 @@ export async function quickCreateBooking(
             email: traveler.email ?? null,
             phone: traveler.phone ?? null,
             preferredLanguage: traveler.preferredLanguage ?? null,
-            accessibilityNeeds: traveler.accessibilityNeeds ?? null,
             specialRequests: traveler.specialRequests ?? null,
             isPrimary: traveler.isPrimary ?? false,
             notes: traveler.notes ?? null,

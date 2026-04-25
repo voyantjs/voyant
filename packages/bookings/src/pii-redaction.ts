@@ -119,6 +119,11 @@ export function redactBookingContact<
 /**
  * Traveler row redaction. Same shape as `redactBookingContact` but for
  * traveler identity columns.
+ *
+ * `accessibilityNeeds` is intentionally NOT in the redacted set — it was
+ * moved to the encrypted `bookingTravelerTravelDetails` table (#283) and
+ * is only ever returned through `createBookingPiiService` after
+ * decryption + audit. It's never present on this row shape.
  */
 export function redactTravelerIdentity<
   T extends {
@@ -126,7 +131,6 @@ export function redactTravelerIdentity<
     lastName?: string | null
     email?: string | null
     phone?: string | null
-    accessibilityNeeds?: string | null
     specialRequests?: string | null
     notes?: string | null
   },
@@ -137,7 +141,6 @@ export function redactTravelerIdentity<
     lastName: redactString(row.lastName),
     email: redactEmail(row.email),
     phone: redactPhone(row.phone),
-    accessibilityNeeds: redactString(row.accessibilityNeeds),
     specialRequests: redactString(row.specialRequests),
     notes: redactString(row.notes),
   }

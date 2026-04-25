@@ -13,7 +13,6 @@ export interface CreateTravelerInput {
   email?: string | null
   phone?: string | null
   preferredLanguage?: string | null
-  accessibilityNeeds?: string | null
   specialRequests?: string | null
   travelerCategory?: string | null
   isPrimary?: boolean | null

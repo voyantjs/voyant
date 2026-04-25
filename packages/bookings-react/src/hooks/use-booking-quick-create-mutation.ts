@@ -17,7 +17,6 @@ export interface QuickCreateTravelerInput {
   participantType?: "traveler" | "occupant" | "other"
   travelerCategory?: "adult" | "child" | "infant" | "senior" | "other" | null
   preferredLanguage?: string | null
-  accessibilityNeeds?: string | null
   specialRequests?: string | null
   /**
    * option_unit_id of the room the passenger is assigned to. Round-trips

@@ -1,5 +1,5 @@
 ---
-"@voyantjs/hono": major
+"@voyantjs/hono": minor
 ---
 
 **BREAKING:** `requireActor` middleware now returns `401 Unauthorized` when no actor is set on the request, instead of defaulting to `"staff"`.

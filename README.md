@@ -142,6 +142,17 @@ Voyant keeps a strict boundary:
 - Core packages stay framework-agnostic even when first-party starters use React, TanStack Start, Hono, Better Auth, and Cloudflare Workers
 - Transport adapters stay thin and call shared domain services rather than owning business logic
 
+Architecture decisions live in [`docs/adr/`](./docs/adr/); domain
+conventions live in [`docs/architecture/`](./docs/architecture/).
+
+## Security model
+
+**One Postgres database + one runtime per organization.** Tenancy is
+enforced at the deployment boundary, not by in-process middleware. See
+[ADR-0001](./docs/adr/0001-tenant-scoping.md) for the full rationale,
+the alternatives considered, and the conditions under which the decision
+should be revisited.
+
 ## License
 
 Functional Source License, Version 1.1, Apache 2.0 Future License (`FSL-1.1-Apache-2.0`). See [LICENSE](./LICENSE).

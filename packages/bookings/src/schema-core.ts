@@ -96,7 +96,6 @@ export const bookingTravelers = pgTable(
     email: text("email"),
     phone: text("phone"),
     preferredLanguage: text("preferred_language"),
-    accessibilityNeeds: text("accessibility_needs"),
     specialRequests: text("special_requests"),
     isPrimary: boolean("is_primary").notNull().default(false),
     notes: text("notes"),

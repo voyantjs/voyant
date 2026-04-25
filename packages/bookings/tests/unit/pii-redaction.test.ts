@@ -134,7 +134,7 @@ describe("redactBookingContact()", () => {
 })
 
 describe("redactTravelerIdentity()", () => {
-  it("masks identity columns + accessibility/specialRequests/notes", () => {
+  it("masks identity columns + specialRequests/notes (accessibility lives in the encrypted bucket)", () => {
     const input = {
       id: "bkpt_1",
       bookingId: "book_1",
@@ -143,7 +143,6 @@ describe("redactTravelerIdentity()", () => {
       lastName: "Popa",
       email: "mihai@example.com",
       phone: "+40712345678",
-      accessibilityNeeds: "wheelchair",
       specialRequests: "kosher meal",
       notes: "VIP guest",
       isPrimary: true,
@@ -153,7 +152,6 @@ describe("redactTravelerIdentity()", () => {
     expect(output.lastName).toBe("***")
     expect(output.email).toBe("m***i@example.com")
     expect(output.phone).toBe("***5678")
-    expect(output.accessibilityNeeds).toBe("***")
     expect(output.specialRequests).toBe("***")
     expect(output.notes).toBe("***")
     // Untouched

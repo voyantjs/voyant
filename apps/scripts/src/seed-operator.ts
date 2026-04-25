@@ -2115,7 +2115,6 @@ async function seedTransactionsAndBookings(
           lastName: isLead ? bookingPlan.leadTraveler.lastName : bookingPlan.leadTraveler.lastName,
           email: isLead ? bookingPlan.leadTraveler.email : null,
           preferredLanguage: plan.workspace.locale,
-          accessibilityNeeds: travelerIndex === 1 ? "Low-step access preferred" : null,
           specialRequests: travelerIndex === 0 ? bookingPlan.notes : null,
           isPrimary: isLead,
           notes: `Seeded traveler ${travelerIndex + 1}`,

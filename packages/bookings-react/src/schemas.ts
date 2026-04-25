@@ -66,7 +66,6 @@ export const bookingTravelerRecordSchema = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   preferredLanguage: z.string().nullable().optional(),
-  accessibilityNeeds: z.string().nullable().optional(),
   specialRequests: z.string().nullable(),
   isPrimary: z.boolean(),
   notes: z.string().nullable().optional(),

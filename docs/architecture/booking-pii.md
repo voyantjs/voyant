@@ -7,24 +7,27 @@ information (PII) on bookings and travelers.
 
 There are three classes of PII on a booking:
 
-1. **High-sensitivity identity** — passport, national ID, date of birth,
-   nationality, dietary requirements with medical implications. Stored
+1. **High-sensitivity** — passport, national ID, date of birth,
+   nationality, dietary requirements, **accessibility needs**. Stored
    in `booking_traveler_travel_details` as KMS-encrypted JSON envelopes.
    See `packages/bookings/src/schema/travel-details.ts` and
-   `createBookingPiiService`.
+   `createBookingPiiService`. Accessibility info has tighter regulatory
+   bar in many jurisdictions (ADA / Equality Act) so it lives with the
+   passport-class data, not with the freeform notes.
 2. **Contact identifiers** — first/last name, email, phone, address,
    postal code. Stored as plaintext columns on `bookings.contact_*` and
    `booking_travelers.{first,last}_name / email / phone`. Plaintext is a
    deliberate choice so the operator UI can search and sort.
-3. **Operational notes** — `accessibility_needs`, `special_requests`,
-   `notes`. Plaintext, treated as PII for redaction purposes because
-   they often contain medical or personal context.
+3. **Operational notes** — `special_requests`, `notes`. Plaintext,
+   redacted in flight. These are too freeform to warrant encryption —
+   "anniversary trip", "high floor please", "VIP guest" cover most of
+   the production use, and operators sort/filter on them.
 
 ## Posture
 
 | Class | At rest | In flight (default) | In flight (with `bookings-pii:read` scope) |
 |---|---|---|---|
-| High-sensitivity identity | Encrypted (KMS envelope) | Not returned by list/get unless explicitly requested through the travel-details endpoint, which always audits | Decrypted and returned |
+| High-sensitivity | Encrypted (KMS envelope) | Not returned by list/get unless explicitly requested through the travel-details endpoint, which always audits | Decrypted and returned |
 | Contact identifiers | Plaintext | **Redacted** (email → `a***e@host`, phone → `***1234`, name/address → `***`) | Returned verbatim |
 | Operational notes | Plaintext | **Redacted** to `***` | Returned verbatim |
 
@@ -60,22 +63,25 @@ Every PII access — both reveals and redactions — is recorded in
 The list endpoints log a single row per request, not per row, with the
 `rowCount` in metadata.
 
-## Encryption follow-up
+## Why contact identifiers stay plaintext
 
-This document codifies "redact-in-flight + plaintext-on-disk" as the
-current posture. A follow-up issue tracks **encrypting contact
-identifiers at rest** — that requires:
+Encrypting `email` / `phone` / `firstName` / `lastName` at rest would
+require either deterministic encryption (which is weak — ciphertext
+patterns leak) or a parallel search-token column built from a
+salted-hash of the value, plus a migration script for existing rows.
+Both add friction to every read path for a threat — disk-level
+exfiltration of a single-tenant Postgres deployment — that's already
+substantially mitigated by:
 
-- A schema migration to replace text columns with encrypted JSON envelopes
-- A search-tokenisation strategy (deterministic encryption or a
-  separate `*_search_token` column produced from a salted-hash of the
-  email/phone) so the operator UI's "find by email" still works
-- A migration script to decrypt-and-re-encrypt existing rows
+- Voyant Cloud's deployment-boundary isolation (one DB per org, see
+  `docs/adr/0001-tenant-scoping.md`)
+- Disk-level encryption on managed Postgres (Neon, RDS, etc.)
+- The redaction layer, which limits what a compromised app credential
+  can dump
 
-Until that ships, contact identifiers are protected by access control
-and audit logging — not by cryptography on disk. Self-hosters with
-stricter requirements can encrypt the underlying Postgres at the disk
-layer (managed Postgres providers handle this; CF Hyperdrive does not).
+The cost-benefit didn't pencil out; routine contact info stays
+plaintext + redacted. Self-hosters with stricter regulatory bars can
+turn on disk-level encryption on their underlying Postgres.
 
 ## How to apply this in route code
 

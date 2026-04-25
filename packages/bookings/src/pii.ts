@@ -3,6 +3,7 @@ import { decryptOptionalJsonEnvelope, encryptOptionalJsonEnvelope } from "@voyan
 import { eq } from "drizzle-orm"
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import {
+  bookingTravelerAccessibilitySchema,
   bookingTravelerDietarySchema,
   bookingTravelerIdentitySchema,
   bookingTravelerTravelDetails,
@@ -16,6 +17,7 @@ export interface UpsertBookingTravelerTravelDetailInput {
   passportExpiry?: string | null
   dateOfBirth?: string | null
   dietaryRequirements?: string | null
+  accessibilityNeeds?: string | null
   isLeadTraveler?: boolean | null
 }
 
@@ -82,6 +84,18 @@ function buildDietaryPayload(input: UpsertBookingTravelerTravelDetailInput) {
   return payload
 }
 
+function buildAccessibilityPayload(input: UpsertBookingTravelerTravelDetailInput) {
+  const payload = bookingTravelerAccessibilitySchema.parse({
+    accessibilityNeeds: input.accessibilityNeeds ?? null,
+  })
+
+  if (!payload.accessibilityNeeds) {
+    return null
+  }
+
+  return payload
+}
+
 async function loadExistingTravelDetails(
   db: PostgresJsDatabase,
   travelerId: string,
@@ -110,6 +124,12 @@ async function loadExistingTravelDetails(
     row.dietaryEncrypted,
     bookingTravelerDietarySchema,
   )
+  const accessibility = await decryptOptionalJsonEnvelope(
+    options.kms,
+    keyRef,
+    row.accessibilityEncrypted,
+    bookingTravelerAccessibilitySchema,
+  )
 
   return {
     nationality: identity?.nationality ?? null,
@@ -117,6 +137,7 @@ async function loadExistingTravelDetails(
     passportExpiry: identity?.passportExpiry ?? null,
     dateOfBirth: identity?.dateOfBirth ?? null,
     dietaryRequirements: dietary?.dietaryRequirements ?? null,
+    accessibilityNeeds: accessibility?.accessibilityNeeds ?? null,
     isLeadTraveler: row.isLeadTraveler,
   }
 }
@@ -142,6 +163,10 @@ function mergeTravelDetailInput(
       input.dietaryRequirements === undefined
         ? (existing?.dietaryRequirements ?? null)
         : input.dietaryRequirements,
+    accessibilityNeeds:
+      input.accessibilityNeeds === undefined
+        ? (existing?.accessibilityNeeds ?? null)
+        : input.accessibilityNeeds,
     isLeadTraveler:
       input.isLeadTraveler === undefined
         ? (existing?.isLeadTraveler ?? false)
@@ -180,6 +205,12 @@ export function createBookingPiiService(options: BookingPiiServiceOptions): Book
         row.dietaryEncrypted,
         bookingTravelerDietarySchema,
       )
+      const accessibility = await decryptOptionalJsonEnvelope(
+        options.kms,
+        keyRef,
+        row.accessibilityEncrypted,
+        bookingTravelerAccessibilitySchema,
+      )
 
       await options.onAudit?.({ action: "decrypt", travelerId, actorId })
 
@@ -190,6 +221,7 @@ export function createBookingPiiService(options: BookingPiiServiceOptions): Book
         passportExpiry: identity?.passportExpiry ?? null,
         dateOfBirth: identity?.dateOfBirth ?? null,
         dietaryRequirements: dietary?.dietaryRequirements ?? null,
+        accessibilityNeeds: accessibility?.accessibilityNeeds ?? null,
         isLeadTraveler: row.isLeadTraveler,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -225,6 +257,11 @@ export function createBookingPiiService(options: BookingPiiServiceOptions): Book
         keyRef,
         buildDietaryPayload(mergedInput),
       )
+      const accessibilityEncrypted = await encryptOptionalJsonEnvelope(
+        options.kms,
+        keyRef,
+        buildAccessibilityPayload(mergedInput),
+      )
       const now = new Date()
 
       await db
@@ -233,6 +270,7 @@ export function createBookingPiiService(options: BookingPiiServiceOptions): Book
           travelerId,
           identityEncrypted,
           dietaryEncrypted,
+          accessibilityEncrypted,
           isLeadTraveler: mergedInput.isLeadTraveler ?? false,
           updatedAt: now,
         })
@@ -241,6 +279,7 @@ export function createBookingPiiService(options: BookingPiiServiceOptions): Book
           set: {
             identityEncrypted,
             dietaryEncrypted,
+            accessibilityEncrypted,
             isLeadTraveler: mergedInput.isLeadTraveler ?? false,
             updatedAt: now,
           },

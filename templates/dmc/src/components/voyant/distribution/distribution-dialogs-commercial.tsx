@@ -38,7 +38,15 @@ import {
 function createChannelFormSchema(nameRequired: string) {
   return z.object({
     name: z.string().min(1, nameRequired),
-    kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
+    kind: z.enum([
+      "direct",
+      "affiliate",
+      "ota",
+      "reseller",
+      "marketplace",
+      "api_partner",
+      "connect",
+    ]),
     status: z.enum(["active", "inactive", "pending", "archived"]),
     website: z.string().optional(),
     contactName: z.string().optional(),

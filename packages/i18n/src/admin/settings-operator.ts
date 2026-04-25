@@ -56,6 +56,7 @@ export const operatorAdminSettingsMessages = {
         kindReseller: "Reseller",
         kindMarketplace: "Marketplace",
         kindApiPartner: "API Partner",
+        kindConnect: "Connect",
       },
       productTypesPage: {
         title: "Product Types",
@@ -182,6 +183,7 @@ export const operatorAdminSettingsMessages = {
         kindReseller: "Revanzator",
         kindMarketplace: "Marketplace",
         kindApiPartner: "Partener API",
+        kindConnect: "Connect",
       },
       productTypesPage: {
         title: "Tipuri de produs",

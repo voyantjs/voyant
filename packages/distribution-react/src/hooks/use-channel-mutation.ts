@@ -6,12 +6,12 @@ import { z } from "zod"
 import { fetchWithValidation } from "../client.js"
 import { useVoyantDistributionContext } from "../provider.js"
 import { distributionQueryKeys } from "../query-keys.js"
-import { channelSingleResponse, successEnvelope } from "../schemas.js"
+import { channelKindSchema, channelSingleResponse, successEnvelope } from "../schemas.js"
 
 const channelInputSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
-  kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
+  kind: channelKindSchema,
   status: z.enum(["active", "inactive", "pending", "archived"]).optional(),
   website: z.string().url().nullable().optional(),
   contactName: z.string().nullable().optional(),

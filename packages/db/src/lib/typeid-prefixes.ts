@@ -20,6 +20,7 @@ export const PREFIXES = {
   webhook_deliveries: "whde",
   domains: "dom",
   email_domain_records: "emdr",
+  idempotency_keys: "ikey",
 
   // --- VOYANT MODULES ---
   communication_log: "clog",

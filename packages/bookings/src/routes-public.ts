@@ -1,4 +1,4 @@
-import { parseJsonBody, parseQuery } from "@voyantjs/hono"
+import { idempotencyKey, parseJsonBody, parseQuery } from "@voyantjs/hono"
 import { Hono } from "hono"
 
 import { type Env, notFound } from "./routes-shared.js"
@@ -40,7 +40,7 @@ function sessionConflictError(status: string) {
 }
 
 export const publicBookingRoutes = new Hono<Env>()
-  .post("/sessions", async (c) => {
+  .post("/sessions", idempotencyKey({ scope: "POST /v1/public/bookings/sessions" }), async (c) => {
     const result = await publicBookingsService.createSession(
       c.get("db"),
       await parseJsonBody(c, publicCreateBookingSessionSchema),
@@ -127,24 +127,28 @@ export const publicBookingRoutes = new Hono<Env>()
       },
     })
   })
-  .post("/sessions/:sessionId/confirm", async (c) => {
-    const result = await publicBookingsService.confirmSession(
-      c.get("db"),
-      c.req.param("sessionId"),
-      await parseJsonBody(c, publicBookingSessionMutationSchema),
-      c.get("userId"),
-    )
+  .post(
+    "/sessions/:sessionId/confirm",
+    idempotencyKey({ scope: "POST /v1/public/bookings/sessions/confirm" }),
+    async (c) => {
+      const result = await publicBookingsService.confirmSession(
+        c.get("db"),
+        c.req.param("sessionId"),
+        await parseJsonBody(c, publicBookingSessionMutationSchema),
+        c.get("userId"),
+      )
 
-    if (result.status === "not_found") {
-      return notFound(c, "Booking session not found")
-    }
+      if (result.status === "not_found") {
+        return notFound(c, "Booking session not found")
+      }
 
-    if (!hasSessionResult(result)) {
-      return c.json({ error: sessionConflictError(result.status) }, 409)
-    }
+      if (!hasSessionResult(result)) {
+        return c.json({ error: sessionConflictError(result.status) }, 409)
+      }
 
-    return c.json({ data: result.session })
-  })
+      return c.json({ data: result.session })
+    },
+  )
   .post("/sessions/:sessionId/expire", async (c) => {
     const result = await publicBookingsService.expireSession(
       c.get("db"),

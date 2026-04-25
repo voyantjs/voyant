@@ -169,7 +169,200 @@ function toDateOrNull(value: string | null | undefined) {
   return value ? new Date(value) : null
 }
 
+/**
+ * Iterate the dates from `start` (inclusive) to `end` (exclusive) as
+ * ISO YYYY-MM-DD strings. Hotel "nights" — checking out on the
+ * `endDate` does not consume that date's inventory.
+ */
+function eachNight(startDate: string, endDate: string): string[] {
+  const out: string[] = []
+  const start = new Date(`${startDate}T00:00:00Z`)
+  const end = new Date(`${endDate}T00:00:00Z`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new Error("eachNight: invalid date input")
+  }
+  for (
+    let cursor = start;
+    cursor < end;
+    cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000)
+  ) {
+    out.push(cursor.toISOString().slice(0, 10))
+  }
+  return out
+}
+
+/**
+ * Input for {@link reserveStay}. Mirrors the schema's stay_booking_items
+ * shape but consumes inventory atomically.
+ */
+export interface ReserveStayInput {
+  bookingItemId: string
+  propertyId: string
+  roomTypeId: string
+  ratePlanId: string
+  checkInDate: string
+  checkOutDate: string
+  roomCount?: number
+  adults?: number
+  children?: number
+  infants?: number
+  mealPlanId?: string | null
+  /**
+   * Per-night sell amounts. Length must equal nightCount; each row is
+   * inserted into `stay_daily_rates` for the corresponding night.
+   */
+  dailyRates: Array<{
+    sellCurrency: string
+    sellAmountCents?: number | null
+    costCurrency?: string | null
+    costAmountCents?: number | null
+    taxAmountCents?: number | null
+    feeAmountCents?: number | null
+    commissionAmountCents?: number | null
+  }>
+}
+
+export type ReserveStayResult =
+  | { status: "ok"; stayBookingItemId: string; nightCount: number }
+  | { status: "insufficient_capacity"; date: string; available: number; needed: number }
+  | { status: "stop_sell"; date: string }
+  | { status: "inventory_missing"; date: string }
+  | { status: "rate_count_mismatch"; expected: number; received: number }
+
 export const hospitalityService = {
+  /**
+   * Atomically reserve a stay against the property's pooled inventory.
+   *
+   * Steps inside one `db.transaction`:
+   * 1. Compute the per-night date range
+   * 2. For each night, lock the `room_inventory` row for
+   *    `(roomTypeId, date)` with `SELECT ... FOR UPDATE`
+   * 3. Reject if any night has `stopSell = true`, missing inventory, or
+   *    `availableUnits < roomCount`
+   * 4. Decrement `availableUnits`, increment `heldUnits` per night
+   * 5. Insert the `stay_booking_items` row
+   * 6. Insert the `stay_daily_rates` rows
+   *
+   * Concurrency: two callers reserving the last available room of a type
+   * for an overlapping date range serialize through the per-night
+   * `room_inventory` row lock; the loser receives
+   * `{ status: "insufficient_capacity" }` and never mutates inventory.
+   *
+   * **Scope:** pooled-mode room types only. Instance-mode (one
+   * `room_unit` per actual physical room, with check-in assignment) is
+   * out of scope here — instance reservation needs to also lock the
+   * specific room_unit and check `room_blocks` / maintenance overlap.
+   * Tracked separately.
+   */
+  async reserveStay(db: PostgresJsDatabase, input: ReserveStayInput): Promise<ReserveStayResult> {
+    const nights = eachNight(input.checkInDate, input.checkOutDate)
+    if (nights.length === 0) {
+      return { status: "rate_count_mismatch", expected: 0, received: input.dailyRates.length }
+    }
+    if (input.dailyRates.length !== nights.length) {
+      return {
+        status: "rate_count_mismatch",
+        expected: nights.length,
+        received: input.dailyRates.length,
+      }
+    }
+
+    const roomCount = input.roomCount ?? 1
+
+    return db.transaction(async (tx) => {
+      // Lock + check inventory for every night. Order by date so two
+      // concurrent reserves with overlapping ranges always grab locks in
+      // the same order — no deadlock possible.
+      for (const date of nights) {
+        const rows = await tx.execute(sql`
+          SELECT id, available_units, stop_sell
+          FROM ${roomInventory}
+          WHERE ${roomInventory.roomTypeId} = ${input.roomTypeId}
+            AND ${roomInventory.date} = ${date}
+          FOR UPDATE
+        `)
+        const row = (
+          rows as unknown as Array<{
+            id: string
+            available_units: number
+            stop_sell: boolean
+          }>
+        )[0]
+
+        if (!row) {
+          return { status: "inventory_missing" as const, date }
+        }
+        if (row.stop_sell) {
+          return { status: "stop_sell" as const, date }
+        }
+        if (row.available_units < roomCount) {
+          return {
+            status: "insufficient_capacity" as const,
+            date,
+            available: row.available_units,
+            needed: roomCount,
+          }
+        }
+      }
+
+      // All nights have capacity. Decrement.
+      for (const date of nights) {
+        await tx
+          .update(roomInventory)
+          .set({
+            availableUnits: sql`${roomInventory.availableUnits} - ${roomCount}`,
+            heldUnits: sql`${roomInventory.heldUnits} + ${roomCount}`,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(roomInventory.roomTypeId, input.roomTypeId), eq(roomInventory.date, date)))
+      }
+
+      // Insert the stay row.
+      const [stayRow] = await tx
+        .insert(stayBookingItems)
+        .values({
+          bookingItemId: input.bookingItemId,
+          propertyId: input.propertyId,
+          roomTypeId: input.roomTypeId,
+          ratePlanId: input.ratePlanId,
+          mealPlanId: input.mealPlanId ?? null,
+          checkInDate: input.checkInDate,
+          checkOutDate: input.checkOutDate,
+          nightCount: nights.length,
+          roomCount,
+          adults: input.adults ?? 1,
+          children: input.children ?? 0,
+          infants: input.infants ?? 0,
+          status: "reserved",
+        })
+        .returning()
+
+      if (!stayRow) {
+        throw new Error("reserveStay: stay_booking_items insert returned no rows")
+      }
+
+      // Insert the per-night rate rows in lockstep with the date range.
+      await tx.insert(stayDailyRates).values(
+        nights.map((date, idx) => {
+          const rate = input.dailyRates[idx]!
+          return {
+            stayBookingItemId: stayRow.id,
+            date,
+            sellCurrency: rate.sellCurrency,
+            sellAmountCents: rate.sellAmountCents ?? null,
+            costCurrency: rate.costCurrency ?? null,
+            costAmountCents: rate.costAmountCents ?? null,
+            taxAmountCents: rate.taxAmountCents ?? null,
+            feeAmountCents: rate.feeAmountCents ?? null,
+            commissionAmountCents: rate.commissionAmountCents ?? null,
+          }
+        }),
+      )
+
+      return { status: "ok" as const, stayBookingItemId: stayRow.id, nightCount: nights.length }
+    })
+  },
+
   async listRoomTypes(db: PostgresJsDatabase, query: RoomTypeListQuery) {
     const conditions = []
     if (query.propertyId) conditions.push(eq(roomTypes.propertyId, query.propertyId))

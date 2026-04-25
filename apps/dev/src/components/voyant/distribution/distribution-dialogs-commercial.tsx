@@ -36,7 +36,7 @@ import {
 
 const channelFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
+  kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner", "connect"]),
   status: z.enum(["active", "inactive", "pending", "archived"]),
   website: z.string().optional(),
   contactName: z.string().optional(),

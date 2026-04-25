@@ -39,6 +39,7 @@ export const channelKindSchema = z.enum([
   "reseller",
   "marketplace",
   "api_partner",
+  "connect",
 ])
 
 export const channelStatusSchema = z.enum(["active", "inactive", "pending", "archived"])

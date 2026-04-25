@@ -7,6 +7,7 @@ export const channelKindOptions = [
   { value: "reseller", label: "Reseller" },
   { value: "marketplace", label: "Marketplace" },
   { value: "api_partner", label: "API Partner" },
+  { value: "connect", label: "Connect" },
 ] as const
 
 export const channelStatusOptions = [

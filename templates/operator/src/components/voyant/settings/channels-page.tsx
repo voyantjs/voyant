@@ -37,7 +37,15 @@ const PAGE_SIZE = 25
 function getChannelFormSchema(messages: AdminMessages) {
   return z.object({
     name: z.string().min(1, messages.settings.validationNameRequired).max(255),
-    kind: z.enum(["direct", "affiliate", "ota", "reseller", "marketplace", "api_partner"]),
+    kind: z.enum([
+      "direct",
+      "affiliate",
+      "ota",
+      "reseller",
+      "marketplace",
+      "api_partner",
+      "connect",
+    ]),
     status: z.enum(["active", "inactive", "pending", "archived"]),
     website: z
       .string()
@@ -80,6 +88,7 @@ export function ChannelsPage() {
     reseller: messages.settings.channelsPage.kindReseller,
     marketplace: messages.settings.channelsPage.kindMarketplace,
     api_partner: messages.settings.channelsPage.kindApiPartner,
+    connect: messages.settings.channelsPage.kindConnect,
   }
   const channelStatusLabels: Record<string, string> = {
     active: messages.settings.channelsPage.statusActive,
@@ -244,6 +253,7 @@ function ChannelSheet({
     { value: "reseller", label: messages.settings.channelsPage.kindReseller },
     { value: "marketplace", label: messages.settings.channelsPage.kindMarketplace },
     { value: "api_partner", label: messages.settings.channelsPage.kindApiPartner },
+    { value: "connect", label: messages.settings.channelsPage.kindConnect },
   ] as const
   const channelFormSchema = useMemo(() => getChannelFormSchema(messages), [messages])
 

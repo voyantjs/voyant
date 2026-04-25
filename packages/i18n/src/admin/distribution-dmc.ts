@@ -66,6 +66,7 @@ const distributionEn = {
         reseller: "Reseller",
         marketplace: "Marketplace",
         api_partner: "API Partner",
+        connect: "Connect",
       },
       channelStatus: {
         active: "Active",
@@ -654,6 +655,7 @@ const distributionRo = {
         reseller: "Revanzator",
         marketplace: "Marketplace",
         api_partner: "Partener API",
+        connect: "Connect",
       },
       channelStatus: {
         active: "Activ",

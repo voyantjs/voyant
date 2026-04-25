@@ -7,6 +7,7 @@ export const channelKindEnum = pgEnum("channel_kind", [
   "reseller",
   "marketplace",
   "api_partner",
+  "connect",
 ])
 
 export const channelStatusEnum = pgEnum("channel_status", [

@@ -25,6 +25,14 @@ export {
   type UpdateBookingGroupInput,
 } from "./service-groups.js"
 export {
+  BOOKING_TRANSITIONS,
+  type BookingStatus,
+  type BookingStatusPatch,
+  BookingTransitionError,
+  canTransitionBooking,
+  transitionBooking,
+} from "./state-machine.js"
+export {
   type ExpireStaleBookingHoldsInput,
   type ExpireStaleBookingHoldsResult,
   expireStaleBookingHolds,

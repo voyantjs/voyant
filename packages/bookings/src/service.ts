@@ -31,6 +31,12 @@ import {
 } from "./schema.js"
 import { cleanupGroupOnBookingCancelled } from "./service-groups.js"
 import {
+  type BookingStatus,
+  BookingTransitionError,
+  canTransitionBooking,
+  transitionBooking,
+} from "./state-machine.js"
+import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
   offerItemsRef,
@@ -590,22 +596,6 @@ async function getConvertProductData(
   }
 }
 
-type BookingStatus = (typeof bookings.$inferSelect)["status"]
-
-const VALID_BOOKING_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  draft: ["on_hold", "confirmed", "cancelled"],
-  on_hold: ["confirmed", "expired", "cancelled"],
-  confirmed: ["in_progress", "cancelled"],
-  in_progress: ["completed", "cancelled"],
-  completed: [],
-  expired: [],
-  cancelled: [],
-}
-
-function isValidBookingTransition(from: BookingStatus, to: BookingStatus) {
-  return VALID_BOOKING_TRANSITIONS[from].includes(to)
-}
-
 function computeHoldExpiresAt(input: { holdMinutes?: number; holdExpiresAt?: string | null }) {
   if (input.holdExpiresAt) {
     return new Date(input.holdExpiresAt)
@@ -613,16 +603,6 @@ function computeHoldExpiresAt(input: { holdMinutes?: number; holdExpiresAt?: str
   const now = Date.now()
   const minutes = input.holdMinutes ?? 30
   return new Date(now + minutes * 60 * 1000)
-}
-
-function toBookingStatusTimestamps(status: BookingStatus) {
-  const now = new Date()
-  return {
-    confirmedAt: status === "confirmed" ? now : undefined,
-    expiredAt: status === "expired" ? now : undefined,
-    cancelledAt: status === "cancelled" ? now : undefined,
-    completedAt: status === "completed" ? now : undefined,
-  }
 }
 
 async function lockAvailabilitySlot(db: PostgresJsDatabase, slotId: string) {
@@ -2162,19 +2142,25 @@ export const bookingsService = {
       return bookingsService.cancelBooking(db, id, { note: data.note }, userId, runtime)
     }
 
+    // `on_hold` is only reachable through `reserveBooking`, never via direct status PATCH.
     if (data.status === "on_hold") {
       return { status: "invalid_transition" as const }
     }
 
-    if (!isValidBookingTransition(current.status, data.status)) {
-      return { status: "invalid_transition" as const }
+    let patch: ReturnType<typeof transitionBooking>
+    try {
+      patch = transitionBooking(current.status, data.status)
+    } catch (error) {
+      if (error instanceof BookingTransitionError) {
+        return { status: "invalid_transition" as const }
+      }
+      throw error
     }
 
     const [row] = await db
       .update(bookings)
       .set({
-        status: data.status,
-        ...toBookingStatusTimestamps(data.status),
+        ...patch,
         updatedAt: new Date(),
       })
       .where(eq(bookings.id, id))
@@ -2230,12 +2216,17 @@ export const bookingsService = {
         if (!booking) {
           throw new BookingServiceError("not_found")
         }
+        if (!canTransitionBooking(booking.status, "confirmed")) {
+          throw new BookingServiceError("invalid_transition")
+        }
         if (booking.status !== "on_hold") {
           throw new BookingServiceError("invalid_transition")
         }
         if (booking.hold_expires_at && booking.hold_expires_at < new Date()) {
           throw new BookingServiceError("hold_expired")
         }
+
+        const patch = transitionBooking(booking.status, "confirmed")
 
         await tx
           .update(bookingAllocations)
@@ -2254,9 +2245,8 @@ export const bookingsService = {
         const [row] = await tx
           .update(bookings)
           .set({
-            status: "confirmed",
+            ...patch,
             holdExpiresAt: null,
-            confirmedAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(bookings.id, id))
@@ -2402,9 +2392,14 @@ export const bookingsService = {
         if (!booking) {
           throw new BookingServiceError("not_found")
         }
+        if (!canTransitionBooking(booking.status, "expired")) {
+          throw new BookingServiceError("invalid_transition")
+        }
         if (booking.status !== "on_hold") {
           throw new BookingServiceError("invalid_transition")
         }
+
+        const patch = transitionBooking(booking.status, "expired")
 
         const allocations = await tx
           .select()
@@ -2432,9 +2427,8 @@ export const bookingsService = {
         const [row] = await tx
           .update(bookings)
           .set({
-            status: "expired",
+            ...patch,
             holdExpiresAt: null,
-            expiredAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(bookings.id, id))
@@ -2544,10 +2538,11 @@ export const bookingsService = {
         if (!booking) {
           throw new BookingServiceError("not_found")
         }
-        if (!["draft", "on_hold", "confirmed", "in_progress"].includes(booking.status)) {
+        if (!canTransitionBooking(booking.status, "cancelled")) {
           throw new BookingServiceError("invalid_transition")
         }
 
+        const patch = transitionBooking(booking.status, "cancelled")
         const previousStatus = booking.status as BookingCancelledEvent["previousStatus"]
 
         const allocations = await tx
@@ -2593,9 +2588,8 @@ export const bookingsService = {
         const [row] = await tx
           .update(bookings)
           .set({
-            status: "cancelled",
+            ...patch,
             holdExpiresAt: null,
-            cancelledAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(bookings.id, id))

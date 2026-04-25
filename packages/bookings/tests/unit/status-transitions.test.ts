@@ -1,112 +1,125 @@
 import { describe, expect, it } from "vitest"
 
-/**
- * Unit tests for booking status transitions and number generation.
- */
+import {
+  BOOKING_TRANSITIONS,
+  type BookingStatus,
+  BookingTransitionError,
+  canTransitionBooking,
+  transitionBooking,
+} from "../../src/state-machine.js"
 
-type BookingStatus =
-  | "draft"
-  | "on_hold"
-  | "confirmed"
-  | "in_progress"
-  | "completed"
-  | "expired"
-  | "cancelled"
-
-const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  draft: ["on_hold", "confirmed", "cancelled"],
-  on_hold: ["confirmed", "expired", "cancelled"],
-  confirmed: ["in_progress", "cancelled"],
-  in_progress: ["completed", "cancelled"],
-  completed: [],
-  expired: [],
-  cancelled: [],
-}
-
-function isValidTransition(from: BookingStatus, to: BookingStatus): boolean {
-  return VALID_TRANSITIONS[from].includes(to)
-}
+const ALL_STATUSES = Object.keys(BOOKING_TRANSITIONS) as BookingStatus[]
 
 function generateBookingNumber(prefix: string, sequence: number): string {
   const padded = String(sequence).padStart(6, "0")
   return `${prefix}-${padded}`
 }
 
-describe("Booking status transitions", () => {
-  describe("valid transitions", () => {
-    it("allows draft → on_hold", () => {
-      expect(isValidTransition("draft", "on_hold")).toBe(true)
-    })
+describe("BOOKING_TRANSITIONS — full matrix", () => {
+  for (const from of ALL_STATUSES) {
+    for (const to of ALL_STATUSES) {
+      const expected = (BOOKING_TRANSITIONS[from] as readonly BookingStatus[]).includes(to)
+      it(`${from} → ${to} is ${expected ? "allowed" : "rejected"}`, () => {
+        expect(canTransitionBooking(from, to)).toBe(expected)
+      })
+    }
+  }
+})
 
-    it("allows draft → confirmed", () => {
-      expect(isValidTransition("draft", "confirmed")).toBe(true)
-    })
-
-    it("allows draft → cancelled", () => {
-      expect(isValidTransition("draft", "cancelled")).toBe(true)
-    })
-
-    it("allows on_hold → confirmed", () => {
-      expect(isValidTransition("on_hold", "confirmed")).toBe(true)
-    })
-
-    it("allows on_hold → expired", () => {
-      expect(isValidTransition("on_hold", "expired")).toBe(true)
-    })
-
-    it("allows on_hold → cancelled", () => {
-      expect(isValidTransition("on_hold", "cancelled")).toBe(true)
-    })
-
-    it("allows confirmed → in_progress", () => {
-      expect(isValidTransition("confirmed", "in_progress")).toBe(true)
-    })
-
-    it("allows confirmed → cancelled", () => {
-      expect(isValidTransition("confirmed", "cancelled")).toBe(true)
-    })
-
-    it("allows in_progress → completed", () => {
-      expect(isValidTransition("in_progress", "completed")).toBe(true)
-    })
-
-    it("allows in_progress → cancelled", () => {
-      expect(isValidTransition("in_progress", "cancelled")).toBe(true)
-    })
+describe("BOOKING_TRANSITIONS — domain rules", () => {
+  it("allows the manual confirmed-booking flow (draft → confirmed without on_hold)", () => {
+    expect(canTransitionBooking("draft", "confirmed")).toBe(true)
   })
 
-  describe("invalid transitions", () => {
-    it("rejects draft → in_progress (must go through confirmed)", () => {
-      expect(isValidTransition("draft", "in_progress")).toBe(false)
-    })
+  it("requires confirmed before in_progress (no draft → in_progress)", () => {
+    expect(canTransitionBooking("draft", "in_progress")).toBe(false)
+    expect(canTransitionBooking("on_hold", "in_progress")).toBe(false)
+  })
 
-    it("rejects on_hold → completed", () => {
-      expect(isValidTransition("on_hold", "completed")).toBe(false)
-    })
+  it("requires in_progress before completed", () => {
+    expect(canTransitionBooking("draft", "completed")).toBe(false)
+    expect(canTransitionBooking("on_hold", "completed")).toBe(false)
+    expect(canTransitionBooking("confirmed", "completed")).toBe(false)
+  })
 
-    it("rejects draft → completed", () => {
-      expect(isValidTransition("draft", "completed")).toBe(false)
-    })
+  it("treats completed, cancelled, expired as terminal", () => {
+    for (const terminal of ["completed", "cancelled", "expired"] as const) {
+      for (const target of ALL_STATUSES) {
+        expect(canTransitionBooking(terminal, target)).toBe(false)
+      }
+    }
+  })
+})
 
-    it("rejects confirmed → completed (must go through in_progress)", () => {
-      expect(isValidTransition("confirmed", "completed")).toBe(false)
-    })
+describe("transitionBooking()", () => {
+  it("returns a patch with the new status", () => {
+    const patch = transitionBooking("on_hold", "confirmed")
+    expect(patch.status).toBe("confirmed")
+  })
 
-    it("rejects completed → any", () => {
-      expect(isValidTransition("completed", "draft")).toBe(false)
-      expect(isValidTransition("completed", "confirmed")).toBe(false)
-      expect(isValidTransition("completed", "cancelled")).toBe(false)
-    })
+  it("stamps confirmedAt when transitioning to confirmed", () => {
+    const now = new Date("2026-01-01T00:00:00Z")
+    const patch = transitionBooking("on_hold", "confirmed", { now })
+    expect(patch.confirmedAt).toEqual(now)
+    expect(patch.cancelledAt).toBeUndefined()
+    expect(patch.expiredAt).toBeUndefined()
+    expect(patch.completedAt).toBeUndefined()
+  })
 
-    it("rejects cancelled → any", () => {
-      expect(isValidTransition("cancelled", "draft")).toBe(false)
-      expect(isValidTransition("cancelled", "confirmed")).toBe(false)
-    })
+  it("stamps cancelledAt when transitioning to cancelled", () => {
+    const now = new Date("2026-01-01T00:00:00Z")
+    const patch = transitionBooking("confirmed", "cancelled", { now })
+    expect(patch.cancelledAt).toEqual(now)
+    expect(patch.confirmedAt).toBeUndefined()
+  })
 
-    it("rejects expired → any", () => {
-      expect(isValidTransition("expired", "draft")).toBe(false)
-      expect(isValidTransition("expired", "confirmed")).toBe(false)
-    })
+  it("stamps expiredAt when transitioning to expired", () => {
+    const now = new Date("2026-01-01T00:00:00Z")
+    const patch = transitionBooking("on_hold", "expired", { now })
+    expect(patch.expiredAt).toEqual(now)
+  })
+
+  it("stamps completedAt when transitioning to completed", () => {
+    const now = new Date("2026-01-01T00:00:00Z")
+    const patch = transitionBooking("in_progress", "completed", { now })
+    expect(patch.completedAt).toEqual(now)
+  })
+
+  it("does not stamp a timestamp when moving to in_progress (no dedicated column)", () => {
+    const patch = transitionBooking("confirmed", "in_progress")
+    expect(patch.confirmedAt).toBeUndefined()
+    expect(patch.cancelledAt).toBeUndefined()
+    expect(patch.expiredAt).toBeUndefined()
+    expect(patch.completedAt).toBeUndefined()
+  })
+
+  it("uses Date.now() when opts.now is omitted", () => {
+    const before = Date.now()
+    const patch = transitionBooking("on_hold", "confirmed")
+    const after = Date.now()
+    expect(patch.confirmedAt).toBeInstanceOf(Date)
+    const stampedAt = patch.confirmedAt?.getTime() ?? 0
+    expect(stampedAt).toBeGreaterThanOrEqual(before)
+    expect(stampedAt).toBeLessThanOrEqual(after)
+  })
+
+  it("throws BookingTransitionError for illegal moves", () => {
+    expect(() => transitionBooking("completed", "draft")).toThrow(BookingTransitionError)
+    expect(() => transitionBooking("draft", "completed")).toThrow(BookingTransitionError)
+  })
+
+  it("BookingTransitionError exposes from/to + a stable code", () => {
+    try {
+      transitionBooking("completed", "draft")
+      expect.unreachable("should have thrown")
+    } catch (err) {
+      expect(err).toBeInstanceOf(BookingTransitionError)
+      const e = err as BookingTransitionError
+      expect(e.from).toBe("completed")
+      expect(e.to).toBe("draft")
+      expect(e.code).toBe("INVALID_BOOKING_TRANSITION")
+      expect(e.message).toMatch(/completed.*draft/)
+    }
   })
 })
 

@@ -97,4 +97,106 @@ export function evaluateCancellationPolicy(
   return { refundPercent, refundCents, refundType, appliedRule: applied }
 }
 
+/**
+ * One revenue line in a multi-segment cancellation. Each segment carries
+ * its own rule set + own amount; segments that share a policy still need
+ * to be passed in separately so the per-segment refund tracks the
+ * specific line item.
+ */
+export type CancellationSegment = {
+  /** Optional caller-supplied id — typically the booking_item id. */
+  id?: string
+  /** Optional human-readable label (e.g. "Deluxe room, 3 nights"). */
+  label?: string
+  rules: CancellationRule[]
+  totalCents: number
+}
+
+export type SegmentedCancellationInput = {
+  daysBeforeDeparture: number
+  currency?: string
+  segments: CancellationSegment[]
+}
+
+export type SegmentedCancellationResult = {
+  /** Σ(segments.totalCents). */
+  totalCents: number
+  /** Σ(per-segment refundCents). */
+  refundCents: number
+  /** Aggregate refund as basis points: refundCents / totalCents × 10000. */
+  refundPercent: number
+  /**
+   * "mixed" when the segments resolve to different refundTypes (e.g. one
+   * segment is `cash` and another is `none`). When all non-zero
+   * segments resolve to the same refundType, that value is preserved.
+   * "none" when every segment resolves to 0 refund.
+   */
+  refundType: "cash" | "credit" | "cash_or_credit" | "none" | "mixed"
+  segments: Array<{
+    id?: string
+    label?: string
+    totalCents: number
+    result: CancellationResult
+  }>
+}
+
+/**
+ * Evaluate a multi-segment cancellation. Each segment runs through
+ * {@link evaluateCancellationPolicy} with the shared
+ * `daysBeforeDeparture`; per-segment refunds are summed and a coarse
+ * `refundType` is computed for the aggregate.
+ *
+ * Use case: hotel bookings with mid-stay room changes where each
+ * `stay_booking_items.ratePlanId` carries a different
+ * `cancellationPolicyId` (e.g. flexible Deluxe + non-refundable Suite).
+ * The customer cancels and we owe a partial refund — the flexible
+ * portion's refundCents + 0 from the non-refundable portion.
+ *
+ * Pure: no I/O. Caller resolves rules from policy IDs first (see
+ * {@link policiesService.evaluateMultiPolicyCancellation} for the DB
+ * variant).
+ */
+export function evaluateSegmentedCancellation(
+  input: SegmentedCancellationInput,
+): SegmentedCancellationResult {
+  const totalCents = input.segments.reduce((sum, segment) => sum + segment.totalCents, 0)
+
+  const segmentResults = input.segments.map((segment) => ({
+    id: segment.id,
+    label: segment.label,
+    totalCents: segment.totalCents,
+    result: evaluateCancellationPolicy(segment.rules, {
+      daysBeforeDeparture: input.daysBeforeDeparture,
+      totalCents: segment.totalCents,
+      currency: input.currency,
+    }),
+  }))
+
+  const refundCents = segmentResults.reduce((sum, segment) => sum + segment.result.refundCents, 0)
+  const refundPercent = totalCents > 0 ? Math.floor((refundCents * 10000) / totalCents) : 0
+
+  const nonZeroTypes = new Set<string>(
+    segmentResults
+      .filter((segment) => segment.result.refundCents > 0)
+      .map((segment) => segment.result.refundType),
+  )
+
+  let refundType: SegmentedCancellationResult["refundType"]
+  if (nonZeroTypes.size === 0) {
+    refundType = "none"
+  } else if (nonZeroTypes.size === 1) {
+    refundType = [...nonZeroTypes][0] as SegmentedCancellationResult["refundType"]
+  } else {
+    refundType = "mixed"
+  }
+
+  return {
+    totalCents,
+    refundCents,
+    refundPercent,
+    refundType,
+    segments: segmentResults,
+  }
+}
+
 export const _unused = inArray

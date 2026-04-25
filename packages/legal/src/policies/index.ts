@@ -48,8 +48,18 @@ export {
   policyRules,
   policyVersions,
 } from "./schema.js"
-export type { CancellationResult, CancellationRule } from "./service.js"
-export { evaluateCancellationPolicy, policiesService } from "./service.js"
+export type {
+  CancellationResult,
+  CancellationRule,
+  CancellationSegment,
+  SegmentedCancellationInput,
+  SegmentedCancellationResult,
+} from "./service.js"
+export {
+  evaluateCancellationPolicy,
+  evaluateSegmentedCancellation,
+  policiesService,
+} from "./service.js"
 export {
   evaluateCancellationInputSchema,
   insertPolicyAcceptanceSchema,

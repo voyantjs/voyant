@@ -1,5 +1,111 @@
 # @voyantjs/bookings
 
+## 0.10.0
+
+### Minor Changes
+
+- 29a581a: Auto-rollup booking total from `booking_items`. `bookingsService.recomputeBookingTotal(db, bookingId)` is now wired into `createItem` / `updateItem` / `deleteItem`, each wrapped in `db.transaction` so partial failures can never leave the parent total stale.
+
+  Also exposed publicly for ad-hoc invocation (saga compensation, fix-up scripts).
+
+  Base-currency totals (`baseSellAmountCents` / `baseCostAmountCents`) are NOT recomputed by this rollup — those are FX-derived and handled by the FX rollup added in the same release.
+
+- 29a581a: **BREAKING:** encrypt `accessibilityNeeds` at rest. Move accessibility info from a plaintext column on `booking_travelers` into the KMS-encrypted `booking_traveler_travel_details` envelope (alongside passport / nationality / DOB / dietary).
+
+  Disability data has tighter regulatory expectations in many jurisdictions (ADA / Equality Act) than freeform notes, so it lives with the passport-class data, not with `specialRequests` or `notes`.
+
+  **Migration:**
+
+  - The `booking_travelers.accessibility_needs` column is dropped.
+  - `accessibilityNeeds` is removed from `bookingTravelerRecord`, `BookingTraveler*` insert/update validation schemas, `redactTravelerIdentity`, and the bookings-react / finance / scripts surface.
+  - Read accessibility data through `createBookingPiiService.getTravelerTravelDetails`, which decrypts via `decryptOptionalJsonEnvelope` + audits the access. Same authorisation gate as the existing dietary / identity buckets.
+
+  Contact identifiers (email, phone, names, address) and `specialRequests` deliberately stay plaintext — see `docs/architecture/booking-pii.md` for the cost-benefit decision.
+
+- 29a581a: FX rollup for `base_*_amount_cents` on item mutations. `bookingsService.recomputeBookingTotal` now re-derives `baseSellAmountCents` / `baseCostAmountCents` from per-item totals when the booking declares a `baseCurrency` and `fxRateSetId`.
+
+  Schema: `bookings.fx_rate_set_id` (text, nullable) — plain text per the cross-domain FK rule (reference into the markets package).
+
+  FX behaviour:
+
+  - **Single-currency** (`baseCurrency` null OR every item's `sellCurrency === baseCurrency`): conversion is a no-op, `base*Cents` track `sell*Cents` 1:1. `fxStatus: "ok"`.
+  - **Multi-currency with valid FX**: each item converted via `exchange_rates` (direct rate or `inverse_rate_decimal` if direct row missing), summed. `fxStatus: "ok"`.
+  - **Missing rate**: short-circuits with `fxStatus: "missing_rate"`; `base*Cents` left unchanged on the parent. Caller decides.
+  - **No `fxRateSetId` configured**: skipped, `fxStatus: "skipped"`, `base*Cents` stay null.
+
+- 29a581a: Add `Idempotency-Key` header protocol for non-idempotent booking-creation endpoints.
+
+  Same key + same body replays the original response; same key + different body returns `409 Conflict`. Records expire after 24h. Wired (with `required: false` default) into:
+
+  - `POST /v1/admin/bookings/`
+  - `POST /v1/admin/bookings/reserve`
+  - `POST /v1/admin/bookings/from-product`
+  - `POST /v1/admin/bookings/from-offer/:offerId/reserve`
+  - `POST /v1/admin/bookings/from-order/:orderId/reserve`
+  - `POST /v1/public/bookings/sessions`
+  - `POST /v1/public/bookings/sessions/:sessionId/confirm`
+
+  Ships:
+
+  - `idempotency_keys` table in `@voyantjs/db/schema/infra` keyed by `(scope, key)`, with body-hash, captured response, and TTL.
+  - `idempotencyKey({ scope, required? })` middleware in `@voyantjs/hono` that reads the header, replays/conflicts/expires, and captures `2xx` JSON responses. Echoes `Idempotency-Key` + `Idempotency-Replayed: true` on replay.
+  - `purgeExpiredIdempotencyKeys()` helper for daily-cron cleanup.
+
+  Backwards-compatible: clients without the header continue to work. Templates can flip a route to `required: true` per endpoint once their client has rolled out.
+
+- 29a581a: Add route-layer PII redaction + mandatory audit on the bookings admin read surface.
+
+  `GET /v1/admin/bookings`, `GET /v1/admin/bookings/:id`, and `GET /v1/admin/bookings/:id/travelers` now:
+
+  - Check `shouldRevealBookingPii(ctx)` against actor / scopes / caller type
+  - Call `logBookingPiiAccess` with reason (`list_redacted` / `detail_reveal` / `insufficient_scope`) and metadata including row count
+  - Mask contact PII (name, email, phone, address) in the response unless the caller has the `bookings-pii:read` (or `bookings-pii:*` / `*` superuser) scope, or the request is internal
+
+  Exported helpers: `shouldRevealBookingPii`, `redactBookingContact`, `redactTravelerIdentity`, `redactEmail`, `redactPhone`, `redactString`. Surface area + posture documented in `docs/architecture/booking-pii.md`.
+
+- 29a581a: Add `refundBooking` saga — atomic credit-note + hold-release + supplier-reverse + notify, built on the existing `createWorkflow` primitive.
+
+  Side-effect dependencies are injected (no compile-time pull on finance / transactions / notifications) so the package stays slim; templates wire the deps.
+
+  Step graph with reverse-order compensation:
+
+  1. `validate-state` — refundable only when `confirmed`, `in_progress`, or `on_hold`. Rejects partial amounts outside `[0, sellAmountCents]`.
+  2. `create-credit-note` — short-circuits when `refundAmount === 0`. Compensation: void.
+  3. `release-inventory` — releases held + confirmed allocations, restores slot capacity. Compensation: re-decrement (loud failure if re-sold, intentional).
+  4. `reverse-supplier-offer` — best-effort.
+  5. `transition-booking` → `cancelled` via `transitionBooking()` (state-machine guard).
+  6. `notify-customer` — fire-and-forget.
+
+  Exports `refundBooking(input, deps)` and `buildRefundBookingWorkflow(deps)` for callers that want to inspect the workflow definition or run it via a JobRunner.
+
+- 29a581a: **BREAKING:** introduce explicit booking state machine with `transitionBooking()` guards.
+
+  Bookings now move through a typed state graph (`draft` → `on_hold` → `confirmed` → `in_progress` → `completed`, with `cancelled` / `expired` as terminal exits). Direct status writes are no longer permitted from service code — use `transitionBooking(bookingId, nextStatus, ctx)`, which enforces `BOOKING_TRANSITIONS` and emits an activity log row per transition.
+
+  **Migration:**
+
+  - Replace any `db.update(bookings).set({ status: ... })` in caller code with `transitionBooking()`.
+  - The `redeemed` status is removed (it was a vouchers-domain concept that didn't apply here). Anything that read it should now look at `completed`.
+  - The new `in_progress` status models "booking has started but the trip is mid-delivery" — set by the operator or by a scheduled transition once `startDate` is reached.
+
+### Patch Changes
+
+- 29a581a: Add Postgres `CHECK` constraints across finance, bookings, and transactions schemas to enforce: if any `*_amount_cents` column is set, its companion currency column must also be set.
+
+  Two flavours, depending on column shape:
+
+  - **Strict XNOR** (`(currency IS NULL) = (amount IS NULL)`) — one currency to one amount: `booking_guarantees`, `booking_item_commissions`, `payments` (base).
+  - **Implication** (`(amounts NULL) OR (currency NOT NULL)`) — one currency covering multiple amount columns: `bookings.base_currency`, `booking_items.cost_currency`, `offer_items.cost_currency`, `order_items.cost_currency`, `invoices.base_currency`.
+
+  The implication form intentionally allows "currency without amount" because the currency may be pre-declared before line items roll up.
+
+- Updated dependencies [29a581a]
+- Updated dependencies [b7f0501]
+  - @voyantjs/core@0.10.0
+  - @voyantjs/db@0.10.0
+  - @voyantjs/hono@0.10.0
+  - @voyantjs/utils@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

@@ -1,5 +1,39 @@
 # @voyantjs/legal
 
+## 0.10.0
+
+### Minor Changes
+
+- 29a581a: Add per-segment cancellation policy fan-out for multi-segment bookings (e.g. mid-stay room change with one flexible rate plan + one non-refundable rate plan).
+
+  Ships:
+
+  - `evaluateSegmentedCancellation(input)` — pure function, no I/O.
+  - `policiesService.evaluateMultiPolicyCancellation(db, segments, input)` — DB variant that resolves each segment's rules from a `policyId` (deduplicated; one query per unique policy).
+  - Types: `CancellationSegment`, `SegmentedCancellationInput`, `SegmentedCancellationResult` — aggregate totals + per-segment breakdown + `refundType` of `"mixed"` when segments resolve to different refund types (e.g. one full + one none).
+
+  Single-policy `evaluateCancellationPolicy` couldn't represent the "partial refund per segment" case; this resolves it without touching the existing API.
+
+### Patch Changes
+
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [b7f0501]
+  - @voyantjs/bookings@0.10.0
+  - @voyantjs/core@0.10.0
+  - @voyantjs/crm@0.10.0
+  - @voyantjs/db@0.10.0
+  - @voyantjs/hono@0.10.0
+  - @voyantjs/voyant-storage@0.10.0
+  - @voyantjs/suppliers@0.10.0
+  - @voyantjs/utils@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

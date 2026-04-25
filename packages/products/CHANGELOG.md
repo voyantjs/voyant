@@ -1,5 +1,17 @@
 # @voyantjs/products
 
+## 0.10.0
+
+### Patch Changes
+
+- Updated dependencies [29a581a]
+- Updated dependencies [b7f0501]
+  - @voyantjs/core@0.10.0
+  - @voyantjs/db@0.10.0
+  - @voyantjs/hono@0.10.0
+  - @voyantjs/voyant-storage@0.10.0
+  - @voyantjs/utils@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

@@ -17,11 +17,13 @@ import {
   type CreatePolicyVersionInput,
   type EvaluateCancellationInput,
   evaluateCancellationPolicy,
+  evaluateSegmentedCancellation,
   type PolicyAcceptanceListQuery,
   type PolicyAssignmentListQuery,
   type PolicyListQuery,
   paginate,
   type ResolvePolicyInput,
+  type SegmentedCancellationResult,
   toDateString,
   type UpdatePolicyAssignmentInput,
   type UpdatePolicyInput,
@@ -400,6 +402,70 @@ export const policiesCoreService = {
       label: r.label,
     }))
     return evaluateCancellationPolicy(mapped, input)
+  },
+
+  /**
+   * DB variant of {@link evaluateSegmentedCancellation} that resolves
+   * each segment's rules from a `policyId`. Use this for multi-segment
+   * cancellations where each line item may carry a different
+   * cancellation policy (e.g. mid-stay room change with mixed
+   * flexible/non-refundable rate plans).
+   *
+   * Segments referencing a missing or version-less policy are passed
+   * through with empty `rules`, which produces a zero refund — surfaces
+   * as a per-segment `appliedRule: null` for ops triage rather than
+   * throwing on the whole cancellation.
+   */
+  async evaluateMultiPolicyCancellation(
+    db: PostgresJsDatabase,
+    segments: Array<{
+      id?: string
+      label?: string
+      policyId: string
+      totalCents: number
+    }>,
+    input: { daysBeforeDeparture: number; currency?: string },
+  ): Promise<SegmentedCancellationResult> {
+    const policyIds = [...new Set(segments.map((segment) => segment.policyId))]
+
+    const rulesByPolicyId = new Map<string, CancellationRule[]>()
+    for (const policyId of policyIds) {
+      const [policy] = await db
+        .select({ id: policies.id, currentVersionId: policies.currentVersionId })
+        .from(policies)
+        .where(eq(policies.id, policyId))
+        .limit(1)
+      if (!policy?.currentVersionId) {
+        rulesByPolicyId.set(policyId, [])
+        continue
+      }
+      const rules = await db
+        .select()
+        .from(policyRules)
+        .where(eq(policyRules.policyVersionId, policy.currentVersionId))
+      rulesByPolicyId.set(
+        policyId,
+        rules.map((r) => ({
+          id: r.id,
+          daysBeforeDeparture: r.daysBeforeDeparture,
+          refundPercent: r.refundPercent,
+          refundType: r.refundType,
+          flatAmountCents: r.flatAmountCents,
+          label: r.label,
+        })),
+      )
+    }
+
+    return evaluateSegmentedCancellation({
+      daysBeforeDeparture: input.daysBeforeDeparture,
+      currency: input.currency,
+      segments: segments.map((segment) => ({
+        id: segment.id,
+        label: segment.label,
+        totalCents: segment.totalCents,
+        rules: rulesByPolicyId.get(segment.policyId) ?? [],
+      })),
+    })
   },
   async listPolicyAcceptances(db: PostgresJsDatabase, query: PolicyAcceptanceListQuery) {
     const conditions = []

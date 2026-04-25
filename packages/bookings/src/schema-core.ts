@@ -44,6 +44,7 @@ export const bookings = pgTable(
     contactPostalCode: text("contact_postal_code"),
     sellCurrency: text("sell_currency").notNull(),
     baseCurrency: text("base_currency"),
+    fxRateSetId: text("fx_rate_set_id"),
     sellAmountCents: integer("sell_amount_cents"),
     baseSellAmountCents: integer("base_sell_amount_cents"),
     costAmountCents: integer("cost_amount_cents"),

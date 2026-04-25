@@ -271,6 +271,75 @@ describe.skipIf(!DB_AVAILABLE)("createCrudService", () => {
     })
   })
 
+  describe("auto-filter on soft-deleted rows", () => {
+    it("excludes soft-deleted rows from list() by default", async () => {
+      const svc = createCrudService(crudItems)
+      await svc.create(db, { id: "a1", name: "Alive" })
+      await svc.create(db, { id: "a2", name: "Tombstoned" })
+      await svc.softDelete(db, "a2")
+
+      const rows = await svc.list(db)
+      expect(rows.map((r) => r.id)).toEqual(["a1"])
+    })
+
+    it("excludes soft-deleted rows from count() and listAndCount() by default", async () => {
+      const svc = createCrudService(crudItems)
+      await svc.create(db, { id: "b1", name: "A" })
+      await svc.create(db, { id: "b2", name: "B" })
+      await svc.create(db, { id: "b3", name: "C" })
+      await svc.softDelete(db, "b3")
+
+      expect(await svc.count(db)).toBe(2)
+      const { data, total } = await svc.listAndCount(db)
+      expect(data).toHaveLength(2)
+      expect(total).toBe(2)
+    })
+
+    it("excludes soft-deleted rows from retrieve() by default", async () => {
+      const svc = createCrudService(crudItems)
+      await svc.create(db, { id: "r1", name: "Alive" })
+      await svc.softDelete(db, "r1")
+      expect(await svc.retrieve(db, "r1")).toBeNull()
+    })
+
+    it("includes soft-deleted rows when includeDeleted: true", async () => {
+      const svc = createCrudService(crudItems)
+      await svc.create(db, { id: "i1", name: "Alive" })
+      await svc.create(db, { id: "i2", name: "Tombstoned" })
+      await svc.softDelete(db, "i2")
+
+      const rows = await svc.list(db, { includeDeleted: true, orderBy: asc(crudItems.id) })
+      expect(rows.map((r) => r.id)).toEqual(["i1", "i2"])
+
+      expect(await svc.count(db, undefined, { includeDeleted: true })).toBe(2)
+      const retrieved = await svc.retrieve(db, "i2", { includeDeleted: true })
+      expect(retrieved?.id).toBe("i2")
+
+      const { data, total } = await svc.listAndCount(db, { includeDeleted: true })
+      expect(data).toHaveLength(2)
+      expect(total).toBe(2)
+    })
+
+    it("composes user-supplied where clauses with the soft-delete filter", async () => {
+      const svc = createCrudService(crudItems)
+      await svc.create(db, { id: "c1", name: "Alive A", tag: "x" })
+      await svc.create(db, { id: "c2", name: "Tombstoned X", tag: "x" })
+      await svc.create(db, { id: "c3", name: "Alive B", tag: "y" })
+      await svc.softDelete(db, "c2")
+
+      const rows = await svc.list(db, { where: eq(crudItems.tag, "x") })
+      expect(rows.map((r) => r.id)).toEqual(["c1"])
+    })
+
+    it("on tables without deletedAt, list() behaviour is unchanged", async () => {
+      const svc = createCrudService(crudMinimal)
+      await svc.create(db, { id: "n1", label: "A" })
+      await svc.create(db, { id: "n2", label: "B" })
+      const rows = await svc.list(db)
+      expect(rows).toHaveLength(2)
+    })
+  })
+
   describe("composition", () => {
     it("supports spreading for custom service extensions", async () => {
       const crud = createCrudService(crudItems)

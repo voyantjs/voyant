@@ -95,6 +95,7 @@ export const db = new Proxy({} as ReturnType<typeof createDbClient>, {
 // Re-export lib utilities
 export * from "./helpers"
 export * from "./lib"
+export * from "./lifecycle"
 // Re-export queries
 export * from "./queries"
 export * from "./types"

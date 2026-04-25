@@ -1,4 +1,4 @@
-import { eq, getTableColumns, type SQL, sql } from "drizzle-orm"
+import { and, eq, getTableColumns, isNull, type SQL, sql } from "drizzle-orm"
 import type { AnyPgTable, PgColumn } from "drizzle-orm/pg-core"
 import type { z } from "zod"
 
@@ -33,6 +33,20 @@ export interface ListOptions {
    * `asc(table.column)` / `desc(table.column)` builders.
    */
   orderBy?: SQL | SQL[]
+  /**
+   * When the table has a `deletedAt` column, soft-deleted rows are filtered
+   * out by default. Pass `true` to include them — useful for admin recycle
+   * bins, audit reports, or background reconciliation jobs.
+   */
+  includeDeleted?: boolean
+}
+
+/**
+ * Options for retrieve-style lookups by id.
+ */
+export interface RetrieveOptions {
+  /** Include soft-deleted rows. Default: false. */
+  includeDeleted?: boolean
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Drizzle generic inference breaks on TTable extends AnyPgTable — casts are isolated to the query-builder boundary
@@ -82,9 +96,22 @@ export function createCrudService<
   // db to AnyDb only at the Drizzle call site; return types stay strict.
   const asDb = (db: DrizzleClient): AnyDb => db
 
+  function activeFilter(): SQL | undefined {
+    return deletedAtColumn ? isNull(deletedAtColumn) : undefined
+  }
+
+  function composeWhere(opts: { where?: SQL; includeDeleted?: boolean }): SQL | undefined {
+    if (opts.includeDeleted) return opts.where
+    const active = activeFilter()
+    if (!active) return opts.where
+    if (!opts.where) return active
+    return and(opts.where, active)
+  }
+
   async function list(db: DrizzleClient, opts: ListOptions = {}): Promise<Row[]> {
     let query = asDb(db).select().from(table)
-    if (opts.where) query = query.where(opts.where)
+    const where = composeWhere(opts)
+    if (where) query = query.where(where)
     if (opts.orderBy) {
       const orders = Array.isArray(opts.orderBy) ? opts.orderBy : [opts.orderBy]
       query = query.orderBy(...orders)
@@ -95,9 +122,14 @@ export function createCrudService<
     return rows
   }
 
-  async function count(db: DrizzleClient, where?: SQL): Promise<number> {
+  async function count(
+    db: DrizzleClient,
+    where?: SQL,
+    opts: { includeDeleted?: boolean } = {},
+  ): Promise<number> {
     const base = asDb(db).select({ count: sql<number>`count(*)::int` }).from(table)
-    const rows = (where ? await base.where(where) : await base) as Array<{ count: number }>
+    const composed = composeWhere({ where, includeDeleted: opts.includeDeleted })
+    const rows = (composed ? await base.where(composed) : await base) as Array<{ count: number }>
     return rows[0]?.count ?? 0
   }
 
@@ -105,12 +137,20 @@ export function createCrudService<
     db: DrizzleClient,
     opts: ListOptions = {},
   ): Promise<{ data: Row[]; total: number }> {
-    const [data, total] = await Promise.all([list(db, opts), count(db, opts.where)])
+    const [data, total] = await Promise.all([
+      list(db, opts),
+      count(db, opts.where, { includeDeleted: opts.includeDeleted }),
+    ])
     return { data, total }
   }
 
-  async function retrieve(db: DrizzleClient, id: string): Promise<Row | null> {
-    const rows = (await asDb(db).select().from(table).where(eq(idColumn, id)).limit(1)) as Row[]
+  async function retrieve(
+    db: DrizzleClient,
+    id: string,
+    opts: RetrieveOptions = {},
+  ): Promise<Row | null> {
+    const where = composeWhere({ where: eq(idColumn, id), includeDeleted: opts.includeDeleted })
+    const rows = (await asDb(db).select().from(table).where(where).limit(1)) as Row[]
     return rows[0] ?? null
   }
 

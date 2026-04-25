@@ -87,6 +87,10 @@
         "types": "./dist/crud.d.ts",
         "import": "./dist/crud.js"
       },
+      "./lifecycle": {
+        "types": "./dist/lifecycle.d.ts",
+        "import": "./dist/lifecycle.js"
+      },
       "./links": {
         "types": "./dist/links.d.ts",
         "import": "./dist/links.js"

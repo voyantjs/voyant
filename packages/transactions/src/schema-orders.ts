@@ -1,7 +1,9 @@
 import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import type { KmsEnvelope } from "@voyantjs/db/schema/iam"
+import { sql } from "drizzle-orm"
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -152,6 +154,10 @@ export const orderItems = pgTable(
     index("idx_order_items_unit_created").on(table.unitId, table.createdAt),
     index("idx_order_items_slot_created").on(table.slotId, table.createdAt),
     index("idx_order_items_status_created").on(table.status, table.createdAt),
+    check(
+      "ck_order_items_cost_currency_amounts",
+      sql`(${table.unitCostAmountCents} IS NULL AND ${table.totalCostAmountCents} IS NULL) OR ${table.costCurrency} IS NOT NULL`,
+    ),
   ],
 )
 

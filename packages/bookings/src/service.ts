@@ -2809,88 +2809,157 @@ export const bookingsService = {
       .orderBy(asc(bookingItems.createdAt))
   },
 
+  /**
+   * Re-derive `bookings.sellAmountCents` and `bookings.costAmountCents`
+   * from `Σ(booking_items.total*AmountCents)` and persist the parent.
+   *
+   * Called automatically inside the item-mutation methods on this service
+   * so callers that go through `createItem` / `updateItem` / `deleteItem`
+   * never have to remember to roll the parent. Public so external flows
+   * (saga compensations, ad-hoc fix-ups) can also invoke it.
+   *
+   * Pass a tx-bound `db` to compose with an existing transaction; this
+   * method does NOT wrap its own transaction.
+   *
+   * NOTE: the base-currency totals (`baseSellAmountCents` /
+   * `baseCostAmountCents`) are NOT recomputed here — they're derived from
+   * FX which lives outside this rollup. Callers that mutate items in a
+   * non-base-currency context must run their own FX rollup separately.
+   */
+  async recomputeBookingTotal(db: PostgresJsDatabase, bookingId: string) {
+    const [exists] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1)
+    if (!exists) {
+      return null
+    }
+
+    const [totals] = await db
+      .select({
+        sellAmountCents: sql<number>`coalesce(sum(${bookingItems.totalSellAmountCents}), 0)::int`,
+        costAmountCents: sql<number>`coalesce(sum(${bookingItems.totalCostAmountCents}), 0)::int`,
+      })
+      .from(bookingItems)
+      .where(eq(bookingItems.bookingId, bookingId))
+
+    const sellAmountCents = totals?.sellAmountCents ?? 0
+    const costAmountCents = totals?.costAmountCents ?? 0
+
+    await db
+      .update(bookings)
+      .set({ sellAmountCents, costAmountCents, updatedAt: new Date() })
+      .where(eq(bookings.id, bookingId))
+
+    return { sellAmountCents, costAmountCents }
+  },
+
   async createItem(
     db: PostgresJsDatabase,
     bookingId: string,
     data: CreateBookingItemInput,
     userId?: string,
   ) {
-    const [booking] = await db
-      .select({ id: bookings.id, sellCurrency: bookings.sellCurrency })
-      .from(bookings)
-      .where(eq(bookings.id, bookingId))
-      .limit(1)
+    return db.transaction(async (tx) => {
+      const [booking] = await tx
+        .select({ id: bookings.id, sellCurrency: bookings.sellCurrency })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .limit(1)
 
-    if (!booking) {
-      return null
-    }
+      if (!booking) {
+        return null
+      }
 
-    const [row] = await db
-      .insert(bookingItems)
-      .values({
+      const [row] = await tx
+        .insert(bookingItems)
+        .values({
+          bookingId,
+          title: data.title,
+          description: data.description ?? null,
+          itemType: data.itemType,
+          status: data.status,
+          serviceDate: data.serviceDate ?? null,
+          startsAt: toTimestamp(data.startsAt),
+          endsAt: toTimestamp(data.endsAt),
+          quantity: data.quantity,
+          sellCurrency: data.sellCurrency ?? booking.sellCurrency,
+          unitSellAmountCents: data.unitSellAmountCents ?? null,
+          totalSellAmountCents: data.totalSellAmountCents ?? null,
+          costCurrency: data.costCurrency ?? null,
+          unitCostAmountCents: data.unitCostAmountCents ?? null,
+          totalCostAmountCents: data.totalCostAmountCents ?? null,
+          notes: data.notes ?? null,
+          productId: data.productId ?? null,
+          optionId: data.optionId ?? null,
+          optionUnitId: data.optionUnitId ?? null,
+          pricingCategoryId: data.pricingCategoryId ?? null,
+          sourceSnapshotId: data.sourceSnapshotId ?? null,
+          sourceOfferId: data.sourceOfferId ?? null,
+          metadata: data.metadata ?? null,
+        })
+        .returning()
+
+      if (!row) {
+        return null
+      }
+
+      await tx.insert(bookingActivityLog).values({
         bookingId,
-        title: data.title,
-        description: data.description ?? null,
-        itemType: data.itemType,
-        status: data.status,
-        serviceDate: data.serviceDate ?? null,
-        startsAt: toTimestamp(data.startsAt),
-        endsAt: toTimestamp(data.endsAt),
-        quantity: data.quantity,
-        sellCurrency: data.sellCurrency ?? booking.sellCurrency,
-        unitSellAmountCents: data.unitSellAmountCents ?? null,
-        totalSellAmountCents: data.totalSellAmountCents ?? null,
-        costCurrency: data.costCurrency ?? null,
-        unitCostAmountCents: data.unitCostAmountCents ?? null,
-        totalCostAmountCents: data.totalCostAmountCents ?? null,
-        notes: data.notes ?? null,
-        productId: data.productId ?? null,
-        optionId: data.optionId ?? null,
-        optionUnitId: data.optionUnitId ?? null,
-        pricingCategoryId: data.pricingCategoryId ?? null,
-        sourceSnapshotId: data.sourceSnapshotId ?? null,
-        sourceOfferId: data.sourceOfferId ?? null,
-        metadata: data.metadata ?? null,
+        actorId: userId ?? "system",
+        activityType: "item_update",
+        description: `Booking item "${data.title}" added`,
+        metadata: { bookingItemId: row.id, itemType: data.itemType },
       })
-      .returning()
 
-    if (!row) {
-      return null
-    }
+      await bookingsService.recomputeBookingTotal(tx as PostgresJsDatabase, bookingId)
 
-    await db.insert(bookingActivityLog).values({
-      bookingId,
-      actorId: userId ?? "system",
-      activityType: "item_update",
-      description: `Booking item "${data.title}" added`,
-      metadata: { bookingItemId: row.id, itemType: data.itemType },
+      return row
     })
-
-    return row
   },
 
   async updateItem(db: PostgresJsDatabase, itemId: string, data: UpdateBookingItemInput) {
-    const [row] = await db
-      .update(bookingItems)
-      .set({
-        ...data,
-        startsAt: data.startsAt === undefined ? undefined : toTimestamp(data.startsAt),
-        endsAt: data.endsAt === undefined ? undefined : toTimestamp(data.endsAt),
-        updatedAt: new Date(),
-      })
-      .where(eq(bookingItems.id, itemId))
-      .returning()
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(bookingItems)
+        .set({
+          ...data,
+          startsAt: data.startsAt === undefined ? undefined : toTimestamp(data.startsAt),
+          endsAt: data.endsAt === undefined ? undefined : toTimestamp(data.endsAt),
+          updatedAt: new Date(),
+        })
+        .where(eq(bookingItems.id, itemId))
+        .returning()
 
-    return row ?? null
+      if (!row) return null
+
+      await bookingsService.recomputeBookingTotal(tx as PostgresJsDatabase, row.bookingId)
+      return row
+    })
   },
 
   async deleteItem(db: PostgresJsDatabase, itemId: string) {
-    const [row] = await db
-      .delete(bookingItems)
-      .where(eq(bookingItems.id, itemId))
-      .returning({ id: bookingItems.id })
+    return db.transaction(async (tx) => {
+      // Look up the parent booking BEFORE the delete so we can roll up
+      // afterwards.
+      const [item] = await tx
+        .select({ bookingId: bookingItems.bookingId })
+        .from(bookingItems)
+        .where(eq(bookingItems.id, itemId))
+        .limit(1)
 
-    return row ?? null
+      const [row] = await tx
+        .delete(bookingItems)
+        .where(eq(bookingItems.id, itemId))
+        .returning({ id: bookingItems.id })
+
+      if (item) {
+        await bookingsService.recomputeBookingTotal(tx as PostgresJsDatabase, item.bookingId)
+      }
+
+      return row ?? null
+    })
   },
 
   listItemParticipants(db: PostgresJsDatabase, itemId: string) {

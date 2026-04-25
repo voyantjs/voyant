@@ -4,6 +4,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import type { z } from "zod"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
+import { exchangeRatesRef } from "./markets-ref.js"
 import {
   bookingItemProductDetailsRef,
   bookingProductDetailsRef,
@@ -603,6 +604,120 @@ function computeHoldExpiresAt(input: { holdMinutes?: number; holdExpiresAt?: str
   const now = Date.now()
   const minutes = input.holdMinutes ?? 30
   return new Date(now + minutes * 60 * 1000)
+}
+
+/**
+ * Walk a booking's items, convert each line into the booking's
+ * `baseCurrency` via the booking's `fxRateSetId`, sum.
+ *
+ * Returns:
+ * - `{ status: "ok", baseSellAmountCents, baseCostAmountCents }` when
+ *   every item's currency was either already in `baseCurrency` or had
+ *   a rate row in the rate set
+ * - `{ status: "missing_rate", currency }` when an item's
+ *   `sellCurrency` had no rate in the rate set; caller treats as
+ *   "leave base totals untouched, surface to ops"
+ * - `{ status: "skipped" }` when the booking has no `fxRateSetId`
+ *   (multi-currency conversion isn't possible without one)
+ *
+ * Pure conversion math. Caller controls persistence.
+ */
+async function rollupBaseTotals(
+  db: PostgresJsDatabase,
+  bookingId: string,
+  baseCurrency: string,
+): Promise<
+  | { status: "ok"; baseSellAmountCents: number; baseCostAmountCents: number }
+  | { status: "missing_rate"; currency: string }
+  | { status: "skipped" }
+> {
+  const [booking] = await db
+    .select({ fxRateSetId: bookings.fxRateSetId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1)
+  if (!booking?.fxRateSetId) {
+    return { status: "skipped" }
+  }
+  // Cache for the closure — TypeScript can't narrow `booking` after
+  // the closure boundary, so capture the id in a local.
+  const fxRateSetId = booking.fxRateSetId
+
+  const items = await db
+    .select({
+      sellCurrency: bookingItems.sellCurrency,
+      totalSellAmountCents: bookingItems.totalSellAmountCents,
+      costCurrency: bookingItems.costCurrency,
+      totalCostAmountCents: bookingItems.totalCostAmountCents,
+    })
+    .from(bookingItems)
+    .where(eq(bookingItems.bookingId, bookingId))
+
+  // Cache rates we look up to avoid N+1 within one booking.
+  const rateCache = new Map<string, number | null>() // key: `${from}->${to}`, value: decimal rate or null
+
+  async function rate(from: string, to: string): Promise<number | null> {
+    if (from === to) return 1
+    const key = `${from}->${to}`
+    if (rateCache.has(key)) return rateCache.get(key) ?? null
+    const [direct] = await db
+      .select({ rate: exchangeRatesRef.rateDecimal })
+      .from(exchangeRatesRef)
+      .where(
+        and(
+          eq(exchangeRatesRef.fxRateSetId, fxRateSetId),
+          eq(exchangeRatesRef.baseCurrency, from),
+          eq(exchangeRatesRef.quoteCurrency, to),
+        ),
+      )
+      .limit(1)
+    if (direct) {
+      const value = Number.parseFloat(direct.rate)
+      rateCache.set(key, value)
+      return value
+    }
+    // Try the inverse
+    const [inverse] = await db
+      .select({ rate: exchangeRatesRef.inverseRateDecimal })
+      .from(exchangeRatesRef)
+      .where(
+        and(
+          eq(exchangeRatesRef.fxRateSetId, fxRateSetId),
+          eq(exchangeRatesRef.baseCurrency, to),
+          eq(exchangeRatesRef.quoteCurrency, from),
+        ),
+      )
+      .limit(1)
+    if (inverse?.rate) {
+      const value = Number.parseFloat(inverse.rate)
+      rateCache.set(key, value)
+      return value
+    }
+    rateCache.set(key, null)
+    return null
+  }
+
+  let baseSellAmountCents = 0
+  let baseCostAmountCents = 0
+
+  for (const item of items) {
+    if (item.totalSellAmountCents !== null) {
+      const r = await rate(item.sellCurrency, baseCurrency)
+      if (r === null) {
+        return { status: "missing_rate", currency: item.sellCurrency }
+      }
+      baseSellAmountCents += Math.round(item.totalSellAmountCents * r)
+    }
+    if (item.totalCostAmountCents !== null && item.costCurrency) {
+      const r = await rate(item.costCurrency, baseCurrency)
+      if (r === null) {
+        return { status: "missing_rate", currency: item.costCurrency }
+      }
+      baseCostAmountCents += Math.round(item.totalCostAmountCents * r)
+    }
+  }
+
+  return { status: "ok", baseSellAmountCents, baseCostAmountCents }
 }
 
 async function lockAvailabilitySlot(db: PostgresJsDatabase, slotId: string) {
@@ -2810,29 +2925,48 @@ export const bookingsService = {
   },
 
   /**
-   * Re-derive `bookings.sellAmountCents` and `bookings.costAmountCents`
-   * from `Σ(booking_items.total*AmountCents)` and persist the parent.
+   * Re-derive `bookings.sellAmountCents` / `costAmountCents` from
+   * `Σ(booking_items.total*AmountCents)`, plus — when the booking
+   * declares a `baseCurrency` and `fxRateSetId` — re-derive
+   * `baseSellAmountCents` / `baseCostAmountCents` by converting each
+   * item's total via the FX rate set.
    *
-   * Called automatically inside the item-mutation methods on this service
-   * so callers that go through `createItem` / `updateItem` / `deleteItem`
-   * never have to remember to roll the parent. Public so external flows
+   * Called automatically inside the item-mutation methods so callers
+   * that go through `createItem` / `updateItem` / `deleteItem` never
+   * have to remember to roll the parent. Public so external flows
    * (saga compensations, ad-hoc fix-ups) can also invoke it.
    *
    * Pass a tx-bound `db` to compose with an existing transaction; this
    * method does NOT wrap its own transaction.
    *
-   * NOTE: the base-currency totals (`baseSellAmountCents` /
-   * `baseCostAmountCents`) are NOT recomputed here — they're derived from
-   * FX which lives outside this rollup. Callers that mutate items in a
-   * non-base-currency context must run their own FX rollup separately.
+   * **FX rollup behaviour**:
+   *
+   * - Single-currency booking (every item's `sellCurrency === baseCurrency`,
+   *   or `baseCurrency === sellCurrency` on the parent): `base*Cents`
+   *   equal `sell*Cents` / `cost*Cents` directly. No FX lookup needed.
+   * - Multi-currency booking with `fxRateSetId`: every item is
+   *   converted to `baseCurrency` via `exchange_rates`. If any item's
+   *   currency is missing from the rate set, the FX rollup short-circuits
+   *   with `fxStatus: "missing_rate"` and `base*Cents` are LEFT
+   *   UNCHANGED on the parent (caller chooses whether to abort).
+   * - No `baseCurrency` configured: FX rollup is skipped entirely
+   *   (`fxStatus: "skipped"`), and `base*Cents` stay null.
+   *
+   * Returns `{ sellAmountCents, costAmountCents, baseSellAmountCents,
+   * baseCostAmountCents, fxStatus, missingCurrency? }` or `null` for a
+   * missing booking.
    */
   async recomputeBookingTotal(db: PostgresJsDatabase, bookingId: string) {
-    const [exists] = await db
-      .select({ id: bookings.id })
+    const [booking] = await db
+      .select({
+        id: bookings.id,
+        sellCurrency: bookings.sellCurrency,
+        baseCurrency: bookings.baseCurrency,
+      })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1)
-    if (!exists) {
+    if (!booking) {
       return null
     }
 
@@ -2847,12 +2981,55 @@ export const bookingsService = {
     const sellAmountCents = totals?.sellAmountCents ?? 0
     const costAmountCents = totals?.costAmountCents ?? 0
 
-    await db
-      .update(bookings)
-      .set({ sellAmountCents, costAmountCents, updatedAt: new Date() })
+    // We need fxRateSetId from the bookings row plus per-item currency
+    // for the FX rollup. Refetch with those columns.
+    const [bookingForFx] = await db
+      .select({
+        baseCurrency: bookings.baseCurrency,
+        sellCurrency: bookings.sellCurrency,
+      })
+      .from(bookings)
       .where(eq(bookings.id, bookingId))
+      .limit(1)
 
-    return { sellAmountCents, costAmountCents }
+    let fxStatus: "ok" | "skipped" | "missing_rate" = "skipped"
+    let baseSellAmountCents: number | null = null
+    let baseCostAmountCents: number | null = null
+    let missingCurrency: string | null = null
+
+    const baseCurrency = bookingForFx?.baseCurrency ?? null
+    if (baseCurrency) {
+      const fxResult = await rollupBaseTotals(db, bookingId, baseCurrency)
+      if (fxResult.status === "ok") {
+        fxStatus = "ok"
+        baseSellAmountCents = fxResult.baseSellAmountCents
+        baseCostAmountCents = fxResult.baseCostAmountCents
+      } else if (fxResult.status === "missing_rate") {
+        fxStatus = "missing_rate"
+        missingCurrency = fxResult.currency
+      }
+    }
+
+    const patch: Record<string, unknown> = {
+      sellAmountCents,
+      costAmountCents,
+      updatedAt: new Date(),
+    }
+    if (fxStatus === "ok") {
+      patch.baseSellAmountCents = baseSellAmountCents
+      patch.baseCostAmountCents = baseCostAmountCents
+    }
+
+    await db.update(bookings).set(patch).where(eq(bookings.id, bookingId))
+
+    return {
+      sellAmountCents,
+      costAmountCents,
+      baseSellAmountCents,
+      baseCostAmountCents,
+      fxStatus,
+      ...(missingCurrency ? { missingCurrency } : {}),
+    }
   },
 
   async createItem(

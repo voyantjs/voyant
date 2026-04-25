@@ -69,8 +69,8 @@ export interface Subscription {
  *
  * Adapter examples:
  * - In-process (default, ships with core)
- * - Hatchet — emit enqueues a durable task
  * - Cloudflare Queues — edge-native
+ * - Postgres-backed durable queue — for refund-saga-grade durability
  *
  * Event naming convention: `<resource>.<pastTenseAction>` in dot-case.
  * Examples: `booking.created`, `quote.accepted`, `payment.received`.

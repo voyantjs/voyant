@@ -53,8 +53,8 @@ Voyant currently ships two first-party starters:
 
 | Starter | Purpose | Stack |
 | --- | --- | --- |
-| [`templates/dmc`](./templates/dmc/README.md) | Destination management company workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle, Hatchet |
-| [`templates/operator`](./templates/operator/README.md) | Tour operator workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle, Hatchet |
+| [`templates/dmc`](./templates/dmc/README.md) | Destination management company workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle |
+| [`templates/operator`](./templates/operator/README.md) | Tour operator workflows | Cloudflare Workers, TanStack Start, Hono, Better Auth, Drizzle |
 
 ## What you get
 

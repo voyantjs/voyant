@@ -1,5 +1,75 @@
 # @voyantjs/hospitality
 
+## 0.10.0
+
+### Minor Changes
+
+- 29a581a: Add `hospitalityService.reserveStay(db, input)` — atomic per-night inventory consumption for pooled-mode room types.
+
+  Inside one `db.transaction`:
+
+  1. Per-night `SELECT ... FOR UPDATE` against `room_inventory` for the date range, locks acquired in **date-sorted order** so concurrent reserves with overlapping ranges always grab locks in the same order — no deadlock.
+  2. Reject if any night is `stop_sell`, missing, or has `< roomCount` available.
+  3. Decrement `available_units`, increment `held_units` per night.
+  4. Insert the `stay_booking_items` row.
+  5. Insert per-night `stay_daily_rates`.
+
+  6 integration tests cover concurrent-reserve races (2 reserves on the last room, 10 reserves on a 5-room slot, day-mid sold-out atomicity).
+
+- 29a581a: Date-scoped rate variation via `priceScheduleId` (weekend bumps, seasonal pricing). `hospitalityService.resolveStayDailyRates` now consults `price_schedules` so callers can write one `room_type_rates` row per schedule (uniqueness on `(ratePlanId, roomTypeId, priceScheduleId)`) plus a default row with `priceScheduleId: null`.
+
+  Schedule matching:
+
+  - `weekdays` (e.g. `["fri", "sat"]`) — match by day of week.
+  - `validFrom` / `validTo` — match within an inclusive ISO date window.
+  - `priority` — higher wins when multiple schedules match a date.
+  - `recurrenceRule` (iCal RRULE) is intentionally NOT parsed — most production usage maps cleanly to the simpler columns above. Inactive schedules (`active=false`) are ignored even if otherwise matching.
+
+- 29a581a: Add `hospitalityService.resolveStayDailyRates(db, input)` — produces the per-night rate-card array `reserveStay`'s `dailyRates` parameter expects.
+
+  Resolution rules:
+
+  1. Base rate from `room_type_rates.baseAmountCents` for the (ratePlanId, roomTypeId) pair.
+  2. `rate_plan_inventory_overrides` consulted for restrictions only:
+     - `stop_sell` on any night → typed `stop_sell` failure.
+     - `closed_to_arrival` on the first night → `closed_to_arrival`.
+     - `closed_to_departure` on the last night before checkout → `closed_to_departure`.
+  3. Currency from `room_type_rates.currencyCode`.
+
+  Date-scoped rate variation (weekend bumps, seasonal pricing) is layered on top in the same release via `priceScheduleId` — see the date-scoped-rate-variation changeset.
+
+- 29a581a: Extend `hospitalityService.reserveStay` to dispatch by the room type's `inventoryMode`. Pooled-mode (existing) decrements `room_inventory` per-night; serialized-mode (new) picks a specific `room_unit` and binds the stay to it.
+
+  Serialized-mode flow inside `db.transaction`:
+
+  1. Find the first available unit for (roomTypeId, date range) via a single query that excludes:
+     - units in non-active status
+     - units covered by an active `room_blocks` entry (per-unit OR property-wide roomType block) whose date range overlaps
+     - units covered by an active `maintenance_blocks` entry on the same logic
+     - units already in a `reserved` or `checked_in` `stay_booking_items` whose date range overlaps
+  2. `SELECT ... FOR UPDATE` the chosen unit so concurrent reserves on the same physical room serialize through the row lock.
+  3. Insert `stay_booking_items` with `roomUnitId` set.
+  4. Insert `stay_daily_rates`.
+
+  If no unit qualifies → `{ status: "no_unit_available" }`.
+
+### Patch Changes
+
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [29a581a]
+- Updated dependencies [b7f0501]
+  - @voyantjs/bookings@0.10.0
+  - @voyantjs/core@0.10.0
+  - @voyantjs/db@0.10.0
+  - @voyantjs/facilities@0.10.0
+  - @voyantjs/hono@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

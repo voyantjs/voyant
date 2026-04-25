@@ -1,5 +1,48 @@
 # @voyantjs/hono
 
+## 0.10.0
+
+### Minor Changes
+
+- 29a581a: Add `Idempotency-Key` header protocol for non-idempotent booking-creation endpoints.
+
+  Same key + same body replays the original response; same key + different body returns `409 Conflict`. Records expire after 24h. Wired (with `required: false` default) into:
+
+  - `POST /v1/admin/bookings/`
+  - `POST /v1/admin/bookings/reserve`
+  - `POST /v1/admin/bookings/from-product`
+  - `POST /v1/admin/bookings/from-offer/:offerId/reserve`
+  - `POST /v1/admin/bookings/from-order/:orderId/reserve`
+  - `POST /v1/public/bookings/sessions`
+  - `POST /v1/public/bookings/sessions/:sessionId/confirm`
+
+  Ships:
+
+  - `idempotency_keys` table in `@voyantjs/db/schema/infra` keyed by `(scope, key)`, with body-hash, captured response, and TTL.
+  - `idempotencyKey({ scope, required? })` middleware in `@voyantjs/hono` that reads the header, replays/conflicts/expires, and captures `2xx` JSON responses. Echoes `Idempotency-Key` + `Idempotency-Replayed: true` on replay.
+  - `purgeExpiredIdempotencyKeys()` helper for daily-cron cleanup.
+
+  Backwards-compatible: clients without the header continue to work. Templates can flip a route to `required: true` per endpoint once their client has rolled out.
+
+- b7f0501: **BREAKING:** `requireActor` middleware now returns `401 Unauthorized` when no actor is set on the request, instead of defaulting to `"staff"`.
+
+  Earlier versions silently granted operator privileges to anonymous traffic if `requireAuth` was missing, misordered, or a route mounted before auth. The fail-open default has been replaced with fail-closed.
+
+  **Migration:**
+
+  - `requireAuth` now sets `actor: "staff"` explicitly on the core-owned API key path (`voy_` prefix), so server-to-server integrations behave the same.
+  - Custom `auth.resolve` integrations that previously relied on the implicit `"staff"` fallback must now return an explicit `actor` from `resolve()`.
+  - Anonymous requests on `/v1/admin/*` now return `401` instead of `200`. Anonymous requests on `/v1/public/*` continue to receive `actor: "customer"` via the `publicPaths` bypass when applicable, and `401` otherwise.
+  - The differentiation between `401` (no actor) and `403` (actor not in the allowed list) is now reliable — earlier the no-actor path returned `403` for some surfaces and `200` for others.
+
+### Patch Changes
+
+- Updated dependencies [29a581a]
+  - @voyantjs/core@0.10.0
+  - @voyantjs/db@0.10.0
+  - @voyantjs/types@0.10.0
+  - @voyantjs/utils@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

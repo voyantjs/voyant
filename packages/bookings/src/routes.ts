@@ -12,6 +12,11 @@ import { type Context, Hono } from "hono"
 
 import { createBookingPiiService } from "./pii.js"
 import {
+  redactBookingContact,
+  redactTravelerIdentity,
+  shouldRevealBookingPii,
+} from "./pii-redaction.js"
+import {
   BOOKING_ROUTE_RUNTIME_CONTAINER_KEY,
   type BookingRouteRuntime,
   buildBookingRouteRuntime,
@@ -224,7 +229,24 @@ export const bookingRoutes = new Hono<Env>()
   // 1. GET / — List bookings
   .get("/", async (c) => {
     const query = parseQuery(c, bookingListQuerySchema)
-    return c.json(await bookingsService.listBookings(c.get("db"), query))
+    const result = await bookingsService.listBookings(c.get("db"), query)
+    const reveal = shouldRevealBookingPii({
+      actor: c.get("actor"),
+      scopes: c.get("scopes"),
+      callerType: c.get("callerType"),
+      isInternalRequest: c.get("isInternalRequest"),
+    })
+    await logBookingPiiAccess(c, {
+      action: "read",
+      outcome: "allowed",
+      reason: reveal ? "list_reveal" : "list_redacted",
+      metadata: { rowCount: result.data.length, reveal },
+    })
+    if (reveal) return c.json(result)
+    return c.json({
+      ...result,
+      data: result.data.map((row) => redactBookingContact(row)),
+    })
   })
 
   // 1a. POST /pricing-preview — Resolve a pricing snapshot without creating a session.
@@ -268,7 +290,20 @@ export const bookingRoutes = new Hono<Env>()
       return c.json({ error: "Booking not found" }, 404)
     }
 
-    return c.json({ data: row })
+    const reveal = shouldRevealBookingPii({
+      actor: c.get("actor"),
+      scopes: c.get("scopes"),
+      callerType: c.get("callerType"),
+      isInternalRequest: c.get("isInternalRequest"),
+    })
+    await logBookingPiiAccess(c, {
+      bookingId: row.id,
+      action: "read",
+      outcome: "allowed",
+      reason: reveal ? "detail_reveal" : "detail_redacted",
+      metadata: { reveal },
+    })
+    return c.json({ data: reveal ? row : redactBookingContact(row) })
   })
 
   // 3. POST /reserve — Reserve inventory and create on-hold booking
@@ -617,7 +652,22 @@ export const bookingRoutes = new Hono<Env>()
   // ==========================================================================
 
   .get("/:id/travelers", async (c) => {
-    return c.json({ data: await bookingsService.listTravelers(c.get("db"), c.req.param("id")) })
+    const travelers = await bookingsService.listTravelers(c.get("db"), c.req.param("id"))
+    const reveal = shouldRevealBookingPii({
+      actor: c.get("actor"),
+      scopes: c.get("scopes"),
+      callerType: c.get("callerType"),
+      isInternalRequest: c.get("isInternalRequest"),
+    })
+    await logBookingPiiAccess(c, {
+      bookingId: c.req.param("id"),
+      action: "read",
+      outcome: "allowed",
+      reason: reveal ? "travelers_reveal" : "travelers_redacted",
+      metadata: { rowCount: travelers.length, reveal },
+    })
+    if (reveal) return c.json({ data: travelers })
+    return c.json({ data: travelers.map((row) => redactTravelerIdentity(row)) })
   })
 
   .get("/:id/travelers/:travelerId/travel-details", async (c) => {

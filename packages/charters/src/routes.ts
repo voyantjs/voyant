@@ -3,7 +3,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
 
-import { parseUnifiedKey } from "./lib/key.js"
+import type { CharterAdapter, SourceRef } from "./adapters/index.js"
+import { listCharterAdapters, resolveCharterAdapter } from "./adapters/registry.js"
+import { type ParsedKey, parseUnifiedKey } from "./lib/key.js"
 import { chartersService } from "./service.js"
 import {
   type CreatePerSuiteBookingInput,
@@ -11,7 +13,7 @@ import {
   chartersBookingService,
 } from "./service-bookings.js"
 import { type CharterContractsService, mybaService } from "./service-myba.js"
-import { pricingService } from "./service-pricing.js"
+import { composePerSuiteQuote, composeWholeYachtQuote, pricingService } from "./service-pricing.js"
 import {
   insertProductSchema,
   insertVoyageSchema,
@@ -35,19 +37,39 @@ type Env = {
      * Optional injection of `@voyantjs/legal`'s contractsService — set by
      * the template at app boot so MYBA generation routes can run without
      * charters taking a hard dep on legal. When unset, the
-     * `/voyages/:key/bookings/whole-yacht/:bookingId/myba` endpoint
-     * returns 501.
+     * `/bookings/:bookingId/myba` endpoint returns 501.
      */
     chartersContractsService?: CharterContractsService
   }
 }
 
-const externalNotSupported = (provider: string) => ({
-  error: "external_not_supported_yet",
-  detail: `External provider '${provider}' will ship in phase 3 once the CharterAdapter contract lands. Use a local TypeID for now.`,
+// ---------- shared helpers ----------
+
+const adapterNotRegistered = (provider: string) => ({
+  error: "adapter_not_registered",
+  detail: `No CharterAdapter registered for source provider '${provider}'. Register one at app startup via registerCharterAdapter().`,
 })
 
+const externalReadOnly = {
+  error: "external_charter_read_only",
+  detail:
+    "External charter rows can't be edited locally. Edit at the upstream system or use a local TypeID for new content.",
+}
+
 const invalidKey = (raw: string) => ({ error: "invalid_key", detail: `Unrecognized key: ${raw}` })
+
+function resolveExternal(parsed: Extract<ParsedKey, { kind: "external" }>): {
+  adapter: CharterAdapter
+  sourceRef: SourceRef
+} | null {
+  const adapter = resolveCharterAdapter(parsed.provider)
+  if (!adapter) return null
+  return { adapter, sourceRef: { externalId: parsed.ref } }
+}
+
+function makeExternalKey(adapter: CharterAdapter, ref: SourceRef): string {
+  return `${adapter.name}:${ref.externalId}`
+}
 
 // ---------- payload schemas ----------
 
@@ -106,6 +128,7 @@ const generateMybaPayload = z.object({
 })
 
 const perSuiteQuotePayload = z.object({
+  /** For local voyages, a `chst_…` TypeID. For external voyages, the upstream suite externalId. */
   suiteId: z.string(),
   currency: firstClassCurrencySchema,
 })
@@ -120,8 +143,62 @@ export const chartersAdminRoutes = new Hono<Env>()
   // --- products ---
   .get("/products", async (c) => {
     const query = parseQuery(c, productListQuerySchema)
-    const result = await chartersService.listProducts(c.get("db"), query)
-    return c.json(result)
+    const local = await chartersService.listProducts(c.get("db"), query)
+    const localItems = local.data.map((p) => ({
+      source: "local" as const,
+      sourceProvider: null,
+      sourceRef: null,
+      key: p.id,
+      product: p,
+    }))
+    // Fan out to every registered adapter in parallel via Promise.allSettled —
+    // one slow or failing adapter doesn't block the rest.
+    const adapters = listCharterAdapters()
+    const settled = await Promise.allSettled(
+      adapters.map((adapter) =>
+        adapter
+          .listEntries({ limit: query.limit })
+          .then((result) => ({ adapter, result }) as const),
+      ),
+    )
+    const adapterItems: Array<{
+      source: "external"
+      sourceProvider: string
+      sourceRef: SourceRef
+      key: string
+      product: unknown
+    }> = []
+    const adapterErrors: Array<{ adapter: string; error: string }> = []
+    for (let i = 0; i < settled.length; i++) {
+      const outcome = settled[i]
+      const adapter = adapters[i]
+      if (!outcome || !adapter) continue
+      if (outcome.status === "rejected") {
+        adapterErrors.push({
+          adapter: adapter.name,
+          error: outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+        })
+        continue
+      }
+      for (const entry of outcome.value.result.entries) {
+        adapterItems.push({
+          source: "external",
+          sourceProvider: adapter.name,
+          sourceRef: entry.sourceRef,
+          key: makeExternalKey(adapter, entry.sourceRef),
+          product: entry,
+        })
+      }
+    }
+    return c.json({
+      data: [...localItems, ...adapterItems],
+      total: local.total + adapterItems.length,
+      localTotal: local.total,
+      adapterCount: adapters.length,
+      adapterErrors,
+      limit: local.limit,
+      offset: local.offset,
+    })
   })
   .post("/products", async (c) => {
     const data = await parseJsonBody(c, insertProductSchema)
@@ -131,7 +208,32 @@ export const chartersAdminRoutes = new Hono<Env>()
   .get("/products/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const product = await ext.adapter.fetchProduct(ext.sourceRef)
+      if (!product) return c.json({ error: "not_found" }, 404)
+      const includeRaw = c.req.query("include") ?? ""
+      const includes = new Set(
+        includeRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      )
+      const enriched: Record<string, unknown> = {
+        source: "external",
+        sourceProvider: ext.adapter.name,
+        sourceRef: product.sourceRef,
+        product,
+      }
+      if (includes.has("voyages")) {
+        enriched.voyages = await ext.adapter.listVoyagesForProduct(ext.sourceRef)
+      }
+      if (includes.has("yacht") && product.defaultYachtRef) {
+        enriched.yacht = await ext.adapter.fetchYacht(product.defaultYachtRef)
+      }
+      return c.json({ data: enriched })
+    }
     const includeRaw = c.req.query("include") ?? ""
     const includes = new Set(
       includeRaw
@@ -149,7 +251,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .put("/products/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const data = await parseJsonBody(c, updateProductSchema)
     const row = await chartersService.updateProduct(c.get("db"), parsed.id, data)
     if (!row) return c.json({ error: "not_found" }, 404)
@@ -158,7 +260,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .delete("/products/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const row = await chartersService.archiveProduct(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
     return c.json({ data: row })
@@ -166,10 +268,34 @@ export const chartersAdminRoutes = new Hono<Env>()
   .post("/products/:key/aggregates/recompute", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const row = await chartersService.recomputeProductAggregates(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
     return c.json({ data: row })
+  })
+  .get("/products/:key/voyages", async (c) => {
+    const parsed = parseUnifiedKey(c.req.param("key"))
+    if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const voyages = await ext.adapter.listVoyagesForProduct(ext.sourceRef)
+      return c.json({
+        data: voyages.map((v) => ({
+          source: "external" as const,
+          sourceProvider: ext.adapter.name,
+          key: makeExternalKey(ext.adapter, v.sourceRef),
+          voyage: v,
+        })),
+        total: voyages.length,
+      })
+    }
+    const result = await chartersService.listVoyages(c.get("db"), {
+      productId: parsed.id,
+      limit: 100,
+      offset: 0,
+    })
+    return c.json(result)
   })
   // --- voyages ---
   .get("/voyages", async (c) => {
@@ -185,7 +311,32 @@ export const chartersAdminRoutes = new Hono<Env>()
   .get("/voyages/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const voyage = await ext.adapter.fetchVoyage(ext.sourceRef)
+      if (!voyage) return c.json({ error: "not_found" }, 404)
+      const includeRaw = c.req.query("include") ?? ""
+      const includes = new Set(
+        includeRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      )
+      const enriched: Record<string, unknown> = {
+        source: "external",
+        sourceProvider: ext.adapter.name,
+        sourceRef: voyage.sourceRef,
+        voyage,
+      }
+      if (includes.has("suites")) {
+        enriched.suites = await ext.adapter.fetchVoyageSuites(ext.sourceRef)
+      }
+      if (includes.has("schedule")) {
+        enriched.schedule = await ext.adapter.fetchVoyageSchedule(ext.sourceRef)
+      }
+      return c.json({ data: enriched })
+    }
     const includeRaw = c.req.query("include") ?? ""
     const includes = new Set(
       includeRaw
@@ -203,7 +354,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .put("/voyages/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const data = await parseJsonBody(c, updateVoyageSchema)
     const row = await chartersService.updateVoyage(c.get("db"), parsed.id, data)
     if (!row) return c.json({ error: "not_found" }, 404)
@@ -212,7 +363,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .put("/voyages/:key/suites/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const payload = await parseJsonBody(c, replaceVoyageSuitesSchema.omit({ voyageId: true }))
     const rows = await chartersService.replaceVoyageSuites(c.get("db"), {
       voyageId: parsed.id,
@@ -223,7 +374,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .put("/voyages/:key/schedule/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const payload = await parseJsonBody(c, replaceVoyageScheduleSchema.omit({ voyageId: true }))
     const rows = await chartersService.replaceVoyageSchedule(c.get("db"), {
       voyageId: parsed.id,
@@ -235,8 +386,31 @@ export const chartersAdminRoutes = new Hono<Env>()
   .post("/voyages/:key/quote/per-suite", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
     const payload = await parseJsonBody(c, perSuiteQuotePayload)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const suites = await ext.adapter.fetchVoyageSuites(ext.sourceRef)
+      const matching = suites.find((s) => s.sourceRef.externalId === payload.suiteId)
+      if (!matching) return c.json({ error: "no_matching_suite" }, 404)
+      const quote = composePerSuiteQuote({
+        voyageId: ext.sourceRef.externalId,
+        suite: {
+          id: matching.sourceRef.externalId,
+          suiteName: matching.suiteName,
+          priceUSD: matching.priceUSD ?? null,
+          priceEUR: matching.priceEUR ?? null,
+          priceGBP: matching.priceGBP ?? null,
+          priceAUD: matching.priceAUD ?? null,
+          portFeeUSD: matching.portFeeUSD ?? null,
+          portFeeEUR: matching.portFeeEUR ?? null,
+          portFeeGBP: matching.portFeeGBP ?? null,
+          portFeeAUD: matching.portFeeAUD ?? null,
+        },
+        currency: payload.currency,
+      })
+      return c.json({ data: quote })
+    }
     const quote = await pricingService.quotePerSuite(c.get("db"), {
       suiteId: payload.suiteId,
       currency: payload.currency,
@@ -246,7 +420,27 @@ export const chartersAdminRoutes = new Hono<Env>()
   .post("/voyages/:key/bookings/per-suite", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const payload = await parseJsonBody(c, createPerSuiteBookingPayload)
+      const result = await chartersBookingService.createExternalPerSuiteBooking(
+        c.get("db"),
+        {
+          adapter: ext.adapter,
+          voyageRef: ext.sourceRef,
+          suiteRef: { externalId: payload.suiteId },
+          currency: payload.currency,
+          personId: payload.personId ?? null,
+          organizationId: payload.organizationId ?? null,
+          contact: payload.contact,
+          guests: payload.guests,
+          notes: payload.notes ?? null,
+        },
+        c.get("userId"),
+      )
+      return c.json({ data: result }, 201)
+    }
     const payload = await parseJsonBody(c, createPerSuiteBookingPayload)
     if (payload.voyageId !== parsed.id) {
       return c.json(
@@ -265,8 +459,27 @@ export const chartersAdminRoutes = new Hono<Env>()
   .post("/voyages/:key/quote/whole-yacht", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
     const payload = await parseJsonBody(c, wholeYachtQuotePayload)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const voyage = await ext.adapter.fetchVoyage(ext.sourceRef)
+      if (!voyage) return c.json({ error: "not_found" }, 404)
+      const product = await ext.adapter.fetchProduct(voyage.productRef)
+      const quote = composeWholeYachtQuote({
+        voyage: {
+          id: voyage.sourceRef.externalId,
+          wholeYachtPriceUSD: voyage.wholeYachtPriceUSD ?? null,
+          wholeYachtPriceEUR: voyage.wholeYachtPriceEUR ?? null,
+          wholeYachtPriceGBP: voyage.wholeYachtPriceGBP ?? null,
+          wholeYachtPriceAUD: voyage.wholeYachtPriceAUD ?? null,
+          apaPercentOverride: voyage.apaPercentOverride ?? null,
+        },
+        productDefaultApaPercent: product?.defaultApaPercent ?? null,
+        currency: payload.currency,
+      })
+      return c.json({ data: quote })
+    }
     const quote = await pricingService.quoteWholeYacht(c.get("db"), {
       voyageId: parsed.id,
       currency: payload.currency,
@@ -276,7 +489,26 @@ export const chartersAdminRoutes = new Hono<Env>()
   .post("/voyages/:key/bookings/whole-yacht", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const payload = await parseJsonBody(c, createWholeYachtBookingPayload)
+      const result = await chartersBookingService.createExternalWholeYachtBooking(
+        c.get("db"),
+        {
+          adapter: ext.adapter,
+          voyageRef: ext.sourceRef,
+          currency: payload.currency,
+          personId: payload.personId ?? null,
+          organizationId: payload.organizationId ?? null,
+          contact: payload.contact,
+          guests: payload.guests,
+          notes: payload.notes ?? null,
+        },
+        c.get("userId"),
+      )
+      return c.json({ data: result }, 201)
+    }
     const payload = await parseJsonBody(c, createWholeYachtBookingPayload)
     if (payload.voyageId !== parsed.id) {
       return c.json(
@@ -335,7 +567,20 @@ export const chartersAdminRoutes = new Hono<Env>()
   .get("/yachts/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const yacht = await ext.adapter.fetchYacht(ext.sourceRef)
+      if (!yacht) return c.json({ error: "not_found" }, 404)
+      return c.json({
+        data: {
+          source: "external",
+          sourceProvider: ext.adapter.name,
+          sourceRef: yacht.sourceRef,
+          yacht,
+        },
+      })
+    }
     const row = await chartersService.getYachtById(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
     return c.json({ data: row })
@@ -343,7 +588,7 @@ export const chartersAdminRoutes = new Hono<Env>()
   .put("/yachts/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
-    if (parsed.kind === "external") return c.json(externalNotSupported(parsed.provider), 501)
+    if (parsed.kind === "external") return c.json(externalReadOnly, 409)
     const data = await parseJsonBody(c, updateYachtSchema)
     const row = await chartersService.updateYacht(c.get("db"), parsed.id, data)
     if (!row) return c.json({ error: "not_found" }, 404)

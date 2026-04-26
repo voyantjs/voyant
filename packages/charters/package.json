@@ -9,7 +9,8 @@
     "./validation": "./src/validation.ts",
     "./routes": "./src/routes.ts",
     "./public-routes": "./src/routes-public.ts",
-    "./booking-extension": "./src/booking-extension.ts"
+    "./booking-extension": "./src/booking-extension.ts",
+    "./adapters": "./src/adapters/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -63,6 +64,10 @@
       "./booking-extension": {
         "types": "./dist/booking-extension.d.ts",
         "import": "./dist/booking-extension.js"
+      },
+      "./adapters": {
+        "types": "./dist/adapters/index.d.ts",
+        "import": "./dist/adapters/index.js"
       }
     },
     "main": "./dist/index.js",

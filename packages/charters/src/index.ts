@@ -4,6 +4,38 @@ import type { HonoModule } from "@voyantjs/hono/module"
 import { chartersAdminRoutes } from "./routes.js"
 import { chartersPublicRoutes } from "./routes-public.js"
 
+// Adapter contract + registry — re-exported so templates can import everything
+// from `@voyantjs/charters` without reaching into sub-paths. Sub-path
+// `@voyantjs/charters/adapters` remains the lighter import for adapter-only
+// implementations.
+export type {
+  AdapterCallContext,
+  CharterAdapter,
+  CreateExternalPerSuiteBookingInput as AdapterCreatePerSuiteBookingInput,
+  CreateExternalWholeYachtBookingInput as AdapterCreateWholeYachtBookingInput,
+  ExternalBookingResult,
+  ExternalCharterProduct,
+  ExternalCharterProductSummary,
+  ExternalCharterScheduleDay,
+  ExternalCharterSuite,
+  ExternalCharterVoyage,
+  ExternalCharterYacht,
+  ExternalContactInput,
+  ExternalGuestInput,
+  ListEntriesOptions,
+  ListEntriesResult,
+  SourceRef,
+} from "./adapters/index.js"
+export { type MemoizeOptions, memoizeCharterAdapter } from "./adapters/memoize.js"
+export { MockCharterAdapter, type MockCharterAdapterOptions } from "./adapters/mock.js"
+export {
+  clearCharterAdapters,
+  hasCharterAdapter,
+  listCharterAdapters,
+  registerCharterAdapter,
+  resolveCharterAdapter,
+  unregisterCharterAdapter,
+} from "./adapters/registry.js"
 // Booking extension (1:1 with bookings — populated when a booking is for a charter).
 export {
   type BookingCharterDetail,
@@ -26,6 +58,10 @@ export { chartersService } from "./service.js"
 export {
   type CharterContact,
   type CharterGuest,
+  type CreateExternalPerSuiteBookingInput,
+  type CreateExternalPerSuiteBookingResult,
+  type CreateExternalWholeYachtBookingInput,
+  type CreateExternalWholeYachtBookingResult,
   type CreatePerSuiteBookingInput,
   type CreatePerSuiteBookingResult,
   type CreateWholeYachtBookingInput,

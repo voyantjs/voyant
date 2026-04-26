@@ -1,4 +1,5 @@
 import {
+  cruiseSailingDirectionSchema,
   cruiseStatusSchema,
   cruiseTypeSchema,
   externalRefsSchema,
@@ -54,7 +55,7 @@ const sailingCoreSchema = z.object({
   returnDate: isoDateSchema,
   embarkPortFacilityId: z.string().optional().nullable(),
   disembarkPortFacilityId: z.string().optional().nullable(),
-  direction: z.string().optional().nullable(),
+  direction: cruiseSailingDirectionSchema.optional().nullable(),
   availabilityNote: z.string().optional().nullable(),
   isCharter: z.boolean().default(false),
   salesStatus: sailingSalesStatusSchema.default("open"),
@@ -70,6 +71,7 @@ export const sailingListQuerySchema = z.object({
   dateFrom: isoDateSchema.optional(),
   dateTo: isoDateSchema.optional(),
   salesStatus: sailingSalesStatusSchema.optional(),
+  direction: cruiseSailingDirectionSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })

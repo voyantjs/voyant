@@ -61,7 +61,7 @@ export type ExternalSailing = {
   returnDate: string
   embarkPortName?: string | null
   disembarkPortName?: string | null
-  direction?: string | null
+  direction?: "upstream" | "downstream" | "round_trip" | "one_way" | null
   availabilityNote?: string | null
   isCharter?: boolean
   salesStatus?: "open" | "on_request" | "wait_list" | "sold_out" | "closed"

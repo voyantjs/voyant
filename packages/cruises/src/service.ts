@@ -11,6 +11,7 @@ import {
   cruiseDecks,
   cruiseShips,
 } from "./schema-cabins.js"
+import { type CruiseEnrichmentProgram, cruiseEnrichmentPrograms } from "./schema-content.js"
 import {
   type Cruise,
   type CruiseSailing,
@@ -44,6 +45,11 @@ import type {
   UpdateDeck,
   UpdateShip,
 } from "./validation-cabins.js"
+import type {
+  InsertEnrichmentProgram,
+  ReplaceEnrichmentPrograms,
+  UpdateEnrichmentProgram,
+} from "./validation-content.js"
 import type {
   CruiseListQuery,
   InsertCruise,
@@ -687,6 +693,66 @@ export const cruisesService = {
     if (sailing) await reprojectIfPossible(db, sailing.cruiseId)
 
     return result
+  },
+
+  // ---------- enrichment programs (expedition-focused) ----------
+
+  async listEnrichmentPrograms(
+    db: PostgresJsDatabase,
+    cruiseId: string,
+  ): Promise<CruiseEnrichmentProgram[]> {
+    return db
+      .select()
+      .from(cruiseEnrichmentPrograms)
+      .where(eq(cruiseEnrichmentPrograms.cruiseId, cruiseId))
+      .orderBy(asc(cruiseEnrichmentPrograms.sortOrder), asc(cruiseEnrichmentPrograms.name))
+  },
+
+  async createEnrichmentProgram(
+    db: PostgresJsDatabase,
+    data: InsertEnrichmentProgram,
+  ): Promise<CruiseEnrichmentProgram> {
+    const [row] = await db.insert(cruiseEnrichmentPrograms).values(data).returning()
+    if (!row) throw new Error("Failed to create enrichment program")
+    return row
+  },
+
+  async updateEnrichmentProgram(
+    db: PostgresJsDatabase,
+    id: string,
+    data: UpdateEnrichmentProgram,
+  ): Promise<CruiseEnrichmentProgram | null> {
+    const [row] = await db
+      .update(cruiseEnrichmentPrograms)
+      .set({ ...data, ...setUpdated })
+      .where(eq(cruiseEnrichmentPrograms.id, id))
+      .returning()
+    return row ?? null
+  },
+
+  async deleteEnrichmentProgram(db: PostgresJsDatabase, id: string): Promise<boolean> {
+    const result = await db
+      .delete(cruiseEnrichmentPrograms)
+      .where(eq(cruiseEnrichmentPrograms.id, id))
+      .returning({ id: cruiseEnrichmentPrograms.id })
+    return result.length > 0
+  },
+
+  async replaceEnrichmentPrograms(
+    db: PostgresJsDatabase,
+    payload: ReplaceEnrichmentPrograms,
+  ): Promise<CruiseEnrichmentProgram[]> {
+    return db.transaction(async (tx) => {
+      await tx
+        .delete(cruiseEnrichmentPrograms)
+        .where(eq(cruiseEnrichmentPrograms.cruiseId, payload.cruiseId))
+      if (payload.programs.length === 0) return []
+      const inserted = await tx
+        .insert(cruiseEnrichmentPrograms)
+        .values(payload.programs.map((p) => ({ ...p, cruiseId: payload.cruiseId })))
+        .returning()
+      return inserted
+    })
   },
 }
 

@@ -135,12 +135,15 @@ export {
   cruiseShips,
 } from "./schema-cabins.js"
 export type {
+  CruiseEnrichmentProgram,
   CruiseInclusion,
   CruiseMedia,
+  NewCruiseEnrichmentProgram,
   NewCruiseInclusion,
   NewCruiseMedia,
 } from "./schema-content.js"
 export {
+  cruiseEnrichmentPrograms,
   cruiseInclusions,
   cruiseMedia,
 } from "./schema-content.js"
@@ -184,9 +187,11 @@ export {
   cabinRoomTypeEnum,
   cruiseInclusionKindEnum,
   cruiseMediaTypeEnum,
+  cruiseSailingDirectionEnum,
   cruiseSourceEnum,
   cruiseStatusEnum,
   cruiseTypeEnum,
+  enrichmentProgramKindEnum,
   priceAvailabilityEnum,
   priceComponentDirectionEnum,
   priceComponentKindEnum,

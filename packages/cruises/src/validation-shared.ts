@@ -67,6 +67,22 @@ export const cruiseInclusionKindSchema = z.enum([
   "other",
 ])
 
+export const enrichmentProgramKindSchema = z.enum([
+  "naturalist",
+  "historian",
+  "photographer",
+  "lecturer",
+  "expert",
+  "other",
+])
+
+export const cruiseSailingDirectionSchema = z.enum([
+  "upstream",
+  "downstream",
+  "round_trip",
+  "one_way",
+])
+
 export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD date")
 export const currencyCodeSchema = z
   .string()

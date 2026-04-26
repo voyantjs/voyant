@@ -23,6 +23,11 @@ import {
   updateShipSchema,
 } from "./validation-cabins.js"
 import {
+  insertEnrichmentProgramSchema,
+  replaceEnrichmentProgramsSchema,
+  updateEnrichmentProgramSchema,
+} from "./validation-content.js"
+import {
   cruiseListQuerySchema,
   insertCruiseSchema,
   insertSailingSchema,
@@ -200,8 +205,18 @@ export const cruiseAdminRoutes = new Hono<Env>()
       key: c.id,
       cruise: c,
     }))
-    // Fan out to every registered adapter. Adapters return summaries; we don't
-    // re-resolve full detail until the operator clicks into one.
+    // Fan out to every registered adapter in parallel via Promise.allSettled —
+    // one slow or failing adapter doesn't block the rest. Each adapter's call
+    // is independent so there's no concurrency-control concern at this layer
+    // (adapters that need rate limiting handle it inside their own implementation).
+    const adapters = listCruiseAdapters()
+    const settled = await Promise.allSettled(
+      adapters.map((adapter) =>
+        adapter
+          .listEntries({ limit: query.limit })
+          .then((result) => ({ adapter, result }) as const),
+      ),
+    )
     const adapterItems: Array<{
       source: "external"
       sourceProvider: string
@@ -209,27 +224,25 @@ export const cruiseAdminRoutes = new Hono<Env>()
       key: string
       cruise: unknown
     }> = []
-    for (const adapter of listCruiseAdapters()) {
-      try {
-        const result = await adapter.listEntries({ limit: query.limit })
-        for (const entry of result.entries) {
-          adapterItems.push({
-            source: "external",
-            sourceProvider: adapter.name,
-            sourceRef: entry.sourceRef,
-            key: makeExternalKey(adapter, entry.sourceRef),
-            cruise: entry,
-          })
-        }
-      } catch (err) {
-        // Don't let one bad adapter take down the whole list — surface it
-        // separately in the response so the operator knows.
+    const adapterErrors: Array<{ adapter: string; error: string }> = []
+    for (let i = 0; i < settled.length; i++) {
+      const outcome = settled[i]
+      const adapter = adapters[i]
+      if (!outcome || !adapter) continue
+      if (outcome.status === "rejected") {
+        adapterErrors.push({
+          adapter: adapter.name,
+          error: outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+        })
+        continue
+      }
+      for (const entry of outcome.value.result.entries) {
         adapterItems.push({
           source: "external",
           sourceProvider: adapter.name,
-          sourceRef: { externalId: "" },
-          key: `${adapter.name}:_error`,
-          cruise: { error: (err as Error).message },
+          sourceRef: entry.sourceRef,
+          key: makeExternalKey(adapter, entry.sourceRef),
+          cruise: entry,
         })
       }
     }
@@ -237,7 +250,8 @@ export const cruiseAdminRoutes = new Hono<Env>()
       data: [...localItems, ...adapterItems],
       total: local.total + adapterItems.length,
       localTotal: local.total,
-      adapterCount: listCruiseAdapters().length,
+      adapterCount: adapters.length,
+      adapterErrors,
       limit: local.limit,
       offset: local.offset,
     })
@@ -394,6 +408,58 @@ export const cruiseAdminRoutes = new Hono<Env>()
     if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
     const cruise = await detachExternalCruise(c.get("db"), ext.adapter, ext.sourceRef)
     return c.json({ data: cruise }, 201)
+  })
+  // --- enrichment programs (expedition-focused; local cruises only) ---
+  .get("/:key/enrichment", async (c) => {
+    const parsed = parseUnifiedKey(c.req.param("key"))
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      // Adapters surface enrichment via the rich cruise detail; we return an
+      // empty list here for shape compatibility. Templates that need richer
+      // external enrichment should read from adapter.fetchCruise() directly.
+      return c.json({ data: [] })
+    }
+    if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    const programs = await cruisesService.listEnrichmentPrograms(c.get("db"), parsed.id)
+    return c.json({ data: programs })
+  })
+  .post("/:key/enrichment", async (c) => {
+    const parsed = parseUnifiedKey(c.req.param("key"))
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
+    if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    const data = await parseJsonBody(c, insertEnrichmentProgramSchema.omit({ cruiseId: true }))
+    const row = await cruisesService.createEnrichmentProgram(c.get("db"), {
+      ...data,
+      cruiseId: parsed.id,
+    })
+    return c.json({ data: row }, 201)
+  })
+  .put("/:key/enrichment/bulk", async (c) => {
+    const parsed = parseUnifiedKey(c.req.param("key"))
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
+    if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    const payload = await parseJsonBody(c, replaceEnrichmentProgramsSchema.omit({ cruiseId: true }))
+    const rows = await cruisesService.replaceEnrichmentPrograms(c.get("db"), {
+      cruiseId: parsed.id,
+      programs: payload.programs,
+    })
+    return c.json({ data: rows })
+  })
+  .put("/enrichment/:programId", async (c) => {
+    const data = await parseJsonBody(c, updateEnrichmentProgramSchema)
+    const row = await cruisesService.updateEnrichmentProgram(
+      c.get("db"),
+      c.req.param("programId"),
+      data,
+    )
+    if (!row) return c.json({ error: "not_found" }, 404)
+    return c.json({ data: row })
+  })
+  .delete("/enrichment/:programId", async (c) => {
+    const ok = await cruisesService.deleteEnrichmentProgram(c.get("db"), c.req.param("programId"))
+    if (!ok) return c.json({ error: "not_found" }, 404)
+    return c.body(null, 204)
   })
   // --- sailings ---
   .get("/sailings", async (c) => {

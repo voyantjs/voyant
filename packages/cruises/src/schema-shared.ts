@@ -73,3 +73,24 @@ export const cruiseInclusionKindEnum = pgEnum("cruise_inclusion_kind", [
   "wifi",
   "other",
 ])
+
+export const enrichmentProgramKindEnum = pgEnum("cruise_enrichment_program_kind", [
+  "naturalist",
+  "historian",
+  "photographer",
+  "lecturer",
+  "expert",
+  "other",
+])
+
+/**
+ * Sailing direction. River cruises use upstream/downstream; ocean cruises
+ * typically use round_trip (return to embark port) — though many lines
+ * leave it null, which is valid.
+ */
+export const cruiseSailingDirectionEnum = pgEnum("cruise_sailing_direction", [
+  "upstream",
+  "downstream",
+  "round_trip",
+  "one_way",
+])

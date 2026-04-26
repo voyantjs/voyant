@@ -12,7 +12,12 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 import { cruiseShips } from "./schema-cabins.js"
-import { cruiseStatusEnum, cruiseTypeEnum, sailingSalesStatusEnum } from "./schema-shared.js"
+import {
+  cruiseSailingDirectionEnum,
+  cruiseStatusEnum,
+  cruiseTypeEnum,
+  sailingSalesStatusEnum,
+} from "./schema-shared.js"
 
 export const cruises = pgTable(
   "cruises",
@@ -72,7 +77,7 @@ export const cruiseSailings = pgTable(
     returnDate: date("return_date").notNull(),
     embarkPortFacilityId: text("embark_port_facility_id"),
     disembarkPortFacilityId: text("disembark_port_facility_id"),
-    direction: text("direction"),
+    direction: cruiseSailingDirectionEnum("direction"),
     availabilityNote: text("availability_note"),
     isCharter: boolean("is_charter").notNull().default(false),
     salesStatus: sailingSalesStatusEnum("sales_status").notNull().default("open"),

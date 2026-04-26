@@ -2,7 +2,11 @@ import { typeId, typeIdRef } from "@voyantjs/db/lib/typeid-column"
 import { boolean, index, integer, pgTable, smallint, text, timestamp } from "drizzle-orm/pg-core"
 
 import { cruiseSailings, cruises } from "./schema-core.js"
-import { cruiseInclusionKindEnum, cruiseMediaTypeEnum } from "./schema-shared.js"
+import {
+  cruiseInclusionKindEnum,
+  cruiseMediaTypeEnum,
+  enrichmentProgramKindEnum,
+} from "./schema-shared.js"
 
 export const cruiseMedia = pgTable(
   "cruise_media",
@@ -57,3 +61,36 @@ export const cruiseInclusions = pgTable(
 
 export type CruiseInclusion = typeof cruiseInclusions.$inferSelect
 export type NewCruiseInclusion = typeof cruiseInclusions.$inferInsert
+
+/**
+ * Expedition enrichment programs — naturalists, historians, photographers,
+ * lecturers, domain experts that travel with the cruise. Specific to expedition
+ * (and increasingly luxury) sailings; left empty for standard ocean/river cruises.
+ */
+export const cruiseEnrichmentPrograms = pgTable(
+  "cruise_enrichment_programs",
+  {
+    id: typeId("cruise_enrichment_programs"),
+    cruiseId: typeIdRef("cruise_id")
+      .notNull()
+      .references(() => cruises.id, { onDelete: "cascade" }),
+    kind: enrichmentProgramKindEnum("kind").notNull(),
+    name: text("name").notNull(),
+    title: text("title"),
+    description: text("description"),
+    bioImageUrl: text("bio_image_url"),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_cruise_enrichment_programs_cruise_kind_sort").on(
+      table.cruiseId,
+      table.kind,
+      table.sortOrder,
+    ),
+  ],
+)
+
+export type CruiseEnrichmentProgram = typeof cruiseEnrichmentPrograms.$inferSelect
+export type NewCruiseEnrichmentProgram = typeof cruiseEnrichmentPrograms.$inferInsert

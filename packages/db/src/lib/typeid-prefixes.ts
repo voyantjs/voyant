@@ -298,6 +298,7 @@ export const PREFIXES = {
   cruise_media: "crme",
   cruise_inclusions: "crin",
   cruise_search_index: "crsi",
+  cruise_enrichment_programs: "crep",
 } as const
 
 export type PrefixKey = keyof typeof PREFIXES

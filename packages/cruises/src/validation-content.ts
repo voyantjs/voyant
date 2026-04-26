@@ -1,4 +1,9 @@
-import { cruiseInclusionKindSchema, cruiseMediaTypeSchema, z } from "./validation-shared.js"
+import {
+  cruiseInclusionKindSchema,
+  cruiseMediaTypeSchema,
+  enrichmentProgramKindSchema,
+  z,
+} from "./validation-shared.js"
 
 const cruiseMediaCoreSchema = z.object({
   cruiseId: z.string(),
@@ -33,3 +38,24 @@ export const updateCruiseInclusionSchema = cruiseInclusionCoreSchema.partial()
 
 export type InsertCruiseInclusion = z.infer<typeof insertCruiseInclusionSchema>
 export type UpdateCruiseInclusion = z.infer<typeof updateCruiseInclusionSchema>
+
+const enrichmentProgramCoreSchema = z.object({
+  cruiseId: z.string(),
+  kind: enrichmentProgramKindSchema,
+  name: z.string().min(1).max(255),
+  title: z.string().max(255).optional().nullable(),
+  description: z.string().optional().nullable(),
+  bioImageUrl: z.string().url().optional().nullable(),
+  sortOrder: z.number().int().default(0),
+})
+
+export const insertEnrichmentProgramSchema = enrichmentProgramCoreSchema
+export const updateEnrichmentProgramSchema = enrichmentProgramCoreSchema.partial()
+export const replaceEnrichmentProgramsSchema = z.object({
+  cruiseId: z.string(),
+  programs: z.array(enrichmentProgramCoreSchema.omit({ cruiseId: true })),
+})
+
+export type InsertEnrichmentProgram = z.infer<typeof insertEnrichmentProgramSchema>
+export type UpdateEnrichmentProgram = z.infer<typeof updateEnrichmentProgramSchema>
+export type ReplaceEnrichmentPrograms = z.infer<typeof replaceEnrichmentProgramsSchema>

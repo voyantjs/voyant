@@ -10,6 +10,7 @@ import {
   cruisesBookingService,
 } from "./service-bookings.js"
 import { pricingService } from "./service-pricing.js"
+import { cruisesSearchService } from "./service-search.js"
 import {
   insertCabinCategorySchema,
   insertCabinSchema,
@@ -765,24 +766,48 @@ export const cruiseAdminRoutes = new Hono<Env>()
     if (!row) return c.json({ error: "not_found" }, 404)
     return c.json({ data: row })
   })
-  // --- search-index management (phase 4 functionality stubbed for shape) ---
-  .put("/search-index/bulk", (c) => {
-    return c.json(
-      { error: "not_implemented", detail: "Search index population lands in phase 4" },
-      501,
+  // --- search-index management ---
+  .put("/search-index/bulk", async (c) => {
+    const payload = await parseJsonBody(
+      c,
+      z.object({
+        entries: z.array(
+          z.object({
+            source: z.enum(["local", "external"]),
+            sourceProvider: z.string().optional().nullable(),
+            sourceRef: z.record(z.string(), z.unknown()).optional().nullable(),
+            localCruiseId: z.string().optional().nullable(),
+            slug: z.string().min(1),
+            name: z.string().min(1),
+            cruiseType: z.enum(["ocean", "river", "expedition", "coastal"]),
+            lineName: z.string().min(1),
+            shipName: z.string().min(1),
+            nights: z.number().int().positive(),
+            embarkPortName: z.string().optional().nullable(),
+            disembarkPortName: z.string().optional().nullable(),
+            regions: z.array(z.string()).optional(),
+            themes: z.array(z.string()).optional(),
+            earliestDeparture: z.string().optional().nullable(),
+            latestDeparture: z.string().optional().nullable(),
+            lowestPrice: z.string().optional().nullable(),
+            lowestPriceCurrency: z.string().optional().nullable(),
+            salesStatus: z.string().optional().nullable(),
+            heroImageUrl: z.string().optional().nullable(),
+          }),
+        ),
+      }),
     )
+    const result = await cruisesSearchService.bulkUpsert(c.get("db"), payload.entries as never)
+    return c.json({ data: result })
   })
-  .delete("/search-index/:crsiId", (c) => {
-    return c.json(
-      { error: "not_implemented", detail: "Search index population lands in phase 4" },
-      501,
-    )
+  .delete("/search-index/:crsiId", async (c) => {
+    const ok = await cruisesSearchService.removeEntry(c.get("db"), c.req.param("crsiId"))
+    if (!ok) return c.json({ error: "not_found" }, 404)
+    return c.body(null, 204)
   })
-  .post("/search-index/rebuild", (c) => {
-    return c.json(
-      { error: "not_implemented", detail: "Search index population lands in phase 4" },
-      501,
-    )
+  .post("/search-index/rebuild", async (c) => {
+    const result = await cruisesSearchService.rebuildAll(c.get("db"))
+    return c.json({ data: result })
   })
 
 export type CruiseAdminRoutes = typeof cruiseAdminRoutes

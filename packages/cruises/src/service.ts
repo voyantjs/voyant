@@ -68,6 +68,29 @@ function paginate(query: { limit: number; offset: number }) {
   return { limit: query.limit, offset: query.offset }
 }
 
+/**
+ * Re-project a cruise into cruise_search_index after a mutation. Errors are
+ * swallowed and logged — the search index is best-effort, never a barrier to
+ * the underlying mutation succeeding. Operators with no storefront never see
+ * an effect either way.
+ *
+ * Uses a dynamic import to avoid the circular dep between service.ts (which
+ * holds the canonical operations) and service-search.ts (which reads from the
+ * canonical tables to compute aggregates).
+ */
+async function reprojectIfPossible(db: PostgresJsDatabase, cruiseId: string | null): Promise<void> {
+  if (!cruiseId) return
+  try {
+    const { cruisesSearchService } = await import("./service-search.js")
+    await cruisesSearchService.projectLocalCruise(db, cruiseId)
+  } catch (err) {
+    // Don't crash the caller — log and move on. Operators can run the
+    // POST /v1/admin/cruises/search-index/rebuild endpoint to repair drift.
+    // eslint-disable-next-line no-console
+    console.warn(`[cruises] search-index projection failed for ${cruiseId}:`, err)
+  }
+}
+
 // ---------- cruises ----------
 
 export const cruisesService = {
@@ -137,6 +160,7 @@ export const cruisesService = {
       .values(data as NewCruise)
       .returning()
     if (!row) throw new Error("Failed to create cruise")
+    await reprojectIfPossible(db, row.id)
     return row
   },
 
@@ -150,6 +174,7 @@ export const cruisesService = {
       .set({ ...data, ...setUpdated })
       .where(eq(cruises.id, id))
       .returning()
+    if (row) await reprojectIfPossible(db, row.id)
     return row ?? null
   },
 
@@ -159,6 +184,7 @@ export const cruisesService = {
       .set({ status: "archived", ...setUpdated })
       .where(eq(cruises.id, id))
       .returning()
+    if (row) await reprojectIfPossible(db, row.id)
     return row ?? null
   },
 
@@ -199,6 +225,7 @@ export const cruisesService = {
       })
       .where(eq(cruises.id, cruiseId))
       .returning()
+    if (row) await reprojectIfPossible(db, row.id)
     return row ?? null
   },
 
@@ -292,6 +319,7 @@ export const cruisesService = {
         .where(eq(cruiseSailings.id, existing.id))
         .returning()
       if (!row) throw new Error("Failed to update sailing")
+      await reprojectIfPossible(db, row.cruiseId)
       return row
     }
 
@@ -300,6 +328,7 @@ export const cruisesService = {
       .values({ ...data, lastSyncedAt: new Date() } as NewCruiseSailing)
       .returning()
     if (!row) throw new Error("Failed to insert sailing")
+    await reprojectIfPossible(db, row.cruiseId)
     return row
   },
 
@@ -313,6 +342,7 @@ export const cruisesService = {
       .set({ ...data, ...setUpdated })
       .where(eq(cruiseSailings.id, id))
       .returning()
+    if (row) await reprojectIfPossible(db, row.cruiseId)
     return row ?? null
   },
 
@@ -620,7 +650,7 @@ export const cruisesService = {
       prices: Array<InsertPrice & { components?: Array<Omit<InsertPriceComponent, "priceId">> }>
     },
   ): Promise<CruisePrice[]> {
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       // Cascade-delete existing prices for this sailing — components go with them via FK.
       await tx.delete(cruisePrices).where(eq(cruisePrices.sailingId, sailingId))
 
@@ -646,6 +676,17 @@ export const cruisesService = {
       }
       return insertedPrices
     })
+
+    // Bulk pricing changes likely move the lowest-price aggregate. Re-project
+    // the parent cruise so the storefront index stays current.
+    const [sailing] = await db
+      .select({ cruiseId: cruiseSailings.cruiseId })
+      .from(cruiseSailings)
+      .where(eq(cruiseSailings.id, sailingId))
+      .limit(1)
+    if (sailing) await reprojectIfPossible(db, sailing.cruiseId)
+
+    return result
   },
 }
 

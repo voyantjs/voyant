@@ -263,20 +263,6 @@ describe("admin routes — external dispatch via registered adapter", () => {
   })
 })
 
-describe("admin routes — search-index stubs (phase 4)", () => {
-  const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
-
-  it("returns 501 on PUT /search-index/bulk", async () => {
-    const res = await app.request("/search-index/bulk", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entries: [] }),
-    })
-    expect(res.status).toBe(501)
-  })
-
-  it("returns 501 on POST /search-index/rebuild", async () => {
-    const res = await app.request("/search-index/rebuild", { method: "POST" })
-    expect(res.status).toBe(501)
-  })
-})
+// Search-index endpoints (phase 4) are real DB-backed handlers — coverage for
+// them lives with the deferred integration test suite that runs against a real
+// Postgres test database (TEST_DATABASE_URL).

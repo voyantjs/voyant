@@ -1,4 +1,4 @@
-import type { PublicProduct } from "./types"
+import type { PublicCruiseSummary, PublicProduct } from "./types"
 
 /**
  * A small in-memory catalog that mirrors what a DMC (Destination Management
@@ -87,4 +87,83 @@ export const MOCK_PRODUCTS: readonly PublicProduct[] = [
 
 export function findMockProduct(id: string): PublicProduct | null {
   return MOCK_PRODUCTS.find((p) => p.id === id) ?? null
+}
+
+/**
+ * A small mixed-source cruise catalog. Two local cruises (the operator's own
+ * boutique boats) and one external cruise (sourced through an adapter such
+ * as Voyant Connect, marked with `source: "external"` and a `sourceProvider`
+ * the storefront uses to render a small badge).
+ */
+export const MOCK_CRUISES: readonly PublicCruiseSummary[] = [
+  {
+    id: "crsi_01h2xfakemock00000000aaaa",
+    source: "local",
+    sourceProvider: null,
+    slug: "norwegian-fjords-7n-luxury",
+    name: "Norwegian Fjords — 7 Night Luxury",
+    cruiseType: "ocean",
+    lineName: "Acme Cruises",
+    shipName: "MV Acme Star",
+    nights: 7,
+    embarkPortName: "Bergen",
+    disembarkPortName: "Bergen",
+    regions: ["Northern Europe", "Norway"],
+    themes: ["Scenic", "Wildlife"],
+    earliestDeparture: "2026-06-15",
+    latestDeparture: "2026-09-21",
+    lowestPrice: "2999.00",
+    lowestPriceCurrency: "USD",
+    salesStatus: "open",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&q=60&auto=format&fit=crop",
+  },
+  {
+    id: "crsi_01h2xfakemock00000000bbbb",
+    source: "local",
+    sourceProvider: null,
+    slug: "danube-river-8n",
+    name: "Danube Discovery — 8 Night River",
+    cruiseType: "river",
+    lineName: "Acme River Cruises",
+    shipName: "MV Acme Lyra",
+    nights: 8,
+    embarkPortName: "Budapest",
+    disembarkPortName: "Passau",
+    regions: ["Central Europe"],
+    themes: ["Cultural", "Historic"],
+    earliestDeparture: "2026-04-12",
+    latestDeparture: "2026-10-25",
+    lowestPrice: "3450.00",
+    lowestPriceCurrency: "EUR",
+    salesStatus: "open",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1549041008-e76ecbc4cc1d?w=1200&q=60&auto=format&fit=crop",
+  },
+  {
+    id: "crsi_01h2xfakemock00000000cccc",
+    source: "external",
+    sourceProvider: "voyant-connect",
+    slug: "antarctic-explorer-12n",
+    name: "Antarctic Explorer — 12 Night Expedition",
+    cruiseType: "expedition",
+    lineName: "Polar Voyages",
+    shipName: "MV Polar Pioneer",
+    nights: 12,
+    embarkPortName: "Ushuaia",
+    disembarkPortName: "Ushuaia",
+    regions: ["Antarctica", "South America"],
+    themes: ["Polar", "Wildlife", "Photography"],
+    earliestDeparture: "2026-11-20",
+    latestDeparture: "2027-02-28",
+    lowestPrice: "12500.00",
+    lowestPriceCurrency: "USD",
+    salesStatus: "open",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1551722773-1f5e3d20fe39?w=1200&q=60&auto=format&fit=crop",
+  },
+]
+
+export function findMockCruise(slug: string): PublicCruiseSummary | null {
+  return MOCK_CRUISES.find((c) => c.slug === slug) ?? null
 }

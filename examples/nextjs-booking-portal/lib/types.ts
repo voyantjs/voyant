@@ -59,3 +59,41 @@ export type PublicProduct = z.infer<typeof publicProductSchema>
 export type PublicProductList = z.infer<typeof publicProductListSchema>
 export type InquiryInput = z.infer<typeof inquiryInputSchema>
 export type InquiryResponse = z.infer<typeof inquiryResponseSchema>
+
+/**
+ * Public cruise summary — matches Voyant's `cruise_search_index` row shape
+ * (the storefront read source). Both self-managed and external cruises are
+ * returned in the same shape; the `source` field tells the UI whether to
+ * render an "external" badge.
+ */
+export const publicCruiseSummarySchema = z.object({
+  id: z.string(),
+  source: z.enum(["local", "external"]),
+  sourceProvider: z.string().nullable(),
+  slug: z.string(),
+  name: z.string(),
+  cruiseType: z.enum(["ocean", "river", "expedition", "coastal"]),
+  lineName: z.string(),
+  shipName: z.string(),
+  nights: z.number(),
+  embarkPortName: z.string().nullable(),
+  disembarkPortName: z.string().nullable(),
+  regions: z.array(z.string()).default([]),
+  themes: z.array(z.string()).default([]),
+  earliestDeparture: z.string().nullable(),
+  latestDeparture: z.string().nullable(),
+  lowestPrice: z.string().nullable(),
+  lowestPriceCurrency: z.string().nullable(),
+  salesStatus: z.string().nullable(),
+  heroImageUrl: z.string().nullable(),
+})
+
+export const publicCruiseListSchema = z.object({
+  data: z.array(publicCruiseSummarySchema),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+})
+
+export type PublicCruiseSummary = z.infer<typeof publicCruiseSummarySchema>
+export type PublicCruiseList = z.infer<typeof publicCruiseListSchema>

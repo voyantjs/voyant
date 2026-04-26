@@ -1,12 +1,15 @@
 import { fetchWithValidation, VoyantApiError, type VoyantFetcher } from "@voyantjs/storefront-react"
 
-import { findMockProduct, MOCK_PRODUCTS } from "./mock-data"
+import { findMockCruise, findMockProduct, MOCK_CRUISES, MOCK_PRODUCTS } from "./mock-data"
 import {
   type InquiryInput,
   type InquiryResponse,
   inquiryResponseSchema,
+  type PublicCruiseList,
+  type PublicCruiseSummary,
   type PublicProduct,
   type PublicProductList,
+  publicCruiseListSchema,
   publicProductListSchema,
   publicProductSchema,
 } from "./types"
@@ -99,4 +102,83 @@ export async function submitInquiry(input: InquiryInput): Promise<InquiryRespons
 
 export function isMockMode(): boolean {
   return MOCK
+}
+
+// ---------- cruises ----------
+
+export type CruiseListFilters = {
+  cruiseType?: PublicCruiseSummary["cruiseType"]
+  region?: string
+  theme?: string
+  dateFrom?: string
+  dateTo?: string
+  priceMax?: number
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+function buildCruiseQuery(filters: CruiseListFilters): string {
+  const params = new URLSearchParams()
+  if (filters.cruiseType) params.set("cruiseType", filters.cruiseType)
+  if (filters.region) params.set("region", filters.region)
+  if (filters.theme) params.set("theme", filters.theme)
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom)
+  if (filters.dateTo) params.set("dateTo", filters.dateTo)
+  if (filters.priceMax !== undefined) params.set("priceMax", String(filters.priceMax))
+  if (filters.search) params.set("search", filters.search)
+  if (filters.limit !== undefined) params.set("limit", String(filters.limit))
+  if (filters.offset !== undefined) params.set("offset", String(filters.offset))
+  const qs = params.toString()
+  return qs ? `?${qs}` : ""
+}
+
+function filterMockCruises(filters: CruiseListFilters): PublicCruiseSummary[] {
+  return MOCK_CRUISES.filter((c) => {
+    if (filters.cruiseType && c.cruiseType !== filters.cruiseType) return false
+    if (filters.region && !c.regions.includes(filters.region)) return false
+    if (filters.theme && !c.themes.includes(filters.theme)) return false
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      if (
+        !c.name.toLowerCase().includes(q) &&
+        !c.lineName.toLowerCase().includes(q) &&
+        !c.shipName.toLowerCase().includes(q)
+      ) {
+        return false
+      }
+    }
+    return true
+  })
+}
+
+export async function listCruises(filters: CruiseListFilters = {}): Promise<PublicCruiseList> {
+  if (MOCK) {
+    const data = filterMockCruises(filters)
+    return {
+      data,
+      total: data.length,
+      limit: filters.limit ?? 20,
+      offset: filters.offset ?? 0,
+    }
+  }
+  return voyantFetch(`/v1/public/cruises${buildCruiseQuery(filters)}`, publicCruiseListSchema)
+}
+
+/**
+ * Cruise detail. The example renders the summary slice for simplicity; the
+ * Voyant `/v1/public/cruises/:slug` endpoint actually returns a richer payload
+ * `{ source, sourceProvider, summary, cruise, sailings? }`. To use the full
+ * detail in your app, model the rich shape and parse with the corresponding
+ * Zod schema.
+ */
+export async function getCruise(slug: string): Promise<PublicCruiseSummary | null> {
+  if (MOCK) {
+    return findMockCruise(slug)
+  }
+  // Find by slug from the search-index list. This avoids modeling the full
+  // detail payload in the example; for production use, fetch the detail
+  // endpoint and parse the rich response.
+  const list = await listCruises({ limit: 100 })
+  return list.data.find((c) => c.slug === slug) ?? null
 }

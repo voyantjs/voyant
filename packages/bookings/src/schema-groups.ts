@@ -3,7 +3,11 @@ import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "dri
 
 import { bookings } from "./schema-core"
 
-export const bookingGroupKindEnum = pgEnum("booking_group_kind", ["shared_room", "other"])
+export const bookingGroupKindEnum = pgEnum("booking_group_kind", [
+  "shared_room",
+  "cruise_party",
+  "other",
+])
 
 export const bookingGroupMemberRoleEnum = pgEnum("booking_group_member_role", ["primary", "shared"])
 

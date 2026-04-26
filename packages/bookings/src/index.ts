@@ -35,6 +35,10 @@ export {
 } from "./service-groups.js"
 export type { BookingStatus } from "./state-machine.js"
 export {
+  type BookingStatusDispatchTarget,
+  dispatchBookingStatusChange,
+} from "./status-dispatch.js"
+export {
   type ExpireStaleBookingHoldsInput,
   type ExpireStaleBookingHoldsResult,
   expireStaleBookingHolds,

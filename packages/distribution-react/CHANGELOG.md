@@ -1,5 +1,12 @@
 # @voyantjs/distribution-react
 
+## 0.11.0
+
+### Patch Changes
+
+- @voyantjs/distribution@0.11.0
+- @voyantjs/react@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes

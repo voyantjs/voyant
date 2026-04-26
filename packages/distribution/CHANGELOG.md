@@ -1,5 +1,17 @@
 # @voyantjs/distribution
 
+## 0.11.0
+
+### Patch Changes
+
+- @voyantjs/availability@0.11.0
+- @voyantjs/core@0.11.0
+- @voyantjs/db@0.11.0
+- @voyantjs/hono@0.11.0
+- @voyantjs/identity@0.11.0
+- @voyantjs/products@0.11.0
+- @voyantjs/suppliers@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes

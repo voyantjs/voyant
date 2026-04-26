@@ -2,7 +2,7 @@
 
 Voyant is a source-available framework for travel companies. It provides starter apps and domain modules for CRM, products, availability, bookings, finance, distribution, resources, legal, and related travel workflows.
 
-#### [CLI](./packages/cli/README.md) | [DMC Template](./templates/dmc/README.md) | [Operator Template](./templates/operator/README.md) | [Packages](./packages) | [Examples](./examples)
+#### [CLI](./packages/cli/README.md) | [DMC Template](./templates/dmc/README.md) | [Operator Template](./templates/operator/README.md) | [Packages](./packages) | [Examples](./examples) | [Migrations](./docs/migrations/README.md)
 
 ## Get started
 
@@ -143,7 +143,8 @@ Voyant keeps a strict boundary:
 - Transport adapters stay thin and call shared domain services rather than owning business logic
 
 Architecture decisions live in [`docs/adr/`](./docs/adr/); domain
-conventions live in [`docs/architecture/`](./docs/architecture/).
+conventions live in [`docs/architecture/`](./docs/architecture/);
+per-minor migration notes live in [`docs/migrations/`](./docs/migrations/README.md).
 
 ## Security model
 

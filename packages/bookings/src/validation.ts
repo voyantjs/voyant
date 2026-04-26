@@ -435,7 +435,7 @@ export const insertBookingTravelerDocumentSchema = insertBookingDocumentSchema
 
 // ---------- booking groups ----------
 
-export const bookingGroupKindSchema = z.enum(["shared_room", "other"])
+export const bookingGroupKindSchema = z.enum(["shared_room", "cruise_party", "other"])
 export const bookingGroupMemberRoleSchema = z.enum(["primary", "shared"])
 
 const bookingGroupCoreSchema = z.object({

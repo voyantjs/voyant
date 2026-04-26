@@ -616,7 +616,9 @@ export const cruisesService = {
   async replaceSailingPricing(
     db: PostgresJsDatabase,
     sailingId: string,
-    payload: { prices: Array<InsertPrice & { components?: InsertPriceComponent[] }> },
+    payload: {
+      prices: Array<InsertPrice & { components?: Array<Omit<InsertPriceComponent, "priceId">> }>
+    },
   ): Promise<CruisePrice[]> {
     return db.transaction(async (tx) => {
       // Cascade-delete existing prices for this sailing — components go with them via FK.

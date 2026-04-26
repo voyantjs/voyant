@@ -1,7 +1,39 @@
 import type { LinkableDefinition, Module } from "@voyantjs/core"
+import type { HonoModule } from "@voyantjs/hono/module"
 
+import { cruiseAdminRoutes } from "./routes.js"
+import { cruisePublicRoutes } from "./routes-public.js"
+
+export {
+  type BookingCruiseDetail,
+  type BookingGroupCruiseDetail,
+  bookingCruiseDetails,
+  bookingCruiseDetailsService,
+  bookingGroupCruiseDetails,
+  bookingGroupCruiseDetailsService,
+  cruiseBookingModeEnum,
+  cruisesBookingExtension,
+  cruisesBookingExtensionRoutes,
+  type NewBookingCruiseDetail,
+  type NewBookingGroupCruiseDetail,
+} from "./booking-extension.js"
+export type { CruiseAdminRoutes } from "./routes.js"
+export { cruiseAdminRoutes } from "./routes.js"
+export type { CruisePublicRoutes } from "./routes-public.js"
+export { cruisePublicRoutes } from "./routes-public.js"
 export type { EffectiveItineraryDay } from "./service.js"
 export { cruisesService } from "./service.js"
+export {
+  type CreateCruiseBookingInput,
+  type CreateCruiseBookingResult,
+  type CreateCruisePartyBookingInput,
+  type CreateCruisePartyBookingResult,
+  type CruiseBookingContact,
+  type CruiseBookingMode,
+  type CruiseBookingPassenger,
+  type CruisePartyCabinEntry,
+  cruisesBookingService,
+} from "./service-bookings.js"
 export {
   type ComposeQuoteInput,
   composeQuote,
@@ -41,6 +73,12 @@ export const cruisesModule: Module = {
     cruise_sailing: cruiseSailingLinkable,
     cruise_ship: cruiseShipLinkable,
   },
+}
+
+export const cruisesHonoModule: HonoModule = {
+  module: cruisesModule,
+  adminRoutes: cruiseAdminRoutes,
+  publicRoutes: cruisePublicRoutes,
 }
 
 export type {

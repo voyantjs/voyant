@@ -1,5 +1,69 @@
 # @voyantjs/bookings
 
+## 0.13.0
+
+### Minor Changes
+
+- 7dfbc05: Export `dispatchBookingStatusChange` from `@voyantjs/bookings/status-dispatch` (also re-exported from the package barrel).
+
+  Framework-agnostic helper that maps `(currentStatus, targetStatus)` → the right verb endpoint (`/confirm`, `/expire`, `/start`, `/complete`, `/cancel`, or `/override-status` for non-adjacent jumps) and the body the server expects. Lets non-React consumers — operator tooling using a generic `api.patch`, server-to-server scripts, third-party storefront builds — reuse the dispatch table that previously lived only inside `bookings-react`'s `useBookingStatusMutation`.
+
+  `useBookingStatusMutation` and `useBookingStatusByIdMutation` now delegate to this helper; behaviour is unchanged.
+
+  ```ts
+  import { dispatchBookingStatusChange } from "@voyantjs/bookings/status-dispatch";
+
+  const target = dispatchBookingStatusChange(
+    bookingId,
+    "on_hold",
+    "confirmed",
+    "ok by ops"
+  );
+  await fetch(`${apiBase}${target.path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(target.body),
+  });
+  ```
+
+- 15dda79: Add `bookingsService.createTravelerWithTravelDetails` and `updateTravelerWithTravelDetails` — convenience verbs that take the same flat payload shape `createTravelerRecord` accepted before 0.10 (with `dateOfBirth` / `nationality` / `passportNumber` / `passportExpiry` / `dietaryRequirements` / `accessibilityNeeds` / `isLeadTraveler` included) and internally fan out to `createTravelerRecord` + `BookingPiiService.upsertTravelerTravelDetails`. The storage split (plaintext columns + encrypted envelope) is preserved at rest — only the call ergonomics collapse.
+
+  Migration boundary helper for consumers coming from the pre-0.10 single-call shape: instead of learning the encrypted PII service contract just to keep parity with the dropped `accessibility_needs` column, you can pass one flat object as before.
+
+  Also adds `accessibilityNeeds` to `upsertTravelerTravelDetailsSchema` (the underlying PII service has always supported it; the public-facing schema was missing it).
+
+  ```ts
+  import { bookingsService, createBookingPiiService } from "@voyantjs/bookings";
+
+  const pii = createBookingPiiService({ kms });
+
+  const result = await bookingsService.createTravelerWithTravelDetails(
+    db,
+    bookingId,
+    {
+      participantType: "traveler",
+      firstName: "Ana",
+      lastName: "Traveler",
+      email: "ana@example.com",
+      nationality: "RO",
+      passportNumber: "ABC123",
+      accessibilityNeeds: "wheelchair access",
+      isLeadTraveler: true,
+    },
+    { pii, userId: actorId, actorId }
+  );
+  // → { traveler, travelDetails }
+  ```
+
+  Operations are sequential, not transactional — a failure in the encrypted-fields write leaves the plaintext row in place (matching the pre-helper two-call protocol).
+
+### Patch Changes
+
+- @voyantjs/core@0.13.0
+- @voyantjs/db@0.13.0
+- @voyantjs/hono@0.13.0
+- @voyantjs/utils@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes

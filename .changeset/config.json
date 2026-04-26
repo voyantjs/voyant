@@ -12,6 +12,8 @@
       "@voyantjs/booking-requirements-react",
       "@voyantjs/bookings",
       "@voyantjs/bookings-react",
+      "@voyantjs/charters",
+      "@voyantjs/charters-react",
       "@voyantjs/checkout",
       "@voyantjs/cli",
       "@voyantjs/core",

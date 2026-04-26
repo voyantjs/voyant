@@ -299,6 +299,13 @@ export const PREFIXES = {
   cruise_inclusions: "crin",
   cruise_search_index: "crsi",
   cruise_enrichment_programs: "crep",
+
+  // --- CHARTERS ---
+  charter_products: "chrt",
+  charter_voyages: "chrv",
+  charter_yachts: "chry",
+  charter_suites: "chst",
+  charter_schedule_days: "chrd",
 } as const
 
 export type PrefixKey = keyof typeof PREFIXES

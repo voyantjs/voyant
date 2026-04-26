@@ -3828,6 +3828,81 @@
           "target": "components/voyant/cruises/enrichment-program-list.tsx"
         }
       ]
+    },
+    {
+      "name": "voyant-charters-external-badge",
+      "type": "registry:component",
+      "title": "External Charter Badge",
+      "description": "Inline pill that surfaces 'External · <provider>' provenance for adapter-sourced charters.",
+      "dependencies": ["@voyantjs/charters-react"],
+      "registryDependencies": ["badge"],
+      "files": [
+        {
+          "path": "registry/charters/external-badge.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/charters/external-badge.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-charters-product-card",
+      "type": "registry:component",
+      "title": "Charter Product Card",
+      "description": "Display card for a charter brand/product summary — line, yacht, regions, lowest price, with provenance badge for external entries.",
+      "dependencies": ["lucide-react", "@voyantjs/charters-react"],
+      "registryDependencies": ["badge", "card", "voyant-charters-external-badge"],
+      "files": [
+        {
+          "path": "registry/charters/charter-product-card.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/charters/charter-product-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-charters-voyage-suite-grid",
+      "type": "registry:component",
+      "title": "Voyage Suite Grid",
+      "description": "Per-suite pricing grid for a charter voyage — suite cards with category, availability, multi-currency price, and a quote/book CTA.",
+      "dependencies": ["@voyantjs/charters-react"],
+      "registryDependencies": ["badge", "button", "card"],
+      "files": [
+        {
+          "path": "registry/charters/voyage-suite-grid.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/charters/voyage-suite-grid.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-charters-whole-yacht-quote-card",
+      "type": "registry:component",
+      "title": "Whole-Yacht Quote Card",
+      "description": "Itemised whole-yacht quote — charter fee + APA + total, with explanatory copy. Ships with a per-suite sibling component.",
+      "dependencies": ["@voyantjs/charters-react"],
+      "registryDependencies": ["card"],
+      "files": [
+        {
+          "path": "registry/charters/whole-yacht-quote-card.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/charters/whole-yacht-quote-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voyant-charters-apa-tracker",
+      "type": "registry:component",
+      "title": "APA Tracker",
+      "description": "Pre-/post-charter APA reconciliation panel — quoted, paid, spent, refund balance, settled status. Pure presentational; wire actions via useRecordApaPayment / useReconcileApa.",
+      "dependencies": ["lucide-react", "@voyantjs/charters-react"],
+      "registryDependencies": ["badge", "card"],
+      "files": [
+        {
+          "path": "registry/charters/apa-tracker.tsx",
+          "type": "registry:component",
+          "target": "components/voyant/charters/apa-tracker.tsx"
+        }
+      ]
     }
   ]
 }

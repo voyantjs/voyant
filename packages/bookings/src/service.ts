@@ -31,12 +31,7 @@ import {
   bookingTravelers,
 } from "./schema.js"
 import { cleanupGroupOnBookingCancelled } from "./service-groups.js"
-import {
-  type BookingStatus,
-  BookingTransitionError,
-  canTransitionBooking,
-  transitionBooking,
-} from "./state-machine.js"
+import { type BookingStatus, canTransitionBooking, transitionBooking } from "./state-machine.js"
 import {
   bookingTransactionDetailsRef,
   offerItemParticipantsRef,
@@ -53,6 +48,7 @@ import {
 import type {
   bookingListQuerySchema,
   cancelBookingSchema,
+  completeBookingSchema,
   confirmBookingSchema,
   convertProductSchema,
   expireBookingSchema,
@@ -66,13 +62,14 @@ import type {
   insertBookingSchema,
   insertTravelerRecordSchema,
   insertTravelerSchema,
+  overrideBookingStatusSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
+  startBookingSchema,
   updateBookingFulfillmentSchema,
   updateBookingItemSchema,
   updateBookingSchema,
-  updateBookingStatusSchema,
   updateTravelerRecordSchema,
   updateTravelerSchema,
 } from "./validation.js"
@@ -81,13 +78,15 @@ type BookingListQuery = z.infer<typeof bookingListQuerySchema>
 type ConvertProductInput = z.infer<typeof convertProductSchema>
 type CreateBookingInput = z.infer<typeof insertBookingSchema>
 type UpdateBookingInput = z.infer<typeof updateBookingSchema>
-type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>
 type ReserveBookingInput = z.infer<typeof reserveBookingSchema>
 type ExtendBookingHoldInput = z.infer<typeof extendBookingHoldSchema>
 type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>
 type CancelBookingInput = z.infer<typeof cancelBookingSchema>
 type ExpireBookingInput = z.infer<typeof expireBookingSchema>
 type ExpireStaleBookingsInput = z.infer<typeof expireStaleBookingsSchema>
+type StartBookingInput = z.infer<typeof startBookingSchema>
+type CompleteBookingInput = z.infer<typeof completeBookingSchema>
+type OverrideBookingStatusInput = z.infer<typeof overrideBookingStatusSchema>
 type CreateTravelerInput = z.infer<typeof insertTravelerSchema>
 type UpdateTravelerInput = z.infer<typeof updateTravelerSchema>
 type CreateTravelerRecordInput = z.infer<typeof insertTravelerRecordSchema>
@@ -190,6 +189,34 @@ export interface BookingExpiredEvent {
   bookingId: string
   bookingNumber: string
   cause: "route" | "sweep"
+  actorId: string | null
+}
+
+/** Payload for `booking.started` — confirmed → in_progress. */
+export interface BookingStartedEvent {
+  bookingId: string
+  bookingNumber: string
+  actorId: string | null
+}
+
+/** Payload for `booking.completed` — in_progress → completed. */
+export interface BookingCompletedEvent {
+  bookingId: string
+  bookingNumber: string
+  actorId: string | null
+}
+
+/**
+ * Payload for `booking.status_overridden`. Fires when an admin bypasses the
+ * transition graph. Subscribers should treat this as a privileged audit signal
+ * distinct from the normal lifecycle events — e.g. compliance dashboards.
+ */
+export interface BookingStatusOverriddenEvent {
+  bookingId: string
+  bookingNumber: string
+  fromStatus: BookingStatus
+  toStatus: BookingStatus
+  reason: string
   actorId: string | null
 }
 
@@ -2227,82 +2254,6 @@ export const bookingsService = {
     return row ?? null
   },
 
-  async updateBookingStatus(
-    db: PostgresJsDatabase,
-    id: string,
-    data: UpdateBookingStatusInput,
-    userId?: string,
-    runtime: BookingServiceRuntime = {},
-  ) {
-    const [current] = await db
-      .select({ id: bookings.id, status: bookings.status })
-      .from(bookings)
-      .where(eq(bookings.id, id))
-      .limit(1)
-
-    if (!current) {
-      return { status: "not_found" as const }
-    }
-
-    if (current.status === "on_hold" && data.status === "confirmed") {
-      return bookingsService.confirmBooking(db, id, { note: data.note }, userId, runtime)
-    }
-
-    if (current.status === "on_hold" && data.status === "expired") {
-      return bookingsService.expireBooking(db, id, { note: data.note }, userId, runtime)
-    }
-
-    if (data.status === "cancelled") {
-      return bookingsService.cancelBooking(db, id, { note: data.note }, userId, runtime)
-    }
-
-    // `on_hold` is only reachable through `reserveBooking`, never via direct status PATCH.
-    if (data.status === "on_hold") {
-      return { status: "invalid_transition" as const }
-    }
-
-    let patch: ReturnType<typeof transitionBooking>
-    try {
-      patch = transitionBooking(current.status, data.status)
-    } catch (error) {
-      if (error instanceof BookingTransitionError) {
-        return { status: "invalid_transition" as const }
-      }
-      throw error
-    }
-
-    const [row] = await db
-      .update(bookings)
-      .set({
-        ...patch,
-        updatedAt: new Date(),
-      })
-      .where(eq(bookings.id, id))
-      .returning()
-
-    await db.insert(bookingActivityLog).values({
-      bookingId: id,
-      actorId: userId ?? "system",
-      activityType: "status_change",
-      description: `Status changed from ${current.status} to ${data.status}`,
-      metadata: { oldStatus: current.status, newStatus: data.status },
-    })
-
-    if (data.note) {
-      await db.insert(bookingNotes).values({
-        bookingId: id,
-        authorId: userId ?? "system",
-        content: data.note,
-      })
-    }
-
-    if (data.status === "confirmed") {
-      await autoIssueFulfillmentsForBooking(db, id, userId)
-    }
-
-    return { status: "ok" as const, booking: row ?? null }
-  },
-
   async confirmBooking(
     db: PostgresJsDatabase,
     id: string,
@@ -2742,6 +2693,264 @@ export const bookingsService = {
             previousStatus: result.previousStatus,
             actorId: userId ?? null,
           } satisfies BookingCancelledEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return { status: result.status, booking: result.booking }
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async startBooking(
+    db: PostgresJsDatabase,
+    id: string,
+    data: StartBookingInput,
+    userId?: string,
+    runtime: BookingServiceRuntime = {},
+  ) {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, booking_number, status
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (
+          rows as unknown as Array<{ id: string; booking_number: string; status: BookingStatus }>
+        )[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (!canTransitionBooking(booking.status, "in_progress")) {
+          throw new BookingServiceError("invalid_transition")
+        }
+
+        const patch = transitionBooking(booking.status, "in_progress")
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            ...patch,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "booking_started",
+          description: `Booking ${booking.booking_number} started`,
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.started",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            actorId: userId ?? null,
+          } satisfies BookingStartedEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return result
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  async completeBooking(
+    db: PostgresJsDatabase,
+    id: string,
+    data: CompleteBookingInput,
+    userId?: string,
+    runtime: BookingServiceRuntime = {},
+  ) {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, booking_number, status
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (
+          rows as unknown as Array<{ id: string; booking_number: string; status: BookingStatus }>
+        )[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+        if (!canTransitionBooking(booking.status, "completed")) {
+          throw new BookingServiceError("invalid_transition")
+        }
+
+        const patch = transitionBooking(booking.status, "completed")
+
+        await tx
+          .update(bookingAllocations)
+          .set({ status: "fulfilled", updatedAt: new Date() })
+          .where(
+            and(eq(bookingAllocations.bookingId, id), eq(bookingAllocations.status, "confirmed")),
+          )
+
+        await tx
+          .update(bookingItems)
+          .set({ status: "fulfilled", updatedAt: new Date() })
+          .where(and(eq(bookingItems.bookingId, id), eq(bookingItems.status, "confirmed")))
+
+        const [row] = await tx
+          .update(bookings)
+          .set({
+            ...patch,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning()
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "booking_completed",
+          description: `Booking ${booking.booking_number} completed`,
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return { status: "ok" as const, booking: row ?? null }
+      })
+
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.completed",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            actorId: userId ?? null,
+          } satisfies BookingCompletedEvent,
+          { category: "domain", source: "service" },
+        )
+      }
+
+      return result
+    } catch (error) {
+      if (error instanceof BookingServiceError) {
+        return { status: error.code as Exclude<string, "ok"> }
+      }
+      throw error
+    }
+  },
+
+  /**
+   * Admin-only force: bypasses the transition graph. Updates the booking row
+   * only — does NOT cascade to items, allocations, or fulfillments. If the
+   * operator needs cascaded behavior (e.g. release allocations), they should
+   * call the verb-specific method instead. The override is for data
+   * correction; misuse leaves child state inconsistent with the parent.
+   */
+  async overrideBookingStatus(
+    db: PostgresJsDatabase,
+    id: string,
+    data: OverrideBookingStatusInput,
+    userId?: string,
+    runtime: BookingServiceRuntime = {},
+  ) {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const rows = await tx.execute(
+          sql`SELECT id, booking_number, status
+              FROM ${bookings}
+              WHERE ${bookings.id} = ${id}
+              FOR UPDATE`,
+        )
+        const booking = (
+          rows as unknown as Array<{ id: string; booking_number: string; status: BookingStatus }>
+        )[0]
+
+        if (!booking) {
+          throw new BookingServiceError("not_found")
+        }
+
+        const now = new Date()
+        const updates: Record<string, unknown> = {
+          status: data.status,
+          updatedAt: now,
+        }
+        if (data.status === "confirmed") updates.confirmedAt = now
+        if (data.status === "expired") updates.expiredAt = now
+        if (data.status === "cancelled") updates.cancelledAt = now
+        if (data.status === "completed") updates.completedAt = now
+
+        const [row] = await tx.update(bookings).set(updates).where(eq(bookings.id, id)).returning()
+
+        await tx.insert(bookingActivityLog).values({
+          bookingId: id,
+          actorId: userId ?? "system",
+          activityType: "status_overridden",
+          description: `Booking status overridden from ${booking.status} to ${data.status}`,
+          metadata: {
+            oldStatus: booking.status,
+            newStatus: data.status,
+            reason: data.reason,
+          },
+        })
+
+        if (data.note) {
+          await tx.insert(bookingNotes).values({
+            bookingId: id,
+            authorId: userId ?? "system",
+            content: data.note,
+          })
+        }
+
+        return {
+          status: "ok" as const,
+          booking: row ?? null,
+          fromStatus: booking.status,
+          toStatus: data.status,
+        }
+      })
+
+      if (result.status === "ok" && result.booking) {
+        await runtime.eventBus?.emit(
+          "booking.status_overridden",
+          {
+            bookingId: result.booking.id,
+            bookingNumber: result.booking.bookingNumber,
+            fromStatus: result.fromStatus,
+            toStatus: result.toStatus,
+            reason: data.reason,
+            actorId: userId ?? null,
+          } satisfies BookingStatusOverriddenEvent,
           { category: "domain", source: "service" },
         )
       }

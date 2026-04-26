@@ -32,6 +32,7 @@ import {
   bookingAggregatesQuerySchema,
   bookingListQuerySchema,
   cancelBookingSchema,
+  completeBookingSchema,
   confirmBookingSchema,
   convertProductSchema,
   createBookingSchema,
@@ -46,14 +47,15 @@ import {
   insertSupplierStatusSchema,
   insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
+  overrideBookingStatusSchema,
   pricingPreviewSchema,
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
+  startBookingSchema,
   updateBookingFulfillmentSchema,
   updateBookingItemSchema,
   updateBookingSchema,
-  updateBookingStatusSchema,
   updateSupplierStatusSchema,
   updateTravelerSchema,
   upsertTravelerTravelDetailsSchema,
@@ -498,31 +500,6 @@ export const bookingRoutes = new Hono<Env>()
   // Status
   // ==========================================================================
 
-  // 7. PATCH /:id/status — Change booking status
-  .patch("/:id/status", async (c) => {
-    const result = await bookingsService.updateBookingStatus(
-      c.get("db"),
-      c.req.param("id"),
-      await parseJsonBody(c, updateBookingStatusSchema),
-      c.get("userId"),
-      { eventBus: c.get("eventBus") },
-    )
-
-    if (result.status === "not_found") {
-      return c.json({ error: "Booking not found" }, 404)
-    }
-
-    if (result.status === "invalid_transition") {
-      return c.json({ error: "Invalid booking status transition" }, 409)
-    }
-
-    if ("booking" in result) {
-      return c.json({ data: result.booking })
-    }
-
-    return c.json({ error: "Unable to update booking status" }, 400)
-  })
-
   // 8. POST /:id/confirm — Confirm an on-hold booking
   .post("/:id/confirm", async (c) => {
     const result = await bookingsService.confirmBooking(
@@ -640,6 +617,80 @@ export const bookingRoutes = new Hono<Env>()
     }
 
     return c.json({ error: "Unable to cancel booking" }, 400)
+  })
+
+  // 11a. POST /:id/start — Mark a confirmed booking as in-progress
+  .post("/:id/start", async (c) => {
+    const result = await bookingsService.startBooking(
+      c.get("db"),
+      c.req.param("id"),
+      await parseJsonBody(c, startBookingSchema),
+      c.get("userId"),
+      { eventBus: c.get("eventBus") },
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking is not in a confirmed state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to start booking" }, 400)
+  })
+
+  // 11b. POST /:id/complete — Mark an in-progress booking as completed
+  .post("/:id/complete", async (c) => {
+    const result = await bookingsService.completeBooking(
+      c.get("db"),
+      c.req.param("id"),
+      await parseJsonBody(c, completeBookingSchema),
+      c.get("userId"),
+      { eventBus: c.get("eventBus") },
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if (result.status === "invalid_transition") {
+      return c.json({ error: "Booking is not in an in-progress state" }, 409)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to complete booking" }, 400)
+  })
+
+  // 11c. POST /:id/override-status — Admin override that bypasses the
+  // transition graph. Updates the booking row only — no cascade to items,
+  // allocations, or fulfillments. Always emits booking.status_overridden for
+  // audit. Requires a non-empty `reason`.
+  .post("/:id/override-status", async (c) => {
+    const result = await bookingsService.overrideBookingStatus(
+      c.get("db"),
+      c.req.param("id"),
+      await parseJsonBody(c, overrideBookingStatusSchema),
+      c.get("userId"),
+      { eventBus: c.get("eventBus") },
+    )
+
+    if (result.status === "not_found") {
+      return c.json({ error: "Booking not found" }, 404)
+    }
+
+    if ("booking" in result) {
+      return c.json({ data: result.booking })
+    }
+
+    return c.json({ error: "Unable to override booking status" }, 400)
   })
 
   // 12. GET /:id/allocations — List booking allocations

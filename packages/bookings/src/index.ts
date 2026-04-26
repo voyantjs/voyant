@@ -33,14 +33,7 @@ export {
   listGroupBookingTravelers,
   type UpdateBookingGroupInput,
 } from "./service-groups.js"
-export {
-  BOOKING_TRANSITIONS,
-  type BookingStatus,
-  type BookingStatusPatch,
-  BookingTransitionError,
-  canTransitionBooking,
-  transitionBooking,
-} from "./state-machine.js"
+export type { BookingStatus } from "./state-machine.js"
 export {
   type ExpireStaleBookingHoldsInput,
   type ExpireStaleBookingHoldsResult,
@@ -170,6 +163,7 @@ export {
   bookingGroupMemberRoleSchema,
   bookingListQuerySchema,
   cancelBookingSchema,
+  completeBookingSchema,
   confirmBookingSchema,
   convertProductSchema,
   createBookingSchema,
@@ -188,6 +182,7 @@ export {
   insertSupplierStatusSchema,
   insertTravelerSchema,
   internalBookingOverviewLookupQuerySchema,
+  overrideBookingStatusSchema,
   pricingPreviewSchema,
   publicBookingOverviewLookupQuerySchema,
   publicBookingSessionMutationSchema,
@@ -202,12 +197,12 @@ export {
   recordBookingRedemptionSchema,
   reserveBookingFromTransactionSchema,
   reserveBookingSchema,
+  startBookingSchema,
   updateBookingAllocationSchema,
   updateBookingFulfillmentSchema,
   updateBookingGroupSchema,
   updateBookingItemSchema,
   updateBookingSchema,
-  updateBookingStatusSchema,
   updateSupplierStatusSchema,
   updateTravelerSchema,
   upsertTravelerTravelDetailsSchema,

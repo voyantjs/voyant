@@ -83,6 +83,7 @@ export function StatusChangeDialog({
 
   const onSubmit = async (values: StatusChangeFormOutput) => {
     await mutation.mutateAsync({
+      currentStatus,
       status: values.status,
       note: values.note || null,
     })

@@ -110,11 +110,6 @@ export const pricingPreviewSchema = z.object({
   catalogId: z.string().optional().nullable(),
 })
 
-export const updateBookingStatusSchema = z.object({
-  status: bookingStatusSchema,
-  note: z.string().optional().nullable(),
-})
-
 export const reserveBookingItemSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional().nullable(),
@@ -187,6 +182,26 @@ export const expireBookingSchema = z.object({
 
 export const expireStaleBookingsSchema = z.object({
   before: z.string().datetime().optional().nullable(),
+  note: z.string().optional().nullable(),
+})
+
+export const startBookingSchema = z.object({
+  note: z.string().optional().nullable(),
+})
+
+export const completeBookingSchema = z.object({
+  note: z.string().optional().nullable(),
+})
+
+/**
+ * Admin-only override: skips the transition graph. `reason` is required —
+ * the operator has to explain why they're bypassing lifecycle laws. Use the
+ * verb-specific endpoints (/confirm, /cancel, /start, /complete, /expire) for
+ * normal state changes; this is for data-correction and exceptional cases.
+ */
+export const overrideBookingStatusSchema = z.object({
+  status: bookingStatusSchema,
+  reason: z.string().min(1).max(2000),
   note: z.string().optional().nullable(),
 })
 

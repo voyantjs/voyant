@@ -13,7 +13,7 @@ describe("buildNotificationTaskRuntime", () => {
     ])
 
     const runtime = buildNotificationTaskRuntime(
-      { RESEND_API_KEY: "resend_test", EMAIL_FROM: "hello@example.com" },
+      { VOYANT_CLOUD_API_KEY: "k_test" },
       { resolveProviders },
     )
 
@@ -28,10 +28,14 @@ describe("buildNotificationTaskRuntime", () => {
     }
 
     const runtime = buildNotificationTaskRuntime(
-      { RESEND_API_KEY: "resend_test", EMAIL_FROM: "hello@example.com" },
+      { VOYANT_CLOUD_API_KEY: "k_test" },
       { providers: [], reminderSweepLockManager },
     )
 
     expect(runtime.reminderSweepLockManager).toBe(reminderSweepLockManager)
+  })
+
+  it("throws when neither providers nor resolveProviders is supplied", () => {
+    expect(() => buildNotificationTaskRuntime({}, {})).toThrow(/requires `providers`/)
   })
 })

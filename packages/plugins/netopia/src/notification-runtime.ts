@@ -1,5 +1,4 @@
 import {
-  createDefaultNotificationProviders,
   createNotificationService,
   type NotificationProvider,
   type NotificationService,
@@ -18,6 +17,13 @@ export type NetopiaNotificationRuntimeOptions = Pick<
   notificationProviders?: ReadonlyArray<NotificationProvider>
 }
 
+export class NetopiaNotificationRuntimeError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "NetopiaNotificationRuntimeError"
+  }
+}
+
 export function buildNetopiaNotificationRuntime(
   bindings: Record<string, unknown> | undefined,
   runtimeOptions: NetopiaNotificationRuntimeOptions = {},
@@ -31,8 +37,13 @@ export function buildNetopiaNotificationRuntime(
 
   const providers =
     runtimeOptions.resolveNotificationProviders?.(bindings ?? {}) ??
-    runtimeOptions.notificationProviders ??
-    createDefaultNotificationProviders(bindings ?? {})
+    runtimeOptions.notificationProviders
+
+  if (!providers) {
+    throw new NetopiaNotificationRuntimeError(
+      "Netopia plugin requires `resolveNotificationProviders` or `notificationProviders` — there are no default providers.",
+    )
+  }
 
   return {
     dispatcher: createNotificationService(providers),

@@ -17,8 +17,9 @@ interface CloudflareBindings {
   BETTER_AUTH_SECRET: string
   DATABASE_URL: string
 
-  // Email (Resend)
-  RESEND_API_KEY: string
+  // Voyant Cloud (canonical email/sms/verify/vault provider)
+  VOYANT_CLOUD_API_KEY: string
+  VOYANT_CLOUD_API_URL?: string
   EMAIL_FROM: string
 
   // KMS provider selection

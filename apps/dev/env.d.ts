@@ -13,8 +13,9 @@ interface CloudflareBindings {
   SESSION_CLAIMS_SECRET: string
   BETTER_AUTH_SECRET: string
 
-  // Email (Resend)
-  RESEND_API_KEY?: string
+  // Voyant Cloud (canonical email/sms/verify/vault provider)
+  VOYANT_CLOUD_API_KEY: string
+  VOYANT_CLOUD_API_URL?: string
   EMAIL_FROM: string
 
   // App URLs

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  completeBookingSchema,
   convertProductSchema,
   createBookingSchema,
   insertBookingSchema,
+  overrideBookingStatusSchema,
   pricingPreviewSchema,
+  startBookingSchema,
   updateBookingSchema,
-  updateBookingStatusSchema,
 } from "../../src/validation.js"
 
 describe("Booking schema", () => {
@@ -134,19 +136,59 @@ describe("Manual create booking schema", () => {
   })
 })
 
-describe("Update booking status schema", () => {
-  it("requires status", () => {
-    const result = updateBookingStatusSchema.parse({ status: "confirmed" })
-    expect(result.status).toBe("confirmed")
-  })
-
-  it("rejects missing status", () => {
-    expect(() => updateBookingStatusSchema.parse({})).toThrow()
+describe("Start booking schema", () => {
+  it("accepts an empty body", () => {
+    const result = startBookingSchema.parse({})
+    expect(result.note).toBeUndefined()
   })
 
   it("accepts optional note", () => {
-    const result = updateBookingStatusSchema.parse({ status: "cancelled", note: "Reason" })
-    expect(result.note).toBe("Reason")
+    const result = startBookingSchema.parse({ note: "Departure on time" })
+    expect(result.note).toBe("Departure on time")
+  })
+})
+
+describe("Complete booking schema", () => {
+  it("accepts an empty body", () => {
+    const result = completeBookingSchema.parse({})
+    expect(result.note).toBeUndefined()
+  })
+
+  it("accepts optional note", () => {
+    const result = completeBookingSchema.parse({ note: "All travelers returned" })
+    expect(result.note).toBe("All travelers returned")
+  })
+})
+
+describe("Override booking status schema", () => {
+  it("requires status and reason", () => {
+    const result = overrideBookingStatusSchema.parse({
+      status: "confirmed",
+      reason: "Manual reconciliation against PSP",
+    })
+    expect(result.status).toBe("confirmed")
+    expect(result.reason).toBe("Manual reconciliation against PSP")
+  })
+
+  it("rejects missing status", () => {
+    expect(() => overrideBookingStatusSchema.parse({ reason: "x" })).toThrow()
+  })
+
+  it("rejects missing reason", () => {
+    expect(() => overrideBookingStatusSchema.parse({ status: "confirmed" })).toThrow()
+  })
+
+  it("rejects empty reason", () => {
+    expect(() => overrideBookingStatusSchema.parse({ status: "confirmed", reason: "" })).toThrow()
+  })
+
+  it("accepts optional note alongside required reason", () => {
+    const result = overrideBookingStatusSchema.parse({
+      status: "cancelled",
+      reason: "Operator request",
+      note: "Customer cancelled by phone",
+    })
+    expect(result.note).toBe("Customer cancelled by phone")
   })
 })
 

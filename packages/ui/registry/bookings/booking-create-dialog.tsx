@@ -383,6 +383,7 @@ export function BookingCreateDialog({
         try {
           finalBooking = await statusMutation.mutateAsync({
             bookingId: booking.id,
+            currentStatus: booking.status,
             status: "confirmed",
           })
         } catch (statusErr) {

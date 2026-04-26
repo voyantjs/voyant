@@ -283,6 +283,21 @@ export const PREFIXES = {
   booking_distribution_details: "bkdd",
   booking_traveler_travel_details: "bptd",
   booking_participant_travel_details: "bptd",
+
+  // --- CRUISES ---
+  cruises: "cru",
+  cruise_sailings: "crsl",
+  cruise_ships: "crsh",
+  cruise_decks: "crdk",
+  cruise_cabin_categories: "crcc",
+  cruise_cabins: "crcb",
+  cruise_prices: "crpx",
+  cruise_price_components: "crpc",
+  cruise_days: "crdy",
+  cruise_sailing_days: "crsd",
+  cruise_media: "crme",
+  cruise_inclusions: "crin",
+  cruise_search_index: "crsi",
 } as const
 
 export type PrefixKey = keyof typeof PREFIXES

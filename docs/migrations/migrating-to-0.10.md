@@ -40,10 +40,6 @@ Postgres `CHECK` constraints now enforce that if any `*_amount_cents` column is 
 
 If the migration fails, the offending rows have an amount without a currency — fix or null the amount before retrying.
 
-### Activity-log enum (no breaking change in 0.10, see 0.11 for the values added then)
-
-No activity-type changes in 0.10.
-
 ---
 
 ## Removed exports
@@ -52,7 +48,7 @@ No activity-type changes in 0.10.
 
 | Removed | Replacement |
 |---|---|
-| `accessibilityNeeds` field on `BookingTraveler*` insert / update validation schemas (`insertTravelerSchema`, `updateTravelerSchema`, `insertTravelerRecordSchema`, `updateTravelerRecordSchema`) and on `redactTravelerIdentity()` output | Use `createBookingPiiService.upsertTravelerTravelDetails({ accessibilityNeeds })`. As of [`@voyantjs/bookings@0.13`](./migrating-to-0.13.md), the `bookingsService.createTravelerWithTravelDetails` convenience verb takes the same flat payload as the old `createTravelerRecord`. |
+| `accessibilityNeeds` field on `BookingTraveler*` insert / update validation schemas (`insertTravelerSchema`, `updateTravelerSchema`, `insertTravelerRecordSchema`, `updateTravelerRecordSchema`) and on `redactTravelerIdentity()` output | Use `createBookingPiiService.upsertTravelerTravelDetails({ accessibilityNeeds })`. A later release adds a `bookingsService.createTravelerWithTravelDetails` convenience verb that takes the same flat payload as the old `createTravelerRecord` — see the matching migration page when it ships. |
 | `redeemed` value in `BookingStatus` | Read `completed` instead. The redemption concept moved to the vouchers domain. |
 
 ---
@@ -117,7 +113,7 @@ await pii.upsertTravelerTravelDetails(db, traveler.id, {
   accessibilityNeeds: "wheelchair access",
 })
 
-// After — 0.13+ (single-call convenience verb)
+// After — single-call convenience verb (added in a later release)
 const result = await bookingsService.createTravelerWithTravelDetails(
   db,
   bookingId,

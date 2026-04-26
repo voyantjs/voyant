@@ -27,6 +27,7 @@ describe.skipIf(!DB_AVAILABLE)("Booking PII service", () => {
         traveler_id text PRIMARY KEY NOT NULL REFERENCES booking_travelers(id) ON DELETE cascade,
         identity_encrypted jsonb,
         dietary_encrypted jsonb,
+        accessibility_encrypted jsonb,
         is_lead_traveler boolean DEFAULT false NOT NULL,
         created_at timestamp with time zone DEFAULT now() NOT NULL,
         updated_at timestamp with time zone DEFAULT now() NOT NULL

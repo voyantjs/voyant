@@ -277,8 +277,17 @@ export const upsertTravelerTravelDetailsSchema = z.object({
   passportExpiry: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   dietaryRequirements: z.string().optional().nullable(),
+  accessibilityNeeds: z.string().optional().nullable(),
   isLeadTraveler: z.boolean().optional().nullable(),
 })
+
+// Flat shape combining plaintext traveler columns + encrypted travel-details
+// fields, matching the pre-0.10 `createTravelerRecord` ergonomics. Migration
+// boundary helper — see `bookingsService.createTravelerWithTravelDetails`.
+export const createTravelerWithTravelDetailsSchema = travelerRecordCoreSchema.extend(
+  upsertTravelerTravelDetailsSchema.shape,
+)
+export const updateTravelerWithTravelDetailsSchema = createTravelerWithTravelDetailsSchema.partial()
 
 // ---------- booking items ----------
 

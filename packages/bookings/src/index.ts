@@ -22,7 +22,11 @@ export {
   redactTravelerIdentity,
   shouldRevealBookingPii,
 } from "./pii-redaction.js"
-export type { ConvertProductData } from "./service.js"
+export type {
+  ConvertProductData,
+  CreateTravelerWithTravelDetailsInput,
+  UpdateTravelerWithTravelDetailsInput,
+} from "./service.js"
 export { bookingsService } from "./service.js"
 export {
   type AddBookingGroupMemberInput,
@@ -171,6 +175,7 @@ export {
   confirmBookingSchema,
   convertProductSchema,
   createBookingSchema,
+  createTravelerWithTravelDetailsSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
   extendBookingHoldSchema,
@@ -209,5 +214,6 @@ export {
   updateBookingSchema,
   updateSupplierStatusSchema,
   updateTravelerSchema,
+  updateTravelerWithTravelDetailsSchema,
   upsertTravelerTravelDetailsSchema,
 } from "./validation.js"

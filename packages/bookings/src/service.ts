@@ -5,6 +5,7 @@ import type { z } from "zod"
 
 import { availabilitySlotsRef } from "./availability-ref.js"
 import { exchangeRatesRef } from "./markets-ref.js"
+import type { BookingPiiService, UpsertBookingTravelerTravelDetailInput } from "./pii.js"
 import {
   bookingItemProductDetailsRef,
   bookingProductDetailsRef,
@@ -51,6 +52,7 @@ import type {
   completeBookingSchema,
   confirmBookingSchema,
   convertProductSchema,
+  createTravelerWithTravelDetailsSchema,
   expireBookingSchema,
   expireStaleBookingsSchema,
   extendBookingHoldSchema,
@@ -72,6 +74,7 @@ import type {
   updateBookingSchema,
   updateTravelerRecordSchema,
   updateTravelerSchema,
+  updateTravelerWithTravelDetailsSchema,
 } from "./validation.js"
 
 type BookingListQuery = z.infer<typeof bookingListQuerySchema>
@@ -91,6 +94,26 @@ type CreateTravelerInput = z.infer<typeof insertTravelerSchema>
 type UpdateTravelerInput = z.infer<typeof updateTravelerSchema>
 type CreateTravelerRecordInput = z.infer<typeof insertTravelerRecordSchema>
 type UpdateTravelerRecordInput = z.infer<typeof updateTravelerRecordSchema>
+export type CreateTravelerWithTravelDetailsInput = z.infer<
+  typeof createTravelerWithTravelDetailsSchema
+>
+export type UpdateTravelerWithTravelDetailsInput = z.infer<
+  typeof updateTravelerWithTravelDetailsSchema
+>
+
+function pickTravelDetailFields(
+  data: CreateTravelerWithTravelDetailsInput | UpdateTravelerWithTravelDetailsInput,
+): UpsertBookingTravelerTravelDetailInput {
+  return {
+    nationality: data.nationality,
+    passportNumber: data.passportNumber,
+    passportExpiry: data.passportExpiry,
+    dateOfBirth: data.dateOfBirth,
+    dietaryRequirements: data.dietaryRequirements,
+    accessibilityNeeds: data.accessibilityNeeds,
+    isLeadTraveler: data.isLeadTraveler,
+  }
+}
 type CreateBookingItemInput = z.infer<typeof insertBookingItemSchema>
 type UpdateBookingItemInput = z.infer<typeof updateBookingItemSchema>
 type CreateBookingItemParticipantInput = z.infer<typeof insertBookingItemParticipantSchema>
@@ -3051,6 +3074,101 @@ export const bookingsService = {
     await ensureParticipantFlags(db, row.bookingId, row.id, data)
 
     return row
+  },
+
+  /**
+   * Create a traveler row and persist the encrypted travel-details envelope in
+   * a single call. Migration boundary helper for consumers coming from the
+   * pre-0.10 `createTravelerRecord({ ..., accessibilityNeeds, ... })` shape:
+   * the storage split (plaintext columns + encrypted bucket) is preserved, but
+   * the call ergonomics collapse back to one flat payload. Plaintext fields go
+   * to `createTravelerRecord`; encrypted fields are forwarded to
+   * `pii.upsertTravelerTravelDetails`. Operations are sequential, not
+   * transactional — a failure in the encrypted-fields write leaves the
+   * plaintext row in place (matching the pre-helper two-call protocol).
+   */
+  async createTravelerWithTravelDetails(
+    db: PostgresJsDatabase,
+    bookingId: string,
+    data: CreateTravelerWithTravelDetailsInput,
+    opts: {
+      pii: BookingPiiService
+      userId?: string
+      actorId?: string | null
+    },
+  ) {
+    const traveler = await this.createTravelerRecord(
+      db,
+      bookingId,
+      {
+        personId: data.personId,
+        participantType: data.participantType,
+        travelerCategory: data.travelerCategory,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        preferredLanguage: data.preferredLanguage,
+        specialRequests: data.specialRequests,
+        isPrimary: data.isPrimary,
+        notes: data.notes,
+      },
+      opts.userId,
+    )
+    if (!traveler) {
+      return null
+    }
+
+    const travelDetails = await opts.pii.upsertTravelerTravelDetails(
+      db,
+      traveler.id,
+      pickTravelDetailFields(data),
+      opts.actorId,
+    )
+
+    return { traveler, travelDetails }
+  },
+
+  /**
+   * Update a traveler row and (re-)upsert the encrypted travel-details
+   * envelope in a single call. Same migration-ergonomics motivation as
+   * `createTravelerWithTravelDetails`. Undefined fields are not written;
+   * `null` clears a column / encrypted field.
+   */
+  async updateTravelerWithTravelDetails(
+    db: PostgresJsDatabase,
+    travelerId: string,
+    data: UpdateTravelerWithTravelDetailsInput,
+    opts: {
+      pii: BookingPiiService
+      actorId?: string | null
+    },
+  ) {
+    const traveler = await this.updateTravelerRecord(db, travelerId, {
+      personId: data.personId,
+      participantType: data.participantType,
+      travelerCategory: data.travelerCategory,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      preferredLanguage: data.preferredLanguage,
+      specialRequests: data.specialRequests,
+      isPrimary: data.isPrimary,
+      notes: data.notes,
+    })
+    if (!traveler) {
+      return null
+    }
+
+    const travelDetails = await opts.pii.upsertTravelerTravelDetails(
+      db,
+      traveler.id,
+      pickTravelDetailFields(data),
+      opts.actorId,
+    )
+
+    return { traveler, travelDetails }
   },
 
   async deleteTravelerRecord(db: PostgresJsDatabase, travelerId: string) {

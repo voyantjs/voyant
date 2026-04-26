@@ -21,7 +21,7 @@ function decimalStringToCents(s: string): bigint {
   const parts = abs.split(".")
   const whole = parts[0] ?? "0"
   const frac = parts[1] ?? ""
-  const fracPadded = (frac + "00").slice(0, 2)
+  const fracPadded = `${frac}00`.slice(0, 2)
   const cents = BigInt(whole) * CENTS_PER_UNIT + BigInt(fracPadded)
   return negative ? -cents : cents
 }
@@ -43,7 +43,7 @@ function percentOf(cents: bigint, percentString: string): bigint {
   const parts = trimmed.split(".")
   const whole = parts[0] ?? "0"
   const frac = parts[1] ?? ""
-  const fracPadded = (frac + "00").slice(0, 2)
+  const fracPadded = `${frac}00`.slice(0, 2)
   // percent * 100 → integer basis points; multiply cents, divide by 10000
   const basisPoints = BigInt(whole) * 100n + BigInt(fracPadded)
   return (cents * basisPoints) / 10_000n
@@ -312,7 +312,7 @@ export const pricingService = {
       )
       .orderBy(asc(sql`${charterSuites.priceUSD}::numeric`))
       .limit(1)
-    if (!row || !row.price) return null
+    if (!row?.price) return null
     return { suiteId: row.suiteId, price: row.price }
   },
 }

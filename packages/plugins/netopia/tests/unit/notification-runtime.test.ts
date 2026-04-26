@@ -13,12 +13,16 @@ describe("buildNetopiaNotificationRuntime", () => {
     ])
 
     const runtime = buildNetopiaNotificationRuntime(
-      { RESEND_API_KEY: "resend_test", EMAIL_FROM: "hello@example.com" },
+      { VOYANT_CLOUD_API_KEY: "k_test" },
       { resolveNotificationProviders },
     )
 
     expect(resolveNotificationProviders).toHaveBeenCalledOnce()
     expect(runtime.dispatcher).toBeTruthy()
+  })
+
+  it("throws when no providers are supplied", () => {
+    expect(() => buildNetopiaNotificationRuntime({}, {})).toThrow(/requires/)
   })
 
   it("prefers an explicit dispatcher override", () => {

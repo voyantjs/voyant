@@ -68,10 +68,12 @@ export interface NotificationResult {
  * channels and handle the actual delivery (HTTP call, SMTP, etc.).
  *
  * Built-in implementations:
- * - {@link createLocalProvider} — logs to console (dev)
- * - {@link createResendProvider} — Resend email API
+ * - `createLocalProvider` — logs to console (dev/tests)
+ * - `createVoyantCloudEmailProvider` — Voyant Cloud email API
+ * - `createVoyantCloudSmsProvider` — Voyant Cloud SMS API
  *
- * Additional providers can be added by implementing this interface.
+ * Self-hosters who want to deliver via a different provider (raw Resend,
+ * Twilio, SES, …) can implement this interface in their template.
  */
 export interface NotificationProvider {
   /** Unique provider name (e.g. "resend", "local", "twilio"). */

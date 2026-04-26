@@ -3,7 +3,7 @@
 Notifications module for Voyant. It includes:
 
 - provider abstraction via `NotificationProvider`
-- first-party providers for local development and optional Resend (email)
+- first-party providers for local development and Voyant Cloud (email + SMS)
 - database-backed notification templates
 - database-backed delivery logs
 - notification reminder rules and reminder runs
@@ -23,54 +23,54 @@ pnpm add @voyantjs/notifications
 ## Usage
 
 ```typescript
+import { getVoyantCloudClient } from "@voyantjs/voyant-cloud"
 import { createNotificationService } from "@voyantjs/notifications"
 import { createLocalProvider } from "@voyantjs/notifications/providers/local"
-import { createResendProvider } from "@voyantjs/notifications/providers/resend"
+import { createVoyantCloudEmailProvider } from "@voyantjs/notifications/providers/voyant-cloud-email"
+import { createVoyantCloudSmsProvider } from "@voyantjs/notifications/providers/voyant-cloud-sms"
 
+const cloud = getVoyantCloudClient(env)
 const notifications = createNotificationService([
-  createLocalProvider(),
-  createResendProvider({ apiKey: env.RESEND_API_KEY, from: "noreply@example.com" }),
+  createLocalProvider({ channels: ["email"] }),
+  createVoyantCloudEmailProvider({ client: cloud, from: "noreply@example.com" }),
+  createVoyantCloudSmsProvider({ client: cloud }),
 ])
 
-await notifications.sendWith("resend", {
+await notifications.send({
   to: "user@example.com",
   channel: "email",
   template: "welcome",
   subject: "Hello",
   html: "<p>Welcome</p>",
-  attachments: [
-    {
-      filename: "invoice.pdf",
-      path: "https://cdn.example.com/invoices/invoice.pdf",
-      contentType: "application/pdf",
-    },
-  ],
 })
 ```
 
 Later providers override earlier ones on channel conflict; `sendWith(name, payload)` dispatches by provider name.
 
-The bring-your-own path is first-class: any project can register its own `NotificationProvider`
-without using Resend at all.
+The bring-your-own path is first-class: any project can implement
+`NotificationProvider` against another transport (raw Resend, Twilio, SES, …)
+and register it in place of the cloud adapters.
 
 For the Hono module:
 
 ```ts
+import { getVoyantCloudClient } from "@voyantjs/voyant-cloud"
 import {
-  createDefaultNotificationProviders,
   createNotificationsHonoModule,
+  createVoyantCloudEmailProvider,
+  createVoyantCloudSmsProvider,
 } from "@voyantjs/notifications"
 
 const notificationsModule = createNotificationsHonoModule({
-  resolveProviders: (env) =>
-    createDefaultNotificationProviders(env, {
-      emailProvider: "resend",
-    }),
+  resolveProviders: (env) => {
+    const cloud = getVoyantCloudClient(env as Record<string, unknown>)
+    return [
+      createVoyantCloudEmailProvider({ client: cloud, from: "noreply@example.com" }),
+      createVoyantCloudSmsProvider({ client: cloud }),
+    ]
+  },
 })
 ```
-
-`createDefaultNotificationProviders(env)` is intentionally local-only by default. Built-in
-email providers should be opted into explicitly at the app boundary.
 
 For scheduled reminder sweeps:
 
@@ -115,9 +115,9 @@ time from the current storage/runtime context.
 | `./routes` | Hono route factory |
 | `./service` | Dispatcher + database-backed notifications service |
 | `./tasks` | Reminder sweep task helpers |
-| `./provider-resolution` | Default local/Resend provider wiring |
 | `./providers/local` | Console sink for dev |
-| `./providers/resend` | Resend email provider |
+| `./providers/voyant-cloud-email` | Voyant Cloud email provider |
+| `./providers/voyant-cloud-sms` | Voyant Cloud SMS provider |
 
 ## License
 

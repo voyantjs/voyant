@@ -16,22 +16,18 @@ export {
   notificationLiquidEngine,
   renderLiquidTemplate,
 } from "./liquid.js"
-export type { DefaultNotificationProviderOptions } from "./provider-resolution.js"
-export {
-  createDefaultNotificationProviders,
-  createResendProviderFromEnv,
-  createTwilioProviderFromEnv,
-} from "./provider-resolution.js"
 export type { LocalProviderOptions } from "./providers/local.js"
 export { createLocalProvider } from "./providers/local.js"
 export type {
-  ResendFetch,
-  ResendProviderOptions,
-  ResendRenderedEmail,
-} from "./providers/resend.js"
-export { createResendProvider } from "./providers/resend.js"
-export type { TwilioFetch, TwilioProviderOptions, TwilioRenderedSms } from "./providers/twilio.js"
-export { createTwilioProvider } from "./providers/twilio.js"
+  VoyantCloudEmailProviderOptions,
+  VoyantCloudEmailRendered,
+} from "./providers/voyant-cloud-email.js"
+export { createVoyantCloudEmailProvider } from "./providers/voyant-cloud-email.js"
+export type {
+  VoyantCloudSmsProviderOptions,
+  VoyantCloudSmsRendered,
+} from "./providers/voyant-cloud-sms.js"
+export { createVoyantCloudSmsProvider } from "./providers/voyant-cloud-sms.js"
 export type { NotificationsRouteRuntime, NotificationsRoutesOptions } from "./routes.js"
 export {
   buildNotificationsRouteRuntime,

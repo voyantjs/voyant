@@ -16,8 +16,13 @@ INTERNAL_API_KEY="<generate with: openssl rand -hex 32>"
 API_BASE_URL="http://localhost:3100/api"
 CORS_ALLOWLIST="http://localhost:3100"
 
-# Email (Resend)
-RESEND_API_KEY="re_..."
+# Voyant Cloud (canonical email / sms / verify / vault provider).
+# Required — templates do not fall back to direct Resend/Twilio.
+# Self-hosters who want a different transport can swap the provider in
+# src/lib/notifications.ts (see @voyantjs/notifications for the
+# NotificationProvider interface).
+VOYANT_CLOUD_API_KEY="vc_..."
+# VOYANT_CLOUD_API_URL="https://api.voyantjs.com"
 
 # Unsplash API — used by `pnpm seed` to attach realistic product images.
 # Get a key at https://unsplash.com/developers. Optional — if unset, seed

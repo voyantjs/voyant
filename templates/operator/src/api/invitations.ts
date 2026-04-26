@@ -20,10 +20,10 @@ import {
   userInvitationsTable,
   userProfilesTable,
 } from "@voyantjs/db/schema/iam"
+import { tryGetVoyantCloudClient } from "@voyantjs/voyant-cloud"
 import { hashPassword } from "better-auth/crypto"
 import { and, desc, eq, gt, isNull } from "drizzle-orm"
 import { Hono } from "hono"
-import { Resend } from "resend"
 import { z } from "zod"
 
 import { getDbFromHyperdrive } from "./lib/db"
@@ -155,22 +155,22 @@ export function createInvitationsRoutes() {
     const appUrl = getAppUrl(c.env)
     const acceptUrl = `${appUrl}/accept-invite?token=${encodeURIComponent(rawToken)}`
 
-    // Best-effort email. If Resend isn't configured, we return the link so the
-    // admin can hand-deliver it (useful in dev).
+    // Best-effort email. If Voyant Cloud isn't configured (no key), we return
+    // the link so the admin can hand-deliver it (useful in dev).
     let emailSent = false
-    if (c.env.RESEND_API_KEY) {
+    const cloud = tryGetVoyantCloudClient(c.env as unknown as Record<string, unknown>)
+    if (cloud) {
       try {
-        const resend = new Resend(c.env.RESEND_API_KEY)
         const from = c.env.EMAIL_FROM || "Voyant <noreply@voyantcloud.app>"
-        await resend.emails.send({
+        await cloud.email.sendMessage({
           from,
-          to: normalizedEmail,
+          to: [normalizedEmail],
           subject: "You've been invited to Voyant",
           html: `<p>You've been invited to join a Voyant workspace.</p><p><a href="${acceptUrl}">Accept invitation</a></p><p>The link expires in ${hours} hours.</p>`,
         })
         emailSent = true
       } catch (error) {
-        console.error("[invitations] resend failed:", error)
+        console.error("[invitations] voyant-cloud send failed:", error)
       }
     }
 

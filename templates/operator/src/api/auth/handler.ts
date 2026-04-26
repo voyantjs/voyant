@@ -10,9 +10,9 @@
 import { createBetterAuth } from "@voyantjs/auth/server"
 import { authUser, userProfilesTable } from "@voyantjs/db/schema/iam"
 import type { VoyantRequestAuthContext } from "@voyantjs/hono"
+import { getVoyantCloudClient } from "@voyantjs/voyant-cloud"
 import { eq, sql } from "drizzle-orm"
 import { Hono } from "hono"
-import { Resend } from "resend"
 
 import { getDbFromHyperdrive } from "../lib/db"
 
@@ -71,7 +71,7 @@ function getAuthBaseUrl(env: CloudflareBindings): string {
  */
 function getBetterAuth(env: CloudflareBindings) {
   const db = getDbFromHyperdrive(env)
-  const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
+  const cloud = getVoyantCloudClient(env as unknown as Record<string, unknown>)
   const emailFrom = env.EMAIL_FROM || "Voyant <noreply@voyantcloud.app>"
 
   return createBetterAuth({
@@ -80,26 +80,22 @@ function getBetterAuth(env: CloudflareBindings) {
     baseURL: getAuthBaseUrl(env),
     basePath: "/auth",
     trustedOrigins: getTrustedOrigins(env),
-    sendResetPassword: resend
-      ? async ({ user, url }) => {
-          await resend.emails.send({
-            from: emailFrom,
-            to: user.email,
-            subject: "Reset your password",
-            html: `<p>Hi ${user.name},</p><p>Click <a href="${url}">here</a> to reset your password.</p><p>If you didn't request this, you can safely ignore this email.</p>`,
-          })
-        }
-      : undefined,
-    sendVerificationOTP: resend
-      ? async ({ email, otp, type }) => {
-          await resend.emails.send({
-            from: emailFrom,
-            to: email,
-            subject: type === "email-verification" ? "Verify your email" : "Your verification code",
-            html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code expires in 10 minutes.</p>`,
-          })
-        }
-      : undefined,
+    sendResetPassword: async ({ user, url }) => {
+      await cloud.email.sendMessage({
+        from: emailFrom,
+        to: [user.email],
+        subject: "Reset your password",
+        html: `<p>Hi ${user.name},</p><p>Click <a href="${url}">here</a> to reset your password.</p><p>If you didn't request this, you can safely ignore this email.</p>`,
+      })
+    },
+    sendVerificationOTP: async ({ email, otp, type }) => {
+      await cloud.email.sendMessage({
+        from: emailFrom,
+        to: [email],
+        subject: type === "email-verification" ? "Verify your email" : "Your verification code",
+        html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code expires in 10 minutes.</p>`,
+      })
+    },
   })
 }
 

@@ -18,6 +18,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import { Hono } from "hono"
 import { z } from "zod"
 
+import type { SourceRef } from "./adapters/index.js"
+import { cruiseSourceEnum } from "./schema-shared.js"
 import type { QuoteComponent } from "./service-pricing.js"
 
 // ---------- enums ----------
@@ -30,9 +32,19 @@ export const bookingCruiseDetails = pgTable(
   "booking_cruise_details",
   {
     bookingId: text("booking_id").primaryKey(),
-    sailingId: typeIdRef("sailing_id").notNull(),
-    cabinCategoryId: typeIdRef("cabin_category_id").notNull(),
+    // Provenance — 'local' bookings reference local sailing/cabin rows;
+    // 'external' bookings carry a sourceRef back to the upstream adapter
+    // and have nullable local FK columns.
+    source: cruiseSourceEnum("source").notNull().default("local"),
+    sourceProvider: text("source_provider"),
+    sourceRef: jsonb("source_ref").$type<SourceRef>(),
+    sailingId: typeIdRef("sailing_id"),
+    cabinCategoryId: typeIdRef("cabin_category_id"),
     cabinId: typeIdRef("cabin_id"),
+    // Display / search hints — populated for both local and external so the UI
+    // can render booking history without resolving the sailing every time.
+    sailingDisplayName: text("sailing_display_name"),
+    cabinDisplayName: text("cabin_display_name"),
     occupancy: smallint("occupancy").notNull(),
     fareCode: text("fare_code"),
     mode: cruiseBookingModeEnum("mode").notNull().default("inquiry"),
@@ -47,9 +59,11 @@ export const bookingCruiseDetails = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    index("idx_bcd_source").on(t.source),
     index("idx_bcd_sailing").on(t.sailingId),
     index("idx_bcd_cabin_category").on(t.cabinCategoryId),
     index("idx_bcd_connector_ref").on(t.connectorBookingRef),
+    index("idx_bcd_provider").on(t.sourceProvider),
   ],
 )
 
@@ -60,7 +74,11 @@ export const bookingGroupCruiseDetails = pgTable(
   "booking_group_cruise_details",
   {
     bookingGroupId: text("booking_group_id").primaryKey(),
-    sailingId: typeIdRef("sailing_id").notNull(),
+    source: cruiseSourceEnum("source").notNull().default("local"),
+    sourceProvider: text("source_provider"),
+    sourceRef: jsonb("source_ref").$type<SourceRef>(),
+    sailingId: typeIdRef("sailing_id"),
+    sailingDisplayName: text("sailing_display_name"),
     cabinCount: smallint("cabin_count").notNull(),
     totalQuotedAmount: numeric("total_quoted_amount", { precision: 12, scale: 2 }).notNull(),
     quotedCurrency: char("quoted_currency", { length: 3 }).notNull(),
@@ -70,8 +88,10 @@ export const bookingGroupCruiseDetails = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    index("idx_bgcd_source").on(t.source),
     index("idx_bgcd_sailing").on(t.sailingId),
     index("idx_bgcd_connector_ref").on(t.connectorBookingRef),
+    index("idx_bgcd_provider").on(t.sourceProvider),
   ],
 )
 
@@ -80,30 +100,100 @@ export type NewBookingGroupCruiseDetail = typeof bookingGroupCruiseDetails.$infe
 
 // ---------- validation ----------
 
-const cruiseDetailUpsertSchema = z.object({
-  sailingId: z.string(),
-  cabinCategoryId: z.string(),
-  cabinId: z.string().optional().nullable(),
-  occupancy: z.number().int().min(1).max(8),
-  fareCode: z.string().optional().nullable(),
-  mode: z.enum(["inquiry", "reserve"]).default("inquiry"),
-  quotedPricePerPerson: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
-  quotedTotalForCabin: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
-  quotedCurrency: z.string().length(3),
-  quotedComponentsJson: z.array(z.unknown()).optional().nullable(),
-  connectorBookingRef: z.string().optional().nullable(),
-  connectorStatus: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-})
+const sourceRefValueSchema = z
+  .object({
+    connectionId: z.string().optional(),
+    externalId: z.string(),
+  })
+  .catchall(z.unknown())
 
-const groupCruiseDetailUpsertSchema = z.object({
-  sailingId: z.string(),
-  cabinCount: z.number().int().min(1).max(20),
-  totalQuotedAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
-  quotedCurrency: z.string().length(3),
-  connectorBookingRef: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-})
+const cruiseDetailUpsertSchema = z
+  .object({
+    source: z.enum(["local", "external"]).default("local"),
+    sourceProvider: z.string().optional().nullable(),
+    sourceRef: sourceRefValueSchema.optional().nullable(),
+    sailingId: z.string().optional().nullable(),
+    cabinCategoryId: z.string().optional().nullable(),
+    cabinId: z.string().optional().nullable(),
+    sailingDisplayName: z.string().optional().nullable(),
+    cabinDisplayName: z.string().optional().nullable(),
+    occupancy: z.number().int().min(1).max(8),
+    fareCode: z.string().optional().nullable(),
+    mode: z.enum(["inquiry", "reserve"]).default("inquiry"),
+    quotedPricePerPerson: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+    quotedTotalForCabin: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+    quotedCurrency: z.string().length(3),
+    quotedComponentsJson: z.array(z.unknown()).optional().nullable(),
+    connectorBookingRef: z.string().optional().nullable(),
+    connectorStatus: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.source === "local") {
+      if (!value.sailingId)
+        ctx.addIssue({
+          code: "custom",
+          path: ["sailingId"],
+          message: "sailingId is required when source='local'",
+        })
+      if (!value.cabinCategoryId)
+        ctx.addIssue({
+          code: "custom",
+          path: ["cabinCategoryId"],
+          message: "cabinCategoryId is required when source='local'",
+        })
+    } else {
+      if (!value.sourceProvider)
+        ctx.addIssue({
+          code: "custom",
+          path: ["sourceProvider"],
+          message: "sourceProvider is required when source='external'",
+        })
+      if (!value.sourceRef)
+        ctx.addIssue({
+          code: "custom",
+          path: ["sourceRef"],
+          message: "sourceRef is required when source='external'",
+        })
+    }
+  })
+
+const groupCruiseDetailUpsertSchema = z
+  .object({
+    source: z.enum(["local", "external"]).default("local"),
+    sourceProvider: z.string().optional().nullable(),
+    sourceRef: sourceRefValueSchema.optional().nullable(),
+    sailingId: z.string().optional().nullable(),
+    sailingDisplayName: z.string().optional().nullable(),
+    cabinCount: z.number().int().min(1).max(20),
+    totalQuotedAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+    quotedCurrency: z.string().length(3),
+    connectorBookingRef: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.source === "local" && !value.sailingId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sailingId"],
+        message: "sailingId is required when source='local'",
+      })
+    }
+    if (value.source === "external") {
+      if (!value.sourceProvider)
+        ctx.addIssue({
+          code: "custom",
+          path: ["sourceProvider"],
+          message: "sourceProvider is required when source='external'",
+        })
+      if (!value.sourceRef)
+        ctx.addIssue({
+          code: "custom",
+          path: ["sourceRef"],
+          message: "sourceRef is required when source='external'",
+        })
+    }
+  })
 
 // ---------- services ----------
 

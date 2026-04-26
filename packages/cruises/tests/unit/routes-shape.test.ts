@@ -1,43 +1,65 @@
 import { mountTestApp } from "@voyantjs/voyant-test-utils/http"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
+import type { ExternalCruise, ExternalSailing } from "../../src/adapters/index.js"
+import { MockCruiseAdapter } from "../../src/adapters/mock.js"
+import { clearCruiseAdapters, registerCruiseAdapter } from "../../src/adapters/registry.js"
 import { cruiseAdminRoutes } from "../../src/routes.js"
 
-/**
- * Shape tests for the admin routes — verify that external/invalid keys are
- * rejected before the handler ever touches the database. We pass `db: undefined`
- * intentionally to surface any handler that fails to short-circuit on the key
- * check (those would crash trying to use `c.get("db")`).
- */
+afterEach(() => clearCruiseAdapters())
 
-const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+const seedCruise: ExternalCruise = {
+  sourceRef: { externalId: "ext-cru-1" },
+  name: "Norwegian Fjords",
+  slug: "norwegian-fjords",
+  cruiseType: "ocean",
+  lineName: "Acme Cruises",
+  defaultShipRef: { externalId: "ext-ship-1" },
+  nights: 7,
+}
 
-describe("admin routes — external key handling", () => {
-  it("returns 501 on GET /:key with an external adapter key", async () => {
-    const res = await app.request("/voyant-connect:cnx_abc123")
+const seedSailing: ExternalSailing = {
+  sourceRef: { externalId: "ext-sl-1" },
+  cruiseRef: seedCruise.sourceRef,
+  shipRef: { externalId: "ext-ship-1" },
+  departureDate: "2026-06-15",
+  returnDate: "2026-06-22",
+  salesStatus: "open",
+}
+
+describe("admin routes — external key dispatch (no adapter registered)", () => {
+  const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+  it("returns 501 + adapter_not_registered on GET /:key when no adapter exists", async () => {
+    const res = await app.request("/voyant-connect:cnx_abc")
     expect(res.status).toBe(501)
-    const body = (await res.json()) as { error: string; detail: string }
-    expect(body.error).toBe("external_adapter_not_implemented")
-    expect(body.detail).toContain("voyant-connect")
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe("adapter_not_registered")
   })
 
-  it("returns 409 on PUT /:key with an external adapter key", async () => {
+  it("returns 501 on POST /:key/refresh when no adapter exists", async () => {
+    const res = await app.request("/voyant-connect:cnx_abc/refresh", { method: "POST" })
+    expect(res.status).toBe(501)
+  })
+})
+
+describe("admin routes — write rejection on external rows", () => {
+  const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+  it("returns 409 + external_cruise_read_only on PUT /:key with external key", async () => {
     const res = await app.request("/voyant-connect:cnx_abc", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "Updated" }),
     })
     expect(res.status).toBe(409)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe("external_cruise_read_only")
   })
 
-  it("returns 409 on DELETE /:key with an external adapter key", async () => {
+  it("returns 409 on DELETE /:key with external key", async () => {
     const res = await app.request("/voyant-connect:cnx_abc", { method: "DELETE" })
     expect(res.status).toBe(409)
-  })
-
-  it("returns 501 on GET /sailings/:key with an external adapter key", async () => {
-    const res = await app.request("/sailings/voyant-connect:cnx_abc")
-    expect(res.status).toBe(501)
   })
 
   it("returns 409 on PUT /sailings/:key/pricing/bulk with external key", async () => {
@@ -49,30 +71,24 @@ describe("admin routes — external key handling", () => {
     expect(res.status).toBe(409)
   })
 
-  it("returns 501 on POST /sailings/:key/bookings with external key", async () => {
-    const res = await app.request("/sailings/voyant-connect:cnx_abc/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(501)
-  })
-
-  it("returns 501 on POST /sailings/:key/party-bookings with external key", async () => {
+  it("returns 501 on POST /sailings/:key/party-bookings with external key (party not yet supported)", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    registerCruiseAdapter(adapter)
     const res = await app.request("/sailings/voyant-connect:cnx_abc/party-bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     })
     expect(res.status).toBe(501)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe("external_party_booking_not_supported")
   })
+})
 
-  it("returns 501 on POST /:key/refresh with an external key", async () => {
-    const res = await app.request("/voyant-connect:cnx_abc/refresh", { method: "POST" })
-    expect(res.status).toBe(501)
-  })
+describe("admin routes — invalid keys + local detach guards", () => {
+  const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
 
-  it("returns 400 on POST /:key/refresh with a local key (refresh only valid for external)", async () => {
+  it("returns 400 on POST /:key/refresh with a local key", async () => {
     const res = await app.request("/cru_abc123/refresh", { method: "POST" })
     expect(res.status).toBe(400)
     const body = (await res.json()) as { error: string }
@@ -85,9 +101,7 @@ describe("admin routes — external key handling", () => {
     const body = (await res.json()) as { error: string }
     expect(body.error).toBe("local_cruise_no_detach")
   })
-})
 
-describe("admin routes — invalid key handling", () => {
   it("returns 400 for malformed keys", async () => {
     const res = await app.request("/not-a-typeid-and-not-external")
     expect(res.status).toBe(400)
@@ -96,7 +110,162 @@ describe("admin routes — invalid key handling", () => {
   })
 })
 
+describe("admin routes — external dispatch via registered adapter", () => {
+  it("GET /:key returns the external cruise when adapter is registered", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/voyant-connect:ext-cru-1")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { source: string; sourceProvider: string; cruise: { name: string } }
+    }
+    expect(body.data.source).toBe("external")
+    expect(body.data.sourceProvider).toBe("voyant-connect")
+    expect(body.data.cruise.name).toBe("Norwegian Fjords")
+  })
+
+  it("GET /:key returns 404 when the adapter has no matching cruise", async () => {
+    registerCruiseAdapter(new MockCruiseAdapter({ name: "voyant-connect" }))
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/voyant-connect:not-real")
+    expect(res.status).toBe(404)
+  })
+
+  it("GET /:key/sailings returns the external sailings", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/voyant-connect:ext-cru-1/sailings")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: Array<{ source: string; sailing: { departureDate: string } }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.source).toBe("external")
+    expect(body.data[0]?.sailing.departureDate).toBe("2026-06-15")
+  })
+
+  it("GET /sailings/:key returns the external sailing", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/sailings/voyant-connect:ext-sl-1")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { source: string; sailing: { departureDate: string } }
+    }
+    expect(body.data.source).toBe("external")
+    expect(body.data.sailing.departureDate).toBe("2026-06-15")
+  })
+
+  it("GET /sailings/:key?include=pricing,itinerary returns nested data", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    adapter.setSailingPricing(seedSailing.sourceRef, [
+      {
+        cabinCategoryRef: { externalId: "cat-A" },
+        occupancy: 2,
+        currency: "USD",
+        pricePerPerson: "1500.00",
+        availability: "available",
+      },
+    ])
+    adapter.setSailingItinerary(seedSailing.sourceRef, [{ dayNumber: 1, portName: "Bergen" }])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/sailings/voyant-connect:ext-sl-1?include=pricing,itinerary")
+    const body = (await res.json()) as {
+      data: { pricing: unknown[]; itinerary: unknown[] }
+    }
+    expect(body.data.pricing).toHaveLength(1)
+    expect(body.data.itinerary).toHaveLength(1)
+  })
+
+  it("POST /:key/refresh re-fetches and returns timestamped data", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise)
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/voyant-connect:ext-cru-1/refresh", { method: "POST" })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: { refreshedAt: string; cruise: { name: string } } }
+    expect(body.data.refreshedAt).toBeDefined()
+    expect(body.data.cruise.name).toBe("Norwegian Fjords")
+  })
+
+  it("POST /sailings/:key/quote composes a quote from upstream pricing", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    adapter.setSailingPricing(seedSailing.sourceRef, [
+      {
+        cabinCategoryRef: { externalId: "cat-A" },
+        occupancy: 2,
+        currency: "USD",
+        pricePerPerson: "2000.00",
+        availability: "available",
+        components: [
+          {
+            kind: "gratuity",
+            label: "Pre-paid gratuities",
+            amount: "15.00",
+            currency: "USD",
+            direction: "addition",
+            perPerson: true,
+          },
+        ],
+      },
+    ])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/sailings/voyant-connect:ext-sl-1/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cabinCategoryId: "cat-A",
+        occupancy: 2,
+        guestCount: 2,
+      }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: { totalForCabin: string } }
+    // 2000 × 2 + 15 × 2 = 4030
+    expect(body.data.totalForCabin).toBe("4030.00")
+  })
+
+  it("POST /sailings/:key/quote returns 404 when no matching price exists", async () => {
+    const adapter = new MockCruiseAdapter({ name: "voyant-connect" })
+    adapter.addCruise(seedCruise, [seedSailing])
+    adapter.setSailingPricing(seedSailing.sourceRef, [])
+    registerCruiseAdapter(adapter)
+    const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
+    const res = await app.request("/sailings/voyant-connect:ext-sl-1/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cabinCategoryId: "cat-X",
+        occupancy: 2,
+        guestCount: 2,
+      }),
+    })
+    expect(res.status).toBe(404)
+  })
+})
+
 describe("admin routes — search-index stubs (phase 4)", () => {
+  const app = mountTestApp(cruiseAdminRoutes, { db: undefined })
+
   it("returns 501 on PUT /search-index/bulk", async () => {
     const res = await app.request("/search-index/bulk", {
       method: "PUT",

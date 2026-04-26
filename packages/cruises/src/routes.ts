@@ -48,21 +48,38 @@ type Env = {
 
 // ---------- unified key parsing ----------
 
-import { parseUnifiedKey } from "./lib/key.js"
+import type { CruiseAdapter, SourceRef } from "./adapters/index.js"
+import { listCruiseAdapters, resolveCruiseAdapter } from "./adapters/registry.js"
+import { type ParsedKey, parseUnifiedKey } from "./lib/key.js"
+import { detachExternalCruise } from "./service-detach.js"
 
-// Sentinel response shape for non-local keys. Caller threads through; happens to
-// always be `c.json({...}, status)` but keeping the helper centralizes the messaging.
-function externalNotYetSupported(provider: string) {
-  return {
-    error: "external_adapter_not_implemented",
-    detail: `Adapter '${provider}' will be supported in phase 3 (see docs/architecture/cruises-module.md §10).`,
-  }
-}
+const adapterNotRegistered = (provider: string) => ({
+  error: "adapter_not_registered",
+  detail: `No CruiseAdapter registered for source provider '${provider}'. Register one at app startup via registerCruiseAdapter() — see docs/architecture/cruises-module.md §10.`,
+})
 
 const invalidKey = (raw: string) => ({
   error: "invalid_key",
   detail: `Unrecognized cruise key: ${raw}`,
 })
+
+/**
+ * Resolve an external `<provider>:<ref>` key against the adapter registry.
+ * Returns the adapter + a SourceRef constructed from the parsed key, or null
+ * with a 404-equivalent error payload if the provider has no registered adapter.
+ */
+function resolveExternal(parsed: Extract<ParsedKey, { kind: "external" }>): {
+  adapter: CruiseAdapter
+  sourceRef: SourceRef
+} | null {
+  const adapter = resolveCruiseAdapter(parsed.provider)
+  if (!adapter) return null
+  return { adapter, sourceRef: { externalId: parsed.ref } }
+}
+
+function makeExternalKey(adapter: CruiseAdapter, ref: SourceRef): string {
+  return `${adapter.name}:${ref.externalId}`
+}
 
 // ---------- payload schemas for create-booking endpoints ----------
 
@@ -174,8 +191,55 @@ export const cruiseAdminRoutes = new Hono<Env>()
   // --- list / unified detail ---
   .get("/", async (c) => {
     const query = parseQuery(c, cruiseListQuerySchema)
-    const result = await cruisesService.listCruises(c.get("db"), query)
-    return c.json(result)
+    const local = await cruisesService.listCruises(c.get("db"), query)
+    const localItems = local.data.map((c) => ({
+      source: "local" as const,
+      sourceProvider: null,
+      sourceRef: null,
+      key: c.id,
+      cruise: c,
+    }))
+    // Fan out to every registered adapter. Adapters return summaries; we don't
+    // re-resolve full detail until the operator clicks into one.
+    const adapterItems: Array<{
+      source: "external"
+      sourceProvider: string
+      sourceRef: SourceRef
+      key: string
+      cruise: unknown
+    }> = []
+    for (const adapter of listCruiseAdapters()) {
+      try {
+        const result = await adapter.listEntries({ limit: query.limit })
+        for (const entry of result.entries) {
+          adapterItems.push({
+            source: "external",
+            sourceProvider: adapter.name,
+            sourceRef: entry.sourceRef,
+            key: makeExternalKey(adapter, entry.sourceRef),
+            cruise: entry,
+          })
+        }
+      } catch (err) {
+        // Don't let one bad adapter take down the whole list — surface it
+        // separately in the response so the operator knows.
+        adapterItems.push({
+          source: "external",
+          sourceProvider: adapter.name,
+          sourceRef: { externalId: "" },
+          key: `${adapter.name}:_error`,
+          cruise: { error: (err as Error).message },
+        })
+      }
+    }
+    return c.json({
+      data: [...localItems, ...adapterItems],
+      total: local.total + adapterItems.length,
+      localTotal: local.total,
+      adapterCount: listCruiseAdapters().length,
+      limit: local.limit,
+      offset: local.offset,
+    })
   })
   .post("/", async (c) => {
     const data = await parseJsonBody(c, insertCruiseSchema)
@@ -185,8 +249,21 @@ export const cruiseAdminRoutes = new Hono<Env>()
   // --- per-cruise (parses unified key, dispatches local or external) ---
   .get("/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const cruise = await ext.adapter.fetchCruise(ext.sourceRef)
+      if (!cruise) return c.json({ error: "not_found" }, 404)
+      return c.json({
+        data: {
+          source: "external",
+          sourceProvider: ext.adapter.name,
+          sourceRef: cruise.sourceRef,
+          cruise,
+        },
+      })
+    }
     const includeRaw = c.req.query("include") ?? ""
     const includes = new Set(
       includeRaw
@@ -199,11 +276,26 @@ export const cruiseAdminRoutes = new Hono<Env>()
       withDays: includes.has("days"),
     })
     if (!row) return c.json({ error: "not_found" }, 404)
-    return c.json({ data: row })
+    return c.json({
+      data: {
+        source: "local",
+        sourceProvider: null,
+        sourceRef: null,
+        cruise: row,
+      },
+    })
   })
   .put("/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") {
+      return c.json(
+        {
+          error: "external_cruise_read_only",
+          detail: `External cruise from '${parsed.provider}' cannot be edited locally. Edit at the upstream system, or POST /:key/detach to convert to a local cruise first.`,
+        },
+        409,
+      )
+    }
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const data = await parseJsonBody(c, updateCruiseSchema)
     const row = await cruisesService.updateCruise(c.get("db"), parsed.id, data)
@@ -212,7 +304,15 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .delete("/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") {
+      return c.json(
+        {
+          error: "external_cruise_read_only",
+          detail: "External cruises can't be deleted locally.",
+        },
+        409,
+      )
+    }
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const row = await cruisesService.archiveCruise(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
@@ -220,7 +320,12 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .post("/:key/aggregates/recompute", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") {
+      return c.json(
+        { error: "external_cruise_read_only", detail: "Aggregates only apply to local cruises." },
+        409,
+      )
+    }
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const row = await cruisesService.recomputeCruiseAggregates(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
@@ -228,8 +333,21 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/:key/sailings", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const sailings = await ext.adapter.listSailingsForCruise(ext.sourceRef)
+      return c.json({
+        data: sailings.map((s) => ({
+          source: "external",
+          sourceProvider: ext.adapter.name,
+          key: makeExternalKey(ext.adapter, s.sourceRef),
+          sailing: s,
+        })),
+        total: sailings.length,
+      })
+    }
     const result = await cruisesService.listSailings(c.get("db"), {
       cruiseId: parsed.id,
       limit: 100,
@@ -239,7 +357,9 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .put("/:key/days/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") {
+      return c.json({ error: "external_cruise_read_only" }, 409)
+    }
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const payload = await parseJsonBody(c, replaceCruiseDaysSchema.omit({ cruiseId: true }))
     const days = await cruisesService.replaceCruiseDays(c.get("db"), {
@@ -248,16 +368,31 @@ export const cruiseAdminRoutes = new Hono<Env>()
     })
     return c.json({ data: days })
   })
-  // --- external-only stubs (phase 3) ---
+  // --- external-only operations (now real, phase 3) ---
   .post("/:key/refresh", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind !== "external") return c.json({ error: "local_cruise_no_refresh" }, 400)
-    return c.json(externalNotYetSupported(parsed.provider), 501)
+    const ext = resolveExternal(parsed)
+    if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+    const cruise = await ext.adapter.fetchCruise(ext.sourceRef)
+    if (!cruise) return c.json({ error: "not_found" }, 404)
+    return c.json({
+      data: {
+        source: "external",
+        sourceProvider: ext.adapter.name,
+        sourceRef: cruise.sourceRef,
+        cruise,
+        refreshedAt: new Date().toISOString(),
+      },
+    })
   })
   .post("/:key/detach", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
     if (parsed.kind !== "external") return c.json({ error: "local_cruise_no_detach" }, 400)
-    return c.json(externalNotYetSupported(parsed.provider), 501)
+    const ext = resolveExternal(parsed)
+    if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+    const cruise = await detachExternalCruise(c.get("db"), ext.adapter, ext.sourceRef)
+    return c.json({ data: cruise }, 201)
   })
   // --- sailings ---
   .get("/sailings", async (c) => {
@@ -267,8 +402,33 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/sailings/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const sailing = await ext.adapter.fetchSailing(ext.sourceRef)
+      if (!sailing) return c.json({ error: "not_found" }, 404)
+      const includeRaw = c.req.query("include") ?? ""
+      const includes = new Set(
+        includeRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      )
+      const enriched: Record<string, unknown> = {
+        source: "external",
+        sourceProvider: ext.adapter.name,
+        sourceRef: sailing.sourceRef,
+        sailing,
+      }
+      if (includes.has("pricing")) {
+        enriched.pricing = await ext.adapter.fetchSailingPricing(ext.sourceRef)
+      }
+      if (includes.has("itinerary")) {
+        enriched.itinerary = await ext.adapter.fetchSailingItinerary(ext.sourceRef)
+      }
+      return c.json({ data: enriched })
+    }
     const includeRaw = c.req.query("include") ?? ""
     const includes = new Set(
       includeRaw
@@ -290,7 +450,7 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .put("/sailings/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const data = await parseJsonBody(c, updateSailingSchema)
     const row = await cruisesService.updateSailing(c.get("db"), parsed.id, data)
@@ -299,14 +459,19 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/sailings/:key/itinerary", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const days = await ext.adapter.fetchSailingItinerary(ext.sourceRef)
+      return c.json({ data: days })
+    }
     const days = await cruisesService.getEffectiveItinerary(c.get("db"), parsed.id)
     return c.json({ data: days })
   })
   .put("/sailings/:key/days/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const payload = await parseJsonBody(c, replaceSailingDaysSchema.omit({ sailingId: true }))
     const days = await cruisesService.replaceSailingDays(c.get("db"), {
@@ -317,7 +482,7 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .put("/sailings/:key/pricing/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const payload = await parseJsonBody(
       c,
@@ -334,9 +499,44 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .post("/sailings/:key/quote", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const payload = await parseJsonBody(c, quotePayloadSchema)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      // Fetch upstream pricing then compose locally — the cabinCategoryId in
+      // the payload is interpreted as the upstream cabin category externalId.
+      const prices = await ext.adapter.fetchSailingPricing(ext.sourceRef)
+      const matching = prices.find(
+        (p) =>
+          p.cabinCategoryRef.externalId === payload.cabinCategoryId &&
+          p.occupancy === payload.occupancy &&
+          (!payload.fareCode || p.fareCode === payload.fareCode),
+      )
+      if (!matching) return c.json({ error: "no_matching_price" }, 404)
+      const { composeQuote } = await import("./service-pricing.js")
+      const quote = composeQuote({
+        price: {
+          pricePerPerson: matching.pricePerPerson,
+          secondGuestPricePerPerson: matching.secondGuestPricePerPerson ?? null,
+          singleSupplementPercent: matching.singleSupplementPercent ?? null,
+          currency: matching.currency,
+          fareCode: matching.fareCode ?? null,
+          fareCodeName: matching.fareCodeName ?? null,
+        },
+        components: (matching.components ?? []).map((c) => ({
+          kind: c.kind,
+          label: c.label ?? null,
+          amount: c.amount,
+          currency: c.currency,
+          direction: c.direction,
+          perPerson: c.perPerson,
+        })),
+        occupancy: payload.occupancy,
+        guestCount: payload.guestCount,
+      })
+      return c.json({ data: quote })
+    }
     const quote = await pricingService.assembleQuote(c.get("db"), {
       sailingId: parsed.id,
       cabinCategoryId: payload.cabinCategoryId,
@@ -349,8 +549,31 @@ export const cruiseAdminRoutes = new Hono<Env>()
   // --- bookings (single + party) ---
   .post("/sailings/:key/bookings", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const payload = await parseJsonBody(c, createBookingPayloadSchema)
+      const result = await cruisesBookingService.createExternalCruiseBooking(
+        c.get("db"),
+        {
+          adapter: ext.adapter,
+          sailingRef: ext.sourceRef,
+          cabinCategoryRef: { externalId: payload.cabinCategoryId },
+          cabinId: payload.cabinId ?? null,
+          occupancy: payload.occupancy,
+          fareCode: payload.fareCode ?? null,
+          mode: payload.mode,
+          personId: payload.personId ?? null,
+          organizationId: payload.organizationId ?? null,
+          contact: payload.contact,
+          passengers: payload.passengers,
+          notes: payload.notes ?? null,
+        },
+        c.get("userId"),
+      )
+      return c.json({ data: result }, 201)
+    }
     const payload = await parseJsonBody(c, createBookingPayloadSchema)
     if (payload.sailingId !== parsed.id) {
       return c.json(
@@ -367,8 +590,20 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .post("/sailings/:key/party-bookings", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      // External party bookings deferred — most cruise lines don't expose a
+      // multi-cabin atomic upstream commit; we'd have to implement the group
+      // semantics by serial bookings + rollback. Out of v1 scope.
+      return c.json(
+        {
+          error: "external_party_booking_not_supported",
+          detail:
+            "Multi-cabin party bookings against external adapters are not yet supported. Submit each cabin individually via POST /sailings/:key/bookings.",
+        },
+        501,
+      )
+    }
     const payload = await parseJsonBody(c, createPartyBookingPayloadSchema)
     if (payload.sailingId !== parsed.id) {
       return c.json(
@@ -413,15 +648,28 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/ships/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const ship = await ext.adapter.fetchShip(ext.sourceRef)
+      if (!ship) return c.json({ error: "not_found" }, 404)
+      return c.json({
+        data: {
+          source: "external",
+          sourceProvider: ext.adapter.name,
+          sourceRef: ship.sourceRef,
+          ship,
+        },
+      })
+    }
     const row = await cruisesService.getShipById(c.get("db"), parsed.id)
     if (!row) return c.json({ error: "not_found" }, 404)
     return c.json({ data: row })
   })
   .put("/ships/:key", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const data = await parseJsonBody(c, updateShipSchema)
     const row = await cruisesService.updateShip(c.get("db"), parsed.id, data)
@@ -430,14 +678,19 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/ships/:key/decks", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const ship = await ext.adapter.fetchShip(ext.sourceRef)
+      return c.json({ data: ship?.decks ?? [] })
+    }
     const decks = await cruisesService.listShipDecks(c.get("db"), parsed.id)
     return c.json({ data: decks })
   })
   .post("/ships/:key/decks", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const data = await parseJsonBody(c, insertDeckSchema.omit({ shipId: true }))
     const row = await cruisesService.upsertDeck(c.get("db"), { ...data, shipId: parsed.id })
@@ -451,14 +704,19 @@ export const cruiseAdminRoutes = new Hono<Env>()
   })
   .get("/ships/:key/categories", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 501)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
+    if (parsed.kind === "external") {
+      const ext = resolveExternal(parsed)
+      if (!ext) return c.json(adapterNotRegistered(parsed.provider), 501)
+      const ship = await ext.adapter.fetchShip(ext.sourceRef)
+      return c.json({ data: ship?.categories ?? [] })
+    }
     const categories = await cruisesService.listShipCabinCategories(c.get("db"), parsed.id)
     return c.json({ data: categories })
   })
   .put("/ships/:key/categories/bulk", async (c) => {
     const parsed = parseUnifiedKey(c.req.param("key"))
-    if (parsed.kind === "external") return c.json(externalNotYetSupported(parsed.provider), 409)
+    if (parsed.kind === "external") return c.json({ error: "external_cruise_read_only" }, 409)
     if (parsed.kind === "invalid") return c.json(invalidKey(parsed.raw), 400)
     const payload = await parseJsonBody(
       c,

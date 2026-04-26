@@ -4,6 +4,41 @@ import type { HonoModule } from "@voyantjs/hono/module"
 import { cruiseAdminRoutes } from "./routes.js"
 import { cruisePublicRoutes } from "./routes-public.js"
 
+// Adapter contract + registry — re-exported so templates can import everything
+// from `@voyantjs/cruises` without reaching into sub-paths. Sub-path
+// `@voyantjs/cruises/adapters` remains the lighter import for adapter-only
+// implementations.
+export type {
+  AdapterCallContext,
+  CreateExternalBookingInput,
+  CruiseAdapter,
+  CruiseSearchProjectionEntry,
+  ExternalBookingResult,
+  ExternalCabinCategory,
+  ExternalContactInput,
+  ExternalCruise,
+  ExternalCruiseSummary,
+  ExternalDeck,
+  ExternalItineraryDay,
+  ExternalPassengerInput,
+  ExternalPriceComponent,
+  ExternalPriceRow,
+  ExternalSailing,
+  ExternalShip,
+  ListEntriesOptions,
+  ListEntriesResult,
+  SourceRef,
+} from "./adapters/index.js"
+export { type MemoizeOptions, memoizeCruiseAdapter } from "./adapters/memoize.js"
+export { MockCruiseAdapter, type MockCruiseAdapterOptions } from "./adapters/mock.js"
+export {
+  clearCruiseAdapters,
+  hasCruiseAdapter,
+  listCruiseAdapters,
+  registerCruiseAdapter,
+  resolveCruiseAdapter,
+  unregisterCruiseAdapter,
+} from "./adapters/registry.js"
 export {
   type BookingCruiseDetail,
   type BookingGroupCruiseDetail,
@@ -28,12 +63,14 @@ export {
   type CreateCruiseBookingResult,
   type CreateCruisePartyBookingInput,
   type CreateCruisePartyBookingResult,
+  type CreateExternalCruiseBookingInput,
   type CruiseBookingContact,
   type CruiseBookingMode,
   type CruiseBookingPassenger,
   type CruisePartyCabinEntry,
   cruisesBookingService,
 } from "./service-bookings.js"
+export { detachExternalCruise } from "./service-detach.js"
 export {
   type ComposeQuoteInput,
   composeQuote,
